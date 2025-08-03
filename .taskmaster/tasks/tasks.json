@@ -238,11 +238,27 @@
         ],
         "priority": "high",
         "subtasks": []
+      },
+      {
+        "id": 33,
+        "title": "Implement Solana Query Tool",
+        "description": "Develop a 'solana_query' tool that leverages the ingested Solana documentation to provide accurate and relevant responses to Solana blockchain queries.",
+        "details": "1. Create a specialized 'solana_query' MCP tool implementation that interfaces with the ingested Solana documentation\n2. Develop query processing logic that understands Solana-specific terminology and concepts\n3. Implement semantic search functionality using the vector embeddings created during ingestion\n4. Add result ranking algorithms optimized for Solana documentation:\n   - Boost consensus documentation for validator-related queries\n   - Prioritize CLI guides for command-line related questions\n   - Weight architecture proposals appropriately for design questions\n5. Implement category-aware filtering to target specific documentation sections based on query intent\n6. Add support for code snippet extraction and formatting from Solana documentation\n7. Implement context preservation to maintain relationships between related concepts\n8. Create response formatting that preserves code blocks, command examples, and technical details\n9. Add citation tracking to reference specific documents in responses\n10. Implement fallback mechanisms for queries without direct matches\n11. Optimize query performance with appropriate indexing strategies\n12. Add logging for query patterns to identify documentation gaps\n\nTechnologies:\n- pgvector with HNSW indexing for efficient vector search\n- SQL query optimization for the 'doc_type=solana' filter\n- Text chunking strategies optimized for Solana's documentation structure\n- Response formatting that preserves markdown code blocks and technical syntax",
+        "testStrategy": "1. Test with a comprehensive set of Solana-specific queries covering all documentation categories:\n   - Consensus mechanism questions\n   - Validator setup and operation queries\n   - CLI command usage scenarios\n   - Architecture and design questions\n   - Module-specific technical inquiries\n2. Verify technical accuracy of responses against official Solana documentation\n3. Test edge cases like ambiguous queries that span multiple documentation categories\n4. Validate proper handling of Solana-specific terminology and acronyms\n5. Benchmark query performance with various complexity levels\n6. Test citation accuracy to ensure responses reference the correct source documents\n7. Verify code snippet formatting preserves syntax and structure\n8. Compare query results with existing Solana documentation search tools\n9. Test with both beginner and advanced technical queries to ensure appropriate depth\n10. Validate integration with the MCP framework and response format compliance",
+        "status": "done",
+        "dependencies": [
+          16,
+          21,
+          23,
+          32
+        ],
+        "priority": "high",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-08-03T16:22:19.011Z",
-      "updated": "2025-08-03T17:19:07.787Z",
+      "updated": "2025-08-03T17:31:11.580Z",
       "description": "Tasks for master context"
     }
   }
