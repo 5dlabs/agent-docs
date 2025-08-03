@@ -105,6 +105,8 @@ Each document type stores specific metadata in JSONB:
 3. **embeddings.rs** - OpenAI client with batching support
 4. **batch_processor.rs** - Queue and batch management
 5. **database.rs** - Unified database operations
+6. **connection/keepalive.rs** - SSE keep-alive and timeout management
+7. **connection/recovery.rs** - Connection resilience and auto-recovery
 
 ### Document Loaders
 
@@ -173,6 +175,28 @@ impl RustDocsServer {
    - Update Helm values for new configuration
    - Ensure pgvector extension supports 3072 dimensions
    - Configure resource limits for batch processing
+
+## Connection Reliability
+
+### SSE Keep-Alive System
+- Heartbeat messages every 30 seconds
+- Connection timeout detection (90 seconds)
+- Automatic activity monitoring
+- Non-intrusive SSE comments for heartbeats
+
+### Recovery Mechanisms
+- Client-side automatic reconnection
+- Exponential backoff retry logic
+- Message buffering during disconnection
+- Connection state tracking
+
+### Toolman Integration
+- Enhanced health endpoints for monitoring
+- Connection lifecycle events
+- Graceful degradation on timeout
+- Persistent connection management
+
+See [CONNECTION_RELIABILITY.md](CONNECTION_RELIABILITY.md) for detailed implementation.
 
 ## Future Extensibility
 

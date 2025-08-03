@@ -6,13 +6,15 @@ A high-performance Model Context Protocol (MCP) server that provides AI assistan
 
 1. **[PROJECT_ARCHITECTURE.md](PROJECT_ARCHITECTURE.md)** - High-level architecture and design decisions
 2. **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Detailed implementation with code examples
-3. **[CHANGES_FROM_ORIGINAL.md](CHANGES_FROM_ORIGINAL.md)** - Comparison with original implementation
-4. **[CURRENT_DATABASE_CONTENT.md](CURRENT_DATABASE_CONTENT.md)** - What's currently in the database
+3. **[CONNECTION_RELIABILITY.md](CONNECTION_RELIABILITY.md)** - SSE keep-alive and recovery design
+4. **[CHANGES_FROM_ORIGINAL.md](CHANGES_FROM_ORIGINAL.md)** - Comparison with original implementation
+5. **[CURRENT_DATABASE_CONTENT.md](CURRENT_DATABASE_CONTENT.md)** - What's currently in the database
 
 ## 🎯 Key Features
 
-- **Multi-Documentation Support**: Rust crates, BirdEye API, Jupyter notebooks, GitHub repos, OpenAPI specs
+- **Multi-Documentation Support**: Currently Rust crates (40 available), extensible to other types
 - **Type-Specific Query Tools**: Dedicated tools for each documentation type
+- **Connection Reliability**: SSE keep-alive, auto-recovery, and timeout handling for Toolman
 - **Unified Database**: Harmonized schema for all documentation types
 - **OpenAI Batching**: 70% cost reduction through batch processing
 - **Backward Compatible**: Preserves all existing Rust documentation
