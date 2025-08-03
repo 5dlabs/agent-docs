@@ -1,16 +1,16 @@
-# Changes from Original Rust-Docs Implementation
+# Changes from Original Implementation
 
 ## Overview of Major Changes
 
 ### 1. **From Single-Type to Multi-Type Documentation**
 
 **Original**: Only supported Rust crate documentation
-**New**: Supports multiple documentation types:
-- Rust crates (preserved)
-- BirdEye blockchain API
-- Jupyter notebooks
-- GitHub repositories
-- OpenAPI specifications
+**New**: Designed to support multiple documentation types:
+- Rust crates (currently implemented - 40 crates)
+- BirdEye blockchain API (planned)
+- Jupyter notebooks (planned)
+- GitHub repositories (planned)
+- Others as needed (planned)
 
 ### 2. **Tool Organization**
 

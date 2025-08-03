@@ -1,12 +1,13 @@
-# Multi-Documentation MCP Server
+# Doc Server
 
-A high-performance Model Context Protocol (MCP) server that provides AI assistants with semantic search across multiple documentation types.
+A high-performance Model Context Protocol (MCP) server that provides AI assistants with semantic search across technical documentation.
 
 ## 📚 Documentation
 
 1. **[PROJECT_ARCHITECTURE.md](PROJECT_ARCHITECTURE.md)** - High-level architecture and design decisions
 2. **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Detailed implementation with code examples
-3. **[CHANGES_FROM_ORIGINAL.md](CHANGES_FROM_ORIGINAL.md)** - Comparison with original Rust-only implementation
+3. **[CHANGES_FROM_ORIGINAL.md](CHANGES_FROM_ORIGINAL.md)** - Comparison with original implementation
+4. **[CURRENT_DATABASE_CONTENT.md](CURRENT_DATABASE_CONTENT.md)** - What's currently in the database
 
 ## 🎯 Key Features
 
@@ -18,15 +19,20 @@ A high-performance Model Context Protocol (MCP) server that provides AI assistan
 
 ## 🚀 Quick Overview
 
-### Supported Documentation Types
+### Documentation Types
 
+#### Currently Available (40 crates in database)
+| Type | Query Tool | Source | Status |
+|------|------------|---------|---------|
+| Rust Crates | `rust_query` | docs.rs | ✅ Active |
+
+#### Planned Extensions
 | Type | Query Tool | Source | Ingestion Method |
 |------|------------|---------|------------------|
-| Rust Crates | `rust_query` | docs.rs | Dynamic (MCP tool) |
 | BirdEye API | `birdeye_query` | API specs | Manual/Agent |
 | Jupyter | `jupyter_query` | Notebooks | Manual/Agent |
 | GitHub | `github_query` | Repositories | Manual/Agent |
-| OpenAPI | `openapi_query` | Spec files | Manual/Agent |
+| Others | TBD | Various | Manual/Agent |
 
 ### Architecture Highlights
 

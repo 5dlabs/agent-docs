@@ -1,18 +1,21 @@
-# Multi-Documentation MCP Server Architecture
+# Doc Server Architecture
 
 ## Overview
 
-This project extends the original Rust documentation MCP server to support multiple documentation types (Rust crates, BirdEye API, Jupyter notebooks, GitHub repos, OpenAPI specs) with unified vector search capabilities and OpenAI-powered embeddings.
+This project extends the original Rust documentation MCP server to support multiple documentation types. Currently, the database contains only Rust crate documentation (40 crates), but the architecture is designed to support additional types including BirdEye API, Jupyter notebooks, and others.
 
 ## Key Architectural Changes
 
 ### 1. **Per-Documentation-Type Query Tools**
 Instead of a single generic query tool, we expose specific tools for each documentation type:
-- `rust_query` - Query Rust crate documentation
+
+**Currently Implemented (based on database content):**
+- `rust_query` - Query Rust crate documentation (40 crates available)
+
+**Planned Extensions:**
 - `birdeye_query` - Query BirdEye blockchain API docs
 - `jupyter_query` - Query Jupyter notebook documentation
-- `github_query` - Query GitHub repository docs
-- `openapi_query` - Query OpenAPI specifications
+- Additional types as they are ingested
 
 This makes it clearer to AI assistants what documentation is available and improves query relevance.
 
