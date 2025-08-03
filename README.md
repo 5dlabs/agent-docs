@@ -7,8 +7,10 @@ A high-performance Model Context Protocol (MCP) server that provides AI assistan
 1. **[PROJECT_ARCHITECTURE.md](PROJECT_ARCHITECTURE.md)** - High-level architecture and design decisions
 2. **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Detailed implementation with code examples
 3. **[CONNECTION_RELIABILITY.md](CONNECTION_RELIABILITY.md)** - SSE keep-alive and recovery design
-4. **[CHANGES_FROM_ORIGINAL.md](CHANGES_FROM_ORIGINAL.md)** - Comparison with original implementation
-5. **[CURRENT_DATABASE_CONTENT.md](CURRENT_DATABASE_CONTENT.md)** - What's currently in the database
+4. **[LOCAL_MIGRATION_PLAN.md](LOCAL_MIGRATION_PLAN.md)** - Step-by-step local database migration
+5. **[DATABASE_MIGRATION_PLAN.md](DATABASE_MIGRATION_PLAN.md)** - Production migration strategy
+6. **[CHANGES_FROM_ORIGINAL.md](CHANGES_FROM_ORIGINAL.md)** - Comparison with original implementation
+7. **[CURRENT_DATABASE_CONTENT.md](CURRENT_DATABASE_CONTENT.md)** - What's currently in the database
 
 ## 🎯 Key Features
 
@@ -62,7 +64,16 @@ A high-performance Model Context Protocol (MCP) server that provides AI assistan
 └─────────────────────────────────┘
 ```
 
-## 🔄 Migration from Original
+## 🔄 Migration Strategy
+
+### Quick Start: Backup First!
+
+```bash
+# Create a backup before any changes
+./scripts/backup_database.sh
+```
+
+### Migration Overview
 
 The new implementation preserves all existing Rust documentation while adding support for multiple documentation types. Key changes:
 
@@ -70,6 +81,8 @@ The new implementation preserves all existing Rust documentation while adding su
 2. **Database**: Unified schema replacing separate tables
 3. **Embeddings**: OpenAI-only with batching (removed Voyage AI)
 4. **Cost**: ~70% reduction through batch processing
+
+See [LOCAL_MIGRATION_PLAN.md](LOCAL_MIGRATION_PLAN.md) for step-by-step instructions.
 
 ## 📋 Implementation Status
 

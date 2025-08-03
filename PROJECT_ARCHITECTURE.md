@@ -12,12 +12,12 @@ Instead of a single generic query tool, we expose specific tools for each docume
 **Currently Implemented (based on database content):**
 - `rust_query` - Query Rust crate documentation (40 crates available)
 
-**Planned Extensions:**
+**Planned Query Tools (as content is added):**
 - `birdeye_query` - Query BirdEye blockchain API docs
 - `jupyter_query` - Query Jupyter notebook documentation
 - Additional types as they are ingested
 
-This makes it clearer to AI assistants what documentation is available and improves query relevance.
+**Note**: Only Rust crates support dynamic addition via MCP tools (`add_rust_crate`). Other documentation types will be ingested through separate processes, with the model helping determine optimal extraction strategies for each format.
 
 ### 2. **Harmonized Database Schema**
 Replace separate tables with a unified schema:
