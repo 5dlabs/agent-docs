@@ -1,0 +1,28 @@
+# Clippy configuration for Doc Server
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 30
+
+# Documentation requirements
+missing-docs-in-crate-items = true
+
+# Avoid false positives for some cases
+avoid-breaking-exported-api = true
+
+# Single letter variable names (allow common ones)
+single-char-binding-names-threshold = 4
+
+# Trivial copy types threshold
+trivial-copy-size-limit = 32
+
+# Type complexity threshold
+type-complexity-threshold = 250
+
+# Too many arguments threshold
+too-many-arguments-threshold = 7
+
+# Too many lines threshold
+too-many-lines-threshold = 100
+
+# Enum variant size threshold
+enum-variant-size-threshold = 200

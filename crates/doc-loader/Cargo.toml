@@ -1,0 +1,27 @@
+[package]
+name = "doc-server-doc-loader"
+version = "0.1.0"
+edition = "2021"
+description = "Document loading and parsing for various documentation types"
+license = "MIT"
+
+[dependencies]
+# Inherit workspace dependencies
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+
+# HTML parsing for docs.rs content
+scraper = "0.20"
+html5ever = "0.27"
+
+# URL handling
+url = "2.5"
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+mockall = { workspace = true }

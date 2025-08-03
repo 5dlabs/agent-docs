@@ -7,7 +7,7 @@
 -- Create new unified tables
 CREATE TABLE documents (
     id SERIAL PRIMARY KEY,
-    doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN ('rust', 'birdeye', 'jupyter')),
+    doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN ('rust', 'jupyter', 'birdeye', 'cilium', 'talos', 'meteora', 'solana', 'ebpf', 'rust_best_practices')),
     source_name VARCHAR(255) NOT NULL,
     doc_path TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -382,7 +382,7 @@ app:
     - name: RATE_LIMIT_RPM
       value: "3000"
     - name: SUPPORTED_DOC_TYPES
-      value: "rust,birdeye,jupyter"
+      value: "rust,jupyter,birdeye,cilium,talos,meteora,solana,ebpf,rust_best_practices"
 ```
 
 ### 6.2 Migration Job

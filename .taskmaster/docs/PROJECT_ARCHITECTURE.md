@@ -2,20 +2,26 @@
 
 ## Overview
 
-This project extends the original Rust documentation MCP server to support multiple documentation types. Currently, the database contains only Rust crate documentation (40 crates), but the architecture is designed to support additional types including BirdEye API, Jupyter notebooks, and others.
+This project transforms the original Rust documentation MCP server into a comprehensive documentation server. The database (to be renamed from `rust_docs_vectors` to `docs`) will support multiple documentation types including infrastructure tools, blockchain platforms, and programming resources.
 
 ## Key Architectural Changes
 
 ### 1. **Per-Documentation-Type Query Tools**
 Instead of a single generic query tool, we expose specific tools for each documentation type:
 
-**Currently Implemented (based on database content):**
+**Currently Implemented:**
 - `rust_query` - Query Rust crate documentation (40 crates available)
 
-**Planned Query Tools (as content is added):**
-- `birdeye_query` - Query BirdEye blockchain API docs
+**Planned Query Tools:**
 - `jupyter_query` - Query Jupyter notebook documentation
-- Additional documentation as determined
+- `birdeye_query` - Query BirdEye blockchain API docs
+- `cilium_query` - Query Cilium networking/security docs
+- `talos_query` - Query Talos Linux documentation
+- `meteora_query` - Query Meteora DEX documentation
+- `raydium_query` - Query Raydium DEX documentation
+- `solana_query` - Query Solana blockchain docs
+- `ebpf_query` - Query eBPF documentation
+- `rust_best_practices_query` - Query Rust best practices guide
 
 **Note**: Only Rust crates support dynamic addition via MCP tools (`add_rust_crate`). Other documentation types will be ingested through separate processes, with the model helping determine optimal extraction strategies for each format.
 
@@ -26,7 +32,7 @@ Replace separate tables with a unified schema:
 -- Unified documents table replacing doc_embeddings
 CREATE TABLE documents (
     id SERIAL PRIMARY KEY,
-    doc_type VARCHAR(50) NOT NULL, -- 'rust', 'birdeye', 'jupyter', etc.
+    doc_type VARCHAR(50) NOT NULL, -- 'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 'meteora', 'solana', 'ebpf', 'rust_best_practices', etc.
     source_name VARCHAR(255) NOT NULL, -- crate name, API version, notebook name, etc.
     doc_path TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -123,8 +129,14 @@ impl RustDocsServer {
     pub fn register_tools(&mut self) {
         // Query tools - one per doc type
         self.register_tool("rust_query", rust_query_handler);
-        self.register_tool("birdeye_query", birdeye_query_handler);
         self.register_tool("jupyter_query", jupyter_query_handler);
+        self.register_tool("birdeye_query", birdeye_query_handler);
+        self.register_tool("cilium_query", cilium_query_handler);
+        self.register_tool("talos_query", talos_query_handler);
+        self.register_tool("meteora_query", meteora_query_handler);
+        self.register_tool("solana_query", solana_query_handler);
+        self.register_tool("ebpf_query", ebpf_query_handler);
+        self.register_tool("rust_best_practices_query", rust_best_practices_handler);
         
         // Rust crate management (dynamic addition)
         self.register_tool("add_rust_crate", add_rust_crate_handler);
@@ -208,8 +220,8 @@ The architecture supports easy addition of new documentation types:
 ## Tool Naming Convention
 
 - Query tools: `{specific_name}_query`
-  - ✅ Good: `birdeye_query`, `jupyter_query`, `rust_query`
-  - ❌ Bad: `openapi_query`, `api_query`, `docs_query`
+  - ✅ Good: `solana_query`, `talos_query`, `cilium_query`
+  - ❌ Bad: `blockchain_query`, `linux_query`, `docs_query`
 - Management tools: `{action}_{doctype}_{noun}` (Rust only)
 - General tools: `{action}_{scope}`
 

@@ -6,7 +6,7 @@ This document outlines the local migration steps to transform the current schema
 
 ## Current Local State
 
-- **Database**: `rust_docs_vectors` on localhost
+- **Database**: `rust_docs_vectors` (to be renamed to `docs`)
 - **Content**: 40 Rust crates with 4,133 embeddings
 - **Tables**: `crates`, `doc_embeddings`
 
@@ -49,10 +49,23 @@ SELECT
 dropdb rust_docs_test
 ```
 
-## Step 3: Create New Schema (In Same Database)
+## Step 3: Rename Database
+
+```bash
+# Create new database with correct name
+createdb docs
+
+# Restore backup into new database
+pg_restore -h localhost -U jonathonfritz -d docs ~/backups/rust_docs_[DATE]/rust_docs_vectors_full.dump
+
+# Verify data transferred
+psql -h localhost -U jonathonfritz -d docs -c "SELECT COUNT(*) FROM doc_embeddings;"
+```
+
+## Step 4: Create New Schema (In docs Database)
 
 ```sql
--- Run this in rust_docs_vectors database
+-- Run this in docs database
 -- This creates new tables alongside existing ones
 
 -- Create new unified tables

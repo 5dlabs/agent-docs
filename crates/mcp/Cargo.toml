@@ -1,0 +1,28 @@
+[package]
+name = "doc-server-mcp"
+version = "0.1.0"
+edition = "2021"
+description = "MCP (Model Context Protocol) server implementation for the Doc Server"
+license = "MIT"
+
+[dependencies]
+# Inherit workspace dependencies
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+rmcp = { workspace = true }
+
+# Local crates
+doc-server-database = { path = "../database" }
+doc-server-embeddings = { path = "../embeddings" }
+doc-server-llm = { path = "../llm" }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+mockall = { workspace = true }

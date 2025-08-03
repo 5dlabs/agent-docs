@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: doc-server-postgres
+    environment:
+      POSTGRES_DB: docs
+      POSTGRES_USER: docserver
+      POSTGRES_PASSWORD: development_password_change_in_production
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d
+    networks:
+      - doc-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docserver -d docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Doc Server application
+  doc-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: doc-server-app
+    environment:
+      DATABASE_URL: postgresql://docserver:development_password_change_in_production@postgres:5432/docs
+      RUST_LOG: info,doc_server=debug
+      PORT: 3000
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - doc-server-network
+    volumes:
+      # Mount source for development (optional)
+      - ./src:/app/src:ro
+      - ./crates:/app/crates:ro
+    restart: unless-stopped
+
+  # Redis for caching (optional future enhancement)
+  redis:
+    image: redis:7-alpine
+    container_name: doc-server-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - doc-server-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  doc-server-network:
+    driver: bridge
