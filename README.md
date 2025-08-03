@@ -14,7 +14,7 @@ A high-performance Model Context Protocol (MCP) server that provides AI assistan
 
 ## 🎯 Key Features
 
-- **Multi-Documentation Support**: Currently Rust crates (40 available), extensible to other types
+- **Multi-Documentation Support**: Currently Rust crates (40 available), planned for BirdEye and Jupyter
 - **Type-Specific Query Tools**: Dedicated tools for each documentation type
 - **Connection Reliability**: SSE keep-alive, auto-recovery, and timeout handling for Toolman
 - **Unified Database**: Harmonized schema for all documentation types
@@ -35,8 +35,6 @@ A high-performance Model Context Protocol (MCP) server that provides AI assistan
 |------|------------|---------|------------------|
 | BirdEye API | `birdeye_query` | API specs | Manual/Agent |
 | Jupyter | `jupyter_query` | Notebooks | Manual/Agent |
-| GitHub | `github_query` | Repositories | Manual/Agent |
-| Others | TBD | Various | Manual/Agent |
 
 ### Architecture Highlights
 

@@ -27,10 +27,8 @@
 ```
 Query Tools (one per type):
 - rust_query
-- birdeye_query
-- jupyter_query
-- github_query
-- openapi_query
+- birdeye_query (planned)
+- jupyter_query (planned)
 
 Management Tools (Rust only - dynamic):
 - add_rust_crate

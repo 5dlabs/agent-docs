@@ -69,8 +69,6 @@ Based on the architecture discussion, the following documentation types are plan
 
 1. **BirdEye** - Blockchain API documentation
 2. **Jupyter** - Jupyter notebook documentation
-3. **GitHub** - Repository documentation (README, docs/)
-4. **OpenAPI** - API specifications
 
 ## Migration Notes
 

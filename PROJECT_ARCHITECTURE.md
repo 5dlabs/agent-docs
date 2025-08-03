@@ -15,7 +15,7 @@ Instead of a single generic query tool, we expose specific tools for each docume
 **Planned Query Tools (as content is added):**
 - `birdeye_query` - Query BirdEye blockchain API docs
 - `jupyter_query` - Query Jupyter notebook documentation
-- Additional types as they are ingested
+- Additional documentation as determined
 
 **Note**: Only Rust crates support dynamic addition via MCP tools (`add_rust_crate`). Other documentation types will be ingested through separate processes, with the model helping determine optimal extraction strategies for each format.
 
@@ -27,7 +27,7 @@ Replace separate tables with a unified schema:
 CREATE TABLE documents (
     id SERIAL PRIMARY KEY,
     doc_type VARCHAR(50) NOT NULL, -- 'rust', 'birdeye', 'jupyter', etc.
-    source_name VARCHAR(255) NOT NULL, -- crate name, repo name, etc.
+    source_name VARCHAR(255) NOT NULL, -- crate name, API version, notebook name, etc.
     doc_path TEXT NOT NULL,
     content TEXT NOT NULL,
     metadata JSONB, -- Flexible storage for type-specific data
@@ -125,8 +125,6 @@ impl RustDocsServer {
         self.register_tool("rust_query", rust_query_handler);
         self.register_tool("birdeye_query", birdeye_query_handler);
         self.register_tool("jupyter_query", jupyter_query_handler);
-        self.register_tool("github_query", github_query_handler);
-        self.register_tool("openapi_query", openapi_query_handler);
         
         // Rust crate management (dynamic addition)
         self.register_tool("add_rust_crate", add_rust_crate_handler);
@@ -209,8 +207,10 @@ The architecture supports easy addition of new documentation types:
 
 ## Tool Naming Convention
 
-- Query tools: `{doctype}_query`
-- Management tools: `{action}_{doctype}_{noun}`
+- Query tools: `{specific_name}_query`
+  - ✅ Good: `birdeye_query`, `jupyter_query`, `rust_query`
+  - ❌ Bad: `openapi_query`, `api_query`, `docs_query`
+- Management tools: `{action}_{doctype}_{noun}` (Rust only)
 - General tools: `{action}_{scope}`
 
-This provides clarity for AI assistants and maintains consistency across the API surface.
+**Key Principle**: Tool names must clearly indicate what specific documentation is available. Generic names don't tell the AI assistant what's actually available to query.

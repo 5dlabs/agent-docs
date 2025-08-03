@@ -7,7 +7,7 @@
 -- Create new unified tables
 CREATE TABLE documents (
     id SERIAL PRIMARY KEY,
-    doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN ('rust', 'birdeye', 'jupyter', 'github', 'openapi')),
+    doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN ('rust', 'birdeye', 'jupyter')),
     source_name VARCHAR(255) NOT NULL,
     doc_path TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -293,54 +293,16 @@ impl GitHubLoader {
 }
 ```
 
-### 3.2 JSON/OpenAPI Loader
+### 3.2 API-Specific Loaders
+Each API will have its own custom loader based on its format and structure. For example:
+
 ```rust
-// src/loaders/json_loader.rs
-pub struct JsonSpecLoader {
+// src/loaders/birdeye_loader.rs
+pub struct BirdEyeLoader {
     batch_processor: Arc<BatchProcessor>,
 }
 
-impl JsonSpecLoader {
-    pub async fn load_openapi_spec(&self, spec_url: &str, api_name: &str) -> Result<(), Error> {
-        let spec: OpenAPISpec = reqwest::get(spec_url)
-            .await?
-            .json()
-            .await?;
-        
-        // Process each endpoint
-        for (path, path_item) in spec.paths {
-            for (method, operation) in path_item.operations() {
-                let content = format!(
-                    "Endpoint: {} {}\n\n{}\n\nParameters:\n{}\n\nResponses:\n{}",
-                    method.to_uppercase(),
-                    path,
-                    operation.summary.unwrap_or_default(),
-                    format_parameters(&operation.parameters),
-                    format_responses(&operation.responses)
-                );
-                
-                let metadata = json!({
-                    "api_name": api_name,
-                    "endpoint": path,
-                    "method": method,
-                    "operation_id": operation.operation_id
-                });
-                
-                self.batch_processor.add_to_queue(
-                    content,
-                    BatchMetadata {
-                        doc_type: "openapi".to_string(),
-                        source_name: api_name.to_string(),
-                        doc_path: format!("{} {}", method, path),
-                        metadata,
-                    }
-                ).await;
-            }
-        }
-        
-        Ok(())
-    }
-}
+// Implementation will be specific to BirdEye's API documentation format
 ```
 
 ## Phase 4: Rate Limiting
@@ -420,7 +382,7 @@ app:
     - name: RATE_LIMIT_RPM
       value: "3000"
     - name: SUPPORTED_DOC_TYPES
-      value: "rust,birdeye,jupyter,github,openapi"
+      value: "rust,birdeye,jupyter"
 ```
 
 ### 6.2 Migration Job
