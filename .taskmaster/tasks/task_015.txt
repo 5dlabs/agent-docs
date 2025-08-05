@@ -1,0 +1,30 @@
+# Task ID: 15
+# Title: Integration Testing and Toolman Compatibility
+# Status: pending
+# Dependencies: 2, 4, 5, 7, 8, 9, 10, 11, 12
+# Priority: high
+# Description: Perform comprehensive integration testing with Toolman to ensure compatibility and stability.
+# Details:
+1. Set up integration testing environment
+2. Implement automated test suite for Toolman integration
+3. Test all query tools with Toolman
+4. Verify SSE keep-alive functionality
+5. Test reconnection and recovery scenarios
+6. Validate response formats and error handling
+
+Technologies:
+- Use Jest or similar for automated testing
+- Implement mock Toolman client for testing
+- Use Docker Compose for integration test environment
+- Implement CI/CD pipeline for continuous testing
+- Consider implementing contract testing
+- Use Postman or similar for API testing
+- Implement test coverage reporting
+
+# Test Strategy:
+1. Test all MCP tools with Toolman
+2. Verify connection stability over extended periods
+3. Test with simulated network issues
+4. Validate error handling and recovery
+5. Test with high concurrency
+6. Verify all success criteria are met

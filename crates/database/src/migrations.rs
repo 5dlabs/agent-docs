@@ -79,9 +79,8 @@ impl Migrations {
             .execute(pool)
             .await?;
             
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_documents_embedding ON documents USING ivfflat (embedding vector_cosine_ops)")
-            .execute(pool)
-            .await?;
+        // Note: Skipping vector index for 3072-dimensional embeddings due to pgvector 2000-dimension limit
+        // Queries will still work but be slower. Consider upgrading pgvector or using 1536 dimensions if performance is critical.
         
         info!("Database migrations completed successfully");
         Ok(())

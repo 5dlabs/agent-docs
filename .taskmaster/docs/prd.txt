@@ -2,182 +2,330 @@
 
 ## Executive Summary
 
-Transform the existing Rust documentation MCP server into a comprehensive documentation server supporting multiple technical documentation types. The server will provide AI assistants with semantic search capabilities across diverse documentation sources including infrastructure tools, blockchain platforms, and programming resources.
+The Doc Server is a comprehensive documentation platform that provides AI assistants with semantic search capabilities across diverse technical documentation sources. Originally designed for Rust crate documentation, it has evolved into a multi-type documentation server supporting infrastructure tools, blockchain platforms, and programming resources.
 
-## Current State
+## Current State (As of Handoff)
 
-- **Database**: `rust_docs_vectors` containing 40 Rust crates with 4,133 embeddings
-- **Functionality**: Single-purpose Rust crate documentation search
-- **Architecture**: PostgreSQL with pgvector for semantic search
-- **Issues**: Connection timeouts, limited to Rust documentation only
+### ✅ Implemented Infrastructure
+- **Database**: `docs` database with harmonized schema (migrated from `rust_docs_vectors`)
+- **Content**: 4,000+ documents with embeddings across 3 documentation types
+- **Architecture**: PostgreSQL with pgvector, Rust MCP server, Docker development environment
+- **Working Tools**: `rust_query` tool implemented and tested in Cursor MCP
+- **Development Environment**: One-command setup with full database restoration
+
+### ✅ Documentation Content
+- **Rust Crates**: 40+ crates with complete documentation and embeddings
+- **BirdEye API**: 600+ endpoints with OpenAPI specifications
+- **Solana Documentation**: 400+ documents including core docs, architecture diagrams, ZK cryptography PDFs
+
+### ✅ Technical Implementation
+- **MCP Server**: HTTP/SSE server on port 3001 with Toolman integration
+- **Database Schema**: Unified tables supporting all planned documentation types
+- **Docker Setup**: Complete development environment with PostgreSQL on port 5433
+- **Database Dump**: 67MB compressed dump for instant restoration
 
 ## Target State
 
-A unified documentation server with:
-- **Database**: Renamed to `docs` 
-- **Content**: 10+ documentation types
-- **Reliability**: SSE keep-alive for stable Toolman integration
-- **Cost Efficiency**: 70% reduction via OpenAI batching
+### Core Functionality
+A unified documentation server providing:
+- **Query Tools**: 10 type-specific query tools for precise documentation access
+- **Management Tools**: Dynamic Rust crate management via MCP
+- **Connection Reliability**: SSE keep-alive for stable Toolman integration  
+- **Cost Efficiency**: 70% embedding cost reduction via OpenAI batching
+- **Developer Experience**: One-command development environment setup
+
+### Supported Documentation Types
+1. ✅ **Rust Crates** (implemented) - Dynamic management and querying
+2. ✅ **BirdEye API** (ingested) - Blockchain API documentation
+3. ✅ **Solana** (ingested) - Blockchain platform documentation
+4. 🔄 **Jupyter Notebooks** (planned) - Interactive notebook documentation
+5. 🔄 **Cilium** (planned) - Networking and security documentation
+6. 🔄 **Talos** (planned) - Linux distribution documentation
+7. 🔄 **Meteora** (planned) - DEX protocol documentation
+8. 🔄 **Raydium** (planned) - DEX protocol documentation
+9. 🔄 **eBPF** (planned) - Extended Berkeley Packet Filter documentation
+10. 🔄 **Rust Best Practices** (planned) - Language best practices guide
 
 ## Functional Requirements
 
 ### 1. Query Tools (Primary MCP Interface)
 
-Each documentation type must have its own specific query tool:
+Each documentation type must have its own specific query tool for optimal relevance:
 
-- `rust_query` - Query Rust crate documentation
+#### ✅ Implemented
+- `rust_query` - Query Rust crate documentation with semantic search
+
+#### 🔄 Planned Implementation  
+- `birdeye_query` - Query BirdEye blockchain API documentation
+- `solana_query` - Query Solana blockchain platform documentation
 - `jupyter_query` - Query Jupyter notebook documentation
-- `birdeye_query` - Query BirdEye blockchain API docs
-- `cilium_query` - Query Cilium networking/security docs
+- `cilium_query` - Query Cilium networking/security documentation
 - `talos_query` - Query Talos Linux documentation
 - `meteora_query` - Query Meteora DEX documentation
 - `raydium_query` - Query Raydium DEX documentation
-- `solana_query` - Query Solana blockchain docs
 - `ebpf_query` - Query eBPF documentation
 - `rust_best_practices_query` - Query Rust best practices guide
+
+#### Tool Requirements
+- **Type-specific naming**: Clear indication of available documentation
+- **Semantic search**: Vector similarity search with embeddings
+- **Metadata filtering**: Use JSONB metadata for refined results
+- **Response formatting**: Structured responses with source attribution
 
 ### 2. Management Tools (Rust Only)
 
 Only Rust crates support dynamic management via MCP:
-- `add_rust_crate` - Add new Rust crate
-- `remove_rust_crate` - Remove Rust crate
-- `list_rust_crates` - List available crates
-- `check_rust_status` - Check population status
+- `add_rust_crate` - Add new Rust crate with automatic documentation extraction
+- `remove_rust_crate` - Remove Rust crate and associated documentation
+- `list_rust_crates` - List available crates with status information
+- `check_rust_status` - Check population status and health of Rust documentation
 
-### 3. Connection Reliability
+### 3. Connection Reliability (Priority)
 
-- SSE heartbeat every 30 seconds
-- Connection timeout detection at 90 seconds
-- Automatic reconnection with exponential backoff
-- Message buffering during disconnection
-- Enhanced health monitoring endpoints
+#### Current State
+- Basic HTTP/SSE server implementation
+- Health check endpoint functional
+- Cursor MCP integration working
+
+#### Required Implementation
+- **SSE Keep-Alive**: Heartbeat messages every 30 seconds
+- **Timeout Detection**: Connection timeout detection at 90 seconds
+- **Auto-Reconnection**: Client-side reconnection with exponential backoff
+- **Message Buffering**: Buffer messages during disconnection periods
+- **Health Monitoring**: Enhanced health endpoints for system monitoring
 
 ### 4. Data Management
 
-- Preserve all existing Rust documentation
-- Harmonized schema supporting multiple doc types
-- JSONB metadata for type-specific information
-- Unified search across all documentation types
+#### Current Implementation
+- ✅ Harmonized schema supporting multiple documentation types
+- ✅ JSONB metadata for type-specific information
+- ✅ OpenAI text-embedding-3-large embeddings (3072 dimensions)
+- ✅ Complete migration from original Rust-only schema
+
+#### Required Enhancements
+- **Batch Processing**: OpenAI API batching for cost optimization
+- **Rate Limiting**: Compliance with OpenAI rate limits (3000 RPM / 1M TPM)
+- **Vector Indexing**: Optimize search performance as data grows
+- **Cross-Type Search**: Unified search across all documentation types
 
 ## Technical Requirements
 
-### Database Schema
+### Database Schema (Implemented)
 
 ```sql
--- Primary tables
-documents (
-    doc_type: VARCHAR(50) -- specific type identifier
-    source_name: VARCHAR(255)
-    doc_path: TEXT
-    content: TEXT
-    metadata: JSONB
-    embedding: vector(3072)
-)
+-- Primary documents table (implemented)
+CREATE TABLE documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN (
+        'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
+        'meteora', 'solana', 'ebpf', 'raydium', 'rust_best_practices'
+    )),
+    source_name VARCHAR(255) NOT NULL,
+    doc_path TEXT NOT NULL,
+    content TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    embedding vector(3072), -- OpenAI text-embedding-3-large
+    token_count INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(doc_type, source_name, doc_path)
+);
 
-document_sources (
-    doc_type: VARCHAR(50)
-    source_name: VARCHAR(255)
-    config: JSONB
-    enabled: BOOLEAN
-)
+-- Source configuration table (implemented)
+CREATE TABLE document_sources (
+    id SERIAL PRIMARY KEY,
+    doc_type VARCHAR(50) NOT NULL,
+    source_name VARCHAR(255) NOT NULL,
+    config JSONB NOT NULL DEFAULT '{}',
+    enabled BOOLEAN DEFAULT true,
+    last_checked TIMESTAMPTZ,
+    last_populated TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(doc_type, source_name)
+);
 ```
 
 ### Performance Requirements
 
-- Query response time < 2 seconds
-- Support 100+ concurrent connections
-- Batch embedding processing (100 items/request)
-- Rate limiting: 3000 RPM / 1M TPM
+#### Current Performance
+- Query response time: ~2-3 seconds (no vector index due to dimension limits)
+- Concurrent connections: Tested with basic load
+- Memory usage: Moderate with current dataset
+
+#### Target Performance
+- **Query Response**: < 2 seconds for semantic search
+- **Concurrent Connections**: Support 100+ simultaneous connections
+- **Batch Processing**: 100 embeddings per OpenAI request
+- **Rate Limiting**: Compliant with OpenAI limits (3000 RPM / 1M TPM)
+- **Uptime**: 99.9% availability target
 
 ### Integration Requirements
 
-- Toolman as primary client
-- MCP protocol compliance
-- PostgreSQL with pgvector
-- OpenAI API for embeddings/LLM
+#### Current Integrations
+- ✅ **Toolman**: Primary client with HTTP/SSE transport
+- ✅ **Cursor**: MCP integration working
+- ✅ **PostgreSQL**: Database with pgvector extension
+- ✅ **OpenAI**: Embedding generation and LLM queries
 
-## Non-Functional Requirements
-
-### Scalability
-- Support for 100,000+ documents per type
-- Horizontal scaling capability
-- Efficient vector indexing
-
-### Reliability
-- 99.9% uptime target
-- Graceful degradation on failures
-- Comprehensive error handling
-
-### Security
-- API key management
-- Database connection encryption
-- No sensitive data in logs
-
-### Maintainability
-- Clear separation between doc types
-- Extensible loader architecture
-- Comprehensive logging and monitoring
+#### Required Enhancements
+- **Docker**: Production-ready containerization
+- **Monitoring**: Health checks and system metrics
+- **Logging**: Structured logging with tracing
+- **Error Handling**: Comprehensive error recovery
 
 ## Implementation Priorities
 
-### Phase 1: Foundation (Week 1-2)
-1. Database migration to `docs`
-2. Harmonized schema implementation
-3. Preserve existing Rust documentation
+### Phase 1: System Evaluation (Week 1)
+**Priority**: Immediate (Task 35)
+- Comprehensive system assessment by new implementation agent
+- Verify all completed functionality
+- Test development environment and Docker setup
+- Validate database restoration and query tools
+- Document current state and identify gaps
 
-### Phase 2: Reliability (Week 3)
-1. SSE keep-alive implementation
-2. Connection recovery mechanisms
-3. Health monitoring improvements
+### Phase 2: Connection Reliability (Week 2)
+**Priority**: High (Task 17)
+- Implement SSE keep-alive mechanism
+- Add connection timeout detection and recovery
+- Enhance health monitoring endpoints
+- Test with Toolman under various network conditions
 
-### Phase 3: Query Tools (Week 4-5)
-1. Implement all 10 query tools
-2. Update tool naming conventions
-3. Integration testing with Toolman
+### Phase 3: Query Tool Implementation (Week 3-4)
+**Priority**: Medium (Tasks 20-25)
+- Implement `birdeye_query` and `solana_query` tools
+- Complete Rust crate management tools
+- Add remaining query tools for all documentation types
+- Integration testing with Cursor and Toolman
 
-### Phase 4: Optimization (Week 6)
-1. OpenAI batch processing
-2. Performance tuning
-3. Cost optimization
+### Phase 4: Optimization (Week 5-6)
+**Priority**: Medium (Tasks 21, 28, 29)
+- OpenAI batch processing implementation
+- Rate limiting and API protection
+- Performance optimization and scaling
+- Documentation ingestion pipeline automation
+
+### Phase 5: Advanced Features (Week 7+)
+**Priority**: Low (Tasks 26, 30)
+- Unified search across all documentation types
+- Comprehensive integration testing
+- Production deployment preparation
+- Monitoring and alerting implementation
 
 ## Success Criteria
 
-1. All 40 existing Rust crates remain searchable
-2. Zero data loss during migration
-3. 90% reduction in connection timeouts
-4. 70% cost reduction via batching
-5. Support for all 10 documentation types
-6. Query performance ≤ 10% degradation
+### Completed Milestones ✅
+1. ✅ All 40 existing Rust crates remain searchable after migration
+2. ✅ Zero data loss during schema migration
+3. ✅ Working MCP server with HTTP/SSE transport
+4. ✅ Development environment with one-command setup
+5. ✅ BirdEye and Solana documentation successfully ingested
+
+### Remaining Success Criteria
+1. **Connection Reliability**: 90% reduction in connection timeouts
+2. **Cost Optimization**: 70% cost reduction via OpenAI batching
+3. **Query Tools**: All 10 documentation types with working query tools
+4. **Performance**: Query performance within 10% of original system
+5. **Integration**: Stable Toolman integration under production load
 
 ## Constraints
 
-1. Must maintain backward compatibility for Rust queries
-2. Database must be renamed from `rust_docs_vectors` to `docs`
-3. Only Rust crates support dynamic addition via MCP
-4. Other doc types require custom ingestion processes
-5. Tool names must be specific, not generic
+### Technical Constraints
+1. **Database**: Must maintain PostgreSQL with pgvector for embeddings
+2. **Embeddings**: OpenAI text-embedding-3-large (3072 dimensions)
+3. **Vector Index**: No pgvector index due to 2000-dimension limit
+4. **Dynamic Management**: Only Rust crates support MCP-based management
+5. **Tool Naming**: Must use specific names, not generic terms
+
+### Business Constraints
+1. **Backward Compatibility**: Existing Rust functionality must be preserved
+2. **Data Migration**: No data loss during any future schema changes
+3. **Cost Management**: Optimize OpenAI API usage through batching
+4. **Development Speed**: Prioritize connection reliability over new features
 
 ## Dependencies
 
-- PostgreSQL with pgvector extension
-- OpenAI API access
-- Toolman for primary integration
-- Documentation sources for each type
+### Current Dependencies ✅
+- ✅ PostgreSQL with pgvector extension
+- ✅ OpenAI API access and authentication
+- ✅ Docker and Docker Compose for development
+- ✅ Rust toolchain and cargo workspace
 
-## Risks
+### Additional Requirements
+- Toolman deployment for production testing
+- Monitoring infrastructure for production deployment
+- CI/CD pipeline for automated testing and deployment
 
-1. **Migration Risk**: Data loss during schema migration
-   - Mitigation: Comprehensive backup strategy
-   
-2. **Performance Risk**: Slower queries with more data
-   - Mitigation: Optimized indexing strategies
-   
-3. **Integration Risk**: Toolman compatibility issues
-   - Mitigation: Extensive testing with keep-alive
+## Risks and Mitigation
+
+### Technical Risks
+
+1. **Connection Stability Risk**
+   - **Risk**: Continued timeout issues with Toolman
+   - **Mitigation**: Priority implementation of SSE keep-alive (Task 17)
+   - **Status**: High priority for Phase 2
+
+2. **Performance Risk**
+   - **Risk**: Slower queries without vector indexing
+   - **Mitigation**: Optimize query patterns and consider alternative indexing
+   - **Status**: Monitor and optimize in Phase 4
+
+3. **Cost Risk**
+   - **Risk**: High OpenAI API costs without batching
+   - **Mitigation**: Implement batch processing for 70% cost reduction
+   - **Status**: Planned for Phase 4
+
+### Business Risks
+
+1. **Integration Risk**
+   - **Risk**: Breaking changes affecting Toolman compatibility
+   - **Mitigation**: Extensive testing with each change
+   - **Status**: Continuous monitoring required
+
+2. **Data Risk**
+   - **Risk**: Data loss during future schema modifications
+   - **Mitigation**: Comprehensive backup strategy and staging environment
+   - **Status**: Database dump created for preservation
 
 ## Future Considerations
 
-- Additional documentation types can be added
-- Vector search optimization as data grows
-- Multi-language support potential
-- Cross-documentation linking capabilities
+### Extensibility
+- Architecture supports addition of new documentation types
+- Loader pattern allows custom ingestion for various formats
+- JSONB metadata provides flexibility for type-specific data
+
+### Scalability
+- Horizontal scaling capability with proper load balancing
+- Vector search optimization as dataset grows
+- Caching layer for frequently accessed content
+
+### Advanced Features
+- Cross-documentation linking and relationships
+- Multi-language support for international documentation
+- Real-time documentation updates and synchronization
+- Advanced query features (filtering, faceting, aggregation)
+
+## Definition of Done
+
+### For Each Query Tool
+- [ ] Tool implemented and registered in MCP server
+- [ ] Semantic search working with vector embeddings
+- [ ] Metadata filtering and result ranking
+- [ ] Integration tested with Cursor
+- [ ] Performance benchmarked and optimized
+- [ ] Documentation and examples provided
+
+### For System Reliability
+- [ ] SSE keep-alive implemented and tested
+- [ ] Connection recovery working under network stress
+- [ ] Health monitoring providing detailed system status
+- [ ] Error handling graceful and informative
+- [ ] Load testing completed with 100+ concurrent connections
+
+### For Production Readiness
+- [ ] Docker containers optimized for production
+- [ ] Monitoring and alerting configured
+- [ ] Security review completed
+- [ ] Performance benchmarks documented
+- [ ] Deployment automation working
+- [ ] Backup and recovery procedures tested

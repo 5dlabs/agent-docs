@@ -12,6 +12,9 @@ members = [
 [workspace.dependencies]
 # Async runtime
 tokio = { version = "1.40", features = ["full"] }
+async-trait = "0.1"
+async-stream = "0.3"
+futures = "0.3"
 
 # Database and ORM
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }

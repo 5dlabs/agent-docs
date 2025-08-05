@@ -16,8 +16,8 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/*/Cargo.toml ./crates/*/
 
 # Create dummy source files to build dependencies
-RUN mkdir -p src/bin crates/database/src crates/mcp/src crates/embeddings/src crates/doc-loader/src crates/llm/src
-RUN echo "fn main() {}" > src/bin/http_server.rs
+RUN mkdir -p crates/database/src crates/mcp/src crates/embeddings/src crates/doc-loader/src crates/llm/src crates/mcp/src/bin
+RUN echo "fn main() {}" > crates/mcp/src/bin/http_server.rs
 RUN echo "pub fn placeholder() {}" > crates/database/src/lib.rs
 RUN echo "pub fn placeholder() {}" > crates/mcp/src/lib.rs  
 RUN echo "pub fn placeholder() {}" > crates/embeddings/src/lib.rs
@@ -25,18 +25,17 @@ RUN echo "pub fn placeholder() {}" > crates/doc-loader/src/lib.rs
 RUN echo "pub fn placeholder() {}" > crates/llm/src/lib.rs
 
 # Build dependencies only
-RUN cargo build --release --bin http_server
+RUN cargo build --release --bin http_server -p doc-server-mcp
 
 # Remove dummy source files
-RUN rm -rf src crates/*/src
+RUN rm -rf crates/*/src
 
 # Copy actual source code
-COPY src/ src/
 COPY crates/ crates/
 
 # Build the application
-RUN touch src/bin/http_server.rs crates/*/src/lib.rs && \
-    cargo build --release --bin http_server
+RUN touch crates/mcp/src/bin/http_server.rs crates/*/src/lib.rs && \
+    cargo build --release --bin http_server -p doc-server-mcp
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -46,6 +45,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -64,15 +64,15 @@ RUN chown -R docserver:docserver /app
 USER docserver
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+    CMD curl -f http://localhost:3001/health || exit 1
 
 # Set default environment variables
 ENV RUST_LOG=info,doc_server=debug
-ENV PORT=3000
+ENV PORT=3001
 
 # Run the application
 CMD ["http_server"]

@@ -1,0 +1,117 @@
+# Task ID: 19
+# Title: Docker Development Environment Setup
+# Status: review
+# Dependencies: 1, 14
+# Priority: medium
+# Description: Create a comprehensive Docker Compose development environment with PostgreSQL (pgvector), development scripts, and production-ready configurations for the MCP server, including proper database initialization and environment management.
+# Details:
+1. Docker Compose Configuration:
+   - Create docker-compose.yml using v2 syntax
+   - Configure PostgreSQL 15+ with pgvector extension
+   - Set custom port 5433 to avoid conflicts
+   - Configure volume mounts for data persistence
+   - Set up proper networking between services
+
+2. Database Initialization:
+   - Create init.sql script for database setup
+   - Configure user creation with proper permissions
+   - Initialize required extensions (pgvector)
+   - Set up initial schema based on Task 16's harmonized structure
+   - Implement health checks
+
+3. Development Scripts:
+   - Create dev.sh script with functions:
+     * Environment validation
+     * Docker health checks
+     * Database migration handling
+     * Service startup orchestration
+   - Create stop.sh for graceful shutdown
+   - Add logs.sh for consolidated logging
+
+4. Production Dockerfile:
+   - Multi-stage build for MCP server
+   - Optimize layer caching
+   - Implement security best practices
+   - Configure proper user permissions
+   - Set up health checks
+   - Optimize image size
+
+5. Environment Management:
+   - Create .env.example template
+   - Document all required variables
+   - Implement validation for required values
+   - Set up separate production/development configs
+   - Add secure secret management
+
+6. Documentation:
+   - Write clear setup instructions
+   - Document all environment variables
+   - Add troubleshooting guide
+   - Include production deployment notes
+   - Document backup/restore procedures
+<info added on 2025-08-05T19:25:04.524Z>
+7. Implementation Status and Validation Requirements:
+   - Infrastructure components created and configured:
+     * Docker Compose configurations (docker-compose.yml, docker-compose.dev.yml)
+     * Production Dockerfile with multi-stage build
+     * Development scripts (dev.sh, stop.sh)
+     * Database initialization scripts
+     * 67MB database dump for restoration
+     * DEV_SETUP.md documentation
+
+   - Known Issues:
+     * Port conflicts with local PostgreSQL instances
+     * Environment variable conflicts between shell and .env
+     * Database connection stability issues
+     * Incomplete end-to-end workflow validation
+
+   - Required Validation Steps:
+     * Complete ./scripts/dev.sh --with-data workflow from clean state
+     * Database dump restoration process
+     * MCP server startup with populated database
+     * Docker environment and MCP server integration
+     * Port configuration and connection stability testing
+
+   - Final Acceptance Criteria:
+     * Successful clean environment setup on new system
+     * Working ./scripts/dev.sh --with-data end-to-end flow
+     * Verified database dump restoration
+     * Functional MCP server with restored data
+     * Stable port configurations and connections
+</info added on 2025-08-05T19:25:04.524Z>
+
+# Test Strategy:
+1. Development Environment Testing:
+   - Verify clean installation on fresh system
+   - Test database initialization and schema creation
+   - Validate pgvector extension functionality
+   - Confirm port configuration and accessibility
+   - Test volume persistence across restarts
+
+2. Script Validation:
+   - Test dev.sh script on multiple platforms
+   - Verify stop.sh graceful shutdown
+   - Validate error handling in scripts
+   - Test concurrent service startup
+   - Verify logging functionality
+
+3. Database Configuration:
+   - Validate user permissions
+   - Test database connections
+   - Verify schema initialization
+   - Confirm backup/restore procedures
+   - Test migration scripts
+
+4. Production Setup:
+   - Build production Docker image
+   - Validate multi-stage build optimization
+   - Test security configurations
+   - Verify resource constraints
+   - Validate environment variable handling
+
+5. Integration Testing:
+   - Test compatibility with existing services
+   - Verify network connectivity
+   - Validate service discovery
+   - Test with sample workload
+   - Verify monitoring integration

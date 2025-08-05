@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": 16,
+        "id": 1,
         "title": "Database Migration and Schema Harmonization",
         "description": "Migrate the existing PostgreSQL database from 'rust_docs_vectors' to 'docs' with a harmonized schema supporting multiple documentation types.",
         "details": "1. Create a backup of the existing 'rust_docs_vectors' database\n2. Create new 'docs' database with pgvector extension\n3. Implement the harmonized schema with the following tables:\n   - documents (id, doc_type, source_name, doc_path, content, metadata, embedding)\n   - document_sources (id, doc_type, source_name, config, enabled)\n4. Migrate existing Rust documentation data to the new schema\n5. Verify data integrity after migration\n6. Update connection strings in application code\n\nTechnologies:\n- PostgreSQL 15+ with pgvector 0.5.0+\n- Use pg_dump/pg_restore for safe migration\n- Implement JSONB for metadata to support type-specific information\n- Use vector(3072) for OpenAI embeddings compatibility\n- Add appropriate indexes for performance optimization\n<info added on 2025-08-03T16:43:50.386Z>\n## Updated Implementation Approach\n\nInstead of the original sequential approach, we will implement a parallel development strategy:\n\n1. Create new `docs` database with harmonized schema first (documents + document_sources tables)\n2. Verify schema supports all planned documentation types (Rust, Python, JavaScript, etc.)\n3. Migrate existing 40 Rust crates from `rust_docs_vectors` to new schema\n4. Validate data integrity and search functionality with migrated data\n5. Update application to use new database\n\nThis approach provides immediate access to working data while building new features, allowing for faster development and testing cycles. The harmonized schema will be implemented from the start, with existing Rust documentation serving as the initial data set to validate functionality.\n</info added on 2025-08-03T16:43:50.386Z>\n<info added on 2025-08-03T16:47:30.977Z>\n## Migration Completion Report\n\n### Successfully Completed Database Creation and Migration\n\n**New harmonized database created:**\n- `docs` database with pgvector extension enabled\n- Documents table supporting all 10 planned doc_types (rust, jupyter, birdeye, cilium, talos, meteora, raydium, solana, ebpf, rust_best_practices)\n- Document_sources table for source configuration\n- Proper JSONB metadata support for type-specific data\n\n**Migration completed:**\n- 40 Rust crates migrated from `rust_docs_vectors` to new schema\n- 4,133 documents with embeddings successfully transferred\n- All documents have 3072-dimensional OpenAI embeddings (text-embedding-3-large)\n- Vector similarity search verified working (no index due to pgvector 2000-dim limit, following reference WIP implementation)\n\n**Database ready for:**\n- New MCP tools implementation \n- Additional documentation type ingestion\n- Full application integration\n\nNext steps: Implement actual MCP server functionality and query tools.\n</info added on 2025-08-03T16:47:30.977Z>",
@@ -13,7 +13,7 @@
         "subtasks": []
       },
       {
-        "id": 17,
+        "id": 2,
         "title": "SSE Keep-Alive Implementation",
         "description": "Implement Server-Sent Events (SSE) heartbeat mechanism to maintain stable connections with Toolman and prevent timeouts.",
         "details": "1. Implement SSE endpoint with heartbeat functionality\n2. Configure heartbeat interval to 30 seconds\n3. Add connection timeout detection at 90 seconds\n4. Implement client-side reconnection with exponential backoff\n   - Initial retry: 1 second\n   - Max retry: 60 seconds\n   - Jitter: 0-500ms\n5. Add message buffering during disconnection periods\n6. Implement connection status tracking\n\nTechnologies:\n- Use EventSource API for client-side SSE handling\n- Implement with appropriate HTTP headers:\n  - 'Content-Type: text/event-stream'\n  - 'Cache-Control: no-cache'\n  - 'Connection: keep-alive'\n- Use Redis 7.0+ for message buffering (optional)\n- Implement using async/await patterns for efficient connection handling",
@@ -24,198 +24,230 @@
         "subtasks": []
       },
       {
-        "id": 18,
+        "id": 3,
         "title": "Health Monitoring and Diagnostics",
         "description": "Enhance health monitoring endpoints to provide detailed system status and diagnostics for the documentation server.",
         "details": "1. Implement comprehensive health check endpoint (/health)\n2. Add detailed status endpoint with component-level health (/status)\n3. Implement metrics collection for:\n   - Query response times\n   - Connection counts\n   - Database performance\n   - OpenAI API usage\n4. Add logging for critical operations with appropriate log levels\n5. Implement circuit breakers for external dependencies\n6. Create dashboard for monitoring system health\n\nTechnologies:\n- Prometheus 2.40+ for metrics collection\n- Grafana 9.3+ for visualization\n- Use structured logging (JSON format)\n- Implement health checks using standard HTTP status codes\n- Use Hystrix or similar for circuit breaking\n- Consider OpenTelemetry 1.0+ for distributed tracing",
         "testStrategy": "1. Verify health endpoints return correct status under various conditions\n2. Test circuit breakers by simulating dependency failures\n3. Validate metrics collection accuracy\n4. Verify logs contain appropriate information for troubleshooting\n5. Test dashboard functionality with simulated load\n6. Verify alerts trigger appropriately on failure conditions",
         "priority": "medium",
         "dependencies": [
-          17
+          2
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 19,
+        "id": 4,
         "title": "Rust Query Tool Implementation",
         "description": "Implement the 'rust_query' tool for querying Rust crate documentation, ensuring backward compatibility with existing functionality.",
         "details": "1. Create 'rust_query' MCP tool implementation\n2. Ensure backward compatibility with existing query patterns\n3. Update to use the new harmonized schema\n4. Implement semantic search using pgvector\n5. Add result ranking and relevance scoring\n6. Optimize query performance\n\nTechnologies:\n- pgvector with HNSW indexing for efficient vector search\n- OpenAI text-embedding-ada-002 model for embeddings\n- SQL query with vector similarity search (cosine distance)\n- Implement proper error handling and validation\n- Use prepared statements for SQL injection prevention\n- Consider caching frequent queries with Redis",
         "testStrategy": "1. Compare query results with existing implementation\n2. Benchmark query performance against baseline\n3. Test with various query complexities\n4. Verify error handling for edge cases\n5. Test with all 40 existing Rust crates\n6. Validate response format matches MCP requirements",
         "priority": "high",
         "dependencies": [
-          16
+          1
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up HTTP MCP Server Foundation",
+            "description": "Create the basic HTTP MCP server using the existing reference implementation",
+            "details": "- Use src/bin/http_server.rs as starting point\n- Set up proper async HTTP handling with SSE transport\n- Configure CORS for Toolman connectivity\n- Implement basic health check endpoint\n- Set up logging and error handling",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 19
+          },
+          {
+            "id": 2,
+            "title": "Implement Database Connection Layer",
+            "description": "Set up the database connection and query functionality",
+            "details": "- Implement connection pooling with SQLx\n- Set up pgvector integration for vector searches\n- Create query builders for semantic search\n- Implement proper connection management and error handling\n- Add database health checks",
+            "status": "done",
+            "dependencies": [
+              "4.1"
+            ],
+            "parentTaskId": 19
+          },
+          {
+            "id": 3,
+            "title": "Implement rust_query MCP Tool",
+            "description": "Create the rust_query tool for semantic search of Rust documentation",
+            "details": "- Implement MCP tool definition for rust_query\n- Add OpenAI embedding generation for user queries\n- Implement vector similarity search with pgvector\n- Add result ranking and relevance scoring\n- Format results according to MCP standards\n- Add proper input validation and error handling",
+            "status": "done",
+            "dependencies": [
+              "4.2"
+            ],
+            "parentTaskId": 19
+          }
+        ]
       },
       {
-        "id": 20,
+        "id": 5,
         "title": "Rust Crate Management Tools",
         "description": "Implement the management tools for Rust crates: add_rust_crate, remove_rust_crate, list_rust_crates, and check_rust_status.",
         "details": "1. Implement 'add_rust_crate' tool for adding new Rust crates\n   - Accept crate name and version parameters\n   - Fetch documentation from docs.rs\n   - Process and embed documentation content\n   - Store in the database\n2. Implement 'remove_rust_crate' tool\n   - Safely remove crate data without affecting other documentation\n3. Implement 'list_rust_crates' tool\n   - Return formatted list of available crates with versions\n4. Implement 'check_rust_status' tool\n   - Show processing status for crates being added\n\nTechnologies:\n- Use reqwest 0.11+ for HTTP requests to docs.rs\n- Implement async processing for embedding generation\n- Use OpenAI embeddings API with batching\n- Implement proper transaction handling for database operations\n- Use background job processing for long-running tasks\n- Consider tokio 1.25+ for async runtime",
         "testStrategy": "1. Test adding various crates of different sizes\n2. Verify removal doesn't affect other documentation\n3. Test listing functionality with different filter parameters\n4. Verify status reporting accuracy during processing\n5. Test concurrent operations for race conditions\n6. Validate error handling for network issues and API limits",
         "priority": "medium",
         "dependencies": [
-          16,
-          19
+          1,
+          4
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 21,
+        "id": 6,
         "title": "OpenAI Batch Processing Implementation",
         "description": "Implement batched processing for OpenAI API calls to reduce costs and improve efficiency for embedding generation.",
         "details": "1. Create a batching service for OpenAI API calls\n2. Implement queue for collecting embedding requests\n3. Process in batches of 100 items per request (OpenAI's optimal batch size)\n4. Add timeout mechanism to process partial batches\n5. Implement retry logic with exponential backoff\n6. Add monitoring for cost tracking\n\nTechnologies:\n- OpenAI API with text-embedding-ada-002 model\n- Use async/await for non-blocking batch processing\n- Implement Redis or similar for distributed queue\n- Use backoff library for retry logic\n- Consider implementing token counting to optimize batch sizes\n- Use tiktoken library for accurate token counting",
         "testStrategy": "1. Verify cost reduction meets 70% target\n2. Test with various batch sizes to confirm optimal performance\n3. Validate retry logic under API failure conditions\n4. Test timeout mechanism for partial batches\n5. Verify embedding quality is maintained\n6. Benchmark processing throughput under load",
         "priority": "high",
         "dependencies": [
-          16
+          1
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 22,
+        "id": 7,
         "title": "Jupyter Query Tool Implementation",
         "description": "Implement the 'jupyter_query' tool for searching and retrieving information from Jupyter notebook documentation.",
         "details": "1. Create 'jupyter_query' MCP tool implementation\n2. Develop Jupyter notebook parser to extract content and metadata\n3. Process code cells, markdown cells, and outputs separately\n4. Generate embeddings for notebook content\n5. Implement semantic search functionality\n6. Add result formatting specific to notebook structure\n\nTechnologies:\n- nbformat 5.7+ for parsing Jupyter notebooks\n- Consider jupytext for additional format support\n- Store cell types and metadata in JSONB for flexible querying\n- Use OpenAI embeddings with appropriate chunking strategy\n- Implement syntax highlighting for code cells in results\n- Consider markdown rendering for presentation",
         "testStrategy": "1. Test with various notebook formats and versions\n2. Verify parsing accuracy for complex notebooks\n3. Test search relevance with different query types\n4. Validate handling of code vs. markdown content\n5. Test with notebooks containing various programming languages\n6. Verify result formatting maintains notebook structure",
         "priority": "medium",
         "dependencies": [
-          16,
-          21
+          1,
+          6
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 23,
+        "id": 8,
         "title": "Blockchain Documentation Query Tools",
         "description": "Implement query tools for blockchain documentation: solana_query, birdeye_query, meteora_query, and raydium_query.",
         "details": "1. Create parsers for each blockchain documentation type\n2. Implement 'solana_query' for Solana blockchain documentation\n   - Parse Solana docs with special handling for code examples and APIs\n3. Implement 'birdeye_query' for BirdEye blockchain API docs\n   - Focus on API endpoint documentation and parameters\n4. Implement 'meteora_query' for Meteora DEX documentation\n   - Include liquidity pool and trading functionality\n5. Implement 'raydium_query' for Raydium DEX documentation\n   - Parse AMM and farming documentation\n\nTechnologies:\n- Use specialized parsers for each documentation format\n- Store blockchain-specific metadata in JSONB fields\n- Implement context-aware chunking for blockchain terminology\n- Consider domain-specific embeddings fine-tuning\n- Use pgvector's HNSW index for efficient similarity search\n- Implement terminology normalization across platforms",
         "testStrategy": "1. Test with domain-specific queries for each blockchain platform\n2. Verify technical accuracy of returned information\n3. Test cross-referencing between different blockchain docs\n4. Validate handling of blockchain-specific terminology\n5. Test with both beginner and advanced technical queries\n6. Verify API documentation is correctly parsed and searchable",
         "priority": "medium",
         "dependencies": [
-          16,
-          21
+          1,
+          6
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 24,
+        "id": 9,
         "title": "Infrastructure Documentation Query Tools",
         "description": "Implement query tools for infrastructure documentation: cilium_query, talos_query, and ebpf_query.",
         "details": "1. Create parsers for each infrastructure documentation type\n2. Implement 'cilium_query' for Cilium networking/security docs\n   - Parse Kubernetes network policy documentation\n   - Handle Cilium-specific networking concepts\n3. Implement 'talos_query' for Talos Linux documentation\n   - Focus on system configuration and Kubernetes integration\n4. Implement 'ebpf_query' for eBPF documentation\n   - Parse low-level kernel and tracing documentation\n   - Handle code examples and performance considerations\n\nTechnologies:\n- Use specialized parsers for each documentation format\n- Store infrastructure-specific metadata in JSONB fields\n- Implement context-aware chunking for technical terminology\n- Consider domain-specific embeddings fine-tuning\n- Use pgvector's HNSW index for efficient similarity search\n- Implement terminology normalization across platforms",
         "testStrategy": "1. Test with domain-specific queries for each infrastructure platform\n2. Verify technical accuracy of returned information\n3. Test cross-referencing between different infrastructure docs\n4. Validate handling of infrastructure-specific terminology\n5. Test with both beginner and advanced technical queries\n6. Verify command syntax and configuration examples are correctly parsed",
         "priority": "medium",
         "dependencies": [
-          16,
-          21
+          1,
+          6
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 25,
+        "id": 10,
         "title": "Rust Best Practices Query Tool",
         "description": "Implement the 'rust_best_practices_query' tool for searching and retrieving information from Rust best practices guides.",
         "details": "1. Create 'rust_best_practices_query' MCP tool implementation\n2. Develop parser for Rust best practices documentation\n3. Categorize content by topic (performance, safety, idioms, etc.)\n4. Generate embeddings with appropriate context\n5. Implement semantic search with category filtering\n6. Add result formatting with code examples\n\nTechnologies:\n- Parse from authoritative sources (Rust Book, Rust by Example, etc.)\n- Store categorization metadata in JSONB for flexible querying\n- Use OpenAI embeddings with appropriate chunking strategy\n- Implement syntax highlighting for code examples\n- Consider implementing citation of sources in results\n- Use vector search with category boosting for better relevance",
         "testStrategy": "1. Test with various best practice queries\n2. Verify accuracy of returned recommendations\n3. Test search relevance with different query types\n4. Validate handling of code examples\n5. Test with queries about controversial practices\n6. Verify results include proper context and explanations",
         "priority": "medium",
         "dependencies": [
-          16,
-          19,
-          21
+          1,
+          4,
+          6
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 26,
+        "id": 11,
         "title": "Unified Search Implementation",
         "description": "Implement a unified search capability across all documentation types while maintaining type-specific querying.",
         "details": "1. Create a unified search interface that can query across all doc types\n2. Implement type filtering and boosting\n3. Develop result ranking algorithm that works across doc types\n4. Add metadata-based filtering options\n5. Implement result deduplication\n6. Create consistent result formatting across types\n\nTechnologies:\n- Use PostgreSQL's full-text search capabilities alongside vector search\n- Implement hybrid retrieval combining BM25 and vector similarity\n- Use query classification to determine intent and doc type relevance\n- Consider implementing Cross-Encoder reranking for better relevance\n- Use metadata filtering with GIN indexes for performance\n- Implement proper result pagination and cursor-based navigation",
         "testStrategy": "1. Test search across multiple documentation types\n2. Verify result relevance across different domains\n3. Test with ambiguous queries that could match multiple doc types\n4. Validate filtering and sorting functionality\n5. Benchmark performance with large result sets\n6. Test deduplication with similar content across doc types",
         "priority": "medium",
         "dependencies": [
-          19,
-          22,
-          23,
-          24,
-          25
+          4,
+          7,
+          8,
+          9,
+          10
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 27,
+        "id": 12,
         "title": "Rate Limiting and API Protection",
         "description": "Implement rate limiting and API protection mechanisms to ensure system stability and prevent abuse.",
         "details": "1. Implement rate limiting at 3000 RPM / 1M TPM as specified\n2. Add per-client rate limiting based on API keys\n3. Implement graduated response to rate limit violations\n4. Add request validation and sanitization\n5. Implement API key management\n6. Add monitoring and alerting for abuse patterns\n\nTechnologies:\n- Use Redis for distributed rate limiting\n- Implement token bucket algorithm for rate control\n- Consider using rate-limiter-flexible library\n- Implement proper HTTP status codes (429 Too Many Requests)\n- Add Retry-After headers for client guidance\n- Use API gateway pattern for centralized protection\n- Consider implementing JWT for authentication",
         "testStrategy": "1. Test rate limiting under various load patterns\n2. Verify correct handling of rate limit violations\n3. Test with simulated abuse patterns\n4. Validate API key management functionality\n5. Test distributed rate limiting across multiple instances\n6. Verify monitoring correctly identifies abuse patterns",
         "priority": "medium",
         "dependencies": [
-          17,
-          18
+          2,
+          3
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 28,
+        "id": 13,
         "title": "Documentation Ingestion Pipeline",
         "description": "Develop a flexible ingestion pipeline for processing and storing documentation from various sources.",
         "details": "1. Create a modular ingestion framework supporting multiple doc types\n2. Implement source-specific fetchers and parsers\n3. Add content normalization and cleaning\n4. Implement chunking strategies appropriate for each doc type\n5. Add metadata extraction and enrichment\n6. Create monitoring for ingestion processes\n\nTechnologies:\n- Implement using a pipeline architecture pattern\n- Use async processing for parallel ingestion\n- Consider Apache Airflow 2.5+ for workflow management\n- Implement proper error handling and retry logic\n- Use content hashing to detect changes\n- Implement incremental updates where possible\n- Consider using LangChain's document loaders for standardization",
         "testStrategy": "1. Test ingestion with various documentation formats\n2. Verify content integrity after processing\n3. Test incremental updates and change detection\n4. Validate error handling and recovery\n5. Benchmark ingestion performance under load\n6. Verify metadata extraction accuracy",
         "priority": "high",
         "dependencies": [
-          16,
-          21
+          1,
+          6
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 29,
+        "id": 14,
         "title": "Performance Optimization and Scaling",
         "description": "Optimize system performance and implement scaling capabilities to handle increased load and data volume.",
         "details": "1. Implement database query optimization\n   - Add appropriate indexes\n   - Optimize vector search parameters\n   - Implement query caching\n2. Add connection pooling and load balancing\n3. Implement horizontal scaling capability\n4. Add performance monitoring and alerting\n5. Optimize memory usage and garbage collection\n6. Implement data partitioning strategy for large collections\n\nTechnologies:\n- Use pgvector's HNSW indexing for faster vector search\n- Implement Redis for query caching\n- Consider PgBouncer for connection pooling\n- Use load balancing with consistent hashing\n- Implement database read replicas where appropriate\n- Consider implementing database sharding for horizontal scaling\n- Use Prometheus and Grafana for performance monitoring",
         "testStrategy": "1. Benchmark query performance under various loads\n2. Test scaling with simulated traffic increases\n3. Verify cache hit rates and effectiveness\n4. Test failover and recovery scenarios\n5. Validate performance with large document collections\n6. Verify system handles 100+ concurrent connections",
         "priority": "medium",
         "dependencies": [
-          16,
-          26,
-          28
+          1,
+          11,
+          13
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 30,
+        "id": 15,
         "title": "Integration Testing and Toolman Compatibility",
         "description": "Perform comprehensive integration testing with Toolman to ensure compatibility and stability.",
         "details": "1. Set up integration testing environment\n2. Implement automated test suite for Toolman integration\n3. Test all query tools with Toolman\n4. Verify SSE keep-alive functionality\n5. Test reconnection and recovery scenarios\n6. Validate response formats and error handling\n\nTechnologies:\n- Use Jest or similar for automated testing\n- Implement mock Toolman client for testing\n- Use Docker Compose for integration test environment\n- Implement CI/CD pipeline for continuous testing\n- Consider implementing contract testing\n- Use Postman or similar for API testing\n- Implement test coverage reporting",
         "testStrategy": "1. Test all MCP tools with Toolman\n2. Verify connection stability over extended periods\n3. Test with simulated network issues\n4. Validate error handling and recovery\n5. Test with high concurrency\n6. Verify all success criteria are met",
         "priority": "high",
         "dependencies": [
-          17,
-          19,
-          20,
-          22,
-          23,
-          24,
-          25,
-          26,
-          27
+          2,
+          4,
+          5,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 31,
+        "id": 16,
         "title": "Initialize Rust Doc Server Project Scaffold and Workspace",
         "description": "Set up the foundational Rust project structure for the Doc Server, including a Cargo workspace, core modules, development tooling, containerization, and documentation.",
         "details": "1. Create a new Git repository and initialize a Cargo workspace with a virtual manifest (Cargo.toml at the root, no [package] section, only [workspace] and members). Follow the flat layout best practice: place all crates (e.g., 'database', 'mcp', 'embeddings') under a 'crates/' directory, each as its own crate with its own Cargo.toml.[1][2][3]\n2. Add initial dependencies to each crate as appropriate (tokio for async runtime, sqlx for database, serde for serialization, dotenvy for env management, tracing for logging, etc.). Use the latest stable versions and specify common dev-dependencies in the workspace-level Cargo.toml where possible.\n3. Establish a basic module structure in each crate (e.g., lib.rs with submodules for core functionality). Stub out main.rs for binaries if needed.\n4. Configure development tooling: add rustfmt.toml and clippy.toml at the root with recommended settings (e.g., enforce formatting, deny warnings). Optionally, set up pre-commit hooks for formatting/linting.\n5. Create a Dockerfile for the main binary crate, using the official Rust image, multi-stage build for smaller images, and install system dependencies for sqlx/postgres. Add a docker-compose.yml for local development, including a PostgreSQL service with pgvector extension enabled.\n6. Add a .env.example file at the root with all required environment variables (database URL, API keys, etc.).\n7. Write a README.md with project overview, workspace structure, setup instructions, and contribution guidelines. Create a 'docs/' directory for future documentation expansion.\n8. Ensure all configuration files (Cargo.toml, Dockerfile, etc.) are well-commented and follow Rust community conventions for maintainability and onboarding.\n\nReferences:\n- https://matklad.github.io/2021/08/22/large-rust-workspaces.html\n- https://earthly.dev/blog/cargo-workspace-crates/\n- https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html\n<info added on 2025-08-03T16:39:14.613Z>\n## Implementation Status Update\n\nThe initial Rust project scaffolding has been successfully completed with all planned components in place:\n\n- Repository structure established with flat workspace layout containing 5 crates: database, mcp, embeddings, doc-loader, and llm\n- HTTP server binary implementation added in src/bin/http_server.rs\n- All crates have proper module structure with stub implementations ensuring successful compilation\n- Development environment fully configured with comprehensive rustfmt and clippy rules\n- Containerization includes both PostgreSQL with pgvector extension and Redis services\n- SQL initialization scripts added in sql/init/ directory\n- Environment configuration covers all required variables including OpenAI API settings\n- Documentation includes MIT license file\n- Project successfully compiles with `cargo check --workspace` with only minor warnings\n\nThe foundation is now ready for implementation of core functionality in the next phase.\n</info added on 2025-08-03T16:39:14.613Z>",
@@ -226,39 +258,78 @@
         "subtasks": []
       },
       {
-        "id": 32,
+        "id": 17,
         "title": "Implement BirdEye API Documentation Ingestion Pipeline",
         "description": "Develop a Python-based ingestion pipeline to extract, parse, and store BirdEye API documentation by scraping their docs pages, extracting embedded JSON, and generating embeddings for harmonized database storage.",
-        "details": "1. Build a Python script (extending the WIP extract_birdeye_json.py) to crawl all relevant BirdEye documentation pages (e.g., https://docs.birdeye.so/ and subpages). 2. Use robust HTML parsing (e.g., BeautifulSoup, lxml) to locate and extract JSON data from data-initial-props attributes, handling dynamic content and edge cases. 3. Parse and normalize the extracted JSON to isolate API endpoint details, parameters, descriptions, and usage examples. 4. Clean and transform the data to fit the harmonized database schema, ensuring doc_type='birdeye' and consistent field mapping. 5. Integrate with the existing embedding generation pipeline (leveraging OpenAI or similar models) to create vector representations for each documentation chunk. 6. Store the processed documentation and embeddings in the database, ensuring idempotency and traceability. 7. Follow best practices for web scraping (respect robots.txt, rate limiting, error handling) and ensure maintainability for future doc structure changes. 8. Prepare the pipeline for future integration with the birdeye_query MCP tool.\n<info added on 2025-08-03T16:57:44.159Z>\n## Progress Update on BirdEye Ingestion Pipeline\n\n9. Significant enhancements to discovery approach:\n   - Successfully improved on WIP script to automatically discover all 59 BirdEye API endpoints (versus 10 hardcoded endpoints in original script)\n   - Implemented intelligent filtering to skip category pages\n   - Added respectful rate limiting with 10-15 second delays between requests\n\n10. Implementation completed:\n    - Created `scripts/ingestion/ingest_birdeye.py` as comprehensive ingestion script\n    - Developed `scripts/run_birdeye_ingestion.sh` helper script with environment checks\n    - Added `scripts/ingestion/requirements.txt` for Python dependencies\n    - Enhanced parsing with BeautifulSoup\n    - Implemented proper async/await patterns for database and OpenAI API interactions\n    - Configured storage in harmonized schema with doc_type='birdeye'\n\n11. Discovery testing successful:\n    - Verified discovery of 59 endpoints across Defi, Token, Wallet, and Search & Utils categories\n    - Pipeline ready to extract embedded JSON from each endpoint page\n\n12. Next step: Execute full ingestion with OpenAI API key to populate database with embeddings.\n</info added on 2025-08-03T16:57:44.159Z>",
+        "details": "1. Build a Python script (extending the WIP extract_birdeye_json.py) to crawl all relevant BirdEye documentation pages (e.g., https://docs.birdeye.so/ and subpages). 2. Use robust HTML parsing (e.g., BeautifulSoup, lxml) to locate and extract JSON data from data-initial-props attributes, handling dynamic content and edge cases. 3. Parse and normalize the extracted JSON to isolate API endpoint details, parameters, descriptions, and usage examples. 4. Clean and transform the data to fit the harmonized database schema, ensuring doc_type='birdeye' and consistent field mapping. 5. Integrate with the existing embedding generation pipeline (leveraging OpenAI or similar models) to create vector representations for each documentation chunk. 6. Store the processed documentation and embeddings in the database, ensuring idempotency and traceability. 7. Follow best practices for web scraping (respect robots.txt, rate limiting, error handling) and ensure maintainability for future doc structure changes. 8. Prepare the pipeline for future integration with the birdeye_query MCP tool.\n<info added on 2025-08-03T16:57:44.159Z>\n## Progress Update on BirdEye Ingestion Pipeline\n\n9. Significant enhancements to discovery approach:\n   - Successfully improved on WIP script to automatically discover all 59 BirdEye API endpoints (versus 10 hardcoded endpoints in original script)\n   - Implemented intelligent filtering to skip category pages\n   - Added respectful rate limiting with 10-15 second delays between requests\n\n10. Implementation completed:\n    - Created `scripts/ingestion/ingest_birdeye.py` as comprehensive ingestion script\n    - Developed `scripts/run_birdeye_ingestion.sh` helper script with environment checks\n    - Added `scripts/ingestion/requirements.txt` for Python dependencies\n    - Enhanced parsing with BeautifulSoup\n    - Implemented proper async/await patterns for database and OpenAI API interactions\n    - Configured storage in harmonized schema with doc_type='birdeye'\n\n11. Discovery testing successful:\n    - Verified discovery of 59 endpoints across Defi, Token, Wallet, and Search & Utils categories\n    - Pipeline ready to extract embedded JSON from each endpoint page\n\n12. Next step: Execute full ingestion with OpenAI API key to populate database with embeddings.\n</info added on 2025-08-03T16:57:44.159Z>\n<info added on 2025-08-05T19:24:22.995Z>\n## Final Implementation Status Update\n\n13. Ingestion Pipeline Completion:\n    - Successfully ingested 600+ BirdEye API endpoints (significantly more than initially discovered)\n    - Generated and stored OpenAI embeddings for all documentation chunks\n    - Verified data storage in docs database with correct schema and metadata\n    - All ingestion pipeline components fully functional and tested\n\n14. Outstanding Validation Requirements:\n    - Query functionality through MCP tools pending verification\n    - Integration with rust_query and other search tools needs testing\n    - Semantic search capabilities with BirdEye documentation require validation\n    - End-to-end testing needed for MCP server tool integration\n    - Query result relevance and accuracy assessment pending\n\n15. Next Steps for Implementation Agent:\n    - Execute comprehensive query testing using ingested BirdEye documentation\n    - Validate semantic search functionality across different query types\n    - Test integration with MCP interface and verify response quality\n    - Ensure BirdEye documentation is discoverable through standard query tools\n    - Document any query-related issues or optimization needs\n</info added on 2025-08-05T19:24:22.995Z>",
         "testStrategy": "1. Run the script against the full set of BirdEye documentation pages and verify all endpoints and sections are ingested. 2. Inspect the database to confirm correct storage of doc_type='birdeye' records with all required fields populated. 3. Validate that embeddings are generated and stored for each documentation chunk. 4. Compare extracted data against the live docs to ensure accuracy and completeness. 5. Test idempotency by re-running the script and confirming no duplicate or corrupted records. 6. Use the WIP script's test endpoints to verify end-to-end extraction and storage. 7. Simulate changes in the docs structure to test parser robustness and error handling. 8. Review logs for scraping errors, rate limit issues, or data mismatches.",
-        "status": "done",
+        "status": "review",
         "dependencies": [
-          21,
-          23
+          6,
+          8
         ],
         "priority": "high",
         "subtasks": []
       },
       {
-        "id": 33,
+        "id": 18,
         "title": "Implement Solana Query Tool",
         "description": "Develop a 'solana_query' tool that leverages the ingested Solana documentation to provide accurate and relevant responses to Solana blockchain queries.",
-        "details": "1. Create a specialized 'solana_query' MCP tool implementation that interfaces with the ingested Solana documentation\n2. Develop query processing logic that understands Solana-specific terminology and concepts\n3. Implement semantic search functionality using the vector embeddings created during ingestion\n4. Add result ranking algorithms optimized for Solana documentation:\n   - Boost consensus documentation for validator-related queries\n   - Prioritize CLI guides for command-line related questions\n   - Weight architecture proposals appropriately for design questions\n5. Implement category-aware filtering to target specific documentation sections based on query intent\n6. Add support for code snippet extraction and formatting from Solana documentation\n7. Implement context preservation to maintain relationships between related concepts\n8. Create response formatting that preserves code blocks, command examples, and technical details\n9. Add citation tracking to reference specific documents in responses\n10. Implement fallback mechanisms for queries without direct matches\n11. Optimize query performance with appropriate indexing strategies\n12. Add logging for query patterns to identify documentation gaps\n\nTechnologies:\n- pgvector with HNSW indexing for efficient vector search\n- SQL query optimization for the 'doc_type=solana' filter\n- Text chunking strategies optimized for Solana's documentation structure\n- Response formatting that preserves markdown code blocks and technical syntax",
+        "details": "1. Create a specialized 'solana_query' MCP tool implementation that interfaces with the ingested Solana documentation\n2. Develop query processing logic that understands Solana-specific terminology and concepts\n3. Implement semantic search functionality using the vector embeddings created during ingestion\n4. Add result ranking algorithms optimized for Solana documentation:\n   - Boost consensus documentation for validator-related queries\n   - Prioritize CLI guides for command-line related questions\n   - Weight architecture proposals appropriately for design questions\n5. Implement category-aware filtering to target specific documentation sections based on query intent\n6. Add support for code snippet extraction and formatting from Solana documentation\n7. Implement context preservation to maintain relationships between related concepts\n8. Create response formatting that preserves code blocks, command examples, and technical details\n9. Add citation tracking to reference specific documents in responses\n10. Implement fallback mechanisms for queries without direct matches\n11. Optimize query performance with appropriate indexing strategies\n12. Add logging for query patterns to identify documentation gaps\n\nTechnologies:\n- pgvector with HNSW indexing for efficient vector search\n- SQL query optimization for the 'doc_type=solana' filter\n- Text chunking strategies optimized for Solana's documentation structure\n- Response formatting that preserves markdown code blocks and technical syntax\n<info added on 2025-08-05T19:24:43.980Z>\nCurrent Status Update:\n- Data ingestion phase completed:\n  * Successfully ingested 400+ Solana documents (markdown, PDFs, architecture diagrams, ZK specs)\n  * Generated and stored OpenAI embeddings for all content\n  * Data properly stored in docs database with doc_type='solana'\n  * Comprehensive documentation coverage achieved\n\nImplementation Status:\n- Core tool implementation not started\n- Required implementation steps:\n  * Create SolanaQueryTool in crates/mcp/src/tools.rs\n  * Add tool registration in crates/mcp/src/handlers.rs\n  * Implement Solana-specific query logic and metadata filtering\n  * Develop MCP integration components\n  * Complete end-to-end testing with Cursor MCP\n\nDependencies:\n- Blocked on completion of tool implementation\n- Data ingestion prerequisites are satisfied\n- Integration with MCP framework pending\n- Testing infrastructure ready but awaiting tool completion\n\nNote: All existing task requirements remain valid but implementation has not begun beyond data preparation. Timeline and resource allocation should be adjusted accordingly.\n</info added on 2025-08-05T19:24:43.980Z>",
         "testStrategy": "1. Test with a comprehensive set of Solana-specific queries covering all documentation categories:\n   - Consensus mechanism questions\n   - Validator setup and operation queries\n   - CLI command usage scenarios\n   - Architecture and design questions\n   - Module-specific technical inquiries\n2. Verify technical accuracy of responses against official Solana documentation\n3. Test edge cases like ambiguous queries that span multiple documentation categories\n4. Validate proper handling of Solana-specific terminology and acronyms\n5. Benchmark query performance with various complexity levels\n6. Test citation accuracy to ensure responses reference the correct source documents\n7. Verify code snippet formatting preserves syntax and structure\n8. Compare query results with existing Solana documentation search tools\n9. Test with both beginner and advanced technical queries to ensure appropriate depth\n10. Validate integration with the MCP framework and response format compliance",
-        "status": "done",
+        "status": "pending",
         "dependencies": [
-          16,
-          21,
-          23,
-          32
+          1,
+          6,
+          8,
+          17
         ],
         "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Docker Development Environment Setup",
+        "description": "Create a comprehensive Docker Compose development environment with PostgreSQL (pgvector), development scripts, and production-ready configurations for the MCP server, including proper database initialization and environment management.",
+        "details": "1. Docker Compose Configuration:\n   - Create docker-compose.yml using v2 syntax\n   - Configure PostgreSQL 15+ with pgvector extension\n   - Set custom port 5433 to avoid conflicts\n   - Configure volume mounts for data persistence\n   - Set up proper networking between services\n\n2. Database Initialization:\n   - Create init.sql script for database setup\n   - Configure user creation with proper permissions\n   - Initialize required extensions (pgvector)\n   - Set up initial schema based on Task 16's harmonized structure\n   - Implement health checks\n\n3. Development Scripts:\n   - Create dev.sh script with functions:\n     * Environment validation\n     * Docker health checks\n     * Database migration handling\n     * Service startup orchestration\n   - Create stop.sh for graceful shutdown\n   - Add logs.sh for consolidated logging\n\n4. Production Dockerfile:\n   - Multi-stage build for MCP server\n   - Optimize layer caching\n   - Implement security best practices\n   - Configure proper user permissions\n   - Set up health checks\n   - Optimize image size\n\n5. Environment Management:\n   - Create .env.example template\n   - Document all required variables\n   - Implement validation for required values\n   - Set up separate production/development configs\n   - Add secure secret management\n\n6. Documentation:\n   - Write clear setup instructions\n   - Document all environment variables\n   - Add troubleshooting guide\n   - Include production deployment notes\n   - Document backup/restore procedures\n<info added on 2025-08-05T19:25:04.524Z>\n7. Implementation Status and Validation Requirements:\n   - Infrastructure components created and configured:\n     * Docker Compose configurations (docker-compose.yml, docker-compose.dev.yml)\n     * Production Dockerfile with multi-stage build\n     * Development scripts (dev.sh, stop.sh)\n     * Database initialization scripts\n     * 67MB database dump for restoration\n     * DEV_SETUP.md documentation\n\n   - Known Issues:\n     * Port conflicts with local PostgreSQL instances\n     * Environment variable conflicts between shell and .env\n     * Database connection stability issues\n     * Incomplete end-to-end workflow validation\n\n   - Required Validation Steps:\n     * Complete ./scripts/dev.sh --with-data workflow from clean state\n     * Database dump restoration process\n     * MCP server startup with populated database\n     * Docker environment and MCP server integration\n     * Port configuration and connection stability testing\n\n   - Final Acceptance Criteria:\n     * Successful clean environment setup on new system\n     * Working ./scripts/dev.sh --with-data end-to-end flow\n     * Verified database dump restoration\n     * Functional MCP server with restored data\n     * Stable port configurations and connections\n</info added on 2025-08-05T19:25:04.524Z>",
+        "testStrategy": "1. Development Environment Testing:\n   - Verify clean installation on fresh system\n   - Test database initialization and schema creation\n   - Validate pgvector extension functionality\n   - Confirm port configuration and accessibility\n   - Test volume persistence across restarts\n\n2. Script Validation:\n   - Test dev.sh script on multiple platforms\n   - Verify stop.sh graceful shutdown\n   - Validate error handling in scripts\n   - Test concurrent service startup\n   - Verify logging functionality\n\n3. Database Configuration:\n   - Validate user permissions\n   - Test database connections\n   - Verify schema initialization\n   - Confirm backup/restore procedures\n   - Test migration scripts\n\n4. Production Setup:\n   - Build production Docker image\n   - Validate multi-stage build optimization\n   - Test security configurations\n   - Verify resource constraints\n   - Validate environment variable handling\n\n5. Integration Testing:\n   - Test compatibility with existing services\n   - Verify network connectivity\n   - Validate service discovery\n   - Test with sample workload\n   - Verify monitoring integration",
+        "status": "review",
+        "dependencies": [
+          1,
+          14
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Project State Evaluation and System Assessment",
+        "description": "Conduct a comprehensive evaluation of the current project state, including system architecture, functionality testing, development environment verification, and documentation assessment to create a detailed handoff report for incoming implementation agents.",
+        "details": "1. System Architecture Review:\n   - Analyze current database schema and data model (docs database)\n   - Review MCP server architecture and components\n   - Document service interactions and dependencies\n   - Evaluate Docker configuration and deployment setup\n\n2. Functionality Testing:\n   - Test MCP server core functionality\n   - Verify rust_query tool operations\n   - Test database operations including vector search\n   - Validate Docker environment functionality\n   - Test Cursor MCP integration\n   - Verify SSE connections and stability\n\n3. Development Environment Verification:\n   - Test Docker Compose setup\n   - Verify PostgreSQL with pgvector functionality\n   - Validate development scripts\n   - Check environment variables and configurations\n   - Test build processes\n\n4. Data State Assessment:\n   - Review ingested documentation sources\n   - Verify documentation accessibility\n   - Test query functionality across doc types\n   - Validate embedding generation\n   - Check data integrity\n\n5. Implementation Gap Analysis:\n   - Review pending vs completed tasks\n   - Identify potential bottlenecks\n   - Document technical debt\n   - List missing features\n   - Note optimization opportunities\n\n6. Codebase Review:\n   - Analyze project structure\n   - Review code quality and patterns\n   - Check test coverage\n   - Evaluate documentation quality\n   - Review Git workflow\n\n7. Create Handoff Documentation:\n   - Document current capabilities\n   - List known limitations\n   - Provide setup instructions\n   - Include troubleshooting guide\n   - Make recommendations for next steps\n<info added on 2025-08-05T19:15:21.603Z>\n8. Database State Verification:\n   - Verify successful restoration of docs_database_dump.sql.gz (67MB compressed, 184MB uncompressed)\n   - Validate completeness of restored data:\n     * 40+ Rust crates documentation\n     * BirdEye API documentation (600+ endpoints)\n     * Solana documentation (400+ docs, PDFs, diagrams)\n     * OpenAI text-embedding-3-large vector embeddings (3072-dimensional)\n     * All metadata and relationships\n   - Test dev.sh script with --with-data flag\n   - Verify automatic database population\n   - Confirm vector search functionality with restored embeddings\n   - Validate documentation accessibility across all sources\n   - Review sql/data/README.md restoration instructions\n   - Check DEV_SETUP.md updates for accuracy\n</info added on 2025-08-05T19:15:21.603Z>",
+        "testStrategy": "1. System Architecture Verification:\n   - Create architecture diagram\n   - Document all service endpoints\n   - Verify all component connections\n   - Test system boundaries\n\n2. Functionality Testing:\n   - Execute comprehensive test suite\n   - Test each query tool individually\n   - Verify database operations\n   - Test with sample queries\n   - Validate response formats\n   - Check error handling\n\n3. Environment Testing:\n   - Perform clean environment setup\n   - Test all development scripts\n   - Verify database initialization\n   - Validate configuration files\n   - Test build process\n\n4. Data Validation:\n   - Query each documentation type\n   - Verify embedding consistency\n   - Check data completeness\n   - Test search functionality\n   - Validate metadata\n\n5. Documentation Review:\n   - Verify README accuracy\n   - Test setup instructions\n   - Review API documentation\n   - Validate code comments\n   - Check deployment guides\n\n6. Integration Testing:\n   - Test Cursor integration\n   - Verify tool interactions\n   - Test concurrent operations\n   - Validate error scenarios\n\n7. Report Validation:\n   - Review with stakeholders\n   - Verify all sections complete\n   - Test recommended solutions\n   - Validate next steps",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "Documentation Consolidation and Cleanup",
+        "description": "Consolidate all project documentation into two essential files (architecture.md and prd.md) while removing duplicate and outdated documentation to provide a clean handoff for the new implementation agent.",
+        "details": "1. Architecture Documentation Consolidation:\n   - Extract and merge architectural decisions from existing documentation\n   - Document current system components and their interactions\n   - Include database schema and data model details\n   - Document service dependencies and integration points\n   - Add deployment architecture and configuration details\n   - Include performance considerations and scaling decisions\n\n2. PRD Documentation Consolidation:\n   - Consolidate current state of the system\n   - Document all implemented features and their status\n   - List pending features and future requirements\n   - Include API specifications and endpoints\n   - Document known limitations and technical debt\n   - Add roadmap and priority considerations\n\n3. Documentation Cleanup Process:\n   - Audit existing documentation in .taskmaster/docs/\n   - Create inventory of all documentation files\n   - Identify duplicate content across files\n   - Mark outdated information for removal\n   - Archive historical documentation for reference\n   - Remove redundant and obsolete files\n\n4. Quality Assurance:\n   - Verify technical accuracy of consolidated documentation\n   - Ensure all critical information is preserved\n   - Validate links and references\n   - Check formatting and structure consistency\n   - Review for completeness and clarity\n\n5. Implementation Considerations:\n   - Use Markdown for consistent formatting\n   - Include table of contents in both files\n   - Add version control information\n   - Document last review/update dates\n   - Include contact information for key stakeholders",
+        "testStrategy": "1. Documentation Completeness Verification:\n   - Compare consolidated files against source documentation\n   - Verify all architectural decisions are captured\n   - Confirm all current features are documented\n   - Validate all requirements are preserved\n   - Check for missing technical specifications\n\n2. Technical Accuracy Testing:\n   - Review architecture.md against actual system implementation\n   - Verify database schema documentation matches production\n   - Validate API endpoint documentation\n   - Test all documented configuration settings\n   - Verify deployment instructions\n\n3. Documentation Cleanup Validation:\n   - Confirm removal of duplicate files\n   - Verify no critical information was lost\n   - Check for broken documentation links\n   - Validate cross-references between files\n   - Ensure no orphaned documentation remains\n\n4. Usability Testing:\n   - Have team members review documentation clarity\n   - Verify documentation searchability\n   - Test navigation and structure\n   - Validate markdown rendering\n   - Check mobile/desktop readability",
+        "status": "done",
+        "dependencies": [
+          13,
+          20
+        ],
+        "priority": "medium",
         "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-08-03T16:22:19.011Z",
-      "updated": "2025-08-03T17:31:11.580Z",
+      "updated": "2025-08-05T19:24:02.817Z",
       "description": "Tasks for master context"
     }
   }

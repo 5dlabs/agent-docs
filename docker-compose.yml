@@ -31,19 +31,15 @@ services:
     environment:
       DATABASE_URL: postgresql://docserver:development_password_change_in_production@postgres:5432/docs
       RUST_LOG: info,doc_server=debug
-      PORT: 3000
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      PORT: 3001
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-dummy-key-for-testing}
     ports:
-      - "3000:3000"
+      - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - doc-server-network
-    volumes:
-      # Mount source for development (optional)
-      - ./src:/app/src:ro
-      - ./crates:/app/crates:ro
     restart: unless-stopped
 
   # Redis for caching (optional future enhancement)

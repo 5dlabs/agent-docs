@@ -22,18 +22,18 @@ pub enum DocType {
 }
 
 /// Main document record
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Document {
     pub id: Uuid,
-    pub doc_type: DocType,
+    pub doc_type: String, // We'll handle the enum conversion manually
     pub source_name: String,
     pub doc_path: String,
     pub content: String,
     pub metadata: serde_json::Value,
     pub embedding: Option<pgvector::Vector>,
     pub token_count: Option<i32>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 /// Document source configuration

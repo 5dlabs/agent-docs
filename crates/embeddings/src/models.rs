@@ -9,9 +9,15 @@ pub struct EmbeddingRequest {
     pub model: String,
 }
 
-/// Embedding response
-#[derive(Debug, Deserialize)]
+/// Embedding response (simplified for internal use)
+#[derive(Debug)]
 pub struct EmbeddingResponse {
+    pub embedding: Vec<f32>,
+}
+
+/// OpenAI API embedding response
+#[derive(Debug, Deserialize)]
+pub struct OpenAIEmbeddingResponse {
     pub data: Vec<EmbeddingData>,
 }
 

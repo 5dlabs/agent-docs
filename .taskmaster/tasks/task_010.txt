@@ -1,0 +1,29 @@
+# Task ID: 10
+# Title: Rust Best Practices Query Tool
+# Status: pending
+# Dependencies: 1, 4, 6
+# Priority: medium
+# Description: Implement the 'rust_best_practices_query' tool for searching and retrieving information from Rust best practices guides.
+# Details:
+1. Create 'rust_best_practices_query' MCP tool implementation
+2. Develop parser for Rust best practices documentation
+3. Categorize content by topic (performance, safety, idioms, etc.)
+4. Generate embeddings with appropriate context
+5. Implement semantic search with category filtering
+6. Add result formatting with code examples
+
+Technologies:
+- Parse from authoritative sources (Rust Book, Rust by Example, etc.)
+- Store categorization metadata in JSONB for flexible querying
+- Use OpenAI embeddings with appropriate chunking strategy
+- Implement syntax highlighting for code examples
+- Consider implementing citation of sources in results
+- Use vector search with category boosting for better relevance
+
+# Test Strategy:
+1. Test with various best practice queries
+2. Verify accuracy of returned recommendations
+3. Test search relevance with different query types
+4. Validate handling of code examples
+5. Test with queries about controversial practices
+6. Verify results include proper context and explanations

@@ -1,0 +1,46 @@
+# Task ID: 16
+# Title: Initialize Rust Doc Server Project Scaffold and Workspace
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: Set up the foundational Rust project structure for the Doc Server, including a Cargo workspace, core modules, development tooling, containerization, and documentation.
+# Details:
+1. Create a new Git repository and initialize a Cargo workspace with a virtual manifest (Cargo.toml at the root, no [package] section, only [workspace] and members). Follow the flat layout best practice: place all crates (e.g., 'database', 'mcp', 'embeddings') under a 'crates/' directory, each as its own crate with its own Cargo.toml.[1][2][3]
+2. Add initial dependencies to each crate as appropriate (tokio for async runtime, sqlx for database, serde for serialization, dotenvy for env management, tracing for logging, etc.). Use the latest stable versions and specify common dev-dependencies in the workspace-level Cargo.toml where possible.
+3. Establish a basic module structure in each crate (e.g., lib.rs with submodules for core functionality). Stub out main.rs for binaries if needed.
+4. Configure development tooling: add rustfmt.toml and clippy.toml at the root with recommended settings (e.g., enforce formatting, deny warnings). Optionally, set up pre-commit hooks for formatting/linting.
+5. Create a Dockerfile for the main binary crate, using the official Rust image, multi-stage build for smaller images, and install system dependencies for sqlx/postgres. Add a docker-compose.yml for local development, including a PostgreSQL service with pgvector extension enabled.
+6. Add a .env.example file at the root with all required environment variables (database URL, API keys, etc.).
+7. Write a README.md with project overview, workspace structure, setup instructions, and contribution guidelines. Create a 'docs/' directory for future documentation expansion.
+8. Ensure all configuration files (Cargo.toml, Dockerfile, etc.) are well-commented and follow Rust community conventions for maintainability and onboarding.
+
+References:
+- https://matklad.github.io/2021/08/22/large-rust-workspaces.html
+- https://earthly.dev/blog/cargo-workspace-crates/
+- https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html
+<info added on 2025-08-03T16:39:14.613Z>
+## Implementation Status Update
+
+The initial Rust project scaffolding has been successfully completed with all planned components in place:
+
+- Repository structure established with flat workspace layout containing 5 crates: database, mcp, embeddings, doc-loader, and llm
+- HTTP server binary implementation added in src/bin/http_server.rs
+- All crates have proper module structure with stub implementations ensuring successful compilation
+- Development environment fully configured with comprehensive rustfmt and clippy rules
+- Containerization includes both PostgreSQL with pgvector extension and Redis services
+- SQL initialization scripts added in sql/init/ directory
+- Environment configuration covers all required variables including OpenAI API settings
+- Documentation includes MIT license file
+- Project successfully compiles with `cargo check --workspace` with only minor warnings
+
+The foundation is now ready for implementation of core functionality in the next phase.
+</info added on 2025-08-03T16:39:14.613Z>
+
+# Test Strategy:
+1. Run 'cargo build --workspace' to verify all crates compile and dependencies resolve.
+2. Run 'cargo fmt --all -- --check' and 'cargo clippy --all -- -D warnings' to ensure formatting and linting are enforced.
+3. Build and run the Docker image locally; verify the service starts and connects to the database using docker-compose.
+4. Confirm that environment variables from .env.example are loaded correctly in development.
+5. Check that the README provides clear setup and usage instructions and that the docs/ directory exists.
+6. Validate that each crate has a basic module structure and compiles independently.
+7. Review all configuration files for completeness, comments, and adherence to best practices.

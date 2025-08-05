@@ -1,0 +1,62 @@
+# Task ID: 4
+# Title: Rust Query Tool Implementation
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Implement the 'rust_query' tool for querying Rust crate documentation, ensuring backward compatibility with existing functionality.
+# Details:
+1. Create 'rust_query' MCP tool implementation
+2. Ensure backward compatibility with existing query patterns
+3. Update to use the new harmonized schema
+4. Implement semantic search using pgvector
+5. Add result ranking and relevance scoring
+6. Optimize query performance
+
+Technologies:
+- pgvector with HNSW indexing for efficient vector search
+- OpenAI text-embedding-ada-002 model for embeddings
+- SQL query with vector similarity search (cosine distance)
+- Implement proper error handling and validation
+- Use prepared statements for SQL injection prevention
+- Consider caching frequent queries with Redis
+
+# Test Strategy:
+1. Compare query results with existing implementation
+2. Benchmark query performance against baseline
+3. Test with various query complexities
+4. Verify error handling for edge cases
+5. Test with all 40 existing Rust crates
+6. Validate response format matches MCP requirements
+
+# Subtasks:
+## 1. Set up HTTP MCP Server Foundation [done]
+### Dependencies: None
+### Description: Create the basic HTTP MCP server using the existing reference implementation
+### Details:
+- Use src/bin/http_server.rs as starting point
+- Set up proper async HTTP handling with SSE transport
+- Configure CORS for Toolman connectivity
+- Implement basic health check endpoint
+- Set up logging and error handling
+
+## 2. Implement Database Connection Layer [done]
+### Dependencies: 4.1
+### Description: Set up the database connection and query functionality
+### Details:
+- Implement connection pooling with SQLx
+- Set up pgvector integration for vector searches
+- Create query builders for semantic search
+- Implement proper connection management and error handling
+- Add database health checks
+
+## 3. Implement rust_query MCP Tool [done]
+### Dependencies: 4.2
+### Description: Create the rust_query tool for semantic search of Rust documentation
+### Details:
+- Implement MCP tool definition for rust_query
+- Add OpenAI embedding generation for user queries
+- Implement vector similarity search with pgvector
+- Add result ranking and relevance scoring
+- Format results according to MCP standards
+- Add proper input validation and error handling
+

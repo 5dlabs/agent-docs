@@ -6,6 +6,7 @@ use std::time::Duration;
 use tracing::info;
 
 /// Database connection pool wrapper
+#[derive(Clone)]
 pub struct DatabasePool {
     pool: PgPool,
 }
