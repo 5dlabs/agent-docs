@@ -3,7 +3,7 @@
 
 ## Project Information
 - **Repository**: https://github.com/5dlabs/agent-docs
-- **Source Branch**: recovery-agent-docs
+- **Source Branch**: main
 - **GitHub App**: 5DLabs-Rex
 - **Working Directory**: .
 - **Implementation Target**: task 1
@@ -42,7 +42,7 @@ See @.taskmaster/docs/architecture.md for system design patterns and architectur
 ### Task Context
 - **Task ID**: 1
 - **Repository**: https://github.com/5dlabs/agent-docs
-- **Branch**: recovery-agent-docs
+- **Branch**: main
 - **Working Directory**: .
 
 ## Quick Command Reference
