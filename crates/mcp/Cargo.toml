@@ -25,6 +25,8 @@ async-trait = { workspace = true }
 futures = { workspace = true }
 chrono = { workspace = true }
 async-stream = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+tokio-stream = { workspace = true }
 
 # Local crates
 doc-server-database = { path = "../database" }

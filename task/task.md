@@ -1,144 +1,257 @@
-# Task 1: Database Migration and Schema Harmonization
+# Task 2: SSE Keep-Alive Implementation
 
 ## Overview
-This task involves migrating the existing PostgreSQL database from 'rust_docs_vectors' to 'docs' with a harmonized schema that supports multiple documentation types. This is a foundational task that enables the expansion from a Rust-only documentation server to a multi-type documentation platform.
+This task involves implementing a Server-Sent Events (SSE) heartbeat mechanism to maintain stable connections with Toolman and prevent connection timeouts. This is a high-priority infrastructure enhancement that addresses connection reliability issues in the current MCP server implementation.
 
 ## Status
-**COMPLETED** ✅
+**PENDING** - Awaiting implementation
 
 ## Priority
-**High** - This is a critical foundation task that blocks other system components.
+**High** - Critical for stable Toolman integration and connection reliability
 
 ## Dependencies
-None - This is a foundational task.
-
-## Database Access Information
-- **Environment**: Kubernetes cluster (NOT Docker)
-- **Pod Name**: `rustdocs-mcp-postgresql-0`
-- **Namespace**: `mcp` 
-- **Connection URL**: `postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql:5432/rust_docs_vectors`
-- **Access Method**: Connect via kubectl exec or port-forward to the Kubernetes pod
-- **Existing Resources**: Preliminary work and SQL scripts available in the `sql/` folder
-- **Data Dumps**: Pre-existing documentation dumps available for import
-
-**IMPORTANT**: The database is running in a Kubernetes pod, NOT a Docker container. Use kubectl commands to interact with it.
+None - This task can be implemented independently of other system components.
 
 ## Background
-The original system used a single-purpose database schema focused on Rust documentation. To support the expanded vision of a multi-type documentation server supporting infrastructure tools, blockchain platforms, and programming resources, we need a harmonized schema that can accommodate diverse documentation types while preserving existing data.
+The current MCP server uses basic HTTP/SSE transport without keep-alive mechanisms, leading to connection timeout issues with Toolman clients. These timeouts disrupt AI agent workflows and require manual reconnection. A robust SSE keep-alive system will provide stable, long-term connections essential for production use.
 
 ## Implementation Details
 
-### Database Migration Strategy
-The task was implemented using a parallel development approach rather than sequential migration:
+### SSE Keep-Alive Architecture
 
-1. **New Database Creation**: Created `docs` database with harmonized schema first
-2. **Schema Validation**: Verified schema supports all 10 planned documentation types
-3. **Data Migration**: Migrated existing 40 Rust crates from `rust_docs_vectors`
-4. **Integrity Validation**: Validated data integrity and search functionality
-5. **Application Update**: Updated application to use new database
+#### Core Components
+1. **SSE Endpoint**: Dedicated `/sse` endpoint for persistent connections
+2. **Heartbeat System**: Regular keep-alive messages every 30 seconds  
+3. **Timeout Detection**: Server-side detection of client disconnections at 90 seconds
+4. **Reconnection Logic**: Client-side automatic reconnection with exponential backoff
+5. **Message Buffering**: Queue messages during disconnection periods
+6. **Connection Tracking**: Monitor and log connection lifecycle events
 
-### Harmonized Schema Implementation
+#### Technical Specifications
 
-#### Documents Table
-```sql
-CREATE TABLE documents (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN (
-        'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
-        'meteora', 'solana', 'ebpf', 'raydium', 'rust_best_practices'
-    )),
-    source_name VARCHAR(255) NOT NULL,
-    doc_path TEXT NOT NULL,
-    content TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}',
-    embedding vector(3072), -- OpenAI text-embedding-3-large
-    token_count INTEGER,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+##### SSE Endpoint Implementation
+```rust
+// SSE endpoint with proper headers
+app.route("/sse", get(sse_handler))
+    .layer(CorsLayer::permissive())
+    .layer(TimeoutLayer::new(Duration::from_secs(90)));
+
+async fn sse_handler() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let stream = interval(Duration::from_secs(30))
+        .map(|_| Event::default().data("heartbeat"));
     
-    UNIQUE(doc_type, source_name, doc_path)
-);
+    Sse::new(stream)
+        .keep_alive(
+            KeepAlive::new()
+                .interval(Duration::from_secs(30))
+                .text("keep-alive")
+        )
+}
 ```
 
-#### Document Sources Table
-```sql
-CREATE TABLE document_sources (
-    id SERIAL PRIMARY KEY,
-    doc_type VARCHAR(50) NOT NULL,
-    source_name VARCHAR(255) NOT NULL,
-    config JSONB NOT NULL DEFAULT '{}',
-    enabled BOOLEAN DEFAULT true,
-    last_checked TIMESTAMPTZ,
-    last_populated TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(doc_type, source_name)
-);
+##### Client Reconnection Logic
+```javascript
+class SSEConnection {
+    constructor(url) {
+        this.url = url;
+        this.retryDelay = 1000; // Start with 1 second
+        this.maxRetryDelay = 60000; // Max 60 seconds
+        this.messageBuffer = [];
+        this.connect();
+    }
+    
+    connect() {
+        this.eventSource = new EventSource(this.url);
+        
+        this.eventSource.onopen = () => {
+            console.log('SSE Connection established');
+            this.retryDelay = 1000; // Reset retry delay
+            this.flushMessageBuffer();
+        };
+        
+        this.eventSource.onerror = () => {
+            console.log('SSE Connection error, reconnecting...');
+            setTimeout(() => this.reconnect(), this.getRetryDelay());
+        };
+        
+        this.eventSource.onmessage = (event) => {
+            if (event.data !== 'heartbeat') {
+                this.handleMessage(event.data);
+            }
+        };
+    }
+    
+    getRetryDelay() {
+        const delay = this.retryDelay + Math.random() * 500; // Add jitter
+        this.retryDelay = Math.min(this.retryDelay * 2, this.maxRetryDelay);
+        return delay;
+    }
+}
 ```
 
-#### Performance Indexes
-```sql
-CREATE INDEX idx_documents_doc_type ON documents(doc_type);
-CREATE INDEX idx_documents_source_name ON documents(source_name);
-CREATE INDEX idx_documents_created_at ON documents(created_at DESC);
+### Implementation Strategy
+
+#### Phase 1: Server-Side SSE Implementation
+1. **HTTP Headers Configuration**
+   ```
+   Content-Type: text/event-stream
+   Cache-Control: no-cache
+   Connection: keep-alive
+   Access-Control-Allow-Origin: *
+   Access-Control-Allow-Headers: Cache-Control
+   ```
+
+2. **Heartbeat Mechanism**
+   - Send heartbeat every 30 seconds
+   - Include timestamp for client-side verification
+   - Use structured event format for different message types
+
+3. **Connection Management**
+   - Track active connections in memory
+   - Implement connection cleanup on client disconnect
+   - Add connection metrics and monitoring
+
+#### Phase 2: Message Buffering System
+1. **Buffer Implementation**
+   - In-memory message queue per connection
+   - Optional Redis backend for persistence
+   - Configurable buffer size and retention
+
+2. **Message Delivery**
+   - Queue messages during disconnection
+   - Replay buffered messages on reconnection
+   - Handle message deduplication
+
+#### Phase 3: Client-Side Integration
+1. **Automatic Reconnection**
+   - Exponential backoff with jitter
+   - Connection state management
+   - Error handling and logging
+
+2. **Toolman Integration**
+   - Update Toolman client for SSE support
+   - Connection status indicators
+   - Graceful degradation on connection loss
+
+### Configuration Parameters
+
+```rust
+pub struct SSEConfig {
+    pub heartbeat_interval: Duration,      // 30 seconds
+    pub connection_timeout: Duration,      // 90 seconds
+    pub initial_retry_delay: Duration,     // 1 second
+    pub max_retry_delay: Duration,         // 60 seconds
+    pub retry_jitter_max: Duration,        // 500ms
+    pub message_buffer_size: usize,        // 1000 messages
+    pub buffer_retention: Duration,        // 5 minutes
+}
 ```
 
-### Migration Results
-- **Database Created**: `docs` database with pgvector extension enabled
-- **Documents Migrated**: 4,133 documents with embeddings successfully transferred
-- **Crates Preserved**: All 40 Rust crates migrated without data loss
-- **Embeddings**: All documents have 3072-dimensional OpenAI embeddings (text-embedding-3-large)
-- **Search Functionality**: Vector similarity search verified working
+### Error Handling and Recovery
 
-### Key Design Decisions
+#### Connection Failures
+- Detect client disconnection through SSE stream errors
+- Clean up connection resources automatically
+- Log connection lifecycle events for monitoring
 
-1. **JSONB Metadata**: Enables type-specific information storage without schema changes
-2. **Vector Dimensions**: 3072-dimensional vectors for OpenAI text-embedding-3-large compatibility
-3. **No Vector Index**: Due to pgvector 2000-dimension limit, following reference implementation
-4. **Document Types**: Constraint ensures only valid documentation types are stored
-5. **Unique Constraints**: Prevents duplicate documents per source and path
+#### Message Delivery Failures
+- Implement message acknowledgment system
+- Retry failed message deliveries
+- Handle partial message transmission
+
+#### Network Interruptions
+- Graceful handling of network timeouts
+- Automatic connection re-establishment
+- Preserve application state during reconnection
 
 ## Technologies Used
-- PostgreSQL 15+ with pgvector 0.5.0+
-- pg_dump/pg_restore for safe migration
-- JSONB for flexible metadata storage
-- OpenAI embeddings (3072 dimensions)
-- SQL constraints for data integrity
+- **Axum**: HTTP framework with SSE support
+- **Tokio**: Async runtime for connection management
+- **EventSource API**: Client-side SSE handling
+- **Redis** (optional): Message buffering and persistence
+- **Prometheus**: Connection metrics and monitoring
+- **Tracing**: Structured logging for connection events
 
-## Verification and Testing
+## Testing Strategy
 
-### Completed Validation
-1. **Row Count Verification**: Confirmed all documents migrated successfully
-2. **Query Comparison**: Sample queries produce identical results between databases
-3. **Schema Integrity**: SQL validation scripts confirm proper schema structure
-4. **Vector Search**: Semantic search functionality verified on migrated data
-5. **Performance**: Query performance maintained within acceptable limits
-6. **Crate Accessibility**: All 40 existing Rust crates remain searchable
+### Unit Tests
+1. **SSE Stream Tests**
+   - Verify heartbeat message generation
+   - Test connection lifecycle management
+   - Validate message formatting
 
-### Test Results
-- ✅ Zero data loss during migration
-- ✅ Vector similarity search operational
-- ✅ All existing functionality preserved
-- ✅ Schema ready for additional documentation types
-- ✅ Application successfully updated to use new database
+2. **Reconnection Logic Tests**
+   - Test exponential backoff calculation
+   - Verify retry jitter implementation
+   - Validate connection state transitions
 
-## Next Steps
-With this foundation in place, the system is ready for:
-1. Implementation of new MCP tools for different documentation types
-2. Ingestion of additional documentation types (BirdEye, Solana, etc.)
-3. Development of type-specific query tools
-4. Enhanced search capabilities across multiple documentation types
+### Integration Tests
+1. **Client-Server Communication**
+   - End-to-end SSE connection establishment
+   - Message delivery during normal operation
+   - Recovery from network interruptions
 
-## Files Modified
-- Database schema creation scripts
-- Application connection strings updated to use `docs` database
-- Migration scripts for data transfer
-- Validation and testing scripts
+2. **Load Testing**
+   - 100+ concurrent SSE connections
+   - Memory usage under sustained load
+   - Connection cleanup verification
 
-## Performance Impact
-- Query performance maintained within 10% of original system
-- Search functionality preserved with identical result quality
-- Vector operations continue to work without performance degradation
-- Database size optimized through schema normalization
+### Stress Testing
+1. **Network Reliability**
+   - Simulate network interruptions
+   - Test connection recovery timing
+   - Verify message buffer behavior
 
-This migration establishes the foundation for the expanded Doc Server vision while preserving all existing functionality and data integrity.
+2. **Resource Management**
+   - Long-running connection stability
+   - Memory leak detection
+   - Connection resource cleanup
+
+## Performance Considerations
+
+### Server Resources
+- Connection tracking overhead minimal
+- Heartbeat message generation lightweight
+- Memory usage scales linearly with connections
+
+### Network Efficiency
+- Minimal bandwidth overhead (30-second intervals)
+- Compressed heartbeat messages
+- Connection pooling for multiple clients
+
+### Scalability
+- Support for 100+ concurrent connections
+- Horizontal scaling with load balancing
+- Optional Redis backend for state sharing
+
+## Security Considerations
+
+### Connection Security
+- CORS headers properly configured
+- Connection rate limiting
+- Authentication integration points
+
+### Data Protection
+- No sensitive data in heartbeat messages
+- Message buffer encryption (if using Redis)
+- Connection logging sanitization
+
+## Monitoring and Observability
+
+### Metrics Collection
+- Active connection count
+- Reconnection frequency
+- Message buffer utilization
+- Connection duration statistics
+
+### Health Checks
+- SSE endpoint availability
+- Connection establishment success rate
+- Heartbeat delivery verification
+
+### Alerting
+- High reconnection rates
+- Connection timeout spikes
+- Message buffer overflow
+
+This SSE keep-alive implementation will provide the stable, reliable connection foundation necessary for robust Toolman integration and seamless AI agent workflows.
