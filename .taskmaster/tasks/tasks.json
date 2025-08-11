@@ -370,7 +370,61 @@
           6
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create OpenAI Batch API Models",
+            "description": "Define data structures for OpenAI Batch API requests and responses including JSONL format support",
+            "dependencies": [],
+            "details": "Create structs in crates/embeddings/src/models.rs for BatchRequest, BatchJob, BatchStatus, and JSONL line items. Define enums for batch status (validating, in_progress, finalizing, completed, failed, expired, cancelling, cancelled). Add serialization/deserialization support with serde for JSONL format. Include fields for custom_id, method, url, and body for each batch line item.",
+            "status": "pending",
+            "testStrategy": "Unit test JSONL serialization/deserialization, validate all batch status transitions, test custom_id generation and parsing"
+          },
+          {
+            "id": 2,
+            "title": "Implement Rate Limiting with Token Bucket",
+            "description": "Build token bucket algorithm for OpenAI API rate limiting (3000 RPM / 1M TPM)",
+            "dependencies": [],
+            "details": "Create RateLimiter struct in crates/embeddings/src/client.rs with token bucket implementation. Track both requests per minute (3000) and tokens per minute (1M). Implement async wait mechanism when buckets are empty. Add methods to consume tokens based on text length. Use tokio::time for timing and tokio::sync::Mutex for thread-safe token management. Include burst capacity handling.",
+            "status": "pending",
+            "testStrategy": "Test rate limiting under concurrent load, verify token replenishment timing, test burst handling, validate blocking behavior when limits exceeded"
+          },
+          {
+            "id": 3,
+            "title": "Build Batch Processing Queue System",
+            "description": "Implement batch queue manager for processing documents in 20,000 line chunks with JSONL format",
+            "dependencies": [
+              "7.1"
+            ],
+            "details": "Enhance crates/embeddings/src/batch.rs with BatchQueue struct. Implement queue management for accumulating embedding requests. Add chunking logic to split into 20,000 line batches. Create JSONL file generation with proper formatting. Implement async batch submission to OpenAI Batch API. Add queue persistence for recovery. Track batch IDs and statuses.",
+            "status": "pending",
+            "testStrategy": "Test chunking with various document sizes, validate JSONL file generation, test queue persistence and recovery, verify optimal 20k line batch sizes"
+          },
+          {
+            "id": 4,
+            "title": "Add Retry Logic and Error Handling",
+            "description": "Implement exponential backoff retry mechanism for failed batch operations",
+            "dependencies": [
+              "7.2",
+              "7.3"
+            ],
+            "details": "Create RetryPolicy struct with exponential backoff configuration (base: 1s, max: 60s, max_retries: 5). Implement retry logic for batch submission, status checking, and result retrieval. Add error classification (retryable vs permanent). Handle specific OpenAI error codes. Implement circuit breaker pattern for repeated failures. Add detailed error logging with context.",
+            "status": "pending",
+            "testStrategy": "Test retry with simulated failures, validate exponential backoff timing, test circuit breaker activation, verify error classification accuracy"
+          },
+          {
+            "id": 5,
+            "title": "Implement Cost Tracking and Reporting",
+            "description": "Build cost tracking system for monitoring embedding generation expenses and validating 50% cost reduction",
+            "dependencies": [
+              "7.3",
+              "7.4"
+            ],
+            "details": "Create CostTracker struct to monitor API usage and costs. Track tokens consumed per batch (text-embedding-3-large pricing: $0.13 per 1M tokens). Compare batch API costs (50% discount) vs regular API. Store cost data in database with batch_id, tokens_used, cost_usd, timestamp. Generate cost reports by time period. Add alerts for cost thresholds. Calculate and display actual savings percentage.",
+            "status": "pending",
+            "testStrategy": "Validate cost calculations against OpenAI pricing, test cost aggregation over time periods, verify 50% savings calculation, test threshold alerting"
+          }
+        ]
       },
       {
         "id": 8,
@@ -794,7 +848,62 @@
           12
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up Prometheus metrics infrastructure",
+            "description": "Initialize Prometheus metrics collection with prometheus-rust crate, create metrics registry, and implement /metrics endpoint in the HTTP server",
+            "dependencies": [],
+            "details": "Add prometheus and prometheus-hyper crates to Cargo.toml dependencies. Create a metrics module in crates/mcp/src/metrics.rs to define custom metrics (query_latency_histogram, embedding_generation_time_histogram, cache_hit_rate_counter, active_connections_gauge, request_counter). Integrate metrics registry into McpServer and add GET /metrics endpoint to expose Prometheus-formatted metrics. Ensure metrics are thread-safe using Arc and lazy_static for global registry.",
+            "status": "pending",
+            "testStrategy": "Verify /metrics endpoint returns valid Prometheus format, test metric increments with sample queries, validate histogram buckets capture expected latency ranges, ensure metrics are properly labeled with service metadata"
+          },
+          {
+            "id": 2,
+            "title": "Implement structured JSON logging with correlation IDs",
+            "description": "Replace current logging with structured JSON format using tracing-subscriber's json feature and add correlation ID propagation across requests",
+            "dependencies": [],
+            "details": "Configure tracing-subscriber with json formatter in http_server.rs main function. Create middleware in server.rs to generate and inject X-Correlation-ID headers for each request. Add correlation_id field to all log spans using tracing::span! macro. Include structured fields like service_name, version, environment, timestamp in all log outputs. Ensure correlation IDs propagate through async operations and database queries.",
+            "status": "pending",
+            "testStrategy": "Verify JSON log output format with jq parsing, test correlation ID propagation across tool calls, validate log levels and filtering work correctly, ensure logs can be aggregated and searched by correlation ID"
+          },
+          {
+            "id": 3,
+            "title": "Add OpenTelemetry tracing with Jaeger integration",
+            "description": "Implement distributed tracing using OpenTelemetry SDK with Jaeger exporter for end-to-end request visibility",
+            "dependencies": [
+              "14.1",
+              "14.2"
+            ],
+            "details": "Add opentelemetry, opentelemetry-jaeger, and tracing-opentelemetry crates. Configure OpenTelemetry pipeline with Jaeger exporter in main initialization. Create spans for key operations: database queries (queries.rs), embedding generation, tool execution (handlers.rs), SSE connections. Add trace context propagation headers (traceparent, tracestate) to all HTTP responses. Configure sampling rate via OTEL_TRACE_SAMPLE_RATE environment variable.",
+            "status": "pending",
+            "testStrategy": "Verify traces appear in Jaeger UI, test trace context propagation across services, validate span attributes contain relevant metadata, ensure sampling configuration works correctly"
+          },
+          {
+            "id": 4,
+            "title": "Create custom metrics for query performance monitoring",
+            "description": "Instrument database queries and tool executions with detailed performance metrics including p50/p95/p99 latencies",
+            "dependencies": [
+              "14.1",
+              "14.3"
+            ],
+            "details": "Add timing instrumentation to DocumentQueries methods in queries.rs using histogram metrics. Implement per-tool metrics in McpHandler::handle_tool_call with labels for tool_name and status. Track embedding generation time in batch processing. Add database connection pool metrics (active, idle, pending connections). Create custom buckets for latency histograms based on expected SLA (0.1s, 0.5s, 1s, 2s, 5s). Export metrics with appropriate labels for Grafana dashboard filtering.",
+            "status": "pending",
+            "testStrategy": "Run load test to generate metric data, verify histogram percentiles match actual query times, test metric labels allow proper aggregation, validate metrics update in real-time"
+          },
+          {
+            "id": 5,
+            "title": "Implement performance profiling endpoints",
+            "description": "Add pprof-compatible profiling endpoints for CPU and memory analysis in production",
+            "dependencies": [
+              "14.1",
+              "14.2"
+            ],
+            "details": "Add pprof crate for profiling support. Create /debug/pprof/profile endpoint for CPU profiling with configurable duration. Add /debug/pprof/heap endpoint for memory profiling snapshots. Implement authentication middleware to protect profiling endpoints. Add rate limiting to prevent profiling abuse. Configure profiling to be opt-in via ENABLE_PROFILING environment variable. Document profiling endpoints in runbook for production debugging.",
+            "status": "pending",
+            "testStrategy": "Test CPU profile generation under load, verify heap profiles show memory allocations, validate authentication prevents unauthorized access, ensure profiling doesn't impact normal operations"
+          }
+        ]
       },
       {
         "id": 15,
@@ -833,20 +942,70 @@
           11
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Generate Rust API Documentation with cargo doc",
+            "description": "Generate comprehensive API documentation for all Rust crates using cargo doc with all features enabled and optimized output settings",
+            "dependencies": [],
+            "details": "Use cargo doc --all-features --no-deps to generate documentation for all workspace crates (database, mcp, embeddings, doc-loader, llm). Configure proper rustdoc settings for external links, search indexes, and HTML output. Generate documentation in target/doc directory and prepare for hosting. Include examples from code comments and ensure all public APIs are documented.",
+            "status": "pending",
+            "testStrategy": "Run cargo doc --all-features --no-deps and verify HTML output is generated in target/doc. Check that index.html exists and all crate documentation is linked. Validate doc tests pass with cargo test --doc. Test documentation can be served locally with a simple HTTP server."
+          },
+          {
+            "id": 2,
+            "title": "Create OpenAPI/Swagger Specification for MCP HTTP Endpoints",
+            "description": "Generate OpenAPI 3.0 specification documenting the MCP server's HTTP endpoints, including the unified /mcp endpoint with SSE support",
+            "dependencies": [],
+            "details": "Create openapi.yaml file documenting the POST /mcp and GET /mcp endpoints with proper JSON-RPC request/response schemas. Include SSE event stream documentation for server-sent events. Document authentication headers, MCP-Protocol-Version header, and content negotiation. Add schemas for all MCP tools including rust_query and future query tools. Include example requests and responses for each operation.",
+            "status": "pending",
+            "testStrategy": "Validate OpenAPI spec using swagger-cli or openapi-generator validators. Test that spec can be imported into Swagger UI or Postman. Verify all endpoint paths and schemas match actual implementation in crates/mcp/src/transport.rs. Test example requests work against running server."
+          },
+          {
+            "id": 3,
+            "title": "Write Kubernetes Deployment Guide with Helm Charts",
+            "description": "Create comprehensive deployment documentation for Kubernetes setup including Helm chart creation and configuration",
+            "dependencies": [],
+            "details": "Document creation of Helm chart structure in helm/doc-server/ directory as referenced in deploy-doc-server.yml. Write guide for values.yaml configuration including image settings, resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi), replica counts, and ingress rules. Document ConfigMap and Secret management for API keys and database credentials. Include PodDisruptionBudget setup for high availability. Add troubleshooting section for common deployment issues.",
+            "status": "pending",
+            "testStrategy": "Test documentation steps can be followed to create valid Helm charts. Run helm lint on generated charts. Verify helm install --dry-run succeeds. Test that documented kubectl commands work correctly. Validate resource specifications match production requirements."
+          },
+          {
+            "id": 4,
+            "title": "Document MCP Tool Usage with Client Integration Examples",
+            "description": "Create comprehensive documentation for MCP tool usage including examples for Cursor and Toolman client integration",
+            "dependencies": [
+              "17.2"
+            ],
+            "details": "Document rust_query tool usage with example queries and responses. Create integration guides for Cursor IDE showing MCP configuration and tool invocation. Write Toolman client setup and usage documentation. Include examples for future query tools (jupyter, cilium, talos, meteora, raydium, ebpf, rust_best_practices). Document JSON-RPC message formats, error handling, and streaming responses. Add troubleshooting guide for common client integration issues.",
+            "status": "pending",
+            "testStrategy": "Test all example code snippets execute correctly. Verify JSON-RPC examples are valid and match server implementation. Test integration steps with actual Cursor and Toolman clients if available. Validate tool response formats match documented schemas."
+          },
+          {
+            "id": 5,
+            "title": "Create Architecture Diagrams and Performance Tuning Guide",
+            "description": "Generate system architecture diagrams using mermaid and document performance tuning parameters for production deployment",
+            "dependencies": [
+              "17.3"
+            ],
+            "details": "Create mermaid diagrams showing system architecture including MCP server, PostgreSQL with pgvector, embedding service, and client connections. Document data flow from ingestion through vector search to client responses. Write performance tuning guide covering database connection pooling, embedding batch sizes, cache strategies, and resource allocation. Include benchmarks for vector search performance with different index types. Document monitoring setup with metrics and alerting.",
+            "status": "pending",
+            "testStrategy": "Verify mermaid diagrams render correctly in markdown viewers. Test performance tuning parameters against load testing scenarios. Validate monitoring queries return expected metrics. Test that recommended settings improve performance under load."
+          }
+        ]
       },
       {
         "id": 18,
         "title": "Data Migration and Validation Pipeline",
-        "description": "Implement automated data migration pipeline for populating all documentation types with validation and rollback capabilities.",
-        "details": "Create migration scripts for each documentation type using doc-loader crate. Implement incremental migration with checkpointing. Add data validation with checksums and count verification. Create rollback procedures for failed migrations. Implement parallel processing for large datasets. Add progress reporting and ETA calculation. Store migration history in database. Handle duplicate detection and merging.",
-        "testStrategy": "Test migration with sample datasets, validate data integrity post-migration, test rollback procedures, verify idempotency of migrations, and benchmark migration performance (target: 1000 docs/minute).",
-        "priority": "medium",
-        "dependencies": [
-          10,
-          11
-        ],
+        "description": "Populate the freshly provisioned database (184 MB of documentation data) immediately after system assessment (Task 1) and database connection setup (Task 6). Implement an automated data-migration pipeline with full validation and rollback so that all subsequent query-tool tasks (Tasks 7-11) have reliable data to operate on.",
         "status": "pending",
+        "dependencies": [
+          1,
+          6
+        ],
+        "priority": "medium",
+        "details": "• Create migration scripts for each documentation type using the doc-loader crate.\n• Support a blank-database bootstrap scenario: initial full load followed by optional incremental migrations with checkpointing.\n• Add data-validation steps (checksums, record counts, schema conformance) and duplicate detection/merging.\n• Provide rollback procedures for any failed migration batch.\n• Run migrations in parallel where safe to achieve ≥ 1000 docs/minute on the 184 MB dataset.\n• Emit progress events with percentage complete and ETA; persist migration history in the database.\n• Expose a CLI command and Kubernetes Job template so the pipeline can be triggered right after Tasks 1 & 6 complete.",
+        "testStrategy": "1. Execute full migration against an empty test database; verify all 184 MB load successfully with matching checksums and document counts.\n2. Simulate failures mid-migration and ensure rollback leaves database in a consistent pre-migration state.\n3. Re-run pipeline to confirm idempotency (no duplicates, no data loss).\n4. Benchmark performance, targeting ≥ 1000 docs/minute throughput on the reference cluster.\n5. Validate progress/ETA reporting and confirm migration history entries are recorded.",
         "subtasks": []
       },
       {
@@ -860,7 +1019,60 @@
           3
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement JWT Authentication for MCP Endpoints",
+            "description": "Add JWT-based authentication middleware to protect MCP server endpoints, including token generation, validation, and refresh mechanisms.",
+            "dependencies": [],
+            "details": "Create a new auth module in crates/mcp/src/auth.rs with JWT token generation using jsonwebtoken crate. Implement middleware that validates JWT tokens in Authorization headers for /mcp and /sse endpoints. Add token refresh endpoint at /auth/refresh. Store JWT secrets securely via environment variables (JWT_SECRET, JWT_EXPIRY). Include claims for user_id, roles, and issued_at/expires_at timestamps. Integrate with existing McpServerState to pass authenticated user context.",
+            "status": "pending",
+            "testStrategy": "Create integration tests validating token generation, successful authentication with valid tokens, rejection of expired/invalid tokens, refresh token flow, and proper 401 responses for unauthenticated requests."
+          },
+          {
+            "id": 2,
+            "title": "Add Role-Based Access Control (RBAC) System",
+            "description": "Implement comprehensive RBAC for management tools with role definitions, permission mappings, and authorization checks.",
+            "dependencies": [
+              "19.1"
+            ],
+            "details": "Create rbac module in crates/mcp/src/rbac.rs defining roles (admin, operator, viewer) and permissions. Add role_permissions table to database schema mapping roles to tool access. Implement authorization middleware checking JWT roles against required permissions for each tool. Restrict management tools (add_rust_crate, remove_rust_crate) to admin/operator roles. Allow read-only query tools for all authenticated users. Add role management endpoints at /auth/roles for admin users.",
+            "status": "pending",
+            "testStrategy": "Test role-based access restrictions, verify admin can access all tools, operators can modify but not delete, viewers have read-only access, and validate permission inheritance and role assignment flows."
+          },
+          {
+            "id": 3,
+            "title": "Enable TLS/SSL and Implement Request Signing",
+            "description": "Configure TLS/SSL for all communications and add request signing mechanism for integrity validation.",
+            "dependencies": [],
+            "details": "Add TLS configuration to Axum server using rustls or native-tls. Support both TLS certificate files and Let's Encrypt auto-renewal. Implement request signing using HMAC-SHA256 for integrity validation on sensitive endpoints. Add X-Signature header validation middleware. Configure TLS_CERT_PATH, TLS_KEY_PATH, and SIGNING_SECRET environment variables. Enforce HTTPS redirect from HTTP. Add certificate pinning support for enhanced security.",
+            "status": "pending",
+            "testStrategy": "Verify TLS handshake success, test HTTPS-only enforcement, validate request signature verification, test with invalid/expired certificates, and ensure proper error messages for TLS failures."
+          },
+          {
+            "id": 4,
+            "title": "Implement Audit Logging and Rate Limiting",
+            "description": "Add comprehensive audit logging for all operations and implement per-client/IP rate limiting.",
+            "dependencies": [
+              "19.1",
+              "19.2"
+            ],
+            "details": "Create audit_logs table storing user_id, action, resource, timestamp, IP address, and request details. Implement AuditLogger trait logging all tool calls, authentication attempts, and data modifications. Add rate limiting using tower-governor crate with configurable limits per client/IP (100 req/min default). Store rate limit state in Redis or in-memory cache. Log rate limit violations to audit logs. Add /admin/audit endpoint for viewing logs (admin only).",
+            "status": "pending",
+            "testStrategy": "Test audit log creation for all operations, verify rate limiting enforcement, test burst handling, validate IP-based and user-based limits work independently, and ensure audit logs capture security events."
+          },
+          {
+            "id": 5,
+            "title": "Add Security Headers and Input Validation",
+            "description": "Implement security headers, CORS policies, input sanitization, and API key rotation mechanism.",
+            "dependencies": [
+              "19.3"
+            ],
+            "details": "Add security headers middleware setting CSP, HSTS, X-Frame-Options, X-Content-Type-Options, and Referrer-Policy. Configure CORS to allow only whitelisted origins from CORS_ALLOWED_ORIGINS env var. Implement input validation using validator crate for all request parameters. Add SQL injection protection through parameterized queries. Implement API key rotation with api_keys table storing hashed keys, creation/expiry dates. Add /auth/rotate-key endpoint for key rotation. Sanitize all user inputs before storage or processing.",
+            "status": "pending",
+            "testStrategy": "Perform OWASP compliance testing, test XSS and SQL injection attempts, verify CORS blocks unauthorized origins, validate all security headers are present, test API key rotation flow, and ensure input validation rejects malformed data."
+          }
+        ]
       },
       {
         "id": 20,
