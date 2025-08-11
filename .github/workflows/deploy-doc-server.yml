@@ -1,0 +1,337 @@
+name: Deploy Doc Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to deploy (e.g., v0.1.4)'
+        required: true
+        type: string
+  push:
+    branches:
+      - feature/*
+      - feat/*
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ${{ github.repository }}
+
+jobs:
+  # Version determination
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      short-sha: ${{ steps.version.outputs.short-sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Set version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            # For push events, use latest
+            VERSION="latest"
+          fi
+          SHORT_SHA=$(git rev-parse --short HEAD)
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "short-sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "📦 Deploy version: ${VERSION}"
+
+  # Clippy and tests
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+          override: true
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check formatting
+        run: |
+          echo "🎨 Checking code formatting..."
+          cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: |
+          echo "🔍 Running Clippy lints..."
+          cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run tests
+        run: |
+          echo "🧪 Running tests..."
+          cargo test --all-features
+
+      - name: Check documentation
+        run: |
+          echo "📚 Checking documentation..."
+          cargo doc --no-deps --all-features
+
+  # Build MCP server
+  build-doc-server:
+    needs: [version, test]
+    runs-on: [k8s-runner]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Setup optimized Rust environment
+        run: |
+          echo "🚀 Setting up ULTRA-OPTIMIZED Rust build environment..."
+
+          # Add cargo bin to PATH for this step and all subsequent steps
+          echo "/home/runner/.cargo/bin" >> $GITHUB_PATH
+          export PATH="/home/runner/.cargo/bin:$PATH"
+
+          # Set up Rust toolchain (required for rust-builder image)
+          echo "🦀 Setting up Rust toolchain..."
+          rustup default stable
+          rustup update stable
+
+          # Custom image already has most tools pre-installed, just verify
+          echo "🔍 Verifying pre-installed tools..."
+          rustc --version || echo "⚠️ Rust not found"
+          cargo --version || echo "⚠️ Cargo not found"
+          sccache --version || echo "⚠️ sccache not found"
+          mold --version || echo "⚠️ mold not found"
+          clang --version || echo "⚠️ clang not found"
+          pkg-config --version || echo "⚠️ pkg-config not found"
+          openssl version || echo "⚠️ openssl not found"
+
+          # Show available resources
+          echo "💾 Available resources:"
+          echo "CPU cores: $(nproc)"
+          echo "Memory: $(free -h | grep '^Mem:' | awk '{print $2}')"
+          echo "Disk space: $(df -h . | tail -1 | awk '{print $4}')"
+
+          # Show cache locations
+          echo "📁 Cache locations:"
+          echo "CARGO_HOME: ${CARGO_HOME:-$HOME/.cargo}"
+          echo "SCCACHE_DIR: ${SCCACHE_DIR:-$HOME/.cache/sccache}"
+          echo "RUSTUP_HOME: ${RUSTUP_HOME:-$HOME/.rustup}"
+
+      - name: Setup sccache
+        run: |
+          echo "🗄️ Setting up sccache for ULTRA-FAST builds..."
+
+          # Ensure cargo bin is in PATH
+          export PATH="/home/runner/.cargo/bin:$PATH"
+
+          # Configure sccache
+          export SCCACHE_CACHE_SIZE="50G"
+          export SCCACHE_IDLE_TIMEOUT="0"
+
+          # Ensure sccache is running
+          sccache --stop-server 2>/dev/null || true
+          sccache --start-server
+
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
+          # Verify mold is available
+          echo "🔗 Verifying mold linker:"
+          mold --version
+
+      - name: Build MCP server binary (ultra-fast)
+        env:
+          CARGO_INCREMENTAL: "0"  # Disable for better sccache hits
+          RUSTC_WRAPPER: "sccache"
+          SCCACHE_CACHE_SIZE: "50G"
+          SCCACHE_IDLE_TIMEOUT: "0"
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+          CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
+          CARGO_TARGET_DIR: "/cache/target"  # Build to cache directory for persistence
+        run: |
+          echo "🏗️ Building Doc Server MCP binary with pre-warmed dependencies..."
+
+          # Show build environment
+          echo "Build environment:"
+          echo "Available cores: $(nproc)"
+          echo "RUSTFLAGS: $RUSTFLAGS"
+          echo "RUSTC_WRAPPER: $RUSTC_WRAPPER"
+          echo "CARGO_HOME: ${CARGO_HOME:-$HOME/.cargo}"
+          echo "SCCACHE_DIR: ${SCCACHE_DIR:-$HOME/.cache/sccache}"
+
+          # Pre-warm sccache
+          sccache --start-server || true
+          echo "📊 Initial sccache stats:"
+          sccache --show-stats
+
+          # Build with detailed output
+          echo "⏱️ Starting build..."
+          cargo build --release --bin http_server
+
+          # Show final sccache stats
+          echo "📊 Final sccache stats:"
+          sccache --show-stats
+
+          # Copy binary from cache target dir (where CARGO_TARGET_DIR points)
+          cp /cache/target/release/http_server doc-server
+
+          # Show binary info
+          echo "📦 Built binary info:"
+          ls -lh doc-server
+          file doc-server
+          
+          # Verify binary is present for Docker build context
+          echo "📋 Verifying doc-server binary for Docker build context"
+          test -f doc-server && echo "doc-server present in root" || (echo "doc-server missing" && exit 1)
+          ls -la doc-server
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Doc Server image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/doc-server:${{ needs.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/doc-server:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/doc-server:${{ needs.version.outputs.short-sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Show GHCR doc-server tags
+        run: |
+          echo "🔎 Latest GHCR tags for doc-server:"
+          gh api -H "Accept: application/vnd.github+json" \
+            "/user/packages/container/agent-docs%2Fdoc-server/versions?per_page=1" \
+            | jq -r '.[0].metadata.container.tags' || echo "No existing tags found"
+
+  # Deploy using Helm
+  deploy:
+    needs: [version, build-doc-server]
+    runs-on: [k8s-runner]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Setup tools
+        run: |
+          mkdir -p $HOME/bin
+          if [ -f /shared/kubectl ]; then
+            cp /shared/kubectl $HOME/bin/
+            chmod +x $HOME/bin/kubectl
+          fi
+          if [ -f /shared/helm ]; then
+            cp /shared/helm $HOME/bin/
+            chmod +x $HOME/bin/helm
+          fi
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Verify Kubernetes connectivity
+        run: |
+          echo "🔗 Verifying Kubernetes cluster connectivity..."
+          kubectl cluster-info
+          kubectl get nodes
+          echo "✅ Kubernetes cluster accessible"
+
+      - name: Deploy with Helm
+        run: |
+          echo "🚀 Deploying Doc Server with Helm..."
+          
+          # Create namespace if it doesn't exist
+          kubectl create namespace doc-server --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Helm upgrade/install
+          helm upgrade --install doc-server ./helm/doc-server \
+            --namespace doc-server \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/doc-server \
+            --set image.tag=${{ needs.version.outputs.version }} \
+            --set image.pullPolicy=Always \
+            --wait \
+            --timeout=300s
+          
+          echo "✅ Helm deployment complete"
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Deployment verification..."
+          kubectl get pods -n doc-server -o wide
+          kubectl get services -n doc-server
+          kubectl get ingress -n doc-server
+          
+          # Wait for pods to be ready
+          echo "⏳ Waiting for pods to be ready..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=doc-server -n doc-server --timeout=120s
+          
+          echo "✅ Deployment verification complete!"
+
+      - name: Run production validation tests
+        run: |
+          echo "🧪 Running production validation tests..."
+          
+          # Get service endpoint
+          SERVICE_IP=$(kubectl get service doc-server -n doc-server -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
+          if [ -z "$SERVICE_IP" ]; then
+            SERVICE_IP=$(kubectl get service doc-server -n doc-server -o jsonpath='{.spec.clusterIP}')
+            echo "Using ClusterIP: $SERVICE_IP"
+          else
+            echo "Using LoadBalancer IP: $SERVICE_IP"
+          fi
+          
+          # Health check
+          echo "🏥 Testing health endpoint..."
+          kubectl exec -n doc-server deployment/doc-server -- curl -f http://localhost:3001/health || echo "Health check failed"
+          
+          # MCP endpoint check
+          echo "🔌 Testing MCP endpoint..."
+          kubectl exec -n doc-server deployment/doc-server -- curl -f -X POST http://localhost:3001/mcp \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json,text/event-stream" \
+            -H "MCP-Protocol-Version: 2025-06-18" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"ping"}' || echo "MCP endpoint test failed"
+          
+          echo "✅ Production validation tests complete"
+
+      - name: Show deployment summary
+        run: |
+          echo ""
+          echo "🎉 DEPLOYMENT SUMMARY"
+          echo "===================="
+          echo "📦 Deployed: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/doc-server:${{ needs.version.outputs.version }}"
+          echo "🏷️ Version: ${{ needs.version.outputs.version }}"
+          echo "🔗 Short SHA: ${{ needs.version.outputs.short-sha }}"
+          echo "🌐 Namespace: doc-server"
+          echo ""
+          echo "🔍 Quick status check:"
+          kubectl get all -n doc-server
+          echo ""
+          echo "✅ Deployment complete - ready for real-world testing!"

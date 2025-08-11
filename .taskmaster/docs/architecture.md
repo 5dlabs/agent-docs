@@ -8,8 +8,8 @@ The Doc Server is a comprehensive documentation server that transforms from a si
 
 ### ✅ Completed Infrastructure
 - **Database**: Migrated from `rust_docs_vectors` to `docs` with harmonized schema
-- **Docker Environment**: Complete development setup with PostgreSQL + pgvector on port 5433
-- **MCP Server**: HTTP/SSE server with Toolman integration on port 3001
+- **Production Database**: PostgreSQL with pgvector extension in dedicated cluster
+- **MCP Server**: HTTP/SSE server with Toolman integration on port 3001 (requires Streamable HTTP migration)
 - **Data Storage**: 184MB database dump with 40+ Rust crates, BirdEye API docs, Solana documentation
 - **Embeddings**: 4,000+ documents with OpenAI text-embedding-3-large (3072 dimensions)
 
@@ -45,12 +45,12 @@ The Doc Server is a comprehensive documentation server that transforms from a si
    - BirdEye API extraction (OpenAPI specs)
    - Solana documentation processing (markdown, PDFs, diagrams)
 
-### Docker Infrastructure
+### Production Infrastructure
 
-- **Development**: `docker-compose.dev.yml` with PostgreSQL on port 5433
-- **Scripts**: `./scripts/dev.sh --with-data` for instant environment with full database
-- **Production**: Multi-stage Dockerfile optimized for Rust workspace
-- **Database Dump**: 67MB compressed dump with all documentation ready for restoration
+- **Database**: PostgreSQL with pgvector extension in dedicated Kubernetes cluster
+- **Container Registry**: GitHub Container Registry for automated builds
+- **Deployment**: Helm-based Kubernetes deployment with production configuration
+- **Data Migration**: 184MB database ready for cluster deployment
 
 ## Database Schema
 
@@ -244,12 +244,12 @@ Each documentation type stores specific metadata in JSONB format:
 ./scripts/stop.sh
 ```
 
-### Port Configuration
+### Production Configuration
 
-- **MCP Server**: http://localhost:3001
-- **Health Check**: http://localhost:3001/health  
-- **PostgreSQL**: localhost:5433 (avoids conflicts with local PostgreSQL)
-- **Redis** (optional): localhost:6379
+- **MCP Server**: Port 3001 (configurable via environment)
+- **Health Check**: `/health` endpoint
+- **PostgreSQL**: Cluster connection via environment configuration
+- **Session Storage**: In-memory (sufficient for single-user with 5-6 agents)
 
 ### Environment Variables
 
@@ -323,10 +323,10 @@ RATE_LIMIT_RPM=3000
 ### Optimization Roadmap
 
 1. **Batch Processing**: 70% cost reduction for embeddings
-2. **Connection Reliability**: SSE keep-alive implementation  
+2. **Connection Reliability**: Streamable HTTP transport implementation  
 3. **Query Optimization**: Improved indexing strategies
-4. **Caching**: Redis for frequently accessed content
-5. **Scaling**: Horizontal scaling preparation
+4. **Caching**: In-memory caching for frequently accessed content
+5. **Scaling**: Kubernetes horizontal pod autoscaling
 
 ## Security & Compliance
 
@@ -363,15 +363,15 @@ RATE_LIMIT_RPM=3000
 
 ### Development
 
-- Docker Compose with PostgreSQL
-- Local development scripts
-- Database dump for instant setup
+- Direct PostgreSQL cluster access
+- GitHub Actions workflow for automated builds
+- Container image building and registry
 - Hot reloading for development
 
-### Production (Planned)
+### Production
 
-- Kubernetes deployment with Helm
-- PostgreSQL with pgvector extension
-- Redis for caching and rate limiting
-- Load balancing for high availability
-- Monitoring and alerting stack
+- Kubernetes deployment with Helm charts
+- PostgreSQL with pgvector extension in dedicated cluster
+- In-memory session and query caching
+- Load balancing via Kubernetes ingress
+- Monitoring and alerting with Prometheus/Grafana

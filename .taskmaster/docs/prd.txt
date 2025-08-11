@@ -6,23 +6,23 @@ The Doc Server is a comprehensive documentation platform that provides AI assist
 
 ## Current State (As of Handoff)
 
-### ✅ Implemented Infrastructure
-- **Database**: `docs` database with harmonized schema (migrated from `rust_docs_vectors`)
-- **Content**: 4,000+ documents with embeddings across 3 documentation types
-- **Architecture**: PostgreSQL with pgvector, Rust MCP server, Docker development environment
-- **Working Tools**: `rust_query` tool implemented and tested in Cursor MCP
-- **Development Environment**: One-command setup with full database restoration
+### 🔄 Infrastructure Status (Requires Rebuild)
+- **Database**: `docs` database with harmonized schema (needs validation and migration)
+- **Content**: 4,000+ documents with embeddings across 3 documentation types (needs verification)
+- **Architecture**: PostgreSQL with pgvector, Rust MCP server (requires Streamable HTTP transport migration)
+- **Working Tools**: `rust_query` tool exists but needs validation with new transport
+- **Production Environment**: Kubernetes cluster deployment required
 
-### ✅ Documentation Content
-- **Rust Crates**: 40+ crates with complete documentation and embeddings
-- **BirdEye API**: 600+ endpoints with OpenAPI specifications
-- **Solana Documentation**: 400+ documents including core docs, architecture diagrams, ZK cryptography PDFs
+### 📋 Current Data Status
+- **Rust Crates**: 40+ crates with documentation and embeddings (needs production validation)
+- **BirdEye API**: 600+ endpoints with OpenAPI specifications (needs production deployment)
+- **Solana Documentation**: 400+ documents including core docs, architecture diagrams, ZK cryptography PDFs (needs cluster validation)
 
-### ✅ Technical Implementation
-- **MCP Server**: HTTP/SSE server on port 3001 with Toolman integration
-- **Database Schema**: Unified tables supporting all planned documentation types
-- **Docker Setup**: Complete development environment with PostgreSQL on port 5433
-- **Database Dump**: 67MB compressed dump for instant restoration
+### 🔧 Current Implementation Status
+- **MCP Server**: HTTP/SSE server using deprecated transport (MUST migrate to Streamable HTTP)
+- **Database Schema**: Unified tables supporting multiple documentation types (needs cluster deployment)
+- **Production Database**: PostgreSQL with pgvector extension in dedicated cluster (ready for connection)
+- **Data Migration**: 184MB database with 4,000+ documents ready for cluster deployment
 
 ## Target State
 
@@ -30,21 +30,21 @@ The Doc Server is a comprehensive documentation platform that provides AI assist
 A unified documentation server providing:
 - **Query Tools**: 10 type-specific query tools for precise documentation access
 - **Management Tools**: Dynamic Rust crate management via MCP
-- **Connection Reliability**: SSE keep-alive for stable Toolman integration  
+- **Connection Reliability**: Streamable HTTP transport for stable Toolman integration  
 - **Cost Efficiency**: 70% embedding cost reduction via OpenAI batching
-- **Developer Experience**: One-command development environment setup
+- **Developer Experience**: Streamlined Kubernetes deployment and validation workflow
 
 ### Supported Documentation Types
-1. ✅ **Rust Crates** (implemented) - Dynamic management and querying
-2. ✅ **BirdEye API** (ingested) - Blockchain API documentation
-3. ✅ **Solana** (ingested) - Blockchain platform documentation
-4. 🔄 **Jupyter Notebooks** (planned) - Interactive notebook documentation
-5. 🔄 **Cilium** (planned) - Networking and security documentation
-6. 🔄 **Talos** (planned) - Linux distribution documentation
-7. 🔄 **Meteora** (planned) - DEX protocol documentation
-8. 🔄 **Raydium** (planned) - DEX protocol documentation
-9. 🔄 **eBPF** (planned) - Extended Berkeley Packet Filter documentation
-10. 🔄 **Rust Best Practices** (planned) - Language best practices guide
+1. 🔄 **Rust Crates** (needs production validation) - Dynamic management and querying
+2. 🔄 **BirdEye API** (needs cluster deployment) - Blockchain API documentation
+3. 🔄 **Solana** (needs cluster deployment) - Blockchain platform documentation
+4. 📋 **Jupyter Notebooks** (planned) - Interactive notebook documentation
+5. 📋 **Cilium** (planned) - Networking and security documentation
+6. 📋 **Talos** (planned) - Linux distribution documentation
+7. 📋 **Meteora** (planned) - DEX protocol documentation
+8. 📋 **Raydium** (planned) - DEX protocol documentation
+9. 📋 **eBPF** (planned) - Extended Berkeley Packet Filter documentation
+10. 📋 **Rust Best Practices** (planned) - Language best practices guide
 
 ## Functional Requirements
 
@@ -52,10 +52,10 @@ A unified documentation server providing:
 
 Each documentation type must have its own specific query tool for optimal relevance:
 
-#### ✅ Implemented
-- `rust_query` - Query Rust crate documentation with semantic search
+#### 🔄 Requires Production Validation
+- `rust_query` - Query Rust crate documentation with semantic search (needs Streamable HTTP migration)
 
-#### 🔄 Planned Implementation  
+#### 📋 Planned Implementation  
 - `birdeye_query` - Query BirdEye blockchain API documentation
 - `solana_query` - Query Solana blockchain platform documentation
 - `jupyter_query` - Query Jupyter notebook documentation
@@ -67,10 +67,76 @@ Each documentation type must have its own specific query tool for optimal releva
 - `rust_best_practices_query` - Query Rust best practices guide
 
 #### Tool Requirements
-- **Type-specific naming**: Clear indication of available documentation
-- **Semantic search**: Vector similarity search with embeddings
-- **Metadata filtering**: Use JSONB metadata for refined results
-- **Response formatting**: Structured responses with source attribution
+- **Type-specific naming**: Clear indication of available documentation (no generic names)
+- **Semantic search**: Vector similarity search using OpenAI text-embedding-3-large (3072 dimensions)
+- **Metadata filtering**: JSONB metadata filtering for refined results and document categorization
+- **Response formatting**: Structured responses with source attribution and relevance scoring
+- **Performance targets**: Query response time < 2 seconds despite lack of vector indexing
+- **Content handling**: Support for markdown, PDF, BOB diagrams, MSC sequence charts
+
+#### Tool Architecture Details
+
+Each query tool follows a standardized architecture pattern:
+
+```rust
+// Tool Implementation Pattern
+struct DocumentTypeQueryTool {
+    db_pool: SqlxPool,
+    embeddings_client: OpenAIClient,
+    doc_type: DocumentType,
+}
+
+impl Tool for DocumentTypeQueryTool {
+    async fn execute(&self, query: String) -> ToolResult {
+        // 1. Generate query embedding (3072 dimensions)
+        // 2. Perform vector similarity search
+        // 3. Apply metadata filters for doc_type
+        // 4. Rank results by relevance score
+        // 5. Format response with source attribution
+    }
+}
+```
+
+**Tool Naming Convention (CRITICAL)**:
+- ✅ **Correct**: `solana_query`, `birdeye_query`, `cilium_query`, `rust_query`
+- ❌ **Incorrect**: `blockchain_query`, `api_query`, `docs_query`, `search_tool`
+
+**Metadata Structure Per Documentation Type**:
+
+**Rust Crates**:
+```json
+{
+  "version": "1.0.0",
+  "features": ["full", "macros"],
+  "crate_type": "library",
+  "docs_url": "https://docs.rs/crate/version",
+  "module_path": "src/lib.rs",
+  "item_type": "struct|function|trait|enum"
+}
+```
+
+**BirdEye API**:
+```json
+{
+  "api_version": "v1",
+  "endpoint": "/defi/price",
+  "method": "GET|POST|PUT|DELETE",
+  "parameters": {"address": "string", "chain": "solana"},
+  "response_schema": {"price": "number", "timestamp": "unix"},
+  "category": "defi|nft|analytics"
+}
+```
+
+**Solana Documentation**:
+```json
+{
+  "category": "core|architecture|crypto|consensus",
+  "format": "markdown|pdf|bob|msc",
+  "section": "consensus|networking|validators|runtime",
+  "complexity": "beginner|intermediate|advanced",
+  "topic": "proof_of_stake|gossip|turbine|accounts"
+}
+```
 
 ### 2. Management Tools (Rust Only)
 
@@ -83,30 +149,87 @@ Only Rust crates support dynamic management via MCP:
 ### 3. Connection Reliability (Priority)
 
 #### Current State
-- Basic HTTP/SSE server implementation
+- Basic HTTP/SSE server implementation (using deprecated transport)
 - Health check endpoint functional
 - Cursor MCP integration working
 
-#### Required Implementation
-- **SSE Keep-Alive**: Heartbeat messages every 30 seconds
-- **Timeout Detection**: Connection timeout detection at 90 seconds
-- **Auto-Reconnection**: Client-side reconnection with exponential backoff
-- **Message Buffering**: Buffer messages during disconnection periods
+#### Required Implementation - Streamable HTTP Transport (MCP 2025-06-18)
+- **Single MCP Endpoint**: Unified endpoint supporting both POST and GET methods
+- **Session Management**: Implement Mcp-Session-Id header support for stateful sessions
+- **Protocol Version Headers**: MCP-Protocol-Version header compliance
+- **Resumable Connections**: SSE event IDs for connection resumability and message redelivery
+- **Security Requirements**: Origin header validation, localhost binding, proper authentication
 - **Health Monitoring**: Enhanced health endpoints for system monitoring
 
 ### 4. Data Management
 
-#### Current Implementation
-- ✅ Harmonized schema supporting multiple documentation types
-- ✅ JSONB metadata for type-specific information
-- ✅ OpenAI text-embedding-3-large embeddings (3072 dimensions)
-- ✅ Complete migration from original Rust-only schema
+#### Current Implementation Status
+- 🔄 Harmonized schema supporting multiple documentation types (needs cluster deployment)
+- 🔄 JSONB metadata for type-specific information (needs production validation)
+- 🔄 OpenAI text-embedding-3-large embeddings (3072 dimensions) (needs cluster connection)
+- 🔄 Migration from original Rust-only schema (needs production verification)
 
 #### Required Enhancements
 - **Batch Processing**: OpenAI API batching for cost optimization
 - **Rate Limiting**: Compliance with OpenAI rate limits (3000 RPM / 1M TPM)
 - **Vector Indexing**: Optimize search performance as data grows
 - **Cross-Type Search**: Unified search across all documentation types
+
+## Deployment and Validation Process
+
+### Mandatory Validation Workflow
+
+**CRITICAL REQUIREMENT**: Every feature implementation and task completion **MUST** follow this exact validation process to reach acceptance criteria. No exceptions.
+
+#### Step 1: Code Integration
+- **Action**: Push feature branch to GitHub repository
+- **Requirement**: All code changes, configuration updates, and documentation must be committed
+- **Validation**: GitHub Actions triggers must execute successfully
+- **Deliverable**: Feature branch ready for build pipeline
+
+#### Step 2: Container Build
+- **Action**: Wait for automated container image build to complete
+- **Requirement**: Container image build must succeed without errors
+- **Validation**: Container image tagged and available in container registry
+- **Deliverable**: Deployable container image with proper versioning
+
+#### Step 3: Kubernetes Deployment
+- **Action**: Deploy the new image to production Kubernetes cluster
+- **Requirement**: All Kubernetes manifests (deployments, services, ingress) must apply successfully
+- **Validation**: Pod health checks pass, service endpoints respond
+- **Environment**: Production cluster with dedicated PostgreSQL + pgvector
+- **Deliverable**: Running service accessible via cluster networking
+
+#### Step 4: Real-World Testing
+- **Action**: Execute comprehensive testing against live deployment
+- **Requirement**: All acceptance criteria must be validated in production environment
+- **Validation**: 
+  - Tool functionality tested via Cursor MCP integration
+  - Query performance benchmarked against production data
+  - Connection stability validated under realistic load
+  - Database queries executed against live PostgreSQL cluster
+- **Deliverable**: Test results demonstrating acceptance criteria fulfillment
+
+#### Step 5: Acceptance Validation
+- **Action**: Document validation results and mark task complete
+- **Requirement**: All acceptance criteria met in production environment
+- **Validation**: Stakeholder approval on real-world functionality
+- **Deliverable**: Completed task with production validation evidence
+
+### Infrastructure Requirements
+
+#### Production Environment
+- **Kubernetes Cluster**: Production-grade cluster with proper resource allocation
+- **PostgreSQL Database**: Dedicated PostgreSQL instance with pgvector extension
+- **Container Registry**: Automated image building and registry management
+- **Monitoring**: Production monitoring and alerting for all deployments
+- **Load Balancing**: Ingress controllers and service mesh for traffic management
+
+#### Development Workflow
+- **Source Control**: Git-based workflow with feature branches
+- **CI/CD Pipeline**: GitHub Actions for automated building and testing
+- **Infrastructure as Code**: Kubernetes manifests versioned with application code
+- **Observability**: Structured logging and metrics collection in production
 
 ## Technical Requirements
 
@@ -162,33 +285,36 @@ CREATE TABLE document_sources (
 
 ### Integration Requirements
 
-#### Current Integrations
-- ✅ **Toolman**: Primary client with HTTP/SSE transport
-- ✅ **Cursor**: MCP integration working
-- ✅ **PostgreSQL**: Database with pgvector extension
-- ✅ **OpenAI**: Embedding generation and LLM queries
+#### Current Integration Status
+- 🔄 **Toolman**: Primary client with deprecated HTTP/SSE transport (MUST migrate to Streamable HTTP)
+- 🔄 **Cursor**: MCP integration exists but needs cluster deployment validation
+- 🔄 **PostgreSQL**: Database with pgvector extension (needs cluster connection setup)
+- 🔄 **OpenAI**: Embedding generation and LLM queries (needs production environment configuration)
 
 #### Required Enhancements
-- **Docker**: Production-ready containerization
-- **Monitoring**: Health checks and system metrics
-- **Logging**: Structured logging with tracing
-- **Error Handling**: Comprehensive error recovery
+- **Kubernetes Deployment**: Production-ready container orchestration
+- **Monitoring**: Health checks and system metrics with Prometheus/Grafana
+- **Logging**: Structured logging with tracing for cluster environments
+- **Error Handling**: Comprehensive error recovery and circuit breakers
 
 ## Implementation Priorities
 
 ### Phase 1: System Evaluation (Week 1)
 **Priority**: Immediate (Task 35)
 - Comprehensive system assessment by new implementation agent
-- Verify all completed functionality
-- Test development environment and Docker setup
-- Validate database restoration and query tools
-- Document current state and identify gaps
+- Verify existing functionality against production requirements
+- Test Kubernetes cluster connectivity and database access
+- Validate current MCP server implementation against Streamable HTTP requirements
+- Document current state, identify migration requirements, and plan cluster deployment
 
-### Phase 2: Connection Reliability (Week 2)
+### Phase 2: MCP Transport Migration (Week 2)
 **Priority**: High (Task 17)
-- Implement SSE keep-alive mechanism
-- Add connection timeout detection and recovery
-- Enhance health monitoring endpoints
+- Migrate from deprecated HTTP+SSE to Streamable HTTP transport (MCP 2025-06-18)
+- Implement unified MCP endpoint with POST/GET support
+- Add session management with Mcp-Session-Id headers
+- Implement protocol version header compliance
+- Add resumable connection support with SSE event IDs
+- Enhance security with Origin header validation
 - Test with Toolman under various network conditions
 
 ### Phase 3: Query Tool Implementation (Week 3-4)
@@ -214,19 +340,20 @@ CREATE TABLE document_sources (
 
 ## Success Criteria
 
-### Completed Milestones ✅
-1. ✅ All 40 existing Rust crates remain searchable after migration
-2. ✅ Zero data loss during schema migration
-3. ✅ Working MCP server with HTTP/SSE transport
-4. ✅ Development environment with one-command setup
-5. ✅ BirdEye and Solana documentation successfully ingested
+### Previous Work (Requires Production Validation)
+1. 🔄 All 40 existing Rust crates data exists (needs cluster deployment validation)
+2. 🔄 Schema migration completed locally (needs production database validation)
+3. 🔄 MCP server exists with deprecated HTTP/SSE transport (MUST migrate to Streamable HTTP)
+4. 🔄 Local development environment existed (needs Kubernetes deployment workflow)
+5. 🔄 BirdEye and Solana documentation ingested locally (needs cluster data migration)
 
 ### Remaining Success Criteria
-1. **Connection Reliability**: 90% reduction in connection timeouts
-2. **Cost Optimization**: 70% cost reduction via OpenAI batching
-3. **Query Tools**: All 10 documentation types with working query tools
-4. **Performance**: Query performance within 10% of original system
-5. **Integration**: Stable Toolman integration under production load
+1. **MCP Transport Compliance**: Full migration to Streamable HTTP transport (MCP 2025-06-18)
+2. **Connection Reliability**: Stable session management and resumable connections
+3. **Cost Optimization**: 70% cost reduction via OpenAI batching
+4. **Query Tools**: All 10 documentation types with working query tools
+5. **Performance**: Query performance within 10% of original system
+6. **Integration**: Stable Toolman integration under production load
 
 ## Constraints
 
@@ -245,24 +372,26 @@ CREATE TABLE document_sources (
 
 ## Dependencies
 
-### Current Dependencies ✅
-- ✅ PostgreSQL with pgvector extension
-- ✅ OpenAI API access and authentication
-- ✅ Docker and Docker Compose for development
-- ✅ Rust toolchain and cargo workspace
+### Infrastructure Dependencies
+- 🔄 PostgreSQL with pgvector extension (3072-dimension vectors) - cluster ready, needs connection
+- 🔄 OpenAI API access and authentication (text-embedding-3-large) - needs production environment setup
+- 🔄 Kubernetes cluster infrastructure - available, needs application deployment
+- 🔄 Rust toolchain and cargo workspace (Axum-based HTTP server) - needs Streamable HTTP migration
+- 🔄 Production container registry and CI/CD pipeline - ready for integration
 
 ### Additional Requirements
-- Toolman deployment for production testing
-- Monitoring infrastructure for production deployment
-- CI/CD pipeline for automated testing and deployment
+- **Toolman Production Integration**: Live testing with Toolman against cluster deployment
+- **Monitoring Infrastructure**: Prometheus/Grafana stack for production observability
+- **Database Performance**: Optimized PostgreSQL configuration for vector workloads
+- **Load Balancing**: Ingress controllers for high-availability deployment
 
 ## Risks and Mitigation
 
 ### Technical Risks
 
-1. **Connection Stability Risk**
-   - **Risk**: Continued timeout issues with Toolman
-   - **Mitigation**: Priority implementation of SSE keep-alive (Task 17)
+1. **MCP Transport Compatibility Risk**
+   - **Risk**: Current implementation uses deprecated HTTP+SSE transport, may cause compatibility issues
+   - **Mitigation**: Priority migration to Streamable HTTP transport (MCP 2025-06-18) (Task 17)
    - **Status**: High priority for Phase 2
 
 2. **Performance Risk**
@@ -305,6 +434,82 @@ CREATE TABLE document_sources (
 - Real-time documentation updates and synchronization
 - Advanced query features (filtering, faceting, aggregation)
 
+## References and Documentation
+
+### Technical Specifications
+
+#### Model Context Protocol (MCP) Specification
+- **MCP Protocol Version**: 2025-06-18
+- **Transport Specification**: [.reference/transports.md](../.reference/transports.md)
+- **Schema Definition**: [.reference/mcp-spec/modelcontextprotocol/schema/2025-06-18/schema.ts](../.reference/mcp-spec/modelcontextprotocol/schema/2025-06-18/schema.ts)
+- **Official MCP Documentation**: https://spec.modelcontextprotocol.io/
+
+#### Key Transport Requirements
+- **Streamable HTTP Transport**: Replaces deprecated HTTP+SSE transport (protocol version 2024-11-05)
+- **Single MCP Endpoint**: Unified endpoint supporting both POST and GET methods
+- **Session Management**: `Mcp-Session-Id` header support for stateful sessions
+- **Protocol Version Headers**: `MCP-Protocol-Version` header compliance required
+- **Security Requirements**: Origin header validation, localhost binding, proper authentication
+
+### Project Documentation
+
+#### Current Project Documents
+- **Product Requirements Document**: [.taskmaster/docs/prd.txt](./prd.txt) (this document)
+- **Architecture Documentation**: [.taskmaster/docs/architecture.md](./architecture.md)
+- **Deployment Workflow**: [.github/workflows/deploy-doc-server.yml](../.github/workflows/deploy-doc-server.yml)
+
+#### Database and API Specifications
+- **PostgreSQL with pgvector**: Vector database for 3072-dimension embeddings
+- **OpenAI API**: text-embedding-3-large model for document embeddings
+- **Vector Dimensions**: 3072 (OpenAI text-embedding-3-large standard)
+- **Rate Limits**: 3,000 RPM / 1M TPM for OpenAI API compliance
+
+### Compliance and Standards
+
+#### MCP Transport Compliance Checklist
+- [ ] **Single MCP Endpoint**: Implement unified `/mcp` endpoint supporting POST/GET
+- [ ] **Protocol Version Header**: Include `MCP-Protocol-Version: 2025-06-18` in all responses
+- [ ] **Session Management**: Support `Mcp-Session-Id` headers for stateful connections
+- [ ] **SSE Event IDs**: Implement resumable connections with proper event identification
+- [ ] **Security Headers**: Validate `Origin` header to prevent DNS rebinding attacks
+- [ ] **Error Handling**: Return proper JSON-RPC error responses per MCP specification
+
+#### Kubernetes Deployment Standards
+- [ ] **Container Security**: Non-root user, minimal base image, security scanning
+- [ ] **Resource Limits**: CPU and memory limits defined in Helm chart
+- [ ] **Health Checks**: Liveness and readiness probes configured
+- [ ] **Service Mesh**: Compatible with Istio/Linkerd if deployed
+- [ ] **Monitoring**: Prometheus metrics endpoint exposed
+- [ ] **Logging**: Structured JSON logging with correlation IDs
+
+### Development and Testing References
+
+#### Validation Process Documentation
+- **GitHub Actions Workflow**: Automated build, test, and deployment pipeline
+- **Clippy Configuration**: [clippy.toml](../clippy.toml) - Rust linting rules
+- **Rust Formatting**: [rustfmt.toml](../rustfmt.toml) - Code formatting standards
+- **Container Build**: [Dockerfile](../Dockerfile) - Multi-stage container build process
+
+#### Testing Requirements
+- **Unit Tests**: Cargo test suite with full feature coverage
+- **Integration Tests**: MCP protocol compliance testing
+- **Production Validation**: Real-world testing against Kubernetes cluster
+- **Performance Benchmarks**: Query response time < 2 seconds target
+
+### External Dependencies and APIs
+
+#### Required External Services
+- **OpenAI API**: Text embedding generation service
+- **PostgreSQL Cluster**: Production database with pgvector extension
+- **Container Registry**: GitHub Container Registry (GHCR) for image storage
+- **Kubernetes Cluster**: Production deployment environment
+
+#### Development Tools and Environment
+- **Rust Toolchain**: Stable channel with Clippy and rustfmt components
+- **Docker/Podman**: Container runtime for local development and CI/CD
+- **Helm**: Kubernetes package manager for deployment orchestration
+- **kubectl**: Kubernetes command-line tool for cluster management
+
 ## Definition of Done
 
 ### For Each Query Tool
@@ -316,16 +521,16 @@ CREATE TABLE document_sources (
 - [ ] Documentation and examples provided
 
 ### For System Reliability
-- [ ] SSE keep-alive implemented and tested
+- [ ] Streamable HTTP transport implemented and tested
 - [ ] Connection recovery working under network stress
 - [ ] Health monitoring providing detailed system status
 - [ ] Error handling graceful and informative
 - [ ] Load testing completed with 100+ concurrent connections
 
 ### For Production Readiness
-- [ ] Docker containers optimized for production
-- [ ] Monitoring and alerting configured
-- [ ] Security review completed
-- [ ] Performance benchmarks documented
-- [ ] Deployment automation working
-- [ ] Backup and recovery procedures tested
+- [ ] Kubernetes deployment optimized for production cluster
+- [ ] Monitoring and alerting configured (Prometheus/Grafana)
+- [ ] Security review completed (authentication, authorization, network policies)
+- [ ] Performance benchmarks documented against production database
+- [ ] CI/CD pipeline working (GitHub → Build → K8s → Test)
+- [ ] Backup and recovery procedures tested in cluster environment

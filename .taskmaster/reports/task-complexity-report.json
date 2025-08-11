@@ -1,0 +1,173 @@
+{
+	"meta": {
+		"generatedAt": "2025-08-11T23:27:12.253Z",
+		"tasksAnalyzed": 20,
+		"totalTasks": 20,
+		"analysisCount": 20,
+		"thresholdScore": 5,
+		"projectName": "Task Master",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Comprehensive System Assessment and Migration Planning",
+			"complexityScore": 4,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down this assessment task into: 1) Codebase structure analysis and documentation review, 2) Database migration status verification including pgvector setup, 3) Existing MCP implementation evaluation against spec requirements, 4) Infrastructure and deployment configuration review, 5) Creation of detailed gap analysis report with migration roadmap",
+			"reasoning": "Found existing codebase with 5 Rust crates already structured. Database queries and models exist but need validation. MCP server has basic structure but transport.rs is empty placeholder. GitHub Actions workflow exists but no Helm charts. Relatively low complexity due to existing foundation."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Implement Streamable HTTP Transport Foundation",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Implement transport layer with: 1) Core HTTP/SSE endpoint setup with Axum routing, 2) JSON-RPC message parsing and validation, 3) SSE stream management with proper event formatting, 4) Session state handling and connection lifecycle, 5) Protocol version negotiation logic, 6) Error handling and status code implementation, 7) Integration tests for all transport scenarios",
+			"reasoning": "Transport.rs is completely empty (only TODO comment). Server.rs references non-existent sse module. Need to build entire transport layer from scratch following complex MCP 2025-06-18 spec. High complexity due to greenfield implementation of critical infrastructure."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Session Management and Security Implementation",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Create session system with: 1) UUID v4 session ID generation and storage infrastructure, 2) Mcp-Session-Id header processing in request/response flow, 3) In-memory session store with TTL and cleanup, 4) Origin header validation and DNS rebinding protection, 5) Session expiry handling with proper HTTP responses, 6) Security testing suite for attack vectors",
+			"reasoning": "No existing session management code found. Must build complete session infrastructure from scratch including security measures. Complex due to security requirements and need for concurrent session handling."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Protocol Version Negotiation and Headers",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Implement version handling: 1) MCP-Protocol-Version header parsing and storage, 2) Version compatibility matrix and negotiation logic, 3) Accept and Content-Type header validation, 4) Integration with existing handler to use negotiated version",
+			"reasoning": "Can leverage existing server.rs structure. Headers need to be added to existing Axum routes. Moderate complexity as it builds on Task 2 foundation."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "SSE Stream Resumability and Event Management",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Build resumable streams: 1) Event ID generation with atomic counters per session, 2) Circular buffer implementation for event history, 3) Last-Event-ID header parsing and replay logic, 4) Stream health monitoring and cleanup, 5) Performance testing with concurrent streams",
+			"reasoning": "Requires building on top of Task 2's SSE implementation. Event buffering and replay adds significant complexity. No existing SSE code to build from."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Enhanced Database Connection and Migration Validation",
+			"complexityScore": 3,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Enhance database layer: 1) SQLx pool configuration with production settings, 2) pgvector extension validation and dimension checks, 3) Connection retry and health check implementation, 4) Migration verification against production schema",
+			"reasoning": "Database crate exists with basic connection and queries. Models and migrations structure in place. Low complexity as foundation exists, mainly configuration and validation work."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "OpenAI Embedding Client with Batch Processing",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Build batch embedding system: 1) OpenAI Batch API client with JSONL formatting, 2) Queue management for 20k line chunks, 3) Rate limiting with token bucket algorithm, 4) Cost tracking and reporting system, 5) Retry logic and error recovery",
+			"reasoning": "BatchProcessor exists but is empty stub. EmbeddingClient exists but needs major enhancement for batch API. Moderate to high complexity due to external API integration and optimization requirements."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement BirdEye Query Tool",
+			"complexityScore": 4,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Create BirdEye tool: 1) Tool struct following RustQueryTool pattern, 2) Metadata parsing for BirdEye-specific fields, 3) Semantic search with pgvector integration, 4) Response formatting with endpoint examples",
+			"reasoning": "RustQueryTool exists as complete pattern to follow. Database queries structure exists. Moderate complexity as it's following established patterns."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Implement Solana Query Tool",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Build Solana tool: 1) Multi-format content handler for MD/PDF/diagrams, 2) Specialized metadata parsing for technical content, 3) Context-aware result presentation, 4) Cross-reference resolution system, 5) Integration with existing tool registry",
+			"reasoning": "More complex than BirdEye due to multiple content formats and diagram handling. Needs PDF extraction logic not present in RustQueryTool pattern."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Implement Rust Crate Management Tools",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Create management suite: 1) add_rust_crate with docs.rs fetching, 2) remove_rust_crate with cascade deletion, 3) list_rust_crates with pagination, 4) check_rust_status implementation, 5) Transaction support for atomicity, 6) Version management and update detection",
+			"reasoning": "No existing management tools. Requires docs.rs API integration, transaction handling, and complex state management. Higher complexity due to external dependencies and data consistency requirements."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Implement Additional Query Tools Suite",
+			"complexityScore": 3,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Batch implement remaining tools by following the established pattern for each: jupyter_query, cilium_query, talos_query, meteora_query, raydium_query, ebpf_query, and rust_best_practices_query",
+			"reasoning": "Low complexity as it's repetitive implementation following RustQueryTool pattern. Main work is metadata parsing variations. Can share utility functions across all tools."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Kubernetes Deployment Configuration",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Create Helm deployment: 1) Chart structure with templates directory, 2) Deployment manifest with resource limits and probes, 3) Service and Ingress configuration, 4) ConfigMap and Secret management, 5) values.yaml with environment-specific overrides",
+			"reasoning": "No Helm charts exist. GitHub Actions workflow exists but needs integration. Moderate complexity for standard Kubernetes patterns."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Container Image Optimization",
+			"complexityScore": 4,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Optimize Docker build: 1) Multi-stage build with cargo-chef integration, 2) Distroless runtime image setup, 3) Security scanning pipeline, 4) Binary optimization and compression",
+			"reasoning": "Dockerfile exists but basic. Moderate complexity for optimization work. Standard patterns for Rust container optimization."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Production Monitoring and Observability",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Implement observability: 1) Prometheus metrics endpoint with custom collectors, 2) Structured JSON logging with correlation IDs, 3) OpenTelemetry tracing setup, 4) Grafana dashboard creation, 5) Alert rules configuration",
+			"reasoning": "No monitoring code exists. Need to integrate multiple observability tools. Moderate to high complexity due to multiple integrations."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Load Testing and Performance Optimization",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Performance validation: 1) Load test suite enhancement from existing script, 2) Query optimization with EXPLAIN analysis, 3) Caching layer implementation, 4) Connection pooling tuning, 5) Performance profiling and bottleneck resolution",
+			"reasoning": "load_test_sse.js exists as starting point. Moderate complexity for optimization work. Standard performance tuning patterns."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "CI/CD Pipeline Enhancement",
+			"complexityScore": 4,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Enhance pipeline: 1) Integration test stage with fixtures, 2) Security scanning integration, 3) Blue-green deployment strategy, 4) Automated rollback mechanisms",
+			"reasoning": "GitHub Actions workflow exists with basic structure. Moderate complexity to add advanced features. Standard CI/CD patterns."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "Documentation and API Reference Generation",
+			"complexityScore": 2,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Create documentation: 1) API reference with cargo doc, 2) OpenAPI specification generation, 3) Deployment and troubleshooting guides, 4) Client integration examples",
+			"reasoning": "Low complexity documentation work. Standard tools and patterns. Mostly writing and generation tasks."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Data Migration and Validation Pipeline",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Build migration pipeline: 1) Migration scripts using doc-loader crate, 2) Checkpointing and incremental processing, 3) Validation and rollback procedures, 4) Parallel processing implementation, 5) Progress tracking system",
+			"reasoning": "doc-loader crate exists but needs extension. Python ingestion scripts exist as reference. Moderate to high complexity for robust pipeline."
+		},
+		{
+			"taskId": 19,
+			"taskTitle": "Security Hardening and Compliance",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Implement security: 1) JWT authentication system, 2) RBAC implementation for tools, 3) TLS/SSL configuration, 4) API key rotation mechanism, 5) Audit logging system, 6) Rate limiting implementation, 7) Security headers and CORS policies",
+			"reasoning": "No security infrastructure exists. High complexity due to multiple security layers and compliance requirements. Critical for production readiness."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Production Deployment and Validation",
+			"complexityScore": 3,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Final deployment: 1) Production deployment execution, 2) Tool validation with real queries, 3) Performance benchmarking, 4) User acceptance testing, 5) Documentation and runbook finalization",
+			"reasoning": "Low complexity as it's primarily validation and testing of completed work. Depends on all other tasks being complete. Mainly coordination and verification work."
+		}
+	]
+}
