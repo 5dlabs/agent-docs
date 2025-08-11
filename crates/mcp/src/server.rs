@@ -3,17 +3,15 @@
 use anyhow::Result;
 use doc_server_database::DatabasePool;
 use crate::handlers::McpHandler;
+use crate::sse::sse_handler;
 use axum::{
     extract::State,
     http::{Method, StatusCode},
-    response::{sse::Event, Sse},
     routing::{get, post},
     Json, Router,
 };
-use futures::Stream;
 use serde_json::Value;
-use std::{convert::Infallible, sync::Arc, time::Duration};
-use tokio::time::interval;
+use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, error, debug};
 
@@ -82,38 +80,6 @@ async fn health_check() -> Result<Json<Value>, StatusCode> {
     })))
 }
 
-/// SSE endpoint for real-time communication
-async fn sse_handler(
-    State(_state): State<McpServerState>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    debug!("New SSE connection established");
-    
-    let stream = async_stream::stream! {
-        // Send initial connection event
-        yield Ok(Event::default()
-            .event("connected")
-            .data("{\"status\":\"connected\",\"server\":\"doc-server-mcp\"}")
-        );
-        
-        // Keep-alive heartbeat every 30 seconds
-        let mut heartbeat = interval(Duration::from_secs(30));
-        
-        loop {
-            heartbeat.tick().await;
-            yield Ok(Event::default()
-                .event("heartbeat")
-                .data(format!("{{\"timestamp\":{}}}", chrono::Utc::now().timestamp()))
-            );
-        }
-    };
-    
-    Sse::new(stream)
-        .keep_alive(
-            axum::response::sse::KeepAlive::new()
-                .interval(Duration::from_secs(15))
-                .text("keep-alive-text"),
-        )
-}
 
 /// MCP JSON-RPC handler for tool calls
 async fn mcp_handler(

@@ -7,6 +7,7 @@ pub mod server;
 pub mod tools;
 pub mod transport;
 pub mod handlers;
+pub mod sse;
 
 pub use server::McpServer;
 

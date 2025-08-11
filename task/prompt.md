@@ -1,236 +1,315 @@
-# Database Migration and Schema Harmonization Task
+# SSE Keep-Alive Implementation Task
 
-You are tasked with migrating a PostgreSQL database from 'rust_docs_vectors' to 'docs' with a harmonized schema supporting multiple documentation types. This is a critical foundation task for expanding from a Rust-only documentation server to a multi-type documentation platform.
+You are tasked with implementing a Server-Sent Events (SSE) heartbeat mechanism for the MCP documentation server to maintain stable connections with Toolman clients and prevent connection timeouts. This is a critical infrastructure enhancement for production reliability.
 
 ## Objective
-Migrate existing Rust documentation data to a new harmonized schema that supports diverse documentation types including infrastructure tools, blockchain platforms, and programming resources, while preserving all existing data and functionality.
+Implement a robust SSE keep-alive system that provides stable, long-term connections between the documentation server and Toolman clients, with automatic reconnection and message buffering capabilities.
 
-## Current State
-- Existing database: `rust_docs_vectors` with Rust crate documentation
-- 40+ Rust crates with embeddings and search functionality
-- Single-purpose schema designed only for Rust documentation
-- Working vector search with semantic queries
+## Current Problem
+The existing MCP server uses basic HTTP/SSE transport without keep-alive mechanisms, causing:
+- Frequent connection timeouts with Toolman clients
+- Disrupted AI agent workflows requiring manual reconnection
+- Unreliable service availability for production use
+- No recovery mechanism for network interruptions
 
-## Database Access Information
+## Target Solution
+A comprehensive SSE keep-alive system providing:
+- Heartbeat messages every 30 seconds to maintain connections
+- Connection timeout detection at 90 seconds
+- Automatic client-side reconnection with exponential backoff
+- Message buffering during disconnection periods
+- Connection lifecycle monitoring and metrics
 
+## Technical Requirements
 
-### ⚠️ CRITICAL: DIRECT NETWORK ACCESS TO LIVE DATABASE ⚠️
-**NO DOCKER, NO KUBECTL NEEDED**: The database is accessible directly over the network. Connect using the PostgreSQL connection URL directly.
+### Server-Side Implementation
+1. **SSE Endpoint** (`/sse`)
+   ```rust
+   // Required HTTP headers
+   Content-Type: text/event-stream
+   Cache-Control: no-cache
+   Connection: keep-alive
+   Access-Control-Allow-Origin: *
+   ```
 
-- **Environment**: Live PostgreSQL database in Kubernetes (accessible over network)
-- **Host**: `rustdocs-mcp-postgresql.mcp.svc.cluster.local` (full service URL for cross-namespace access)
-- **Port**: `5432`
-- **Database**: `rust_docs_vectors` (existing), create `docs` (new)
-- **Connection URL**: `postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/rust_docs_vectors`
-- **Access Method**: **DIRECT NETWORK CONNECTION** - Use psql (installed and available) with the connection URL
-- **PostgreSQL Tools**: psql client tools are installed and available for use
-- **Data Source**: **IMPORTANT** - The repository contains a dump file with ingested data that MUST be imported into the NEW 'docs' database
-- **Existing Resources**: SQL scripts and dump files available in the repository (check `sql/` folder and other locations)
+2. **Heartbeat System**
+   - Send keep-alive message every 30 seconds
+   - Include timestamp for client verification
+   - Use structured event format for different message types
 
-**HOW TO CONNECT**:
+3. **Connection Management**
+   - Track active connections in memory or Redis
+   - Implement connection cleanup on client disconnect
+   - Monitor connection metrics and health
+
+### Client-Side Implementation
+1. **Automatic Reconnection**
+   ```javascript
+   // Exponential backoff parameters
+   Initial retry: 1 second
+   Maximum retry: 60 seconds
+   Jitter: 0-500ms random delay
+   ```
+
+2. **Connection State Management**
+   - Track connection status (connected, reconnecting, failed)
+   - Handle connection lifecycle events
+   - Provide status indicators for debugging
+
+### Message Buffering System
+1. **Buffer Configuration**
+   - Buffer size: 1000 messages per connection
+   - Retention time: 5 minutes
+   - Optional Redis persistence for scalability
+
+2. **Message Delivery**
+   - Queue messages during disconnection
+   - Replay buffered messages on reconnection
+   - Handle message deduplication and ordering
+
+## Environment Setup
+
+### Database Connection (For Reference)
+Export the database URL for any potential database operations:
 ```bash
-# Direct connection using psql (with full service URL for cross-namespace access)
-psql "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/rust_docs_vectors"
-
-# Or using environment variables
-PGPASSWORD=rustdocs123 psql -h rustdocs-mcp-postgresql.mcp.svc.cluster.local -p 5432 -U rustdocs -d rust_docs_vectors
-
-# Python connection example
-import psycopg2
-conn = psycopg2.connect("postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/rust_docs_vectors")
+export DATABASE_URL="postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/docs"
 ```
-
-**DO NOT USE**:
-- ❌ Docker - Not needed, database is network accessible
-- ❌ kubectl - Not needed, database is network accessible
-- ❌ Local database files or dumps for verification
-
-
-## Target State
-- New database: `docs` with harmonized schema
-- Support for 10 documentation types: rust, jupyter, birdeye, cilium, talos, meteora, solana, ebpf, raydium, rust_best_practices
-- All existing Rust data preserved and functional
-- Foundation for multi-type documentation ingestion
-
-## Required Schema
-
-### Documents Table
-```sql
-CREATE TABLE documents (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN (
-        'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
-        'meteora', 'solana', 'ebpf', 'raydium', 'rust_best_practices'
-    )),
-    source_name VARCHAR(255) NOT NULL,
-    doc_path TEXT NOT NULL,
-    content TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}',
-    embedding vector(3072), -- OpenAI text-embedding-3-large
-    token_count INTEGER,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(doc_type, source_name, doc_path)
-);
-```
-
-### Document Sources Table
-```sql
-CREATE TABLE document_sources (
-    id SERIAL PRIMARY KEY,
-    doc_type VARCHAR(50) NOT NULL,
-    source_name VARCHAR(255) NOT NULL,
-    config JSONB NOT NULL DEFAULT '{}',
-    enabled BOOLEAN DEFAULT true,
-    last_checked TIMESTAMPTZ,
-    last_populated TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(doc_type, source_name)
-);
-```
+This environment variable is available for use throughout the implementation if needed for persistence or tracking.
 
 ## Implementation Steps
 
+### Phase 1: Basic SSE Infrastructure
+1. **Create SSE endpoint** with proper headers and CORS configuration
+2. **Implement heartbeat mechanism** with 30-second intervals
+3. **Add connection tracking** for active SSE connections
+4. **Test basic connectivity** with simple client
 
-1. **Database Connection (Direct Network Access)**
-   - **DIRECT CONNECTION**: Use psql (installed and available) with the PostgreSQL connection URL
-   - `psql "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/rust_docs_vectors"`
-   - This connects to the LIVE database over the network using the full service URL
-   - Verify connection to the live PostgreSQL instance
+### Phase 2: Reconnection Logic
+1. **Implement client-side EventSource wrapper** with reconnection
+2. **Add exponential backoff** with jitter for retry timing
+3. **Create connection state management** and event handling
+4. **Test reconnection** under various failure scenarios
 
-2. **New Database Creation (SEPARATE DATABASE)**
-   - Create NEW 'docs' database (separate from rust_docs_vectors)
-   - `CREATE DATABASE docs;`
-   - Connect to the new database: `psql "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/docs"`
-   - Enable pgvector extension: `CREATE EXTENSION IF NOT EXISTS vector;`
+### Phase 3: Message Buffering
+1. **Design message buffer architecture** (in-memory + optional Redis)
+2. **Implement message queuing** during disconnections
+3. **Add message replay logic** on reconnection
+4. **Handle buffer overflow** and message expiration
 
-3. **Import Data from Repository Dump**
-   - **CRITICAL**: Find and use the dump file included in the repository
-   - This dump contains the ingested data that must be imported
-   - Import the dump into the NEW 'docs' database (NOT rust_docs_vectors)
-   - Example: `psql "postgresql://rustdocs:rustdocs123@rustdocs-mcp-postgresql.mcp.svc.cluster.local:5432/docs" < path/to/dump.sql`
-   - Verify all data imported correctly with counts and sample queries
+### Phase 4: Integration and Testing
+1. **Integrate with existing MCP server** endpoints
+2. **Add comprehensive logging** and monitoring
+3. **Perform load testing** with multiple concurrent connections
+4. **Validate Toolman integration** and stability
 
-   - Set doc_type='rust' for all migrated documents
+## Configuration Structure
+```rust
+pub struct SSEConfig {
+    pub heartbeat_interval: Duration,      // 30 seconds
+    pub connection_timeout: Duration,      // 90 seconds
+    pub initial_retry_delay: Duration,     // 1 second
+    pub max_retry_delay: Duration,         // 60 seconds
+    pub retry_jitter_max: Duration,        // 500ms
+    pub message_buffer_size: usize,        // 1000 messages
+    pub buffer_retention: Duration,        // 5 minutes
+    pub enable_redis_persistence: bool,    // Optional Redis backend
+}
+```
 
-4. **Integrity Validation**
-   - Verify row counts match between databases
-   - Compare sample query results for consistency
-   - Test vector search functionality on migrated data
-   - Validate all 40 Rust crates remain searchable
+## Error Handling Requirements
 
-5. **Application Update**
-   - Update connection strings to use new 'docs' database
-   - Verify all existing functionality works with new schema
-   - Test search queries and embedding operations
+### Network Failures
+- Detect client disconnection through SSE stream errors
+- Clean up connection resources automatically
+- Retry message delivery on reconnection
+- Handle partial message transmission
 
-## Critical Requirements
+### Resource Management
+- Prevent memory leaks from abandoned connections
+- Implement connection timeout cleanup
+- Monitor and limit concurrent connection count
+- Handle connection resource exhaustion gracefully
 
-1. **Zero Data Loss**: All existing documents, embeddings, and metadata must be preserved
-2. **Functional Preservation**: All search and query functionality must work identically
-3. **Performance Maintenance**: Query performance must remain within 10% of original
-4. **Schema Validation**: New schema must support all 10 planned documentation types
-5. **Rollback Capability**: Maintain ability to rollback to original database if needed
+### Message Reliability
+- Ensure message ordering during replay
+- Handle duplicate message detection
+- Implement message acknowledgment system
+- Manage buffer overflow scenarios
 
-## Validation Criteria
+## Testing Requirements
 
-1. **Data Integrity**
-   - Document count matches exactly between old and new databases
-   - All embeddings transferred with full 3072-dimensional fidelity
-   - Metadata preserved in JSONB format
-   - No duplicate or missing documents
+### Functional Testing
+1. **Connection Establishment**
+   - Verify SSE connection setup and headers
+   - Test heartbeat message delivery
+   - Validate connection tracking
+
+2. **Reconnection Logic**
+   - Simulate network interruptions
+   - Test exponential backoff timing
+   - Verify connection state transitions
+
+3. **Message Buffering**
+   - Test message queuing during disconnection
+   - Verify message replay on reconnection
+   - Validate buffer overflow handling
+
+### Load Testing
+1. **Concurrent Connections**
+   - Support 100+ simultaneous SSE connections
+   - Monitor memory usage under load
+   - Verify connection cleanup efficiency
+
+2. **Network Stress**
+   - Test rapid connect/disconnect cycles
+   - Simulate intermittent network failures
+   - Validate recovery under stress conditions
+
+### Integration Testing
+1. **Toolman Compatibility**
+   - Test with actual Toolman client
+   - Verify stable long-term connections
+   - Validate AI agent workflow continuity
+
+2. **MCP Server Integration**
+   - Ensure compatibility with existing endpoints
+   - Test under normal operational load
+   - Verify no performance degradation
+
+## Performance Requirements
+
+### Connection Performance
+- Support minimum 100 concurrent connections
+- Connection establishment under 1 second
+- Heartbeat processing under 10ms per connection
+- Memory usage under 1MB per 100 connections
+
+### Network Efficiency
+- Minimal bandwidth overhead (heartbeat only)
+- Efficient connection pooling
+- Optimized message serialization
+- Compressed event streams where beneficial
+
+### Recovery Performance
+- Reconnection within 5 seconds of network restoration
+- Message buffer replay under 2 seconds
+- Connection state synchronization under 1 second
+- Zero message loss during planned reconnections
+
+## Success Criteria
+
+### Reliability Metrics
+- 99.9% connection uptime under normal conditions
+- 90% reduction in manual reconnection events
+- Zero message loss during network interruptions
+- Sub-5-second recovery from connection failures
+
+### Performance Metrics
+- Connection establishment success rate > 99%
+- Heartbeat delivery consistency > 99.5%
+- Memory efficiency under 10MB for 100 connections
+- CPU overhead under 5% for heartbeat processing
+
+### Integration Success
+- Stable Toolman connections for 24+ hour periods
+- Seamless AI agent workflow continuation
+- No degradation in existing MCP functionality
+- Compatible with current client implementations
+
+## Deliverables
+
+### Code Implementation
+- SSE endpoint with heartbeat functionality
+- Client-side reconnection wrapper
+- Message buffering system
+- Configuration management
+- Error handling and logging
+
+### Testing Suite
+- Unit tests for all components
+- Integration tests with mock clients
+- Load testing scripts and results
+- Network failure simulation tests
+
+### Documentation
+- API documentation for SSE endpoints
+- Configuration guide and examples
+- Troubleshooting guide for connection issues
+- Performance tuning recommendations
+
+## CRITICAL PR SUBMISSION REQUIREMENTS
+
+### Code Quality Standards (MANDATORY)
+**DO NOT SUBMIT THE PR** until ALL of the following requirements are met:
+
+1. **Clippy Compliance**
+   ```bash
+   # Run clippy and fix ALL warnings and errors
+   cargo clippy -- -W clippy::all -W clippy::pedantic
+   # The PR will be rejected if any clippy issues remain
+   ```
+
+2. **Live Binary Testing**
+   ```bash
+   # Build the binary
+   cargo build --release
    
-
-2. **Live Database Verification - MANDATORY**
-   - **CRITICAL REQUIREMENT**: You MUST execute queries against the LIVE Kubernetes database and commit the actual outputs
-   - **DO NOT** just read dumps or analyze code - connect to the live PostgreSQL pod in Kubernetes
-   - **COMMIT THE FOLLOWING QUERY OUTPUTS** to a file named `live-database-verification.md`:
-     
-     a) Connection verification:
-     ```sql
-     -- Show you're connected to the live database
-     SELECT current_database(), current_user, inet_server_addr(), version();
-     ```
-     
-     b) Row count from migrated database:
-     ```sql
-     -- Show actual row count from the new 'docs' database
-     SELECT COUNT(*) as total_documents, 
-            COUNT(DISTINCT source_name) as unique_sources,
-            COUNT(embedding) as documents_with_embeddings
-     FROM documents WHERE doc_type = 'rust';
-     ```
-     
-     c) Sample of actual migrated data:
-     ```sql
-     -- Show 5 actual documents to prove data was migrated
-     SELECT id, doc_type, source_name, doc_path, 
-            substring(content, 1, 100) as content_preview,
-            array_length(embedding, 1) as embedding_dimensions,
-            created_at
-     FROM documents 
-     WHERE doc_type = 'rust' 
-     LIMIT 5;
-     ```
-     
-     d) Verification timestamp:
-     ```sql
-     -- Prove this is live by showing current timestamp
-     SELECT NOW() as verification_timestamp, 
-            'Live Kubernetes Database' as environment;
-     ```
+   # Run the binary and perform actual SSE connection tests
+   ./target/release/mcp-docs-server
    
-   - **PASTE THE ACTUAL OUTPUT** of these queries, not just the queries themselves
-   - Include the full psql output showing the connection string and results
-   - This proves you're working with the live Kubernetes database, not local files
+   # Test SSE endpoint with curl or actual client
+   curl -N -H "Accept: text/event-stream" http://localhost:PORT/sse
+   
+   # Verify heartbeat messages are received
+   # Test reconnection by interrupting and reconnecting
+   # Confirm message buffering works as expected
+   ```
 
+3. **Verification Checklist**
+   Before creating the PR, ensure:
+   - [ ] All clippy warnings and errors are resolved
+   - [ ] The binary compiles without warnings
+   - [ ] Live SSE endpoint testing completed successfully
+   - [ ] Heartbeat messages verified at 30-second intervals
+   - [ ] Client reconnection tested and working
+   - [ ] Message buffering tested during disconnection
+   - [ ] All tests pass (`cargo test`)
+   - [ ] Code formatted with `cargo fmt`
 
-3. **Functional Verification**
-   - Vector similarity search produces identical results
-   - All 40 Rust crates searchable and accessible
-   - Query response times within acceptable range
-   - No errors in search operations
+4. **PR Description Requirements**
+   Include in the PR description:
+   - Clippy output showing no issues
+   - Screenshot or log output from live binary testing
+   - Test results showing SSE heartbeat functionality
+   - Evidence of successful reconnection testing
+   - Performance metrics from load testing
 
-4. **Schema Readiness**
-   - Constraint validation working for all documentation types
-   - JSONB metadata storage functional
-   - Indexes properly created for performance
-   - Unique constraints preventing duplicates
+### Testing Evidence
+Create a file `testing-evidence.md` in the PR with:
+```markdown
+# Testing Evidence
 
-## Technologies and Tools
+## Clippy Results
+```
+cargo clippy -- -W clippy::all -W clippy::pedantic
+# Output: (paste clean output here)
+```
 
-- **Database**: PostgreSQL 15+ with pgvector 0.5.0+
-- **Migration Tools**: pg_dump, pg_restore, custom SQL scripts
-- **Vector Storage**: 3072-dimensional vectors for OpenAI compatibility
-- **Metadata Format**: JSONB for flexible type-specific information
-- **Backup Strategy**: Full database dumps before any modifications
+## Live Binary Test
+```
+# Binary execution log
+# SSE connection test results
+# Heartbeat message samples
+# Reconnection test results
+```
 
+## Performance Metrics
+- Concurrent connections tested: X
+- Memory usage: X MB
+- CPU usage: X%
+- Reconnection time: X seconds
+```
 
-## Required Deliverables
+**IMPORTANT**: The PR will be automatically rejected if submitted without resolving all clippy issues or without performing live binary testing. Take the time to thoroughly test and validate the implementation before creating the PR.
 
-1. **Migration Scripts**: SQL scripts used for the migration
-2. **Live Database Verification File** (`live-database-verification.md`):
-   - MUST contain actual query outputs from the live Kubernetes database
-   - MUST show connection details proving you're on the Kubernetes pod
-   - MUST include timestamped verification queries
-   - MUST show actual row counts and sample data from the migrated database
-   - This file MUST be committed to prove live database interaction
-
-
-## Success Metrics
-
-- 100% data preservation (4,133+ documents)
-- Identical search result quality and relevance
-- Query performance within 10% of baseline
-- Zero errors in migrated search functionality
-- Schema ready for additional documentation types
-- Application successfully connected to new database
-
-- **Live database verification file committed with actual query outputs**
-- **Proof of connection to Kubernetes pod (not local Docker or dumps)**
-
-
-Complete this migration with extreme care for data preservation, ensuring that the expanded schema foundation is solid while maintaining all existing functionality without any degradation in performance or capability.
-
-@database-connection for more details
+Implement this SSE keep-alive system with focus on reliability, performance, and seamless integration with existing MCP server infrastructure. The solution should provide the stable foundation necessary for production-ready Toolman integration.
