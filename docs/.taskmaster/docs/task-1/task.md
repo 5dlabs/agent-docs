@@ -73,7 +73,6 @@ The Doc Server is transitioning from a deprecated HTTP+SSE transport to the new 
 ### Tools and Environment
 - Rust toolchain (stable)
 - PostgreSQL client tools
-- Docker/Podman for container testing
 - kubectl for Kubernetes validation
 - GitHub Actions CLI for workflow testing
 
@@ -88,8 +87,15 @@ The project uses `requirements.yaml` file to define environment variables and se
 - **VECTOR_DATABASE_URL**: Connection string for the PostgreSQL database with pgvector extension
 - **DATABASE_URL**: Connection string for the main PostgreSQL database 
 - **OPENAI_API_KEY**: API key for OpenAI embedding service
+ - **DOC_SERVER_CONFIG_PATH**: Absolute path inside the pod to the config file controlling tools and ingestion (see below)
 
 Additional configuration is defined in `requirements.yaml` including rate limiting, batch processing settings, and monitoring parameters. Review this file during the assessment to understand the complete configuration requirements.
+
+### Config-Driven Tools and Ingestion
+
+- Primary config file example for this task: `docs/.taskmaster/docs/task-1/doc-server.config.yaml`
+- At runtime, set `DOC_SERVER_CONFIG_PATH` to the absolute path where the server can read this file inside the container.
+- See `config.md` in this directory for a schema summary and usage notes.
 
 ## Expected Deliverables
 

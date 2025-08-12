@@ -10,6 +10,7 @@ environment:
   # Server Configuration
   PORT: "3000"
   RUST_LOG: "info,doc_server=debug"
+  DOC_SERVER_CONFIG_PATH: "/app/config/doc-server.config.yaml"
   
   # OpenAI API Configuration
   OPENAI_BASE_URL: "https://api.openai.com/v1"
