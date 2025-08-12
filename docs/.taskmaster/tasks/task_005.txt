@@ -1,0 +1,90 @@
+# Task ID: 5
+# Title: Streamable HTTP Response Enhancement and Optional SSE Support
+# Status: pending
+# Dependencies: 3
+# Priority: medium
+# Description: Implement enhancements to the MCP 2025-06-18 Streamable HTTP transport so that servers can optionally upgrade a normal JSON response into an SSE stream when multiple messages need to be emitted. All functionality must remain fully compatible with the default POST/GET interaction model; SSE is a best-effort optimisation, not the primary mechanism.
+# Details:
+1. Unified Endpoint Integration
+   • Extend the existing /mcp endpoint (introduced in Task 2) to dynamically choose between a single JSON response body (default) and an SSE stream (optional) based on application logic.
+   • Negotiate the response mode using the request’s Accept header: clients MAY add both application/json and text/event-stream; the server chooses the final media type.
+
+2. Event & Replay Mechanics (SSE mode only)
+   • Generate monotonically increasing, globally unique event IDs (u64) scoped to the lifetime of the node.
+   • Maintain a per-connection ring-buffered history (configurable, default = 1 000 events) to enable selective replay.
+   • Honour the Last-Event-ID header on reconnection, replaying missed events in order; if the ID is too old (purged), start from the oldest retained event; if it is newer than the newest, respond with 204 No Content.
+   • Purge buffers automatically when a stream completes or after idle_timeout.
+
+3. Streaming Implementation
+   • Use tokio-stream + axum::response::Sse to push events efficiently.
+   • Convert JSON-RPC responses into properly formatted SSE events (fields: id, event: mcp, data).
+   • For single-message scenarios, fall back to a normal JSON response body (most common path).
+
+4. Connection Health
+   • Detect lost TCP connections via keep-alive probes and clean up associated resources.
+   • Emit periodic comment-style ping events (:\n) every ping_interval to keep browser clients alive when in SSE mode.
+
+5. Configuration Surface (Config::streamable_http)
+   • buffer_size, idle_timeout, ping_interval, max_connection_age.
+
+6. Tracing & Metrics
+   • Counters/histograms: active_streams, replayed_events, dropped_events, buffer_occupancy.
+
+NOTE: Do not re-implement routing or generic JSON-RPC parsing—build on the foundation delivered in Task 2. SSE support must remain strictly optional; JSON behaviour for legacy clients must be preserved without behavioural change.
+
+# Test Strategy:
+1. Functional
+   • Issue POST requests with Accept: application/json and verify the server returns a normal JSON body without SSE headers.
+   • Issue POST or GET with Accept: text/event-stream and a server configuration that triggers streaming; validate correct SSE framing, including id, event, and data fields.
+   • Simulate network drop, reconnect with Last-Event-ID=N, and assert the first replayed event has id N+1.
+   • Verify boundary handling when Last-Event-ID is older than earliest retained or newer than newest retained.
+
+2. Ordering & Uniqueness
+   • Stress-test with 1 000 000 sequential events across concurrent streams; assert strictly increasing IDs without gaps.
+
+3. Memory & Cleanup
+   • Soak test with 10 000 concurrent streams; measure RSS; ensure buffers are released after disconnection or idle_timeout.
+
+4. Compatibility
+   • Confirm behaviour remains 100 % unchanged for legacy clients that advertise only application/json.
+
+5. Concurrency & Isolation
+   • Mix streaming and non-streaming workloads; ensure no cross-talk between buffers; inspect with tokio-console for task lifetimes.
+
+# Subtasks:
+## 1. Add Accept header negotiation and SSE fallback logic to /mcp handler [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 2. Implement global event ID generator and per-stream ring buffer [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 3. Handle Last-Event-ID parsing and selective replay [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 4. Integrate tokio-stream + axum::response::Sse with keep-alive pings [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 5. Add metrics and tracing for streaming operations [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 6. Write integration tests for streaming, replay, and fallback paths [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+

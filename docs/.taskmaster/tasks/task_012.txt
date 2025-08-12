@@ -1,0 +1,43 @@
+# Task ID: 12
+# Title: Kubernetes Deployment Configuration
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Create and optimize Helm charts for production Kubernetes deployment with proper resource allocation and security policies.
+# Details:
+Create Helm chart structure in helm/doc-server/ directory. Define values.yaml with configurable parameters (image, resources, replicas). Create deployment manifest with proper resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi). Configure service with ClusterIP and optional LoadBalancer. Add ingress rules for external access. Implement ConfigMap for environment variables. Add Secret management for API keys and database credentials. Configure PodDisruptionBudget for high availability.
+
+# Test Strategy:
+Test Helm chart installation with helm lint and dry-run, validate resource allocation under load, test rolling updates with zero downtime, verify secret mounting and environment injection, and test auto-scaling behavior.
+
+# Subtasks:
+## 1. Create Helm Chart Structure and Base Configuration [pending]
+### Dependencies: None
+### Description: Initialize the Helm chart directory structure and create the base Chart.yaml file with proper metadata and dependencies
+### Details:
+Create helm/doc-server/ directory structure with standard Helm chart layout (templates/, charts/, values.yaml). Define Chart.yaml with apiVersion: v2, name: doc-server, version and appVersion matching Cargo.toml. Set up .helmignore file to exclude unnecessary files. Create helpers template (_helpers.tpl) for common label and selector functions
+
+## 2. Define values.yaml with Configurable Parameters [pending]
+### Dependencies: 12.1
+### Description: Create comprehensive values.yaml file with all configurable parameters for deployment customization including image settings, resources, and scaling options
+### Details:
+Define image configuration (repository: ghcr.io/5dlabs/agent-docs/doc-server, tag, pullPolicy). Set resource limits and requests (CPU: 500m-2000m, Memory: 512Mi-2Gi). Configure replicaCount (default: 2), autoscaling parameters (min: 2, max: 10, targetCPU: 70%). Add service configuration (type: ClusterIP, port: 3001). Define ingress settings (enabled: false by default, host, TLS). Include environment variables for DATABASE_URL, PORT (3001), RUST_LOG, and other app configs
+
+## 3. Create Deployment and Service Manifests [pending]
+### Dependencies: 12.2
+### Description: Implement Kubernetes deployment manifest with proper resource allocation, health checks, and create service manifests for both ClusterIP and optional LoadBalancer
+### Details:
+Create deployment.yaml with container spec using values from values.yaml, implement readiness/liveness probes on /health endpoint, configure resource limits/requests from values, add security context (runAsNonRoot: true, runAsUser: 1000). Create service.yaml supporting both ClusterIP and LoadBalancer types, expose port 3001 targeting container port. Add proper labels and selectors using helm helpers. Include pod annotations for Prometheus metrics scraping (/metrics)
+
+## 4. Implement ConfigMap, Secret Management and Ingress [pending]
+### Dependencies: 12.3
+### Description: Create ConfigMap for environment variables, implement Secret management for sensitive data, and configure Ingress rules for external access
+### Details:
+Create configmap.yaml for non-sensitive environment variables (RUST_LOG, PORT, monitoring configs). Implement secret.yaml template for API keys and DATABASE_URL with base64 encoding. Create ingress.yaml with conditional rendering based on values.yaml, support multiple hosts and TLS configuration, add annotations for ingress controller (nginx/traefik). Mount ConfigMap and Secrets as environment variables in deployment. Add support for external secrets operator integration
+
+## 5. Add High Availability and Production Features [pending]
+### Dependencies: 12.4
+### Description: Implement PodDisruptionBudget, HorizontalPodAutoscaler, and other production-ready features for high availability and reliability
+### Details:
+Create poddisruptionbudget.yaml with minAvailable: 1 or maxUnavailable: 1. Implement hpa.yaml for horizontal pod autoscaling based on CPU/memory metrics. Add networkpolicy.yaml for pod-to-pod communication restrictions. Create servicemonitor.yaml for Prometheus Operator integration. Add priorityclass.yaml for pod scheduling priority. Implement pod anti-affinity rules to spread pods across nodes. Add topologySpreadConstraints for even distribution across zones
+
