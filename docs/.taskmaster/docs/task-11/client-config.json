@@ -1,13 +1,10 @@
 {
   "remoteTools": [
     "rust_query",
-    "jupyter_query",
-    "cilium_query",
-    "talos_query",
-    "meteora_query",
-    "raydium_query",
-    "ebpf_query",
-    "rust_best_practices_query"
+    "add_rust_crate",
+    "remove_rust_crate", 
+    "list_rust_crates",
+    "check_rust_status"
   ],
   "localServers": {
     "filesystem": {

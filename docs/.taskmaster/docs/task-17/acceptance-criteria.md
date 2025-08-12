@@ -1,210 +1,207 @@
-# Acceptance Criteria: Task 17 - Documentation and API Reference Generation
+# Acceptance Criteria: Task 17 - CI/CD Pipeline Enhancement
 
 ## Functional Requirements
 
-### 1. Rust API Documentation Generation
-- [ ] `cargo doc --all-features --no-deps` generates comprehensive documentation
-- [ ] All workspace crates documented (database, mcp, embeddings, doc-loader, llm)
-- [ ] External links and search indexes properly configured
-- [ ] All public APIs include documentation comments
-- [ ] Code examples included and tested for accuracy
-- [ ] Documentation hosted and accessible via web interface
-- [ ] Cross-references between modules and crates functional
+### 1. Integration Test Stage with Database Fixtures
+- [ ] PostgreSQL service container added to GitHub Actions workflow
+- [ ] Database fixtures and test data setup implemented
+- [ ] Integration tests cover all MCP tools and endpoints
+- [ ] Database migration testing validates schema changes
+- [ ] Test isolation and cleanup between test runs
+- [ ] Parallel test execution for improved performance
+- [ ] Integration test reporting and failure analysis
 
-### 2. OpenAPI/Swagger Specification Creation
-- [ ] `openapi.yaml` file created with OpenAPI 3.0 specification
-- [ ] POST /mcp endpoint documented with JSON-RPC request/response schemas
-- [ ] GET /mcp endpoint documented for SSE event streams
-- [ ] Authentication headers documented (Authorization, MCP-Protocol-Version)
-- [ ] All MCP tools documented with input schemas and examples:
-  - [ ] rust_query, jupyter_query, cilium_query, talos_query
-  - [ ] meteora_query, raydium_query, ebpf_query, rust_best_practices_query
-  - [ ] add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status
-- [ ] Error response schemas and status codes documented
-- [ ] OpenAPI specification validated with standard tools
+### 2. Security Scanning Integration
+- [ ] cargo-audit integrated for dependency vulnerability scanning
+- [ ] cargo-deny configured for license compliance and security policies
+- [ ] Trivy container image scanning in pipeline
+- [ ] SAST tools integrated for static code analysis
+- [ ] Vulnerability reporting with severity classification
+- [ ] Security scan failure blocks deployment pipeline
+- [ ] Automated security alert notifications
 
-### 3. Kubernetes Deployment Guide
-- [ ] Helm chart structure documented in `helm/doc-server/`
-- [ ] Comprehensive `values.yaml` configuration guide:
-  - [ ] Image settings and repository configuration
-  - [ ] Resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi)
-  - [ ] Replica counts and scaling configuration
-  - [ ] Ingress rules and networking setup
-- [ ] ConfigMap and Secret management procedures:
-  - [ ] Database credentials and API keys
-  - [ ] Environment variable configuration
-  - [ ] Certificate and TLS configuration
-- [ ] PodDisruptionBudget setup for high availability
-- [ ] Troubleshooting section with common deployment issues
-- [ ] Monitoring and logging integration guide
+### 3. Performance Regression Testing
+- [ ] Performance benchmarks integrated into CI pipeline
+- [ ] Baseline performance measurement and storage
+- [ ] Automated regression detection with configurable thresholds
+- [ ] Performance comparison reporting across builds
+- [ ] Alert system for significant performance degradation
+- [ ] Load testing integration for major releases
+- [ ] Performance trend analysis and reporting
 
-### 4. MCP Tool Usage and Client Integration
-- [ ] rust_query tool usage documented with examples
-- [ ] Cursor IDE integration guide:
-  - [ ] MCP configuration setup
-  - [ ] Tool invocation examples
-  - [ ] Troubleshooting common issues
-- [ ] Toolman client setup and usage documentation
-- [ ] All query tools documented with usage examples
-- [ ] JSON-RPC message format specifications
-- [ ] Error handling and retry logic documentation
-- [ ] Authentication and session management guide
-- [ ] Performance optimization tips for clients
+### 4. Blue-Green Deployment Strategy
+- [ ] Blue-green deployment workflow for Kubernetes implemented
+- [ ] Health checking and deployment validation logic
+- [ ] Traffic switching with zero-downtime capability
+- [ ] Automated rollback on deployment failure detection
+- [ ] Deployment status monitoring and metrics collection
+- [ ] Canary deployment option for staged rollouts
+- [ ] Infrastructure as Code for deployment environments
 
-### 5. Architecture Diagrams and Performance Guide
-- [ ] Mermaid diagrams for system architecture:
-  - [ ] High-level system overview
-  - [ ] MCP server component interaction
-  - [ ] Database and embedding service integration
-  - [ ] Client connection and request flow
-- [ ] Data flow documentation from ingestion to response
-- [ ] Performance tuning guide:
-  - [ ] Database connection pooling optimization
-  - [ ] Embedding batch size configuration
-  - [ ] Cache strategy recommendations
-  - [ ] Resource allocation guidelines
-- [ ] Vector search performance benchmarks
-- [ ] Monitoring setup with metrics and alerting
-- [ ] Operational runbooks for production deployment
+### 5. Post-Deployment Validation and Smoke Testing
+- [ ] Comprehensive smoke tests covering all endpoints
+- [ ] Health verification and functional testing suite
+- [ ] Monitoring integration and alert validation
+- [ ] Automated rollback on smoke test failures
+- [ ] Deployment success/failure notification system
+- [ ] Performance validation post-deployment
+- [ ] User acceptance testing automation
 
 ## Non-Functional Requirements
 
-### 1. Documentation Quality
-- [ ] All examples tested and validated for correctness
-- [ ] Consistent formatting and style across all documents
-- [ ] Clear step-by-step procedures with prerequisites
-- [ ] Comprehensive troubleshooting guides
-- [ ] Regular documentation updates with code changes
+### 1. Performance Requirements
+- [ ] Total pipeline execution time < 10 minutes
+- [ ] Integration tests complete within 5 minutes
+- [ ] Security scanning adds < 2 minutes to pipeline
+- [ ] Blue-green deployment completes within 3 minutes
+- [ ] Smoke tests execute in < 1 minute
+- [ ] Parallel job execution optimized for speed
 
-### 2. Accessibility and Usability
-- [ ] Documentation searchable and well-organized
-- [ ] Clear navigation and cross-references
-- [ ] Multiple formats available (HTML, PDF, Markdown)
-- [ ] Responsive design for mobile and desktop viewing
-- [ ] Accessibility compliance (WCAG 2.1 AA)
+### 2. Security Requirements
+- [ ] Zero CRITICAL vulnerabilities allowed in deployment
+- [ ] HIGH vulnerabilities require approval process
+- [ ] License compliance validated for all dependencies
+- [ ] Container images scanned before deployment
+- [ ] Secret management and secure credential handling
+- [ ] Audit trail for all security scan results
 
-### 3. Maintenance and Integration
-- [ ] Documentation generation integrated into CI/CD pipeline
-- [ ] Automated validation and link checking
-- [ ] Version control and change tracking
-- [ ] Regular review and update process
-- [ ] Integration with existing documentation systems
+### 3. Reliability Requirements
+- [ ] Deployment success rate > 99%
+- [ ] Automated rollback success rate > 99%
+- [ ] Zero-downtime deployment capability
+- [ ] Failed deployment detection within 30 seconds
+- [ ] Complete rollback execution within 2 minutes
+- [ ] Health check accuracy and reliability
 
 ## Test Cases
 
-### Test Case 1: API Documentation Generation
-**Given**: All Rust crates with public APIs
-**When**: `cargo doc` command executed
+### Test Case 1: Integration Testing with Database
+**Given**: Code changes requiring database interaction
+**When**: Integration test stage executes
 **Then**:
-- Documentation generated for all public APIs
-- Examples compile and execute correctly
-- Cross-references and links functional
-- Search functionality works properly
+- PostgreSQL container starts successfully
+- Database fixtures load without errors
+- All MCP tool integration tests pass
+- Database connections properly managed
+- Test cleanup completes successfully
 
-### Test Case 2: OpenAPI Specification Validation
-**Given**: Complete OpenAPI specification
-**When**: Specification validated with tools
+### Test Case 2: Security Vulnerability Detection
+**Given**: Dependency with known CRITICAL vulnerability
+**When**: Security scanning stage executes
 **Then**:
-- OpenAPI 3.0 specification valid
-- All endpoints documented with examples
-- Client code generation possible
-- Interactive API documentation functional
+- cargo-audit detects vulnerability
+- Pipeline fails at security scanning stage
+- Vulnerability report generated with details
+- Deployment blocked until vulnerability resolved
+- Security team notification sent
 
-### Test Case 3: Kubernetes Deployment from Guide
-**Given**: Fresh Kubernetes cluster and documentation
-**When**: Following deployment guide step-by-step
+### Test Case 3: Performance Regression Detection
+**Given**: Code changes that degrade performance by >10%
+**When**: Performance testing stage executes
 **Then**:
-- Successful deployment of doc-server
-- All services accessible and healthy
-- Configuration options work as documented
-- Troubleshooting guide resolves common issues
+- Performance regression detected automatically
+- Comparison report generated with baseline
+- Pipeline fails with performance alert
+- Development team notified of regression
+- Deployment blocked until performance restored
 
-### Test Case 4: Client Integration Following Guide
-**Given**: Cursor IDE and integration documentation
-**When**: Following MCP integration guide
+### Test Case 4: Blue-Green Deployment Success
+**Given**: Successful pipeline with all tests passing
+**When**: Blue-green deployment stage executes
 **Then**:
-- MCP connection established successfully
-- All documented tools accessible and functional
-- Examples work as documented
-- Error scenarios handled appropriately
+- Green environment deployed successfully
+- Health checks pass for new deployment
+- Traffic switched from blue to green
+- Blue environment kept for rollback capability
+- Deployment success notification sent
 
-### Test Case 5: Architecture Understanding
-**Given**: System architecture documentation
-**When**: New team member reviews documentation
+### Test Case 5: Deployment Rollback Automation
+**Given**: Deployment with failing health checks
+**When**: Smoke tests detect failures
 **Then**:
-- Complete understanding of system components
-- Data flow clear and traceable
-- Performance characteristics understood
-- Operational procedures executable
+- Automated rollback initiated within 30 seconds
+- Traffic switched back to previous version
+- Failed deployment environment cleaned up
+- Rollback success confirmed via monitoring
+- Incident notification sent to team
+
+### Test Case 6: Pipeline Performance Optimization
+**Given**: Complete CI/CD pipeline execution
+**When**: All stages run in parallel where possible
+**Then**:
+- Total execution time under 10 minutes
+- Security and integration tests run concurrently
+- Deployment preparation paralleled with testing
+- Resource utilization optimized
+- Pipeline efficiency metrics collected
 
 ## Deliverables Checklist
 
-### Core Documentation
-- [ ] Generated Rust API documentation
-- [ ] OpenAPI specification (openapi.yaml)
-- [ ] Kubernetes deployment guide
-- [ ] Client integration guides (Cursor, Toolman)
-- [ ] Architecture documentation with diagrams
+### Pipeline Configuration
+- [ ] Enhanced `.github/workflows/deploy-doc-server.yml`
+- [ ] Security scanning configuration files
+- [ ] Performance benchmark definitions
+- [ ] Blue-green deployment scripts
+- [ ] Smoke test suite implementation
 
-### Supporting Materials
-- [ ] Performance tuning guide
-- [ ] Troubleshooting documentation
-- [ ] Operational runbooks
-- [ ] Example configurations and code samples
-- [ ] Video tutorials for complex procedures
+### Infrastructure Components
+- [ ] Kubernetes blue-green deployment manifests
+- [ ] PostgreSQL integration test service configuration
+- [ ] Load balancer configuration for traffic switching
+- [ ] Monitoring and alerting setup
+- [ ] Secret management configuration
 
-### Infrastructure
-- [ ] Documentation hosting setup
-- [ ] Search functionality implementation
-- [ ] Automated generation pipeline
-- [ ] Version control and update process
-- [ ] Feedback and contribution system
+### Documentation and Runbooks
+- [ ] CI/CD pipeline documentation
+- [ ] Deployment procedures and rollback guide
+- [ ] Security scanning and remediation procedures
+- [ ] Performance regression investigation guide
+- [ ] Incident response procedures
 
 ## Validation Criteria
 
-### Automated Validation
-```bash
-# Documentation generation
-cargo doc --all-features --no-deps
-
-# OpenAPI validation
-swagger-codegen validate -i openapi.yaml
-npx @apidevtools/swagger-cli validate openapi.yaml
-
-# Helm chart validation
-helm template helm/doc-server --validate
-helm lint helm/doc-server
-
-# Link checking
-markdown-link-check docs/**/*.md
+### Automated Pipeline Testing
+```yaml
+# GitHub Actions workflow validation
+name: Pipeline Validation
+on: [push, pull_request]
+jobs:
+  validate-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Validate workflow syntax
+        run: |
+          yamllint .github/workflows/
+          actionlint .github/workflows/
 ```
 
 ### Manual Validation
-1. **Completeness Review**: All required topics covered comprehensively
-2. **Accuracy Testing**: All examples and procedures tested
-3. **Usability Testing**: New users can follow guides successfully
-4. **Technical Review**: Subject matter experts validate content
-5. **Accessibility Audit**: Documentation meets accessibility standards
+1. **Integration Testing**: Verify database fixtures and test execution
+2. **Security Scanning**: Test with known vulnerabilities
+3. **Performance Testing**: Validate regression detection
+4. **Blue-Green Deployment**: Test in staging environment
+5. **Rollback Procedures**: Verify automated rollback functionality
 
 ## Definition of Done
 
-Task 17 is complete when:
+Task 16 is complete when:
 
-1. **API Documentation**: All public Rust APIs comprehensively documented
-2. **OpenAPI Specification**: Complete and validated API specification
-3. **Deployment Guide**: Successful Kubernetes deployment possible following guide
-4. **Client Integration**: Cursor and Toolman integration guides functional
-5. **Architecture Documentation**: Complete system understanding possible
-6. **Validation Complete**: All automated and manual validation passed
-7. **User Feedback**: Initial user testing confirms documentation usability
+1. **Integration Testing**: Database fixtures and comprehensive testing implemented
+2. **Security Scanning**: Vulnerability detection and compliance validation operational
+3. **Performance Monitoring**: Regression detection and alerting functional
+4. **Blue-Green Deployment**: Zero-downtime deployment with automated rollback
+5. **Smoke Testing**: Post-deployment validation comprehensive and reliable
+6. **Pipeline Optimization**: Execution time under 10 minutes consistently
+7. **Documentation Complete**: Runbooks and procedures documented
 
 ## Success Metrics
 
-- 100% of public APIs documented with examples
-- OpenAPI specification enables successful client generation
-- Kubernetes deployment success rate > 95% following guide
-- Client integration success rate > 90% for new users
-- Documentation completeness score > 95% via automated analysis
-- User satisfaction rating > 4.5/5 for documentation quality
-- Time to productive use < 30 minutes for new developers
-- Documentation maintenance overhead < 10% of development time
+- Pipeline execution time reduced to < 10 minutes
+- Deployment success rate > 99% with zero-downtime capability
+- Security vulnerability detection rate 100% for CRITICAL/HIGH issues
+- Performance regression detection accuracy > 95%
+- Automated rollback success rate > 99%
+- Integration test coverage > 90% of critical functionality
+- Mean time to deployment (MTTD) reduced by 50%
+- Mean time to recovery (MTTR) reduced by 70%

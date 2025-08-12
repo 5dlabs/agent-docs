@@ -1,43 +1,11 @@
-# Task ID: 17
-# Title: Documentation and API Reference Generation
+# Task ID: 16
+# Title: CI/CD Pipeline Enhancement
 # Status: pending
-# Dependencies: 11
-# Priority: low
-# Description: Create comprehensive documentation including API reference, deployment guides, and integration examples.
+# Dependencies: 12
+# Priority: medium
+# Description: Enhance GitHub Actions workflow for comprehensive testing, security scanning, and automated deployment validation.
 # Details:
-Generate API documentation using cargo doc with all features. Create OpenAPI/Swagger specification for HTTP endpoints. Write deployment guide for Kubernetes setup. Document MCP tool usage with examples. Create troubleshooting guide with common issues. Add architecture diagrams using mermaid or plantuml. Document performance tuning parameters. Create client integration examples for Cursor and Toolman.
+Add integration test stage with database fixtures. Implement security scanning (cargo-audit, cargo-deny). Add performance regression testing. Implement blue-green deployment strategy. Add smoke tests post-deployment. Configure branch protection rules. Implement automated rollback on failure. Add dependency update automation with Dependabot. Enhance caching with sccache optimization.
 
 # Test Strategy:
-Validate documentation completeness with doc tests, test example code execution, verify OpenAPI spec with validators, test deployment guide accuracy, and review with stakeholders.
-
-# Subtasks:
-## 1. Generate Rust API Documentation with cargo doc [pending]
-### Dependencies: None
-### Description: Generate comprehensive API documentation for all Rust crates using cargo doc with all features enabled and optimized output settings
-### Details:
-Use cargo doc --all-features --no-deps to generate documentation for all workspace crates (database, mcp, embeddings, doc-loader, llm). Configure proper rustdoc settings for external links, search indexes, and HTML output. Generate documentation in target/doc directory and prepare for hosting. Include examples from code comments and ensure all public APIs are documented.
-
-## 2. Create OpenAPI/Swagger Specification for MCP HTTP Endpoints [pending]
-### Dependencies: None
-### Description: Generate OpenAPI 3.0 specification documenting the MCP server's HTTP endpoints, including the unified /mcp endpoint with SSE support
-### Details:
-Create openapi.yaml file documenting the POST /mcp and GET /mcp endpoints with proper JSON-RPC request/response schemas. Include SSE event stream documentation for server-sent events. Document authentication headers, MCP-Protocol-Version header, and content negotiation. Add schemas for all MCP tools including rust_query and future query tools. Include example requests and responses for each operation.
-
-## 3. Write Kubernetes Deployment Guide with Helm Charts [pending]
-### Dependencies: None
-### Description: Create comprehensive deployment documentation for Kubernetes setup including Helm chart creation and configuration
-### Details:
-Document creation of Helm chart structure in helm/doc-server/ directory as referenced in deploy-doc-server.yml. Write guide for values.yaml configuration including image settings, resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi), replica counts, and ingress rules. Document ConfigMap and Secret management for API keys and database credentials. Include PodDisruptionBudget setup for high availability. Add troubleshooting section for common deployment issues.
-
-## 4. Document MCP Tool Usage with Client Integration Examples [pending]
-### Dependencies: 17.2
-### Description: Create comprehensive documentation for MCP tool usage including examples for Cursor and Toolman client integration
-### Details:
-Document rust_query tool usage with example queries and responses. Create integration guides for Cursor IDE showing MCP configuration and tool invocation. Write Toolman client setup and usage documentation. Include examples for future query tools (jupyter, cilium, talos, meteora, raydium, ebpf, rust_best_practices). Document JSON-RPC message formats, error handling, and streaming responses. Add troubleshooting guide for common client integration issues.
-
-## 5. Create Architecture Diagrams and Performance Tuning Guide [pending]
-### Dependencies: 17.3
-### Description: Generate system architecture diagrams using mermaid and document performance tuning parameters for production deployment
-### Details:
-Create mermaid diagrams showing system architecture including MCP server, PostgreSQL with pgvector, embedding service, and client connections. Document data flow from ingestion through vector search to client responses. Write performance tuning guide covering database connection pooling, embedding batch sizes, cache strategies, and resource allocation. Include benchmarks for vector search performance with different index types. Document monitoring setup with metrics and alerting.
-
+Test pipeline with various failure scenarios, validate rollback mechanisms, test parallel job execution, verify security scan detection, and measure pipeline execution time (< 10 minutes).

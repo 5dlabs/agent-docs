@@ -1,164 +1,143 @@
-# Autonomous Agent Prompt: Additional Query Tools Suite Implementation
+# Autonomous Agent Prompt: Rust Crate Management Tools Implementation
 
-You are tasked with implementing the remaining query tools for jupyter, cilium, talos, meteora, raydium, ebpf, and rust_best_practices documentation types following the established QueryTool pattern.
+You are tasked with implementing dynamic Rust crate management tools (add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status) for comprehensive MCP-based crate administration with docs.rs integration.
 
 ## Your Mission
 
-Create seven specialized query tools with type-specific metadata parsing, consistent response formatting, shared utility functions, and comprehensive caching strategies for optimal performance.
+Create a complete Rust crate management system with automatic documentation fetching, atomic operations, health monitoring, and dependency analysis capabilities.
 
 ## Execution Steps
 
-### Step 1: Create Shared Utility Module
-- Create `crates/mcp/src/query_utils.rs` module
-- Implement shared utility functions:
-  - `parse_metadata_field()`: Generic JSONB field extraction with type conversion
-  - `format_document_response()`: Consistent markdown formatting across all tools
-  - `calculate_relevance_score()`: Similarity-based ranking algorithm
-  - `create_performance_monitor()`: Query execution time tracking
-  - `validate_query_params()`: Standard parameter validation
-- Export utilities from lib.rs for use by all QueryTool implementations
+### Step 1: Create Core Data Structures and Database Schema
+- Extend database schema with 'crates' table containing:
+  - id, name, version, description, documentation_url
+  - last_updated, status (active/inactive/updating)
+  - metadata JSONB field
+- Create RustCrateManager struct in `crates/mcp/src/tools.rs`
+- Add database pool, embedding client, and HTTP client fields
+- Create CrateInfo and CrateStatus models in `crates/database/src/models.rs`
+- Implement transaction helper methods for atomic operations
 
-### Step 2: Implement Jupyter and Cilium Query Tools
-- Create `JupyterQueryTool` in `crates/mcp/src/tools.rs`:
-  - Handle notebook-specific metadata (kernel, language, cell_types)
-  - Parse cell execution results and outputs
-  - Format notebook content with proper code highlighting
-- Create `CiliumQueryTool`:
-  - Process network policy metadata (policy_type, namespace, endpoints)
-  - Handle Kubernetes networking configuration
-  - Format policy rules and security contexts
-- Add `jupyter_vector_search` and `cilium_vector_search` methods to `crates/database/src/queries.rs`
-- Register both tools in McpHandler with comprehensive tool definitions
+### Step 2: Implement add_rust_crate Tool with docs.rs Integration
+- Build AddRustCrateTool following Tool trait pattern
+- Add docs.rs API client in `crates/doc-loader/src/loaders.rs`
+- Implement rate limiting (max 10 requests/minute) using tokio::time::interval
+- Parse HTML documentation with scraper crate:
+  - Extract modules, structs, functions, examples
+  - Store in documents table with proper metadata
+  - Generate embeddings for documentation chunks
+- Add version checking for update detection
+- Register tool in McpHandler
 
-### Step 3: Implement Talos and Meteora Query Tools
-- Create `TalosQueryTool`:
-  - Parse Kubernetes-specific metadata (resource_type, api_version, namespace)
-  - Handle Talos node configuration and cluster setup
-  - Format system configuration and boot sequences
-- Create `MeteoraQueryTool`:
-  - Process DeFi protocol metadata (pool_type, liquidity_params, reward_structure)
-  - Handle liquidity pool configurations and AMM parameters
-  - Format financial calculations and yield strategies
-- Add corresponding database vector search methods
-- Implement custom response formatting for technical specifications
+### Step 3: Implement remove_rust_crate Tool with Cascade Deletion
+- Create RemoveRustCrateTool with transaction support
+- Implement cascade deletion logic:
+  - Query documents where metadata->>'crate_name' matches target
+  - Delete associated embeddings using document IDs
+  - Remove crate entry from crates table
+  - Clean up orphaned embeddings
+- Add soft-delete option with status='inactive'
+- Implement comprehensive audit logging
 
-### Step 4: Implement Raydium and eBPF Query Tools
-- Create `RaydiumQueryTool`:
-  - Handle AMM and liquidity pool metadata (amm_version, pool_address, fee_structure)
-  - Process Solana-based DeFi protocol parameters
-  - Format swap mechanics and liquidity provision details
-- Create `EbpfQueryTool`:
-  - Parse kernel programming metadata (program_type, kernel_version, hook_points)
-  - Handle BPF program lifecycle and attachment points
-  - Format code examples and kernel integration patterns
-- Add caching strategy using `tokio::sync::RwLock` for frequently accessed technical docs
-- Register tools in MCP handler with proper error handling
+### Step 4: Implement list_rust_crates Tool with Pagination
+- Build ListRustCratesTool with configurable pagination
+- Default 20 items per page with customizable limits
+- Include comprehensive information:
+  - Name, version, document count, last updated, status
+  - Filtering by status and name pattern search
+  - Statistics: total documents, embeddings, averages
+- Add sorting options (name, version, last_updated, document_count)
+- Format output as structured JSON with pagination metadata
 
-### Step 5: Implement RustBestPractices Tool and Integration Testing
-- Create `RustBestPracticesQueryTool`:
-  - Handle pattern/anti-pattern metadata (practice_category, rust_version, complexity_level)
-  - Parse best practice recommendations and code patterns
-  - Format examples with before/after code comparisons
-- Add `rust_best_practices_vector_search` to queries.rs
-- Create comprehensive integration tests in `crates/mcp/tests/`:
-  - Test query accuracy for all seven tools
-  - Validate metadata filtering functionality
-  - Test response formatting consistency
-  - Verify error handling and edge cases
-  - Performance benchmarks (< 2 seconds per query)
-- Verify MCP protocol compliance for all tools
+### Step 5: Implement check_rust_status Tool and Dependency Analysis
+- Create CheckRustStatusTool for comprehensive health monitoring
+- Report system health metrics:
+  - Database connectivity and performance
+  - Storage usage statistics
+  - Total counts for crates/documents/embeddings
+- Implement cargo metadata parser using std::process::Command
+- Add update detection comparing local vs docs.rs versions
+- Generate dependency graph visualization data
+- Create metrics collection for tool usage patterns
 
 ## Required Outputs
 
 Generate these implementation artifacts:
 
-1. **Shared Utilities Module** with common functions for all query tools
-2. **Seven Specialized Query Tools** following consistent patterns
-3. **Database Query Methods** for each documentation type
-4. **Caching Infrastructure** for performance optimization
-5. **Comprehensive Test Suite** covering all functionality and edge cases
+1. **Database Schema Extensions** with crates table and transaction helpers
+2. **RustCrateManager Core Structure** with all required clients
+3. **Four Management Tools** (add, remove, list, check) fully implemented
+4. **docs.rs Integration Client** with rate limiting and error handling
+5. **Comprehensive Testing Suite** covering all operations and edge cases
 
 ## Key Technical Requirements
 
-1. **Consistency**: All tools follow identical patterns from RustQueryTool
-2. **Performance**: Each tool responds within 2 seconds
-3. **Metadata Handling**: Type-specific metadata parsing for each domain
-4. **Caching**: Shared caching strategy for frequently accessed content
-5. **Testing**: 100% coverage of core functionality with integration tests
-
-## Documentation Type Specifications
-
-### Jupyter Notebooks
-- **Metadata Fields**: kernel, language, cell_types, execution_count
-- **Content Types**: Code cells, markdown cells, output results
-- **Formatting**: Syntax highlighting, execution results display
-
-### Cilium Networking
-- **Metadata Fields**: policy_type, namespace, endpoints, rules
-- **Content Types**: Network policies, security contexts, traffic rules
-- **Formatting**: YAML configuration blocks, network diagrams
-
-### Talos Kubernetes
-- **Metadata Fields**: resource_type, api_version, namespace, node_config
-- **Content Types**: System configurations, boot sequences, cluster setup
-- **Formatting**: Configuration files, system commands
-
-### Meteora DeFi
-- **Metadata Fields**: pool_type, liquidity_params, reward_structure, apy
-- **Content Types**: Liquidity strategies, yield calculations, protocol mechanics
-- **Formatting**: Financial formulas, pool configurations
-
-### Raydium AMM
-- **Metadata Fields**: amm_version, pool_address, fee_structure, trading_pairs
-- **Content Types**: Swap mechanics, liquidity provision, price calculations
-- **Formatting**: Trading parameters, pool statistics
-
-### eBPF Programming
-- **Metadata Fields**: program_type, kernel_version, hook_points, verifier_info
-- **Content Types**: BPF programs, kernel integration, performance metrics
-- **Formatting**: C code examples, assembly output
-
-### Rust Best Practices
-- **Metadata Fields**: practice_category, rust_version, complexity_level, pattern_type
-- **Content Types**: Code patterns, anti-patterns, recommendations
-- **Formatting**: Before/after examples, best practice explanations
+1. **Performance**: All operations complete within 30 seconds
+2. **Reliability**: Atomic operations with proper rollback handling
+3. **Rate Limiting**: Respect docs.rs API limits (10 req/min)
+4. **Data Integrity**: Cascade deletions and orphan cleanup
+5. **Monitoring**: Health checks and usage metrics
 
 ## Tools at Your Disposal
 
-- File system access for implementation and testing
-- Database access for query development and optimization
-- Existing query tool patterns for reference
-- Performance monitoring tools for optimization
+- File system access for code implementation and testing
+- Database access for schema management and data operations
+- HTTP client capabilities for docs.rs API integration
+- Cargo tools for metadata parsing and dependency analysis
 
 ## Success Criteria
 
 Your implementation is complete when:
-- All seven query tools are implemented following consistent patterns
-- Shared utility module provides reusable functionality
-- Database queries are optimized with proper indexing
-- Caching strategy improves performance for repeated queries
-- All tools are registered and available through MCP
-- Comprehensive test suite validates all functionality
-- Performance targets are consistently met
+- All four management tools are implemented and registered
+- docs.rs integration works with proper rate limiting
+- Database operations are atomic with proper error handling
+- Cascade deletion prevents data orphaning
+- Health monitoring provides comprehensive system status
+- All tests pass and performance targets are met
 
 ## Important Implementation Notes
 
-- Reuse existing RustQueryTool patterns exactly
-- Implement proper error handling for each domain-specific case
-- Use shared utilities to maintain consistency
-- Add appropriate logging for debugging and monitoring
+- Use transaction boundaries for all multi-step operations
+- Implement proper retry logic for network operations
+- Handle docs.rs API rate limiting gracefully
+- Log all operations for audit and debugging
 - Ensure thread safety for concurrent operations
+
+## Database Schema Requirements
+
+```sql
+CREATE TABLE crates (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    version VARCHAR(50) NOT NULL,
+    description TEXT,
+    documentation_url TEXT,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'active',
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX idx_crates_name ON crates(name);
+CREATE INDEX idx_crates_status ON crates(status);
+CREATE INDEX idx_crates_last_updated ON crates(last_updated);
+```
+
+## Tool Definitions Required
+
+1. **add_rust_crate**: Parameters: name (required), version (optional)
+2. **remove_rust_crate**: Parameters: name (required), soft_delete (boolean)
+3. **list_rust_crates**: Parameters: page, limit, status_filter, name_pattern
+4. **check_rust_status**: Parameters: include_dependencies (boolean)
 
 ## Validation Commands
 
 Before completion, run:
 ```bash
 cd /workspace
-cargo test --package mcp --test query_tools_integration
-cargo test --package mcp query_tools
+cargo test --package mcp --test crate_management
+cargo test --package database --test crate_operations
 cargo clippy --package mcp --lib
-cargo fmt --package mcp --check
-cargo doc --package mcp --no-deps
+cargo fmt --all --check
 ```
 
-Begin implementation with focus on consistency, performance, and comprehensive testing across all seven query tools.
+Begin implementation with focus on data integrity, performance, and comprehensive error handling.

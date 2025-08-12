@@ -1,25 +1,25 @@
-# Task 10: Additional Query Tools Implementation
+# Task 10: Solana Query Tool Implementation
 
 ## Overview
-Implement remaining query tools for comprehensive documentation coverage: `cilium_query`, `talos_query`, `meteora_query`, `raydium_query`, `ebpf_query`, and `rust_best_practices_query`.
+Implement `solana_query` tool for semantic search across Solana blockchain platform documentation including core docs, architecture diagrams, and cryptography specifications.
 
 ## Implementation Guide
-- Create standardized query tool architecture
-- Implement type-specific metadata filtering for each documentation type
-- Add specialized response formatting per tool category
-- Ensure consistent MCP integration pattern
-- Optimize performance across all query tools
+- Create SolanaQueryTool with comprehensive search capabilities
+- Implement metadata filtering for documentation categories
+- Add support for multiple content formats (markdown, PDF, diagrams)
+- Integrate with existing MCP tool registration
+- Optimize for blockchain documentation complexity levels
 
 ## Technical Requirements
-- Standardized QueryTool trait implementation
-- Type-specific metadata schemas
-- Consistent error handling patterns
-- Unified response formatting
-- Performance parity across all tools
+- Vector similarity search with format-aware processing
+- JSONB metadata filtering for categories and complexity
+- Multi-format content handling (markdown, PDF, BOB, MSC)
+- Tool registration and MCP integration
+- Performance optimization for large documentation set
 
 ## Success Metrics
-- All 6 query tools functional with < 2s response time
-- Consistent user experience across tools
-- Type-specific optimization for each documentation category
-- Complete MCP tool registration
-- Comprehensive test coverage for all tools
+- Query response time < 2 seconds
+- Multi-format content search capability
+- Accurate categorization and filtering
+- Complexity-aware result ranking
+- Comprehensive Solana ecosystem coverage

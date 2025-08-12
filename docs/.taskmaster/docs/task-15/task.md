@@ -1,18 +1,18 @@
-# Task 15: Load Balancing and Auto-scaling
+# Task 15: Health Monitoring and Metrics
 
 ## Overview
-Implement load balancing and auto-scaling capabilities for production deployment to handle varying traffic loads.
+Implement comprehensive health monitoring and metrics collection system for production observability and alerting.
 
 ## Implementation Guide
-- Configure Kubernetes ingress with load balancing
-- Implement horizontal pod autoscaling (HPA)
-- Add resource-based scaling policies
-- Configure load balancer health checks
-- Test scaling behavior under load
+- Add health check endpoints for all components
+- Implement Prometheus metrics collection
+- Configure Grafana dashboards for visualization
+- Set up alerting for critical conditions
+- Add performance and resource monitoring
 
 ## Success Metrics
-- Load balancing distributes traffic effectively
-- Auto-scaling responds to load changes
-- Resource utilization optimized
-- System handles traffic spikes gracefully
-- Scaling events logged and monitored
+- Health checks operational for all services
+- Metrics collection and visualization working
+- Alerting responds to critical conditions
+- Performance monitoring provides insights
+- System observability meets operational needs

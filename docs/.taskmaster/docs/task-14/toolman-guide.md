@@ -1,255 +1,338 @@
-# Toolman Guide: Task 14 - Production Monitoring and Observability
+# Toolman Guide: Task 13 - Container Image Optimization
 
 ## Overview
 
-This task implements comprehensive production monitoring including Prometheus metrics, structured JSON logging, OpenTelemetry tracing, and performance profiling endpoints. The focus is on complete observability with minimal performance impact.
+This task optimizes Docker images for production deployment through multi-stage builds, security hardening, binary optimization, and comprehensive scanning integration. The focus is on achieving minimal image size, zero security vulnerabilities, and operational excellence.
 
 ## Core Tools
 
 ### Filesystem Server Tools
 
+Essential for container optimization, Dockerfile enhancement, and security scanning integration.
+
 #### read_file
-**Purpose**: Analyze existing code structure and monitoring patterns
+**Purpose**: Analyze current container configuration and examine existing patterns
 **When to Use**: 
-- Examine current logging and error handling patterns
-- Study existing HTTP server implementation for metrics integration
-- Review database query patterns for instrumentation
-- Analyze existing middleware for correlation ID integration
+- Examine current Dockerfile structure and optimization opportunities
+- Study existing signal handling patterns in the codebase
+- Review CI/CD pipeline configurations for integration points
+- Analyze current security scanning approaches
+
+**Usage Example**:
+```
+read_file("/workspace/Dockerfile")
+read_file("/workspace/crates/mcp/src/http_server.rs")
+read_file("/workspace/.github/workflows/deploy-doc-server.yml")
+```
 
 #### write_file
-**Purpose**: Create monitoring infrastructure and configuration
+**Purpose**: Create optimized Dockerfile and security scanning scripts
 **When to Use**:
-- Implement metrics module with Prometheus integration
-- Create OpenTelemetry configuration and tracing setup
-- Write profiling endpoint implementations
-- Add Grafana dashboard configurations
+- Implement enhanced Dockerfile with cargo-chef and distroless base
+- Create security scanning scripts with Trivy integration
+- Write signal handling implementation for graceful shutdown
+- Add CI/CD enhancements for automated security scanning
+
+**Usage Example**:
+```
+write_file("/workspace/Dockerfile.optimized", "FROM lukemathwalker/cargo-chef...")
+write_file("/workspace/scripts/scan_image.sh", "#!/bin/bash\ntrivy image...")
+```
 
 #### edit_file
-**Purpose**: Integrate observability into existing codebase
+**Purpose**: Modify existing files to integrate optimization features
 **When to Use**:
-- Add metrics instrumentation to existing handlers
-- Modify database queries to include tracing spans
-- Update HTTP server to include correlation ID middleware
-- Integrate structured logging throughout application
+- Add signal handling to existing http_server.rs
+- Update Cargo.toml with size optimization settings
+- Modify CI/CD workflows to include security scanning
+- Update configuration files for production deployment
+
+**Usage Example**:
+```
+edit_file("/workspace/crates/mcp/src/http_server.rs", add_graceful_shutdown)
+edit_file("/workspace/Cargo.toml", add_optimization_settings)
+```
 
 ### Kubernetes Tools
 
-#### kubernetes_getResource
-**Purpose**: Examine existing deployment configuration for monitoring integration
-**When to Use**:
-- Review current service configuration for metrics endpoints
-- Check existing resource limits and monitoring setup
-- Validate ServiceMonitor configuration
-- Examine current logging and tracing infrastructure
+Essential for validating container optimization in Kubernetes environments.
 
 #### kubernetes_listResources
-**Purpose**: Discover monitoring infrastructure components
+**Purpose**: List deployed resources to understand current container usage
 **When to Use**:
-- Find existing Prometheus and Grafana deployments
-- Locate monitoring namespace resources
-- Identify current logging pipeline components
-- Check for existing Jaeger tracing infrastructure
+- Finding existing deployments that will use optimized images
+- Discovering related services and configurations
+- Understanding resource organization and namespaces
+- Checking for current security policies
+
+**Parameters**:
+- `type`: Resource type (deployments, pods, services)
+- `namespace`: Target namespace for doc-server deployment
+
+#### kubernetes_getResource
+**Purpose**: Retrieve specific deployment configurations for optimization validation
+**When to Use**:
+- Examining current deployment specifications
+- Reviewing resource limits and security contexts
+- Checking container image references
+- Validating health check configurations
+
+**Parameters**:
+- `type`: Resource type (deployment, service, configmap)
+- `name`: Resource name (doc-server)
+- `namespace`: Target namespace
+
+#### kubernetes_describeResource
+**Purpose**: Get detailed information about container runtime and performance
+**When to Use**:
+- Checking container startup times and resource usage
+- Troubleshooting deployment issues with optimized images
+- Validating security contexts and user configurations
+- Monitoring graceful shutdown behavior
+
+**Parameters**:
+- `kind`: Resource kind (Pod, Deployment)
+- `name`: Resource name
+- `namespace`: Target namespace
+
+### Documentation Query Tool
+
+#### rust_query
+**Purpose**: Query existing Rust documentation for optimization patterns
+**When to Use**:
+- Understanding existing signal handling implementations
+- Finding performance optimization examples
+- Learning about container-specific Rust patterns
+- Researching graceful shutdown best practices
+
+**Parameters**:
+- `query`: Search terms for Rust optimization patterns
+- `limit`: Number of results to analyze
 
 ## Implementation Flow
 
-### Phase 1: Metrics Infrastructure
-1. Add Prometheus dependencies and create metrics module
-2. Define custom metrics for key operations
-3. Integrate metrics registry into server state
-4. Add /metrics endpoint for Prometheus scraping
+### Phase 1: Current State Analysis
+1. Use `read_file` to examine existing Dockerfile and build process
+2. Use `kubernetes_getResource` to understand current deployment configuration
+3. Use `rust_query` to research optimization patterns and best practices
+4. Analyze current image size and security posture
 
-### Phase 2: Structured Logging
-1. Configure tracing-subscriber with JSON formatter
-2. Implement correlation ID middleware
-3. Replace existing logging with structured format
-4. Ensure correlation propagation across operations
+### Phase 2: Dockerfile Optimization
+1. Implement cargo-chef for dependency caching optimization
+2. Migrate to distroless base image for security hardening
+3. Add binary optimization settings and UPX compression
+4. Test each optimization stage for functionality and performance
 
-### Phase 3: Distributed Tracing
-1. Add OpenTelemetry dependencies and configuration
-2. Instrument key operations with tracing spans
-3. Configure Jaeger exporter and sampling
-4. Add trace context propagation headers
+### Phase 3: Application Enhancement
+1. Implement graceful shutdown signal handling
+2. Add health check endpoints compatible with distroless
+3. Optimize startup performance and resource usage
+4. Test application behavior with optimizations
 
-### Phase 4: Performance Monitoring
-1. Instrument database queries with timing metrics
-2. Add per-tool performance tracking
-3. Monitor embedding generation performance
-4. Track connection pool and resource metrics
+### Phase 4: Security and Scanning Integration
+1. Create security scanning scripts with Trivy
+2. Integrate scanning into CI/CD pipeline
+3. Configure SBOM generation and compliance reporting
+4. Test security scanning with various vulnerability scenarios
 
-### Phase 5: Profiling and Debugging
-1. Implement pprof-compatible profiling endpoints
-2. Add authentication and rate limiting
-3. Create debugging documentation
-4. Test profiling in production-like environment
+### Phase 5: Kubernetes Validation
+1. Deploy optimized containers to Kubernetes cluster
+2. Validate performance, security, and operational characteristics
+3. Test graceful shutdown in orchestrated environment
+4. Monitor and measure optimization improvements
 
 ## Best Practices
 
-### Metrics Collection
-- Use histograms for timing data with appropriate buckets
-- Apply consistent labeling for dashboard filtering
-- Keep metrics cardinality reasonable to avoid memory issues
-- Use counters for events and gauges for current state
+### Container Optimization
+- Use multi-stage builds to minimize final image size
+- Leverage cargo-chef for optimal dependency layer caching
+- Apply binary optimization judiciously to balance size and performance
+- Test functionality thoroughly after each optimization step
 
-### Structured Logging
-- Include correlation IDs in all log entries
-- Use consistent field names across all components
-- Avoid logging sensitive information
-- Structure logs for easy parsing and searching
+### Security Hardening
+- Use distroless base images to minimize attack surface
+- Run containers as non-root users
+- Scan for vulnerabilities at every build step
+- Generate and maintain SBOM for compliance
 
-### Distributed Tracing
-- Keep spans focused on meaningful operations
-- Use appropriate sampling to control overhead
-- Include relevant context in span attributes
-- Maintain parent-child relationships correctly
+### Operational Excellence
+- Implement proper signal handling for graceful shutdown
+- Add comprehensive health checks for orchestration
+- Log important lifecycle events for debugging
+- Test deployment scenarios thoroughly
 
-### Performance Impact
-- Monitor observability overhead regularly
-- Use efficient serialization for structured logs
-- Implement async metrics collection where possible
-- Test performance impact under load
+### Performance Monitoring
+- Measure startup time impact of optimizations
+- Monitor memory usage and resource efficiency
+- Benchmark build time improvements
+- Validate application performance under load
 
 ## Task-Specific Implementation Guidelines
 
-### 1. Metrics Module Structure
+### 1. cargo-chef Multi-Stage Build
+```dockerfile
+FROM lukemathwalker/cargo-chef:latest-rust-1.70 AS chef
+WORKDIR /app
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+RUN cargo build --release
+RUN strip target/release/doc-server
+RUN upx --best target/release/doc-server
+```
+
+### 2. Distroless Runtime Configuration
+```dockerfile
+FROM gcr.io/distroless/cc-debian12 AS runtime
+COPY --from=builder /app/target/release/doc-server /usr/local/bin/
+USER nonroot:nonroot
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["/usr/local/bin/doc-server", "--health-check"]
+ENTRYPOINT ["/usr/local/bin/doc-server"]
+```
+
+### 3. Graceful Shutdown Implementation
 ```rust
-// crates/mcp/src/metrics.rs
-use prometheus::{
-    register_histogram_with_registry, register_counter_with_registry,
-    register_gauge_with_registry, Histogram, Counter, Gauge, Registry
-};
+use tokio::signal;
 
-pub struct ApplicationMetrics {
-    pub query_latency: Histogram,
-    pub embedding_generation_time: Histogram,
-    pub cache_hit_rate: Counter,
-    pub active_connections: Gauge,
-    pub request_counter: Counter,
-}
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
 
-impl ApplicationMetrics {
-    pub fn new(registry: &Registry) -> Self {
-        // Initialize metrics with registry
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
     }
 }
 ```
 
-### 2. Correlation ID Middleware
-```rust
-use tower_http::trace::TraceLayer;
-use uuid::Uuid;
+### 4. Security Scanning Script
+```bash
+#!/bin/bash
+# scripts/scan_image.sh
+IMAGE_NAME=${1:-doc-server:latest}
 
-pub fn correlation_id_layer() -> TraceLayer<SharedClassifier> {
-    TraceLayer::new_for_http()
-        .make_span_with(|request: &Request<Body>| {
-            let correlation_id = request
-                .headers()
-                .get("X-Correlation-ID")
-                .and_then(|h| h.to_str().ok())
-                .unwrap_or_else(|| &Uuid::new_v4().to_string());
-            
-            tracing::info_span!(
-                "http_request",
-                correlation_id = %correlation_id,
-                method = %request.method(),
-                path = %request.uri().path()
-            )
-        })
-}
+# Vulnerability scanning with exit on CRITICAL/HIGH
+trivy image --exit-code 1 --severity HIGH,CRITICAL $IMAGE_NAME
+
+# Generate SARIF for tooling integration
+trivy image --format sarif --output results.sarif $IMAGE_NAME
+
+# Generate SBOM for compliance
+trivy image --format spdx-json --output sbom.spdx.json $IMAGE_NAME
+
+echo "Security scan completed for $IMAGE_NAME"
 ```
 
-### 3. Database Query Instrumentation
-```rust
-// In database queries
-#[tracing::instrument(skip(self))]
-pub async fn vector_search(
-    &self,
-    query: &str,
-    limit: i64,
-) -> Result<Vec<Document>, DatabaseError> {
-    let start = std::time::Instant::now();
-    
-    let result = sqlx::query_as!()
-        .fetch_all(&self.pool)
-        .await;
-    
-    // Record metrics
-    self.metrics.query_latency
-        .observe(start.elapsed().as_secs_f64());
-    
-    result
-}
-```
-
-### 4. Profiling Endpoints
-```rust
-// Profiling endpoint implementation
-pub async fn cpu_profile(
-    Extension(auth): Extension<AuthState>,
-    Query(params): Query<ProfileParams>,
-) -> Result<Response<Body>, StatusCode> {
-    if !auth.can_profile() {
-        return Err(StatusCode::FORBIDDEN);
-    }
-    
-    let duration = Duration::from_secs(params.seconds.unwrap_or(30));
-    let profile = pprof::ProfilerGuard::new(100).unwrap();
-    
-    tokio::time::sleep(duration).await;
-    
-    match profile.report().build() {
-        Ok(report) => {
-            let mut body = Vec::new();
-            report.pprof().unwrap().write_to_vec(&mut body).unwrap();
-            Ok(Response::new(Body::from(body)))
-        },
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
+### 5. Size Optimization Settings
+```toml
+# Cargo.toml
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Better optimization
+panic = "abort"     # Reduce binary size
 ```
 
 ## Troubleshooting
 
-### Common Issues
+### Common Container Issues
 
-#### Metrics Collection Problems
-- Verify Prometheus endpoint accessibility
-- Check metric registration and naming
-- Monitor memory usage from high cardinality metrics
-- Validate histogram bucket configuration
+#### cargo-chef Build Failures
+- Verify cargo-chef version compatibility with Rust version
+- Check recipe.json generation includes all workspace dependencies
+- Ensure dependency stage has access to all required files
+- Monitor Docker layer caching effectiveness
 
-#### Tracing Performance Impact
-- Adjust sampling rate for high-traffic endpoints
-- Monitor trace export performance
-- Check Jaeger backend capacity
-- Validate span lifecycle management
+#### Distroless Runtime Problems
+- Verify all required shared libraries are available
+- Check that application doesn't depend on shell utilities
+- Ensure health check works without external dependencies
+- Validate user permissions for nonroot user
 
-#### Correlation ID Propagation
-- Ensure middleware order in HTTP stack
-- Verify async context propagation
-- Check database client span creation
-- Validate header extraction and injection
+#### Binary Optimization Issues
+- Test functionality after each optimization step
+- Monitor startup performance impact
+- Verify UPX compression doesn't break functionality
+- Check memory usage patterns with optimized binary
+
+#### Signal Handling Problems
+- Test signal handling in containerized environment
+- Verify signals reach application process (PID 1)
+- Check graceful shutdown timeout configuration
+- Monitor database connection cleanup
+
+### Security Scanning Issues
+
+#### Trivy Scanning Failures
+- Verify Trivy installation and database updates
+- Check network connectivity for vulnerability database
+- Monitor scan performance for large images
+- Handle false positives with appropriate filters
+
+#### SBOM Generation Problems
+- Verify SPDX-JSON format compatibility
+- Check completeness of dependency information
+- Monitor output file size and content
+- Validate compliance with organizational requirements
 
 ## Validation Steps
 
 ### Development Testing
-1. **Metrics Endpoint**: Verify Prometheus format and values
-2. **Correlation Tracking**: Test ID propagation across operations
-3. **Tracing Integration**: Validate spans in Jaeger UI
-4. **Profiling**: Test CPU and memory profiling endpoints
+1. **Build Performance**: Measure cargo-chef cache effectiveness
+2. **Image Size**: Verify final image size < 100MB
+3. **Functionality**: Test all API endpoints in optimized container
+4. **Security**: Run vulnerability scans and verify clean results
 
-### Production Validation
-1. **Performance Impact**: Measure overhead under load
-2. **Alerting**: Test SLA violation detection
-3. **Dashboard**: Verify Grafana visualization
-4. **Log Aggregation**: Confirm structured log processing
+### Integration Testing
+1. **Kubernetes Deployment**: Deploy optimized image to cluster
+2. **Health Checks**: Verify readiness and liveness probes
+3. **Graceful Shutdown**: Test termination handling
+4. **Performance**: Measure startup time and resource usage
+
+### Quality Assurance
+```bash
+# Build optimized container
+docker build -t doc-server:optimized .
+
+# Verify size target
+docker images doc-server:optimized
+
+# Run security scan
+./scripts/scan_image.sh doc-server:optimized
+
+# Test functionality
+docker run --rm -d -p 8080:8080 --name test-container doc-server:optimized
+curl http://localhost:8080/health
+docker stop test-container  # Test graceful shutdown
+```
 
 ## Success Indicators
 
-- Prometheus metrics endpoint provides comprehensive system visibility
-- Structured logs enable efficient troubleshooting
-- Distributed tracing shows complete request flows
-- Performance profiling assists with optimization
-- Observability overhead remains under 5%
-- SLA monitoring and alerting operational
-- Operations team can debug issues effectively
-- Production performance insights drive optimization
+- Container image size reduced to < 100MB
+- Zero CRITICAL and HIGH security vulnerabilities
+- Build time improvement > 80% with cargo-chef
+- Startup time consistently < 5 seconds
+- Graceful shutdown completes within 30 seconds
+- Security scanning integrated into CI/CD pipeline
+- SBOM generation working for compliance
+- Kubernetes deployment successful with optimized images
+- Application functionality preserved through all optimizations

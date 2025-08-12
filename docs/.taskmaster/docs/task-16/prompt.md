@@ -1,79 +1,122 @@
-# Autonomous Agent Prompt: CI/CD Pipeline Enhancement
+# Autonomous Agent Prompt: Load Testing and Performance Optimization
 
-You are tasked with enhancing GitHub Actions workflow for comprehensive testing, security scanning, automated deployment validation, and blue-green deployment strategy.
+You are tasked with conducting comprehensive load testing to validate performance targets and optimize system bottlenecks using k6 or vegeta for 100+ concurrent connections.
 
 ## Your Mission
 
-Transform the CI/CD pipeline with integration testing, security scanning (cargo-audit, cargo-deny), performance regression testing, blue-green deployment, smoke tests, and automated rollback capabilities.
+Create a comprehensive load testing suite, identify performance bottlenecks, implement optimization strategies including query result caching, vector similarity optimization, and request coalescing.
 
 ## Execution Steps
 
-### Step 1: Add Integration Test Stage with Database Fixtures
-- Examine current `.github/workflows/deploy-doc-server.yml`
-- Add integration test stage with PostgreSQL service container
-- Create database fixtures and test data setup
-- Implement comprehensive integration tests covering all MCP tools
-- Add database migration testing and validation
+### Step 1: Create Load Testing Suite
+- Examine existing `scripts/load_test_sse.js` as baseline
+- Implement comprehensive k6 test scenarios:
+  - Gradual ramp-up from 1 to 100+ concurrent users
+  - Sustained load testing (1 hour duration)
+  - Spike testing for peak load handling
+  - SSE connection stress testing
+- Add realistic query patterns and data volumes
+- Configure test data and scenarios for different load patterns
 
-### Step 2: Implement Security Scanning Integration
-- Add cargo-audit for vulnerability scanning of dependencies
-- Integrate cargo-deny for license compliance and security policies
-- Add Trivy container image scanning to pipeline
-- Configure SAST (Static Application Security Testing) tools
-- Add dependency vulnerability reporting and alerting
+### Step 2: Database Query Optimization
+- Identify slow queries using EXPLAIN ANALYZE
+- Optimize vector similarity search with approximation techniques:
+  - Implement HNSW (Hierarchical Navigable Small World) indexes
+  - Add IVF (Inverted File) indexes for large datasets
+  - Configure approximate nearest neighbor search
+- Add query result caching with configurable TTL
+- Optimize database connection pooling parameters
 
-### Step 3: Add Performance Regression Testing
-- Integrate performance benchmarks into CI pipeline
-- Add baseline performance measurement and comparison
-- Implement automated performance regression detection
-- Configure performance alerts for significant degradation
-- Add load testing integration for major releases
+### Step 3: Application Performance Optimization
+- Implement request coalescing for duplicate queries:
+  - Cache identical queries in-flight
+  - Deduplicate embedding generation requests
+  - Share results across multiple concurrent requests
+- Add connection pooling optimization for HTTP clients
+- Implement lazy loading for embedding models
+- Add streaming optimizations for large result sets
 
-### Step 4: Implement Blue-Green Deployment Strategy
-- Design blue-green deployment workflow for Kubernetes
-- Add deployment validation and health checking
-- Implement traffic switching logic with zero downtime
-- Add rollback automation on deployment failure
-- Configure deployment status monitoring and alerting
+### Step 4: Memory and CPU Profiling Under Load
+- Profile application during load testing using pprof
+- Identify memory leaks and excessive allocations
+- Analyze CPU hotspots and optimization opportunities
+- Implement memory pool optimizations for frequent allocations
+- Add garbage collection tuning for consistent performance
 
-### Step 5: Add Post-Deployment Validation
-- Implement comprehensive smoke tests post-deployment
-- Add endpoint health verification and functional testing
-- Configure monitoring integration and alert validation
-- Add automated rollback on smoke test failures
-- Implement deployment success/failure notifications
+### Step 5: Performance Monitoring and SLA Validation
+- Measure and document p50/p95/p99 latencies
+- Test connection limit handling (1000+ concurrent connections)
+- Verify memory stability during extended load testing
+- Validate cache effectiveness and hit rates
+- Implement automated performance regression testing
 
 ## Required Outputs
 
-1. **Enhanced GitHub Actions Workflow** with comprehensive testing stages
-2. **Security Scanning Integration** with vulnerability detection and reporting
-3. **Performance Testing Pipeline** with regression detection
-4. **Blue-Green Deployment Configuration** with automated rollback
-5. **Smoke Testing Suite** with post-deployment validation
+1. **Load Testing Suite** with k6 scenarios for various load patterns
+2. **Database Optimizations** including vector search improvements
+3. **Caching Infrastructure** with TTL and invalidation strategies
+4. **Request Coalescing System** for duplicate query handling
+5. **Performance Benchmarks** with SLA validation results
 
 ## Key Technical Requirements
 
-1. **Pipeline Speed**: Total pipeline execution < 10 minutes
-2. **Security**: Zero tolerance for CRITICAL vulnerabilities
-3. **Reliability**: Automated rollback on any deployment failure
-4. **Visibility**: Comprehensive status reporting and notifications
-5. **Compliance**: License scanning and policy enforcement
+1. **Throughput**: Handle 100+ concurrent connections
+2. **Latency**: p95 < 2 seconds, p99 < 5 seconds
+3. **Stability**: No memory leaks during 1-hour sustained load
+4. **Efficiency**: Cache hit rate > 70% for repeated queries
+5. **Scalability**: Linear performance scaling with resources
+
+## Load Testing Scenarios
+
+```javascript
+// k6 load testing configuration
+export let options = {
+  stages: [
+    { duration: '2m', target: 10 },   // Ramp up
+    { duration: '5m', target: 50 },   // Stay at 50 users
+    { duration: '2m', target: 100 },  // Ramp up to 100
+    { duration: '10m', target: 100 }, // Sustained load
+    { duration: '2m', target: 0 },    // Ramp down
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)<2000', 'p(99)<5000'],
+    http_req_failed: ['rate<0.1'],
+  },
+};
+```
 
 ## Tools at Your Disposal
 
-- GitHub Actions workflow modification capabilities
-- Kubernetes deployment and service management
-- Security scanning tools integration
-- Performance testing and benchmarking tools
+- File system access for test script creation and optimization
+- Database access for query optimization and profiling
+- HTTP load testing tools (k6, vegeta)
+- Performance profiling tools (pprof, flamegraph)
 
 ## Success Criteria
 
-Your enhancement is complete when:
-- Integration tests validate all functionality with real database
-- Security scanning prevents vulnerable deployments
-- Performance regression testing catches degradation automatically
-- Blue-green deployment enables zero-downtime updates
-- Smoke tests validate deployment success comprehensively
-- Pipeline execution time remains under 10 minutes
+Your optimization is complete when:
+- Load testing suite validates system performance under stress
+- Database queries optimized for sub-second response times
+- Caching system reduces database load by 70%+
+- Request coalescing eliminates duplicate processing
+- System handles 100+ concurrent connections stably
+- Memory usage remains stable during extended testing
 
-Begin implementation focusing on reliability, security, and operational excellence.
+## Performance Targets
+
+- **Response Time**: p95 < 2s, p99 < 5s
+- **Throughput**: 100+ concurrent connections
+- **Memory Stability**: No leaks during 1-hour test
+- **Cache Efficiency**: 70%+ hit rate
+- **Error Rate**: < 0.1% failed requests
+
+## Validation Commands
+
+```bash
+cd /workspace
+k6 run scripts/load_test_comprehensive.js
+vegeta attack -duration=60s -rate=100 | vegeta report
+cargo test --release performance_benchmarks
+```
+
+Begin implementation focusing on systematic performance optimization with comprehensive validation.

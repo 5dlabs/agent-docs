@@ -1,106 +1,79 @@
-# Autonomous Agent Prompt: Documentation and API Reference Generation
+# Autonomous Agent Prompt: CI/CD Pipeline Enhancement
 
-You are tasked with creating comprehensive documentation including API reference, deployment guides, integration examples, and architecture diagrams using cargo doc, OpenAPI/Swagger, and mermaid diagrams.
+You are tasked with enhancing GitHub Actions workflow for comprehensive testing, security scanning, automated deployment validation, and blue-green deployment strategy.
 
 ## Your Mission
 
-Generate complete documentation ecosystem covering Rust API documentation, OpenAPI specification, Kubernetes deployment guides, MCP tool usage examples, and client integration guides for Cursor and Toolman.
+Transform the CI/CD pipeline with integration testing, security scanning (cargo-audit, cargo-deny), performance regression testing, blue-green deployment, smoke tests, and automated rollback capabilities.
 
 ## Execution Steps
 
-### Step 1: Generate Rust API Documentation with cargo doc
-- Use `cargo doc --all-features --no-deps` for comprehensive API documentation
-- Configure rustdoc settings for external links and search indexes
-- Generate documentation for all workspace crates (database, mcp, embeddings, doc-loader, llm)
-- Include examples from code comments and ensure all public APIs documented
-- Prepare documentation for hosting and integration
+### Step 1: Add Integration Test Stage with Database Fixtures
+- Examine current `.github/workflows/deploy-doc-server.yml`
+- Add integration test stage with PostgreSQL service container
+- Create database fixtures and test data setup
+- Implement comprehensive integration tests covering all MCP tools
+- Add database migration testing and validation
 
-### Step 2: Create OpenAPI/Swagger Specification
-- Create `openapi.yaml` documenting MCP server HTTP endpoints
-- Document POST /mcp and GET /mcp endpoints with JSON-RPC schemas
-- Include SSE event stream documentation for server-sent events
-- Add authentication headers and MCP-Protocol-Version documentation
-- Define schemas for all MCP tools with example requests/responses
-- Validate OpenAPI specification with standard validators
+### Step 2: Implement Security Scanning Integration
+- Add cargo-audit for vulnerability scanning of dependencies
+- Integrate cargo-deny for license compliance and security policies
+- Add Trivy container image scanning to pipeline
+- Configure SAST (Static Application Security Testing) tools
+- Add dependency vulnerability reporting and alerting
 
-### Step 3: Write Kubernetes Deployment Guide
-- Document Helm chart creation in `helm/doc-server/` directory
-- Write comprehensive `values.yaml` configuration guide
-- Document resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi)
-- Include ConfigMap and Secret management procedures
-- Add PodDisruptionBudget setup for high availability
-- Create troubleshooting section for common deployment issues
+### Step 3: Add Performance Regression Testing
+- Integrate performance benchmarks into CI pipeline
+- Add baseline performance measurement and comparison
+- Implement automated performance regression detection
+- Configure performance alerts for significant degradation
+- Add load testing integration for major releases
 
-### Step 4: Document MCP Tool Usage with Client Integration
-- Document rust_query tool usage with detailed examples
-- Create Cursor IDE integration guide with MCP configuration
-- Write Toolman client setup and usage documentation
-- Include examples for all query tools (jupyter, cilium, talos, meteora, etc.)
-- Document JSON-RPC message formats and error handling
-- Add troubleshooting guide for client integration issues
+### Step 4: Implement Blue-Green Deployment Strategy
+- Design blue-green deployment workflow for Kubernetes
+- Add deployment validation and health checking
+- Implement traffic switching logic with zero downtime
+- Add rollback automation on deployment failure
+- Configure deployment status monitoring and alerting
 
-### Step 5: Create Architecture Diagrams and Performance Guide
-- Generate mermaid diagrams for system architecture
-- Document data flow from ingestion through vector search
-- Write performance tuning guide with optimization parameters
-- Include benchmarks for vector search with different index types
-- Document monitoring setup with metrics and alerting
-- Create operational runbooks for production deployment
+### Step 5: Add Post-Deployment Validation
+- Implement comprehensive smoke tests post-deployment
+- Add endpoint health verification and functional testing
+- Configure monitoring integration and alert validation
+- Add automated rollback on smoke test failures
+- Implement deployment success/failure notifications
 
 ## Required Outputs
 
-1. **Complete API Documentation** generated with cargo doc
-2. **OpenAPI Specification** with comprehensive endpoint documentation
-3. **Kubernetes Deployment Guide** with Helm charts and procedures
-4. **Client Integration Guides** for Cursor and Toolman
-5. **Architecture Documentation** with diagrams and performance guide
+1. **Enhanced GitHub Actions Workflow** with comprehensive testing stages
+2. **Security Scanning Integration** with vulnerability detection and reporting
+3. **Performance Testing Pipeline** with regression detection
+4. **Blue-Green Deployment Configuration** with automated rollback
+5. **Smoke Testing Suite** with post-deployment validation
 
 ## Key Technical Requirements
 
-1. **Completeness**: All public APIs and endpoints documented
-2. **Accuracy**: Examples tested and validated for correctness
-3. **Usability**: Clear step-by-step procedures and troubleshooting
-4. **Standards Compliance**: OpenAPI 3.0 and documentation best practices
-5. **Maintainability**: Documentation integrated with code generation
+1. **Pipeline Speed**: Total pipeline execution < 10 minutes
+2. **Security**: Zero tolerance for CRITICAL vulnerabilities
+3. **Reliability**: Automated rollback on any deployment failure
+4. **Visibility**: Comprehensive status reporting and notifications
+5. **Compliance**: License scanning and policy enforcement
 
 ## Tools at Your Disposal
 
-- File system access for documentation creation and organization
-- Rust documentation generation tools (cargo doc, rustdoc)
-- OpenAPI specification validation and generation tools
-- Kubernetes deployment and Helm chart creation capabilities
+- GitHub Actions workflow modification capabilities
+- Kubernetes deployment and service management
+- Security scanning tools integration
+- Performance testing and benchmarking tools
 
 ## Success Criteria
 
-Your documentation is complete when:
-- Rust API documentation covers all public interfaces comprehensively
-- OpenAPI specification enables client generation and integration
-- Kubernetes deployment guide enables successful production deployment
-- Client integration guides enable seamless MCP tool usage
-- Architecture documentation provides complete system understanding
-- All examples and procedures tested and validated
+Your enhancement is complete when:
+- Integration tests validate all functionality with real database
+- Security scanning prevents vulnerable deployments
+- Performance regression testing catches degradation automatically
+- Blue-green deployment enables zero-downtime updates
+- Smoke tests validate deployment success comprehensively
+- Pipeline execution time remains under 10 minutes
 
-## Documentation Structure
-
-```
-docs/
-├── api/                 # Generated API documentation
-├── openapi.yaml        # OpenAPI specification
-├── deployment/         # Kubernetes and Helm guides
-├── integration/        # Client integration guides
-├── architecture/       # System architecture and diagrams
-├── performance/        # Performance tuning guide
-└── troubleshooting/    # Common issues and solutions
-```
-
-## Validation Commands
-
-```bash
-cd /workspace
-cargo doc --all-features --no-deps --open
-swagger-codegen validate -i openapi.yaml
-helm template helm/doc-server --validate
-markdown-link-check docs/**/*.md
-```
-
-Begin documentation creation focusing on completeness, accuracy, and usability for end users and developers.
+Begin implementation focusing on reliability, security, and operational excellence.

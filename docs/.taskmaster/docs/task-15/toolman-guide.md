@@ -1,308 +1,255 @@
-# Toolman Guide: Task 15 - Load Testing and Performance Optimization
+# Toolman Guide: Task 14 - Production Monitoring and Observability
 
 ## Overview
 
-This task implements comprehensive load testing and performance optimization to validate system performance under stress and optimize bottlenecks. Focus areas include database optimization, caching, request coalescing, and memory stability.
+This task implements comprehensive production monitoring including Prometheus metrics, structured JSON logging, OpenTelemetry tracing, and performance profiling endpoints. The focus is on complete observability with minimal performance impact.
 
 ## Core Tools
 
 ### Filesystem Server Tools
 
 #### read_file
-**Purpose**: Analyze existing performance patterns and load testing infrastructure
+**Purpose**: Analyze existing code structure and monitoring patterns
 **When to Use**: 
-- Examine existing `scripts/load_test_sse.js` for baseline patterns
-- Study current database query implementations for optimization opportunities
-- Review existing caching mechanisms and performance monitoring
-- Analyze memory allocation patterns in hot code paths
+- Examine current logging and error handling patterns
+- Study existing HTTP server implementation for metrics integration
+- Review database query patterns for instrumentation
+- Analyze existing middleware for correlation ID integration
 
 #### write_file
-**Purpose**: Create load testing scripts and performance optimization implementations
+**Purpose**: Create monitoring infrastructure and configuration
 **When to Use**:
-- Implement k6 load testing scenarios with comprehensive coverage
-- Create database optimization scripts and index configurations
-- Write caching layer implementation with TTL and invalidation
-- Add request coalescing logic and memory optimization code
+- Implement metrics module with Prometheus integration
+- Create OpenTelemetry configuration and tracing setup
+- Write profiling endpoint implementations
+- Add Grafana dashboard configurations
 
 #### edit_file
-**Purpose**: Optimize existing code for performance and add instrumentation
+**Purpose**: Integrate observability into existing codebase
 **When to Use**:
-- Add performance instrumentation to existing query handlers
-- Optimize database connection pooling and query patterns
-- Integrate caching into existing query flows
-- Add memory profiling and leak detection instrumentation
+- Add metrics instrumentation to existing handlers
+- Modify database queries to include tracing spans
+- Update HTTP server to include correlation ID middleware
+- Integrate structured logging throughout application
 
 ### Kubernetes Tools
 
 #### kubernetes_getResource
-**Purpose**: Examine deployment configuration for performance optimization
+**Purpose**: Examine existing deployment configuration for monitoring integration
 **When to Use**:
-- Review current resource limits and scaling configuration
-- Check existing performance monitoring setup
-- Validate load balancer configuration for testing
-- Examine current deployment scaling policies
+- Review current service configuration for metrics endpoints
+- Check existing resource limits and monitoring setup
+- Validate ServiceMonitor configuration
+- Examine current logging and tracing infrastructure
 
 #### kubernetes_listResources
-**Purpose**: Discover performance testing infrastructure components
+**Purpose**: Discover monitoring infrastructure components
 **When to Use**:
-- Find existing monitoring and metrics collection systems
-- Locate load testing infrastructure and tools
-- Identify performance testing namespaces and resources
-- Check for existing horizontal pod autoscaling configuration
+- Find existing Prometheus and Grafana deployments
+- Locate monitoring namespace resources
+- Identify current logging pipeline components
+- Check for existing Jaeger tracing infrastructure
 
 ## Implementation Flow
 
-### Phase 1: Load Testing Infrastructure
-1. Create comprehensive k6 test scenarios for various load patterns
-2. Implement performance monitoring and metrics collection
-3. Set up automated test execution pipeline
-4. Configure performance thresholds and alerting
+### Phase 1: Metrics Infrastructure
+1. Add Prometheus dependencies and create metrics module
+2. Define custom metrics for key operations
+3. Integrate metrics registry into server state
+4. Add /metrics endpoint for Prometheus scraping
 
-### Phase 2: Database Performance Optimization
-1. Identify slow queries using database profiling tools
-2. Implement vector similarity search optimizations
-3. Add query result caching with intelligent invalidation
-4. Optimize database connection pooling parameters
+### Phase 2: Structured Logging
+1. Configure tracing-subscriber with JSON formatter
+2. Implement correlation ID middleware
+3. Replace existing logging with structured format
+4. Ensure correlation propagation across operations
 
-### Phase 3: Application Performance Tuning
-1. Implement request coalescing for duplicate queries
-2. Add memory allocation optimization for high-frequency operations
-3. Optimize HTTP client connection pooling
-4. Implement lazy loading and streaming optimizations
+### Phase 3: Distributed Tracing
+1. Add OpenTelemetry dependencies and configuration
+2. Instrument key operations with tracing spans
+3. Configure Jaeger exporter and sampling
+4. Add trace context propagation headers
 
-### Phase 4: Memory and Resource Management
-1. Add comprehensive memory profiling during load testing
-2. Identify and resolve memory leaks
-3. Optimize garbage collection for consistent performance
-4. Implement resource cleanup and lifecycle management
+### Phase 4: Performance Monitoring
+1. Instrument database queries with timing metrics
+2. Add per-tool performance tracking
+3. Monitor embedding generation performance
+4. Track connection pool and resource metrics
 
-### Phase 5: Performance Validation and Monitoring
-1. Execute comprehensive load testing scenarios
-2. Validate SLA compliance under various load conditions
-3. Implement performance regression testing
-4. Create operational runbooks for performance troubleshooting
+### Phase 5: Profiling and Debugging
+1. Implement pprof-compatible profiling endpoints
+2. Add authentication and rate limiting
+3. Create debugging documentation
+4. Test profiling in production-like environment
 
 ## Best Practices
 
-### Load Testing Strategy
-- Start with realistic user patterns and data volumes
-- Gradually increase load to identify breaking points
-- Test different scenarios (ramp-up, sustained, spike)
-- Monitor both application and infrastructure metrics
+### Metrics Collection
+- Use histograms for timing data with appropriate buckets
+- Apply consistent labeling for dashboard filtering
+- Keep metrics cardinality reasonable to avoid memory issues
+- Use counters for events and gauges for current state
 
-### Database Optimization
-- Use EXPLAIN ANALYZE to identify query bottlenecks
-- Implement appropriate indexing strategies
-- Consider read replicas for read-heavy workloads
-- Monitor connection pool utilization and tune accordingly
+### Structured Logging
+- Include correlation IDs in all log entries
+- Use consistent field names across all components
+- Avoid logging sensitive information
+- Structure logs for easy parsing and searching
 
-### Caching Implementation
-- Cache at multiple levels (query results, embeddings, computed values)
-- Implement intelligent cache invalidation strategies
-- Monitor cache hit rates and adjust TTL accordingly
-- Use cache warming for predictable query patterns
+### Distributed Tracing
+- Keep spans focused on meaningful operations
+- Use appropriate sampling to control overhead
+- Include relevant context in span attributes
+- Maintain parent-child relationships correctly
 
-### Memory Management
-- Profile memory usage under realistic load conditions
-- Implement object pooling for frequently allocated objects
-- Monitor garbage collection performance and tune parameters
-- Use streaming for large data processing where possible
+### Performance Impact
+- Monitor observability overhead regularly
+- Use efficient serialization for structured logs
+- Implement async metrics collection where possible
+- Test performance impact under load
 
 ## Task-Specific Implementation Guidelines
 
-### 1. k6 Load Testing Configuration
-```javascript
-// scripts/load_test_comprehensive.js
-import http from 'k6/http';
-import { check, sleep } from 'k6';
-import { Rate, Trend } from 'k6/metrics';
-
-export let options = {
-  stages: [
-    { duration: '2m', target: 10 },
-    { duration: '5m', target: 50 },
-    { duration: '2m', target: 100 },
-    { duration: '10m', target: 100 },
-    { duration: '2m', target: 0 },
-  ],
-  thresholds: {
-    http_req_duration: ['p(95)<2000', 'p(99)<5000'],
-    http_req_failed: ['rate<0.01'],
-    sse_connection_time: ['p(95)<1000'],
-  },
+### 1. Metrics Module Structure
+```rust
+// crates/mcp/src/metrics.rs
+use prometheus::{
+    register_histogram_with_registry, register_counter_with_registry,
+    register_gauge_with_registry, Histogram, Counter, Gauge, Registry
 };
-```
 
-### 2. Database Query Optimization
-```sql
--- HNSW index for vector similarity search
-CREATE INDEX embeddings_hnsw_idx ON embeddings 
-USING hnsw (embedding vector_cosine_ops) 
-WITH (m = 16, ef_construction = 64);
-
--- IVF index for large datasets
-CREATE INDEX embeddings_ivf_idx ON embeddings 
-USING ivfflat (embedding vector_cosine_ops) 
-WITH (lists = 100);
-```
-
-### 3. Request Coalescing Implementation
-```rust
-use std::collections::HashMap;
-use tokio::sync::{Mutex, oneshot};
-
-pub struct QueryCoalescer {
-    in_flight: Mutex<HashMap<String, Vec<oneshot::Sender<QueryResult>>>>,
+pub struct ApplicationMetrics {
+    pub query_latency: Histogram,
+    pub embedding_generation_time: Histogram,
+    pub cache_hit_rate: Counter,
+    pub active_connections: Gauge,
+    pub request_counter: Counter,
 }
 
-impl QueryCoalescer {
-    pub async fn execute_or_wait(&self, query: String) -> Result<QueryResult> {
-        let mut in_flight = self.in_flight.lock().await;
-        
-        if let Some(waiters) = in_flight.get_mut(&query) {
-            let (tx, rx) = oneshot::channel();
-            waiters.push(tx);
-            drop(in_flight);
-            rx.await.map_err(|_| "Query cancelled")
-        } else {
-            in_flight.insert(query.clone(), Vec::new());
-            drop(in_flight);
-            
-            let result = self.execute_query(&query).await;
-            
-            let mut waiters = self.in_flight.lock().await.remove(&query).unwrap_or_default();
-            for waiter in waiters {
-                let _ = waiter.send(result.clone());
-            }
-            
-            result
-        }
+impl ApplicationMetrics {
+    pub fn new(registry: &Registry) -> Self {
+        // Initialize metrics with registry
     }
 }
 ```
 
-### 4. Caching Layer Implementation
+### 2. Correlation ID Middleware
 ```rust
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
+use tower_http::trace::TraceLayer;
+use uuid::Uuid;
 
-pub struct QueryCache {
-    cache: RwLock<HashMap<String, (QueryResult, Instant)>>,
-    ttl: Duration,
-}
-
-impl QueryCache {
-    pub async fn get_or_execute<F, Fut>(&self, key: &str, executor: F) -> Result<QueryResult>
-    where
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<QueryResult>>,
-    {
-        // Try cache first
-        if let Some(result) = self.get_cached(key).await {
-            return Ok(result);
-        }
-        
-        // Execute and cache result
-        let result = executor().await?;
-        self.set_cached(key, result.clone()).await;
-        Ok(result)
-    }
+pub fn correlation_id_layer() -> TraceLayer<SharedClassifier> {
+    TraceLayer::new_for_http()
+        .make_span_with(|request: &Request<Body>| {
+            let correlation_id = request
+                .headers()
+                .get("X-Correlation-ID")
+                .and_then(|h| h.to_str().ok())
+                .unwrap_or_else(|| &Uuid::new_v4().to_string());
+            
+            tracing::info_span!(
+                "http_request",
+                correlation_id = %correlation_id,
+                method = %request.method(),
+                path = %request.uri().path()
+            )
+        })
 }
 ```
 
-### 5. Memory Profiling Integration
+### 3. Database Query Instrumentation
 ```rust
-#[cfg(feature = "profiling")]
-pub fn start_memory_profiling() {
-    let guard = pprof::ProfilerGuard::new(100).unwrap();
+// In database queries
+#[tracing::instrument(skip(self))]
+pub async fn vector_search(
+    &self,
+    query: &str,
+    limit: i64,
+) -> Result<Vec<Document>, DatabaseError> {
+    let start = std::time::Instant::now();
     
-    tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(60)).await;
-        
-        match guard.report().build() {
-            Ok(report) => {
-                let file = std::fs::File::create("heap.pb").unwrap();
-                let profile = report.pprof().unwrap();
-                profile.write_to_writer(file).unwrap();
-            }
-            Err(e) => eprintln!("Profiling error: {}", e),
-        }
-    });
+    let result = sqlx::query_as!()
+        .fetch_all(&self.pool)
+        .await;
+    
+    // Record metrics
+    self.metrics.query_latency
+        .observe(start.elapsed().as_secs_f64());
+    
+    result
+}
+```
+
+### 4. Profiling Endpoints
+```rust
+// Profiling endpoint implementation
+pub async fn cpu_profile(
+    Extension(auth): Extension<AuthState>,
+    Query(params): Query<ProfileParams>,
+) -> Result<Response<Body>, StatusCode> {
+    if !auth.can_profile() {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    
+    let duration = Duration::from_secs(params.seconds.unwrap_or(30));
+    let profile = pprof::ProfilerGuard::new(100).unwrap();
+    
+    tokio::time::sleep(duration).await;
+    
+    match profile.report().build() {
+        Ok(report) => {
+            let mut body = Vec::new();
+            report.pprof().unwrap().write_to_vec(&mut body).unwrap();
+            Ok(Response::new(Body::from(body)))
+        },
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 ```
 
 ## Troubleshooting
 
-### Load Testing Issues
+### Common Issues
 
-#### High Response Times
-- Check database query performance and indexes
-- Verify connection pool sizing and configuration
-- Monitor resource utilization (CPU, memory, network)
-- Analyze application bottlenecks with profiling
+#### Metrics Collection Problems
+- Verify Prometheus endpoint accessibility
+- Check metric registration and naming
+- Monitor memory usage from high cardinality metrics
+- Validate histogram bucket configuration
 
-#### Memory Growth During Testing
-- Enable memory profiling to identify leak sources
-- Check for unclosed database connections
-- Verify proper cleanup of temporary objects
-- Monitor garbage collection frequency and effectiveness
+#### Tracing Performance Impact
+- Adjust sampling rate for high-traffic endpoints
+- Monitor trace export performance
+- Check Jaeger backend capacity
+- Validate span lifecycle management
 
-#### Connection Exhaustion
-- Tune database connection pool sizing
-- Implement connection retry logic with backoff
-- Monitor connection lifecycle and cleanup
-- Check for connection leaks in error scenarios
-
-### Performance Optimization Issues
-
-#### Cache Ineffectiveness
-- Analyze query patterns and cache key design
-- Adjust TTL based on data change frequency
-- Monitor cache hit/miss ratios
-- Implement cache warming strategies
-
-#### Database Performance Degradation
-- Validate index usage with EXPLAIN ANALYZE
-- Monitor database resource utilization
-- Check for lock contention and long-running queries
-- Consider query optimization and rewriting
+#### Correlation ID Propagation
+- Ensure middleware order in HTTP stack
+- Verify async context propagation
+- Check database client span creation
+- Validate header extraction and injection
 
 ## Validation Steps
 
-### Load Testing Validation
-1. **Baseline Testing**: Establish performance baselines
-2. **Ramp-up Testing**: Validate gradual load handling
-3. **Sustained Load**: Test extended operation under load
-4. **Spike Testing**: Verify handling of traffic bursts
+### Development Testing
+1. **Metrics Endpoint**: Verify Prometheus format and values
+2. **Correlation Tracking**: Test ID propagation across operations
+3. **Tracing Integration**: Validate spans in Jaeger UI
+4. **Profiling**: Test CPU and memory profiling endpoints
 
-### Performance Optimization Validation
-1. **Query Performance**: Measure database query improvements
-2. **Cache Effectiveness**: Validate cache hit rates and performance
-3. **Memory Stability**: Confirm no leaks during extended testing
-4. **Resource Utilization**: Monitor efficient resource usage
-
-### Quality Assurance
-```bash
-# Execute comprehensive load testing
-k6 run --out influxdb scripts/load_test_comprehensive.js
-
-# Performance benchmarking
-cargo bench performance_benchmarks
-
-# Memory leak detection
-valgrind --tool=memcheck --leak-check=full ./target/release/doc-server
-
-# Cache performance testing
-cargo test cache_performance --release
-```
+### Production Validation
+1. **Performance Impact**: Measure overhead under load
+2. **Alerting**: Test SLA violation detection
+3. **Dashboard**: Verify Grafana visualization
+4. **Log Aggregation**: Confirm structured log processing
 
 ## Success Indicators
 
-- Load testing validates 100+ concurrent connection handling
-- Response times consistently meet p95 < 2s, p99 < 5s targets
-- Database query performance improved by 50%+ through optimization
-- Cache hit rates > 70% for repeated query patterns
-- Memory usage stable during 1-hour sustained load testing
-- Request coalescing eliminates duplicate processing effectively
-- Performance regression testing prevents degradation
-- System handles spike loads gracefully with quick recovery
+- Prometheus metrics endpoint provides comprehensive system visibility
+- Structured logs enable efficient troubleshooting
+- Distributed tracing shows complete request flows
+- Performance profiling assists with optimization
+- Observability overhead remains under 5%
+- SLA monitoring and alerting operational
+- Operations team can debug issues effectively
+- Production performance insights drive optimization

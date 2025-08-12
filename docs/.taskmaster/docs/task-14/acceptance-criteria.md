@@ -1,200 +1,221 @@
-# Acceptance Criteria: Task 14 - Production Monitoring and Observability
+# Acceptance Criteria: Task 14 - Container Image Optimization
 
 ## Functional Requirements
 
-### 1. Prometheus Metrics Infrastructure
-- [ ] prometheus and prometheus-hyper crates added to Cargo.toml
-- [ ] `crates/mcp/src/metrics.rs` module created with custom metrics:
-  - [ ] query_latency_histogram for database operation timing
-  - [ ] embedding_generation_time_histogram for AI operations
-  - [ ] cache_hit_rate_counter for cache performance tracking
-  - [ ] active_connections_gauge for connection monitoring
-  - [ ] request_counter for request volume tracking
-- [ ] Metrics registry integrated into McpServer state
-- [ ] GET /metrics endpoint implemented for Prometheus scraping
-- [ ] Thread-safe metrics collection using Arc and lazy_static
-- [ ] Metrics properly labeled for Grafana dashboard filtering
+### 1. cargo-chef Dependency Caching Implementation
+- [ ] cargo-chef installed and configured in builder stage
+- [ ] Chef stage created with `cargo chef prepare` generating recipe.json
+- [ ] Dependencies stage implemented with `cargo chef cook` for cached builds
+- [ ] Builder stage modified to use pre-built dependencies
+- [ ] Dockerfile layers optimized for maximum cache utilization
+- [ ] Build time reduction verified: 80%+ improvement for code-only changes
+- [ ] Recipe.json properly captures all workspace dependencies
 
-### 2. Structured JSON Logging with Correlation IDs
-- [ ] tracing-subscriber configured with json formatter in main function
-- [ ] Correlation ID middleware generates X-Correlation-ID headers
-- [ ] Correlation IDs propagate through all async operations
-- [ ] Structured fields included in all logs:
-  - [ ] service_name, version, environment
-  - [ ] timestamp, correlation_id, level
-  - [ ] operation context and metadata
-- [ ] Database queries include correlation ID in spans
-- [ ] Error logging maintains structured format
-- [ ] Log aggregation compatible format (ELK stack)
+### 2. Distroless Runtime Migration
+- [ ] Runtime base image changed to gcr.io/distroless/cc-debian12
+- [ ] All apt-get installations removed from runtime stage
+- [ ] Required shared libraries (libssl, libpq) available or statically linked
+- [ ] HEALTHCHECK updated to use application's /health endpoint (no curl dependency)
+- [ ] USER directive set to nonroot:nonroot compatible with distroless
+- [ ] Container startup and functionality validated with distroless base
+- [ ] Attack surface reduced by removing shell and package managers
 
-### 3. OpenTelemetry Tracing with Jaeger Integration
-- [ ] Required crates added: opentelemetry, opentelemetry-jaeger, tracing-opentelemetry
-- [ ] OpenTelemetry pipeline configured with Jaeger exporter
-- [ ] Key operations instrumented with spans:
-  - [ ] Database queries in `crates/database/src/queries.rs`
-  - [ ] Embedding generation in embedding service
-  - [ ] Tool execution in `crates/mcp/src/handlers.rs`
-  - [ ] SSE connections and streaming operations
-- [ ] Trace context propagation headers (traceparent, tracestate)
-- [ ] Sampling rate configurable via OTEL_TRACE_SAMPLE_RATE
-- [ ] Jaeger UI shows complete request traces
+### 3. Binary Optimization and Compression
+- [ ] Cargo.toml configured with size optimization settings:
+  - [ ] opt-level = "z" for maximum size optimization
+  - [ ] lto = true for link-time optimization
+  - [ ] codegen-units = 1 for better optimization
+  - [ ] panic = "abort" to reduce binary size
+- [ ] Strip command applied in builder stage to remove debug symbols
+- [ ] UPX compression applied with --best flag
+- [ ] Binary size reduction achieved: 60-70% from original
+- [ ] Compressed binary functionality verified (startup, API responses, shutdown)
+- [ ] Performance impact minimal (< 5% startup time increase)
 
-### 4. Custom Performance Metrics Implementation
-- [ ] DocumentQueries methods instrumented with timing histograms
-- [ ] McpHandler::handle_tool_call includes per-tool metrics with labels
-- [ ] Embedding generation batch processing timing tracked
-- [ ] Database connection pool metrics monitored:
-  - [ ] active_connections, idle_connections, pending_connections
-- [ ] Custom histogram buckets optimized for SLA monitoring:
-  - [ ] Buckets: 0.1s, 0.5s, 1s, 2s, 5s, 10s
-- [ ] Metrics exported with appropriate labels for filtering
-- [ ] Performance bottlenecks identifiable through metrics
+### 4. Graceful Shutdown and Signal Handling
+- [ ] Signal handlers implemented in `crates/mcp/src/http_server.rs`:
+  - [ ] SIGTERM handler for orchestration compatibility
+  - [ ] SIGINT handler for development convenience
+- [ ] Graceful shutdown logic implemented:
+  - [ ] Database connections closed cleanly
+  - [ ] In-flight HTTP requests completed (with timeout)
+  - [ ] Server shutdown sequence orderly and logged
+- [ ] Shutdown timeout set to 30 seconds maximum
+- [ ] STOPSIGNAL SIGTERM added to Dockerfile
+- [ ] Signal handling works correctly with non-root user
+- [ ] Kubernetes termination handling verified
 
-### 5. Performance Profiling Endpoints
-- [ ] pprof crate added for CPU and memory profiling support
-- [ ] /debug/pprof/profile endpoint for CPU profiling:
-  - [ ] Configurable duration parameter (default 30s)
-  - [ ] Flame graph compatible output format
-- [ ] /debug/pprof/heap endpoint for memory profiling snapshots
-- [ ] Authentication middleware protects profiling endpoints
-- [ ] Rate limiting prevents profiling abuse (max 1 profile/minute)
-- [ ] ENABLE_PROFILING environment variable controls availability
-- [ ] Production debugging documentation provided
+### 5. Security Scanning Pipeline Integration
+- [ ] `scripts/scan_image.sh` created with Trivy integration:
+  - [ ] Vulnerability scanning with severity thresholds
+  - [ ] CRITICAL and HIGH vulnerabilities must be zero
+  - [ ] SARIF format output for tooling integration
+  - [ ] SPDX-JSON SBOM generation for compliance
+- [ ] GitHub Action workflow enhanced with security scanning:
+  - [ ] Automated scanning on image builds
+  - [ ] Build failure on security threshold violations
+  - [ ] Artifact storage for scan results and SBOMs
+- [ ] Local development scanning support
+- [ ] Security remediation documentation provided
 
 ## Non-Functional Requirements
 
 ### 1. Performance Requirements
-- [ ] Observability overhead < 5% of total system resources
-- [ ] Metrics collection adds < 1ms latency per request
-- [ ] Structured logging performance impact < 2%
-- [ ] Tracing sampling configurable to control overhead
-- [ ] Memory usage increase < 10MB for observability stack
+- [ ] Final container image size < 100MB
+- [ ] Container startup time < 5 seconds
+- [ ] First request response time < 2 seconds after startup
+- [ ] Memory usage minimal (< 50MB at idle)
+- [ ] Build time with cache hits < 2 minutes
+- [ ] Cold build time (no cache) < 10 minutes
 
 ### 2. Security Requirements
-- [ ] Profiling endpoints require authentication
-- [ ] Rate limiting prevents resource exhaustion attacks
-- [ ] Sensitive data excluded from traces and logs
-- [ ] Metrics endpoint secured in production deployment
-- [ ] Profiling disabled by default in production
+- [ ] Zero CRITICAL vulnerabilities in final image
+- [ ] Zero HIGH vulnerabilities in final image
+- [ ] MEDIUM and LOW vulnerabilities documented and accepted
+- [ ] SBOM generated for all image builds
+- [ ] Base image updates automated and tested
+- [ ] No sensitive information in image layers
+- [ ] Container runs as non-root user
 
-### 3. Integration Requirements
-- [ ] Compatible with existing Kubernetes deployment
-- [ ] Prometheus ServiceMonitor configuration provided
-- [ ] Grafana dashboard JSON templates created
-- [ ] Log shipping to centralized logging system
-- [ ] Jaeger deployment configuration documented
+### 3. Operational Requirements
+- [ ] Graceful shutdown completes within 30 seconds
+- [ ] Health check endpoint responds correctly
+- [ ] Container restarts cleanly without data loss
+- [ ] Logging maintained during shutdown sequence
+- [ ] Resource cleanup verified (connections, file handles)
+- [ ] Kubernetes deployment compatibility maintained
 
 ## Test Cases
 
-### Test Case 1: Prometheus Metrics Collection
-**Given**: Application running with metrics enabled
-**When**: /metrics endpoint queried
+### Test Case 1: cargo-chef Build Optimization
+**Given**: Clean Docker build environment
+**When**: Build performed twice (first cold, second with code change only)
 **Then**:
-- Prometheus format metrics returned
-- All custom metrics present with values
-- Histogram buckets properly configured
-- Labels applied correctly for filtering
+- First build completes successfully
+- Second build reuses dependency layer from cache
+- Build time reduction > 80% for code-only changes
+- Final binary identical in both builds
 
-### Test Case 2: Correlation ID Propagation
-**Given**: HTTP request with correlation ID header
-**When**: Request processed through system
+### Test Case 2: Distroless Security and Functionality
+**Given**: Container built with distroless base image
+**When**: Container started and tested
 **Then**:
-- Same correlation ID appears in all related logs
-- Database operation logs include correlation ID
-- Error logs maintain correlation context
-- Trace spans connected by correlation ID
+- Container starts successfully as nonroot user
+- Health check endpoint returns 200 OK
+- API endpoints respond correctly
+- No shell or package manager accessible
+- Required shared libraries present and functional
 
-### Test Case 3: Distributed Tracing
-**Given**: Complex request requiring multiple operations
-**When**: Request processed with tracing enabled
+### Test Case 3: Binary Optimization Results
+**Given**: Binary optimization settings applied
+**When**: Binary size measured and functionality tested
 **Then**:
-- Complete trace visible in Jaeger UI
-- All major operations have spans
-- Parent-child relationships correct
-- Timing information accurate
+- Binary size reduced by 60-70% from original
+- UPX compression applied successfully
+- Application startup time < 5 seconds
+- All API functionality works correctly
+- Memory usage remains optimal
 
-### Test Case 4: Performance Profiling
-**Given**: Profiling endpoints enabled and authenticated
-**When**: CPU profile requested
+### Test Case 4: Graceful Shutdown Handling
+**Given**: Running container with active connections
+**When**: SIGTERM signal sent to container
 **Then**:
-- Profile generated within specified duration
-- Flame graph data accurate and useful
-- No significant performance impact during profiling
-- Rate limiting enforced correctly
+- Shutdown signal received and logged
+- In-flight requests completed or timed out
+- Database connections closed cleanly
+- Container exits with code 0
+- Shutdown completes within 30 seconds
 
-### Test Case 5: Database Query Instrumentation
-**Given**: Database operations under monitoring
-**When**: Queries executed with various complexity
+### Test Case 5: Security Scanning Integration
+**Given**: Container image built with potential vulnerabilities
+**When**: Security scanning executed
 **Then**:
-- Query latency histograms updated correctly
-- Slow queries identifiable in metrics
-- Connection pool status accurately tracked
-- Performance bottlenecks visible in dashboards
+- Trivy scan completes successfully
+- CRITICAL and HIGH vulnerabilities fail the build
+- SARIF and SBOM outputs generated
+- Scan results stored for review
+- Build process stops on security failures
+
+### Test Case 6: Kubernetes Deployment Compatibility
+**Given**: Optimized container deployed in Kubernetes
+**When**: Pod lifecycle events occur (start, stop, restart)
+**Then**:
+- Pod starts successfully with readiness checks
+- Graceful shutdown works with terminationGracePeriodSeconds
+- Health checks pass consistently
+- Resource limits respected
+- No memory leaks or resource exhaustion
 
 ## Deliverables Checklist
 
-### Core Implementation
-- [ ] Metrics module with Prometheus integration
-- [ ] Structured logging configuration
-- [ ] OpenTelemetry tracing setup
-- [ ] Performance profiling endpoints
-- [ ] Database and tool instrumentation
+### Container Optimization
+- [ ] Enhanced Dockerfile with multi-stage cargo-chef build
+- [ ] Distroless runtime configuration
+- [ ] Binary optimization and compression settings
+- [ ] Size and security optimized final image
 
-### Configuration and Documentation
-- [ ] Environment variable configuration guide
-- [ ] Prometheus ServiceMonitor YAML
-- [ ] Grafana dashboard JSON templates
-- [ ] Jaeger deployment documentation
-- [ ] Observability runbook for operations team
+### Application Changes
+- [ ] Graceful shutdown implementation in http_server.rs
+- [ ] Signal handling for SIGTERM and SIGINT
+- [ ] Health check endpoint for container orchestration
+- [ ] Logging enhancements for operational visibility
+
+### Security and Operations
+- [ ] Security scanning scripts and CI/CD integration
+- [ ] SBOM generation for compliance
+- [ ] Vulnerability remediation documentation
+- [ ] Operational runbook for container management
 
 ### Testing and Validation
-- [ ] Unit tests for metrics collection
-- [ ] Integration tests for tracing propagation
-- [ ] Performance impact benchmarks
-- [ ] Security validation for profiling endpoints
-- [ ] Production deployment validation
+- [ ] Container functionality tests
+- [ ] Performance benchmark results
+- [ ] Security scan reports and approval
+- [ ] Kubernetes deployment validation
 
 ## Validation Criteria
 
 ### Automated Testing
 ```bash
-# Metrics endpoint testing
-curl http://localhost:8080/metrics | grep -E 'query_latency|embedding_generation'
+# Build and size validation
+docker build -t doc-server:optimized .
+docker images doc-server:optimized | grep -E '<\s*100MB'
 
-# Tracing validation
-curl -H "X-Correlation-ID: test-123" http://localhost:8080/api/query
+# Security scanning
+./scripts/scan_image.sh doc-server:optimized
+echo $?  # Must return 0 (no CRITICAL/HIGH vulnerabilities)
 
-# Performance testing
-cargo test --package mcp metrics_performance
-cargo test --package mcp tracing_overhead
+# Functionality testing
+docker run -d --name test-container doc-server:optimized
+docker exec test-container /usr/local/bin/doc-server --health-check
+docker stop test-container  # Test graceful shutdown
 ```
 
 ### Manual Validation
-1. **Prometheus Integration**: Metrics scraped successfully by Prometheus
-2. **Grafana Dashboards**: Custom dashboards display system metrics
-3. **Jaeger Tracing**: End-to-end traces visible and accurate
-4. **Log Aggregation**: JSON logs processed by log management system
-5. **Profiling**: CPU and memory profiles assist with optimization
+1. **Performance Testing**: Measure startup time and memory usage
+2. **Security Review**: Review scan results and SBOM contents
+3. **Operational Testing**: Test in Kubernetes environment
+4. **Build Process**: Validate cache efficiency and build times
+5. **Signal Handling**: Test graceful shutdown under various conditions
 
 ## Definition of Done
 
-Task 14 is complete when:
+Task 13 is complete when:
 
-1. **Comprehensive Metrics**: All critical operations instrumented with Prometheus metrics
-2. **Structured Logging**: JSON logs with correlation IDs deployed
-3. **Distributed Tracing**: OpenTelemetry/Jaeger integration functional
-4. **Performance Monitoring**: Custom metrics enable SLA monitoring
-5. **Production Ready**: Observability stack deployed and operational
-6. **Documentation Complete**: Runbooks and configuration guides provided
-7. **Security Validated**: Profiling endpoints properly secured
+1. **Image Optimization**: Container size < 100MB with full functionality
+2. **Security Hardening**: Zero CRITICAL/HIGH vulnerabilities with SBOM generation
+3. **Performance Targets**: Startup time < 5 seconds, graceful shutdown < 30 seconds
+4. **Build Optimization**: cargo-chef provides 80%+ build time improvement
+5. **Signal Handling**: Graceful shutdown works correctly in all environments
+6. **Integration Testing**: All functionality validated in containerized environment
+7. **Documentation Complete**: Security and operational procedures documented
 
 ## Success Metrics
 
-- Observability overhead < 5% of system resources
-- 100% correlation ID propagation across operations
-- All database queries instrumented with timing metrics
-- Distributed traces provide complete request visibility
-- Performance bottlenecks identifiable through metrics
-- Production debugging capabilities significantly improved
-- SLA monitoring and alerting enabled through custom metrics
-- Operations team can troubleshoot issues efficiently
+- Container image size reduction > 60% from baseline
+- Build time improvement > 80% for code-only changes
+- Zero security vulnerabilities at CRITICAL and HIGH levels
+- Startup performance < 5 seconds consistently
+- Graceful shutdown success rate 100% within timeout
+- Resource usage minimal (< 50MB idle memory)
+- Security scan integration blocks vulnerable deployments
+- Operational documentation enables team self-service

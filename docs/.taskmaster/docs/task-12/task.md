@@ -1,25 +1,25 @@
-# Task 12: Kubernetes Deployment Configuration
+# Task 12: Rust Crate Management Tools Enhancement
 
 ## Overview
-Create and optimize Helm charts for production Kubernetes deployment with proper resource allocation, security policies, and high availability configuration.
+Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`) with improved functionality and integration.
 
 ## Implementation Guide
-- Create comprehensive Helm chart structure
-- Define configurable deployment parameters
-- Implement proper resource limits and requests
-- Add security policies and network configurations
-- Configure high availability and auto-scaling
+- Enhance add_rust_crate with version management and feature selection
+- Improve remove_rust_crate with cleanup verification
+- Add comprehensive status reporting to check_rust_status
+- Implement atomic operations for crate management
+- Add progress tracking and user feedback
 
 ## Technical Requirements
-- Helm chart with values.yaml configuration
-- Kubernetes manifests (Deployment, Service, Ingress)
-- Resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi)
-- ConfigMap and Secret management
-- PodDisruptionBudget and auto-scaling policies
+- Atomic crate operations with rollback capability
+- Enhanced error handling and validation
+- Progress tracking for long-running operations
+- Comprehensive status reporting
+- Integration with batch embedding processing (Task 7)
 
 ## Success Metrics
-- Successful deployment to production cluster
-- Resource utilization within defined limits
-- High availability with zero-downtime deployments
-- Proper security policy enforcement
-- Auto-scaling responds to load changes
+- Atomic crate operations with zero data corruption
+- Enhanced user experience with progress feedback
+- Comprehensive error handling and recovery
+- Integration with new embedding batch processing (Task 7)
+- Improved performance for crate management operations

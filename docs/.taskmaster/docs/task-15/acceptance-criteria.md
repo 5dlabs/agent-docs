@@ -1,210 +1,200 @@
-# Acceptance Criteria: Task 15 - Load Testing and Performance Optimization
+# Acceptance Criteria: Task 15 - Production Monitoring and Observability
 
 ## Functional Requirements
 
-### 1. Comprehensive Load Testing Suite
-- [ ] k6 load testing scripts created based on existing `scripts/load_test_sse.js`
-- [ ] Multiple testing scenarios implemented:
-  - [ ] Gradual ramp-up from 1 to 100+ concurrent users
-  - [ ] Sustained load testing for 1 hour duration
-  - [ ] Spike testing for sudden traffic bursts
-  - [ ] SSE connection stress testing with persistent connections
-- [ ] Realistic query patterns and data volumes
-- [ ] Performance thresholds configured (p95 < 2s, p99 < 5s)
-- [ ] Error rate monitoring (< 0.1% failures)
-- [ ] Automated test execution and reporting
+### 1. Prometheus Metrics Infrastructure
+- [ ] prometheus and prometheus-hyper crates added to Cargo.toml
+- [ ] `crates/mcp/src/metrics.rs` module created with custom metrics:
+  - [ ] query_latency_histogram for database operation timing
+  - [ ] embedding_generation_time_histogram for AI operations
+  - [ ] cache_hit_rate_counter for cache performance tracking
+  - [ ] active_connections_gauge for connection monitoring
+  - [ ] request_counter for request volume tracking
+- [ ] Metrics registry integrated into McpServer state
+- [ ] GET /metrics endpoint implemented for Prometheus scraping
+- [ ] Thread-safe metrics collection using Arc and lazy_static
+- [ ] Metrics properly labeled for Grafana dashboard filtering
 
-### 2. Database Query Optimization
-- [ ] Slow query identification using EXPLAIN ANALYZE
-- [ ] Vector similarity search optimization:
-  - [ ] HNSW (Hierarchical Navigable Small World) indexes implemented
-  - [ ] IVF (Inverted File) indexes for large datasets
-  - [ ] Approximate nearest neighbor search configured
-  - [ ] Index parameters tuned for performance vs accuracy
-- [ ] Query result caching with configurable TTL:
-  - [ ] In-memory cache for frequent queries
-  - [ ] Cache invalidation strategies
-  - [ ] Hit rate monitoring and optimization
-- [ ] Database connection pooling optimized:
-  - [ ] Connection limits tuned for concurrent load
-  - [ ] Connection timeout and retry logic
-  - [ ] Pool size optimization based on testing
+### 2. Structured JSON Logging with Correlation IDs
+- [ ] tracing-subscriber configured with json formatter in main function
+- [ ] Correlation ID middleware generates X-Correlation-ID headers
+- [ ] Correlation IDs propagate through all async operations
+- [ ] Structured fields included in all logs:
+  - [ ] service_name, version, environment
+  - [ ] timestamp, correlation_id, level
+  - [ ] operation context and metadata
+- [ ] Database queries include correlation ID in spans
+- [ ] Error logging maintains structured format
+- [ ] Log aggregation compatible format (ELK stack)
 
-### 3. Application Performance Optimization
-- [ ] Request coalescing for duplicate queries:
-  - [ ] In-flight query deduplication
-  - [ ] Shared result distribution to multiple waiters
-  - [ ] Embedding generation request batching
-  - [ ] Cache-aware request handling
-- [ ] HTTP client connection pooling optimization
-- [ ] Lazy loading for embedding models and resources
-- [ ] Streaming optimizations for large result sets
-- [ ] Memory allocation optimization for high-frequency operations
+### 3. OpenTelemetry Tracing with Jaeger Integration
+- [ ] Required crates added: opentelemetry, opentelemetry-jaeger, tracing-opentelemetry
+- [ ] OpenTelemetry pipeline configured with Jaeger exporter
+- [ ] Key operations instrumented with spans:
+  - [ ] Database queries in `crates/database/src/queries.rs`
+  - [ ] Embedding generation in embedding service
+  - [ ] Tool execution in `crates/mcp/src/handlers.rs`
+  - [ ] SSE connections and streaming operations
+- [ ] Trace context propagation headers (traceparent, tracestate)
+- [ ] Sampling rate configurable via OTEL_TRACE_SAMPLE_RATE
+- [ ] Jaeger UI shows complete request traces
 
-### 4. Memory and CPU Profiling Integration
-- [ ] pprof integration for CPU and memory profiling during load tests
-- [ ] Memory leak detection and resolution
-- [ ] CPU hotspot identification and optimization
-- [ ] Garbage collection tuning for consistent performance
-- [ ] Memory pool optimization for frequent allocations
-- [ ] Performance regression detection in CI/CD
+### 4. Custom Performance Metrics Implementation
+- [ ] DocumentQueries methods instrumented with timing histograms
+- [ ] McpHandler::handle_tool_call includes per-tool metrics with labels
+- [ ] Embedding generation batch processing timing tracked
+- [ ] Database connection pool metrics monitored:
+  - [ ] active_connections, idle_connections, pending_connections
+- [ ] Custom histogram buckets optimized for SLA monitoring:
+  - [ ] Buckets: 0.1s, 0.5s, 1s, 2s, 5s, 10s
+- [ ] Metrics exported with appropriate labels for filtering
+- [ ] Performance bottlenecks identifiable through metrics
 
-### 5. Performance Monitoring and SLA Validation
-- [ ] Latency percentile measurement (p50/p95/p99)
-- [ ] Connection limit testing (1000+ concurrent connections)
-- [ ] Memory stability validation during extended testing
-- [ ] Cache effectiveness metrics and monitoring
-- [ ] Automated performance regression testing
-- [ ] SLA compliance validation and alerting
+### 5. Performance Profiling Endpoints
+- [ ] pprof crate added for CPU and memory profiling support
+- [ ] /debug/pprof/profile endpoint for CPU profiling:
+  - [ ] Configurable duration parameter (default 30s)
+  - [ ] Flame graph compatible output format
+- [ ] /debug/pprof/heap endpoint for memory profiling snapshots
+- [ ] Authentication middleware protects profiling endpoints
+- [ ] Rate limiting prevents profiling abuse (max 1 profile/minute)
+- [ ] ENABLE_PROFILING environment variable controls availability
+- [ ] Production debugging documentation provided
 
 ## Non-Functional Requirements
 
-### 1. Performance Targets
-- [ ] Response time p95 < 2 seconds consistently
-- [ ] Response time p99 < 5 seconds under normal load
-- [ ] Throughput: 100+ concurrent connections sustained
-- [ ] Memory usage stable during 1-hour sustained load
-- [ ] Cache hit rate > 70% for repeated queries
-- [ ] Error rate < 0.1% during load testing
+### 1. Performance Requirements
+- [ ] Observability overhead < 5% of total system resources
+- [ ] Metrics collection adds < 1ms latency per request
+- [ ] Structured logging performance impact < 2%
+- [ ] Tracing sampling configurable to control overhead
+- [ ] Memory usage increase < 10MB for observability stack
 
-### 2. Scalability Requirements
-- [ ] Linear performance scaling with increased resources
-- [ ] Graceful degradation under extreme load
-- [ ] Efficient resource utilization (CPU, memory, connections)
-- [ ] Horizontal scaling validation in Kubernetes
-- [ ] Load balancer compatibility and session affinity
+### 2. Security Requirements
+- [ ] Profiling endpoints require authentication
+- [ ] Rate limiting prevents resource exhaustion attacks
+- [ ] Sensitive data excluded from traces and logs
+- [ ] Metrics endpoint secured in production deployment
+- [ ] Profiling disabled by default in production
 
-### 3. Reliability Requirements
-- [ ] No memory leaks during extended operation
-- [ ] Consistent performance across test iterations
-- [ ] Recovery from temporary overload conditions
-- [ ] Connection handling without resource exhaustion
-- [ ] Stable operation under various load patterns
+### 3. Integration Requirements
+- [ ] Compatible with existing Kubernetes deployment
+- [ ] Prometheus ServiceMonitor configuration provided
+- [ ] Grafana dashboard JSON templates created
+- [ ] Log shipping to centralized logging system
+- [ ] Jaeger deployment configuration documented
 
 ## Test Cases
 
-### Test Case 1: Gradual Load Ramp-Up
-**Given**: System idle with baseline performance
-**When**: Load gradually increased from 1 to 100 concurrent users
+### Test Case 1: Prometheus Metrics Collection
+**Given**: Application running with metrics enabled
+**When**: /metrics endpoint queried
 **Then**:
-- Response times remain within p95 < 2s threshold
-- No memory leaks or resource exhaustion
-- Error rate stays below 0.1%
-- Cache hit rate increases with repeated queries
+- Prometheus format metrics returned
+- All custom metrics present with values
+- Histogram buckets properly configured
+- Labels applied correctly for filtering
 
-### Test Case 2: Sustained Load Testing
-**Given**: System under 100 concurrent connections
-**When**: Load maintained for 1 hour duration
+### Test Case 2: Correlation ID Propagation
+**Given**: HTTP request with correlation ID header
+**When**: Request processed through system
 **Then**:
-- Memory usage remains stable
-- Response times consistent throughout test
-- No degradation in cache performance
-- Database connections managed efficiently
+- Same correlation ID appears in all related logs
+- Database operation logs include correlation ID
+- Error logs maintain correlation context
+- Trace spans connected by correlation ID
 
-### Test Case 3: Spike Load Handling
-**Given**: System under normal load (50 connections)
-**When**: Sudden spike to 200 concurrent connections
+### Test Case 3: Distributed Tracing
+**Given**: Complex request requiring multiple operations
+**When**: Request processed with tracing enabled
 **Then**:
-- System handles spike without errors
-- Response times may increase but remain under p99 < 5s
-- Graceful degradation with queue management
-- Recovery to normal performance after spike
+- Complete trace visible in Jaeger UI
+- All major operations have spans
+- Parent-child relationships correct
+- Timing information accurate
 
-### Test Case 4: Query Deduplication Effectiveness
-**Given**: Multiple concurrent identical queries
-**When**: Request coalescing system active
+### Test Case 4: Performance Profiling
+**Given**: Profiling endpoints enabled and authenticated
+**When**: CPU profile requested
 **Then**:
-- Duplicate queries processed only once
-- Results shared across all waiting requests
-- Significant reduction in database load
-- Cache hit rate improves for repeated queries
+- Profile generated within specified duration
+- Flame graph data accurate and useful
+- No significant performance impact during profiling
+- Rate limiting enforced correctly
 
-### Test Case 5: Database Optimization Validation
-**Given**: Optimized vector similarity search
-**When**: Complex queries executed under load
+### Test Case 5: Database Query Instrumentation
+**Given**: Database operations under monitoring
+**When**: Queries executed with various complexity
 **Then**:
-- Query response time improved by 50%+ from baseline
-- HNSW/IVF indexes provide accurate results
-- Database CPU usage optimized
-- Concurrent query handling improved
-
-### Test Case 6: Memory Stability Under Load
-**Given**: Extended load testing scenario
-**When**: System operates under stress for extended period
-**Then**:
-- Memory usage remains within acceptable bounds
-- No memory leaks detected via profiling
-- Garbage collection optimized for low latency
-- Resource cleanup proper throughout test
+- Query latency histograms updated correctly
+- Slow queries identifiable in metrics
+- Connection pool status accurately tracked
+- Performance bottlenecks visible in dashboards
 
 ## Deliverables Checklist
 
-### Load Testing Infrastructure
-- [ ] k6 test scripts for comprehensive load scenarios
-- [ ] Performance monitoring dashboards
-- [ ] Automated test execution pipeline
-- [ ] Performance regression testing framework
+### Core Implementation
+- [ ] Metrics module with Prometheus integration
+- [ ] Structured logging configuration
+- [ ] OpenTelemetry tracing setup
+- [ ] Performance profiling endpoints
+- [ ] Database and tool instrumentation
 
-### Database Optimizations
-- [ ] Vector index optimizations (HNSW, IVF)
-- [ ] Query result caching implementation
-- [ ] Connection pooling optimization
-- [ ] Query performance analysis tools
+### Configuration and Documentation
+- [ ] Environment variable configuration guide
+- [ ] Prometheus ServiceMonitor YAML
+- [ ] Grafana dashboard JSON templates
+- [ ] Jaeger deployment documentation
+- [ ] Observability runbook for operations team
 
-### Application Optimizations
-- [ ] Request coalescing implementation
-- [ ] Memory allocation optimization
-- [ ] Streaming and lazy loading improvements
-- [ ] Performance profiling integration
-
-### Documentation and Monitoring
-- [ ] Performance optimization guide
-- [ ] Load testing runbook
-- [ ] SLA monitoring configuration
-- [ ] Troubleshooting guide for performance issues
+### Testing and Validation
+- [ ] Unit tests for metrics collection
+- [ ] Integration tests for tracing propagation
+- [ ] Performance impact benchmarks
+- [ ] Security validation for profiling endpoints
+- [ ] Production deployment validation
 
 ## Validation Criteria
 
 ### Automated Testing
 ```bash
-# Load testing execution
-k6 run --out influxdb scripts/load_test_comprehensive.js
-vegeta attack -duration=300s -rate=100/s | vegeta report
+# Metrics endpoint testing
+curl http://localhost:8080/metrics | grep -E 'query_latency|embedding_generation'
 
-# Performance benchmarking
-cargo bench --package mcp performance
-cargo test --release --package mcp load_tests
+# Tracing validation
+curl -H "X-Correlation-ID: test-123" http://localhost:8080/api/query
 
-# Memory leak detection
-valgrind --tool=memcheck --leak-check=full target/release/doc-server
+# Performance testing
+cargo test --package mcp metrics_performance
+cargo test --package mcp tracing_overhead
 ```
 
 ### Manual Validation
-1. **Load Testing**: Execute full test suite with performance validation
-2. **Memory Profiling**: Analyze heap usage during sustained load
-3. **Database Performance**: Validate query optimization effectiveness
-4. **Cache Analysis**: Measure cache hit rates and effectiveness
-5. **Resource Usage**: Monitor CPU, memory, and connection usage
+1. **Prometheus Integration**: Metrics scraped successfully by Prometheus
+2. **Grafana Dashboards**: Custom dashboards display system metrics
+3. **Jaeger Tracing**: End-to-end traces visible and accurate
+4. **Log Aggregation**: JSON logs processed by log management system
+5. **Profiling**: CPU and memory profiles assist with optimization
 
 ## Definition of Done
 
-Task 15 is complete when:
+Task 14 is complete when:
 
-1. **Load Testing Complete**: Comprehensive test suite validates system performance
-2. **Performance Optimized**: All optimization targets met consistently
-3. **Database Tuned**: Vector search and query performance optimized
-4. **Caching Effective**: Query result caching reduces database load significantly
-5. **Memory Stable**: No leaks during extended load testing
-6. **SLA Validated**: Response time and throughput targets consistently met
-7. **Monitoring Operational**: Performance regression detection automated
+1. **Comprehensive Metrics**: All critical operations instrumented with Prometheus metrics
+2. **Structured Logging**: JSON logs with correlation IDs deployed
+3. **Distributed Tracing**: OpenTelemetry/Jaeger integration functional
+4. **Performance Monitoring**: Custom metrics enable SLA monitoring
+5. **Production Ready**: Observability stack deployed and operational
+6. **Documentation Complete**: Runbooks and configuration guides provided
+7. **Security Validated**: Profiling endpoints properly secured
 
 ## Success Metrics
 
-- Response time p95 < 2 seconds under 100 concurrent connections
-- Response time p99 < 5 seconds during load testing
-- Cache hit rate > 70% for repeated query patterns
-- Memory usage stable (< 10% increase) during 1-hour sustained load
-- Error rate < 0.1% during all load testing scenarios
-- Database query performance improved by 50%+ from baseline
-- Request coalescing reduces duplicate processing by 80%+
-- System handles spike loads gracefully with quick recovery
+- Observability overhead < 5% of system resources
+- 100% correlation ID propagation across operations
+- All database queries instrumented with timing metrics
+- Distributed traces provide complete request visibility
+- Performance bottlenecks identifiable through metrics
+- Production debugging capabilities significantly improved
+- SLA monitoring and alerting enabled through custom metrics
+- Operations team can troubleshoot issues efficiently

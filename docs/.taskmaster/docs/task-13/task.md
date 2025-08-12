@@ -1,25 +1,30 @@
-# Task 13: Container Registry and CI/CD Pipeline
+# Task 13: Kubernetes Deployment Configuration
 
 ## Overview
-Implement comprehensive CI/CD pipeline with container registry integration for automated building, testing, and deployment of the Doc Server.
+Create and optimize Helm charts for production Kubernetes deployment with proper resource allocation, security policies, and high availability configuration.
 
 ## Implementation Guide
-- Configure GitHub Actions workflow for automated builds
-- Implement container image building with multi-stage Dockerfile
-- Set up GitHub Container Registry (GHCR) integration
-- Add automated testing pipeline with quality gates
-- Configure deployment automation to Kubernetes
+- Create comprehensive Helm chart structure
+- Define configurable deployment parameters
+- Implement proper resource limits and requests
+- Add security policies and network configurations
+- Configure high availability and auto-scaling
 
 ## Technical Requirements
-- GitHub Actions CI/CD workflow
-- Multi-stage Dockerfile optimization
-- Container registry integration (GHCR)
-- Automated testing and quality gates
-- Kubernetes deployment automation
+- Helm chart with values.yaml configuration (ensure existence; recreate if missing)
+- Kubernetes manifests (Deployment, Service, Ingress)
+- Resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi)
+- ConfigMap and Secret management
+- PodDisruptionBudget and auto-scaling policies
+
+## Notes from Assessment
+- Ensure Helm `values.yaml` is restored (file was missing) and includes envs:
+  - `VECTOR_DATABASE_URL`, `DATABASE_URL`, `OPENAI_API_KEY`, `DOC_SERVER_CONFIG_PATH`
+- CI/CD must deploy via Helm as part of 4-step validation
 
 ## Success Metrics
-- Automated builds triggered on code changes
-- Container images built and published successfully
-- Quality gates prevent broken deployments
-- Deployment automation works reliably
-- Build and deployment times within acceptable limits
+- Successful deployment to production cluster
+- Resource utilization within defined limits
+- High availability with zero-downtime deployments
+- Proper security policy enforcement
+- Auto-scaling responds to load changes

@@ -1,23 +1,20 @@
 {
   "remoteTools": [
-    "read_file",
-    "write_file", 
-    "edit_file",
-    "kubernetes_listResources",
-    "kubernetes_getResource",
-    "kubernetes_createResource",
-    "kubernetes_describeResource"
+    "rust_query",
+    "jupyter_query",
+    "cilium_query",
+    "talos_query",
+    "meteora_query",
+    "raydium_query",
+    "ebpf_query",
+    "rust_best_practices_query"
   ],
   "localServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-filesystem", "/workspace/docs"],
-      "env": {}
-    },
-    "kubernetes": {
-      "command": "kubectl-mcp-server",
-      "args": ["--kubeconfig", "/etc/kubernetes/config"],
-      "env": {}
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file"],
+      "workingDirectory": "project_root"
     }
   }
 }

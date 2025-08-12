@@ -1,307 +1,254 @@
-# Autonomous Agent Prompt: Session Management and Security Implementation
+# Autonomous Agent Prompt: Implement Streamable HTTP Transport Foundation
 
 ## Mission
 
-Implement comprehensive session management with `Mcp-Session-Id` headers and robust security measures for the Doc Server MCP implementation. This task builds on the Streamable HTTP transport foundation to add essential security features and stateful session handling required for stable MCP client communication.
+You are tasked with implementing the critical migration from deprecated HTTP+SSE transport to the new Streamable HTTP transport following MCP 2025-06-18 specification. This task is essential for maintaining compatibility with modern MCP clients and ensuring reliable communication for the Doc Server project.
 
 ## Context
 
-Following the implementation of Streamable HTTP transport in Task 2, you must now add secure session management that complies with MCP 2025-06-18 specification. This includes cryptographically secure session IDs, Origin header validation for DNS rebinding protection, and proper session lifecycle management.
+The current Doc Server implementation uses deprecated HTTP+SSE transport (protocol version 2024-11-05) that is no longer supported. You must implement the new Streamable HTTP transport (protocol version 2025-06-18) to ensure compatibility with Toolman, Cursor, and other modern MCP clients.
 
 ## Primary Objectives
 
-1. **Secure Session Management**: Implement UUID v4 session IDs with proper TTL and lifecycle management
-2. **MCP Header Compliance**: Add bidirectional `Mcp-Session-Id` header handling per MCP specification
-3. **Origin Validation**: Implement DNS rebinding protection with Origin header validation
-4. **Localhost Security**: Ensure secure localhost binding for local deployments
-5. **Session Lifecycle**: Add automatic expiry, cleanup, and explicit termination endpoints
+1. **Create Core Transport Module**: Implement `crates/mcp/src/transport.rs` with full Streamable HTTP support using Axum 0.7
+2. **Unified MCP Endpoint**: Create single `/mcp` endpoint supporting both POST and GET methods with proper content negotiation
+3. **SSE Streaming Infrastructure**: Implement Server-Sent Events streaming for multiple server messages with proper session management
+4. **Backward Compatibility**: Add detection and graceful handling for legacy transport attempts
+5. **Server Integration**: Wire new transport into existing MCP server infrastructure replacing old endpoints
 
 ## Step-by-Step Implementation
 
-### Step 1: Session Module Foundation
+### Step 1: Foundation Setup
 
-1. Create `crates/mcp/src/session.rs` with core types:
+1. Create `crates/mcp/src/transport.rs` with core imports:
    ```rust
-   use chrono::{DateTime, Duration, Utc};
-   use serde::{Deserialize, Serialize};
+   use axum::{
+       extract::{Request, State},
+       http::{HeaderMap, Method, StatusCode},
+       response::{Response, Sse},
+       routing::{get, post},
+       Json, Router
+   };
+   use serde_json::{json, Value};
+   use std::collections::HashMap;
+   use std::sync::{Arc, RwLock};
+   use std::time::{Duration, Instant};
+   use tokio::sync::broadcast;
    use uuid::Uuid;
-   
-   #[derive(Debug, Clone, Serialize, Deserialize)]
-   pub struct Session {
-       pub session_id: Uuid,
-       pub created_at: DateTime<Utc>,
-       pub last_accessed: DateTime<Utc>,
-       pub ttl: Duration,
-       pub client_info: Option<ClientInfo>,
+   ```
+
+2. Define core transport types:
+   ```rust
+   #[derive(Clone, Debug)]
+   pub struct TransportConfig {
+       pub protocol_version: String,
+       pub session_timeout: Duration,
+       pub heartbeat_interval: Duration,
    }
    
-   #[derive(Debug, Clone, Serialize, Deserialize)]
-   pub struct ClientInfo {
-       pub user_agent: Option<String>,
-       pub origin: Option<String>,
-       pub ip_address: Option<String>,
+   pub type SessionId = Uuid;
+   
+   #[derive(Debug, Clone)]
+   pub struct McpSession {
+       pub id: SessionId,
+       pub created_at: Instant,
+       pub last_activity: Arc<RwLock<Instant>>,
+       pub message_sender: broadcast::Sender<SseMessage>,
    }
    ```
 
-2. Implement Session methods:
-   - `new()` with UUID v4 generation
-   - `is_expired()` checking current time against TTL
-   - `refresh()` updating last_accessed timestamp
+3. Add protocol constants:
+   ```rust
+   pub const MCP_PROTOCOL_VERSION: &str = "MCP-Protocol-Version";
+   pub const MCP_SESSION_ID: &str = "Mcp-Session-Id";
+   pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
+   pub const LEGACY_PROTOCOL_VERSION: &str = "2024-11-05";
+   ```
 
-3. Add comprehensive error handling:
+### Step 2: Session Management
+
+1. Implement `SessionManager` struct with thread-safe session storage
+2. Create session creation, retrieval, and cleanup methods
+3. Add automatic session expiration based on `session_timeout`
+4. Implement session activity tracking for proper cleanup
+
+### Step 3: Unified MCP Endpoint
+
+1. Create `unified_mcp_handler` function accepting both POST and GET requests
+2. Implement protocol version extraction from headers with validation
+3. Add session ID extraction or generation logic
+4. Route requests based on HTTP method and Accept headers:
+   - POST with `application/json` → JSON-RPC request processing
+   - GET with `text/event-stream` → SSE stream initialization
+
+### Step 4: JSON-RPC Processing
+
+1. Implement `handle_json_rpc_request` for POST requests
+2. Parse JSON-RPC messages from request body
+3. Process through existing MCP handler infrastructure
+4. Return proper JSON-RPC responses with required headers:
+   - `MCP-Protocol-Version: 2025-06-18`
+   - `Mcp-Session-Id: {session_uuid}`
+   - `Content-Type: application/json`
+
+### Step 5: SSE Streaming
+
+1. Implement `handle_sse_stream_request` for GET requests
+2. Validate `Accept: text/event-stream` header
+3. Create or retrieve session for the request
+4. Set up SSE stream with proper event formatting:
+   - Event ID for resumability
+   - Proper JSON-RPC message encoding
+   - Heartbeat messages every 30 seconds
+5. Handle stream cleanup on client disconnect
+
+### Step 6: Backward Compatibility
+
+1. Create `detect_legacy_transport` function checking for:
+   - Missing `MCP-Protocol-Version` header
+   - Protocol version `2024-11-05`
+2. Implement `handle_legacy_transport` returning appropriate errors:
+   - Status: 426 Upgrade Required
+   - JSON response with upgrade instructions
+3. Add logging for legacy transport detection
+
+### Step 7: Server Integration
+
+1. Update `crates/mcp/src/server.rs` to use new transport:
+   - Replace `/mcp` POST endpoint with unified handler
+   - Update `/sse` endpoint or redirect to unified handler
+   - Add transport configuration to server state
+2. Update router creation with new endpoint:
+   ```rust
+   Router::new()
+       .route("/mcp", post(unified_mcp_handler).get(unified_mcp_handler))
+       .route("/health", get(health_check))
+       .layer(CorsLayer::permissive())
+   ```
+3. Initialize transport manager in server constructor
+
+### Step 8: Error Handling
+
+1. Define transport-specific error types:
    ```rust
    #[derive(Debug, thiserror::Error)]
-   pub enum SessionError {
+   pub enum McpTransportError {
+       #[error("Protocol version not supported: {0}")]
+       UnsupportedProtocolVersion(String),
        #[error("Session not found: {0}")]
        SessionNotFound(Uuid),
-       #[error("Maximum sessions reached")]
-       MaxSessionsReached,
-       #[error("Lock acquisition failed")]
-       LockError,
+       #[error("Invalid session ID: {0}")]
+       InvalidSessionId(String),
    }
    ```
 
-### Step 2: Session Manager Implementation
-
-1. Create `SessionManager` struct with thread-safe storage:
-   ```rust
-   pub struct SessionManager {
-       sessions: Arc<RwLock<HashMap<Uuid, Session>>>,
-       default_ttl: Duration,
-       max_sessions: usize,
-   }
-   ```
-
-2. Implement core session operations:
-   - `create_session()` with UUID v4 generation and session limits
-   - `get_session()` with expiry checking
-   - `update_last_accessed()` for activity tracking
-   - `delete_session()` for explicit removal
-   - `cleanup_expired_sessions()` for automatic cleanup
-
-3. Add session metrics and monitoring:
-   - `session_count()` for monitoring
-   - Structured logging for all operations
-   - Error tracking for failed operations
-
-### Step 3: Security Validation Layer
-
-1. Create `crates/mcp/src/security.rs` with security configuration:
-   ```rust
-   #[derive(Debug, Clone)]
-   pub struct SecurityConfig {
-       pub allowed_origins: HashSet<String>,
-       pub strict_origin_validation: bool,
-       pub localhost_only: bool,
-       pub require_origin_header: bool,
-   }
-   ```
-
-2. Implement Origin validation middleware:
-   - `origin_validation_middleware` as Axum middleware
-   - `validate_origin()` checking against allowed origins list
-   - `is_localhost_origin()` for localhost pattern matching
-   - DNS rebinding protection through Host header validation
-
-3. Add secure server binding:
-   - Force binding to 127.0.0.1 instead of 0.0.0.0
-   - Configuration validation for security settings
-   - Security headers in responses
-
-### Step 4: Header Integration
-
-1. Update `transport.rs` to handle `Mcp-Session-Id` headers:
-   - Extract session ID from incoming requests
-   - Create new sessions when ID is missing or invalid
-   - Add session ID to all outgoing responses
-   - Maintain session context throughout request lifecycle
-
-2. Implement session extraction logic:
-   ```rust
-   async fn extract_or_create_session(
-       headers: &HeaderMap,
-       session_manager: &SessionManager,
-   ) -> Result<Session, McpError> {
-       // Try to extract existing session ID
-       // Validate and retrieve session if found
-       // Create new session if needed
-   }
-   ```
-
-3. Add client info extraction from headers:
-   - User-Agent for client identification
-   - Origin for security validation
-   - IP address for audit logging
-
-### Step 5: Session Lifecycle Management
-
-1. Implement background cleanup task:
-   ```rust
-   impl SessionManager {
-       pub fn start_cleanup_task(&self, cleanup_interval: Duration) {
-           let session_manager = Arc::clone(&Arc::new(self.clone()));
-           tokio::spawn(async move {
-               // Periodic cleanup of expired sessions
-           });
-       }
-   }
-   ```
-
-2. Add DELETE endpoint for explicit session termination:
-   - Handle DELETE requests to `/mcp` with session context
-   - Return appropriate status codes (204 No Content, 404 Not Found)
-   - Clean up associated resources
-
-3. Implement session renewal on activity:
-   - Update `last_accessed` on every valid request
-   - Extend session lifetime for active connections
-   - Log session activity for monitoring
-
-### Step 6: Server Integration
-
-1. Update `server.rs` to initialize session management:
-   - Create SessionManager in server constructor
-   - Start cleanup task during server initialization
-   - Configure security settings
-
-2. Integrate with transport layer:
-   - Pass SessionManager through server state
-   - Ensure thread-safe access across request handlers
-   - Maintain backward compatibility with existing functionality
-
-3. Add session-aware routing:
-   - Include session context in all MCP handlers
-   - Implement session validation middleware
-   - Handle session-related errors appropriately
-
-### Step 7: Error Handling and Recovery
-
-1. Implement comprehensive error responses:
-   - 404 for expired or non-existent sessions
-   - 403 for security validation failures
-   - 400 for malformed session IDs
-   - 429 for session limit exceeded
-
-2. Add graceful degradation:
-   - Continue operation when sessions expire
-   - Automatic session recreation for legitimate clients
-   - Proper cleanup on server shutdown
-
-3. Implement security logging:
-   - Log all security validation failures
-   - Track session creation and deletion
-   - Monitor for suspicious activity patterns
+2. Implement proper error responses for each error type
+3. Add structured logging for debugging transport issues
 
 ## Required Tools
 
 **Use these tools in this specific order:**
 
-1. **read_file**: Examine existing transport implementation from Task 2
-   - `crates/mcp/src/transport.rs` - Transport layer to integrate with
-   - `crates/mcp/src/server.rs` - Server structure for integration
-   - `crates/mcp/src/lib.rs` - Module organization
+1. **read_file**: Read existing MCP server files to understand current architecture
+   - `crates/mcp/src/server.rs` - Current server implementation
+   - `crates/mcp/src/handlers.rs` - Existing MCP handlers
+   - `crates/mcp/src/lib.rs` - Module structure
 
-2. **write_file**: Create session management modules
-   - `crates/mcp/src/session.rs` - Core session management
-   - `crates/mcp/src/security.rs` - Security validation layer
+2. **create_directory**: Ensure proper directory structure exists
+   - Verify `crates/mcp/src/` directory
+   - Create test directories if needed
 
-3. **edit_file**: Update existing files for integration
-   - Modify `crates/mcp/src/lib.rs` to include new modules
-   - Update `crates/mcp/src/transport.rs` for session integration
-   - Modify `crates/mcp/src/server.rs` for session manager initialization
-   - Update `Cargo.toml` with new dependencies (chrono, uuid)
+3. **write_file**: Create new transport module
+   - `crates/mcp/src/transport.rs` - Main transport implementation
+   - Update `crates/mcp/src/lib.rs` to include new module
 
-4. **write_file**: Create comprehensive test suite
-   - `crates/mcp/tests/session_tests.rs` - Session management tests
-   - `crates/mcp/tests/security_tests.rs` - Security validation tests
-   - `crates/mcp/tests/integration_tests.rs` - End-to-end integration tests
+4. **edit_file**: Update existing files for integration
+   - Modify `crates/mcp/src/server.rs` to use new transport
+   - Update `Cargo.toml` dependencies if needed
+   - Modify any related configuration files
 
-5. **create_directory**: Ensure proper test structure
-   - Verify `crates/mcp/tests/` directory exists
-   - Create subdirectories if needed for organization
+5. **write_file**: Create comprehensive tests
+   - `crates/mcp/tests/transport_tests.rs` - Integration tests
+   - Unit tests within transport module
 
 ## Key Integration Points
 
-1. **Transport Layer**: Seamless integration with Streamable HTTP transport from Task 2
-2. **Session Headers**: Proper handling of `Mcp-Session-Id` in requests and responses
-3. **Security Middleware**: Integration with Axum middleware stack
-4. **Error Handling**: Consistent with existing MCP error handling patterns
-5. **Logging**: Use existing tracing infrastructure for security and session events
+1. **Existing MCP Handler**: Preserve all existing JSON-RPC processing logic
+2. **CORS Configuration**: Maintain existing CORS setup for web clients
+3. **Health Endpoints**: Keep existing health check functionality
+4. **Error Types**: Integrate with existing error handling infrastructure
+5. **Logging**: Use existing tracing setup for structured logging
 
 ## Success Criteria
 
 ### Functional Requirements
-- [ ] Secure UUID v4 session ID generation with proper entropy
-- [ ] Thread-safe session storage with configurable TTL
-- [ ] Automatic cleanup of expired sessions with background task
-- [ ] Bidirectional `Mcp-Session-Id` header handling
-- [ ] Origin header validation with DNS rebinding protection
-- [ ] Localhost binding enforcement for secure local deployment
-- [ ] DELETE endpoint for explicit session termination
+- [ ] Single `/mcp` endpoint supports both POST and GET methods
+- [ ] Proper `MCP-Protocol-Version: 2025-06-18` header handling
+- [ ] Session management with UUID-based session IDs
+- [ ] SSE streaming with event IDs and heartbeat messages
+- [ ] JSON-RPC request/response cycle maintained
+- [ ] Graceful legacy transport detection and error responses
 
-### Security Requirements
-- [ ] DNS rebinding attack prevention through Origin validation
-- [ ] Session fixation attack prevention (server-side ID generation only)
-- [ ] Cryptographically secure session ID generation
-- [ ] Proper CORS integration with security policies
-- [ ] Security event logging for monitoring and audit
-- [ ] Protection against session hijacking attempts
+### Technical Requirements
+- [ ] All existing MCP tools continue to work without modification
+- [ ] No breaking changes to JSON-RPC message handling
+- [ ] Memory-safe session management with automatic cleanup
+- [ ] Thread-safe concurrent request handling
+- [ ] Proper UTF-8 encoding for all message types
 
-### Performance Requirements
-- [ ] Session operations complete in < 10ms (95th percentile)
-- [ ] Support for 1000+ concurrent sessions
-- [ ] Memory usage linear with active session count
-- [ ] Background cleanup completes in < 100ms for 1000+ sessions
-- [ ] Zero memory leaks during 24-hour operation
+### Integration Requirements
+- [ ] Successful testing with Cursor MCP client
+- [ ] Compatible with Toolman integration requirements
+- [ ] Health checks continue to function properly
+- [ ] CORS policies maintained for web-based clients
+- [ ] Existing logging and monitoring preserved
 
 ## Testing Strategy
 
-1. **Unit Tests**: Test each component in isolation
-   - Session creation, validation, and expiry logic
-   - Origin validation with various input combinations
-   - Security configuration and validation
-   - Error handling for all failure modes
+1. **Unit Tests**: Test each transport component independently
+   - Session management (creation, cleanup, expiration)
+   - Protocol version detection and validation
+   - Message serialization and deserialization
+   - Error handling for various failure scenarios
 
 2. **Integration Tests**: Test complete request/response cycles
-   - Session creation during MCP request processing
-   - Header propagation across multiple requests
-   - Session cleanup and lifecycle management
-   - Security validation with real HTTP requests
+   - POST requests with JSON-RPC messages
+   - GET requests for SSE stream initialization
+   - Session tracking across multiple requests
+   - Concurrent session handling
 
-3. **Security Tests**: Validate protection mechanisms
-   - DNS rebinding attack simulation
-   - Session hijacking attempt prevention
-   - Origin spoofing attack blocking
-   - CORS policy enforcement
+3. **Compatibility Tests**: Verify client integration
+   - Cursor MCP client connection and tool usage
+   - Legacy transport detection and error responses
+   - Protocol version negotiation
 
-4. **Performance Tests**: Validate scalability and performance
-   - Concurrent session handling (500+ simultaneous)
-   - Session cleanup performance under load
-   - Memory leak detection over extended periods
-   - Response time benchmarking
+4. **Performance Tests**: Validate under load
+   - Multiple concurrent sessions (50+ connections)
+   - Long-running SSE streams (30+ minutes)
+   - Session cleanup performance
+   - Memory usage under various loads
 
 ## Critical Implementation Notes
 
-1. **Thread Safety**: All session operations must be thread-safe using proper locking
-2. **Security First**: Implement security validations before functional features
-3. **Session Persistence**: Use in-memory storage with note for future Redis integration
-4. **Error Recovery**: Graceful handling of all error conditions
-5. **Monitoring**: Comprehensive logging for security and operational events
+1. **Thread Safety**: All session management must be thread-safe using `Arc<RwLock<>>`
+2. **Memory Management**: Implement proper session cleanup to prevent memory leaks
+3. **Protocol Compliance**: Strict adherence to MCP 2025-06-18 specification
+4. **Error Handling**: Comprehensive error responses with helpful debugging information
+5. **Backward Compatibility**: Graceful degradation for legacy clients with clear upgrade instructions
 
 ## Focus Areas
 
-- **Security**: DNS rebinding protection and Origin validation are critical
-- **Performance**: Session operations must not impact MCP request latency
-- **Reliability**: Session management must be robust under high concurrency
-- **Integration**: Seamless integration with existing transport and handler infrastructure
+- **Reliability**: Ensure stable connections and message delivery
+- **Performance**: Minimize latency and memory usage
+- **Compatibility**: Support both modern and legacy clients during transition
+- **Maintainability**: Clear, well-documented code that integrates smoothly with existing architecture
 
 ## Expected Deliverables
 
-1. **Session Management Module**: Complete session.rs implementation with lifecycle management
-2. **Security Module**: Comprehensive security.rs with Origin validation and DNS protection
-3. **Transport Integration**: Updated transport.rs with session header handling
-4. **Server Integration**: Modified server.rs with session manager initialization
-5. **Test Suite**: Complete unit, integration, and security tests
-6. **Documentation**: Security guide and session management API documentation
+1. **Core Transport Module**: Complete `transport.rs` implementation
+2. **Updated Server Integration**: Modified server files using new transport
+3. **Comprehensive Tests**: Unit and integration tests covering all functionality
+4. **Migration Documentation**: Clear documentation of changes and upgrade procedures
+5. **Validation Results**: Evidence of successful testing with MCP clients
 
-This implementation is critical for secure MCP communication and must be thoroughly tested before deployment to production environments.
+Implement this foundation carefully as it forms the basis for all future MCP communication in the Doc Server project. The success of this task is critical for the reliability and compatibility of the entire system.

@@ -1,43 +1,43 @@
-# Task ID: 10
-# Title: Implement Rust Crate Management Tools
+# Task ID: 9
+# Title: Implement Solana Query Tool
 # Status: pending
-# Dependencies: 6
+# Dependencies: 6, 7
 # Priority: medium
-# Description: Create dynamic Rust crate management tools (add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status) for MCP-based crate administration.
+# Description: Create the solana_query tool for querying Solana blockchain platform documentation including architecture diagrams and ZK cryptography content.
 # Details:
-Implement add_rust_crate with automatic docs.rs fetching and parsing. Create remove_rust_crate with cascade deletion of documents and embeddings. Build list_rust_crates with pagination and status information. Implement check_rust_status for health monitoring and statistics. Add transaction support for atomic operations. Implement crate version management and update detection. Use cargo metadata parsing for dependency analysis. Add rate limiting for docs.rs API calls.
+Implement SolanaQueryTool with support for multiple content formats (markdown, PDF, BOB diagrams, MSC charts). Add specialized handling for technical diagrams and cryptography documentation. Parse Solana-specific metadata (category, format, section, complexity, topic). Implement context-aware result presentation. Support cross-referenced documentation linking. Add special handling for PDF content extraction. Register in MCP server with comprehensive tool definition.
 
 # Test Strategy:
-Test adding popular crates (tokio, serde, axum), validate document extraction completeness, test removal with orphan cleanup, verify transaction rollback on errors, test concurrent management operations, and validate status reporting accuracy.
+Test queries across different content types, validate PDF and diagram content retrieval, test metadata filtering by complexity and topic, verify cross-reference resolution, and ensure proper formatting of technical content.
 
 # Subtasks:
-## 1. Create Rust Crate Management Tool Structures and Database Schema [pending]
+## 1. Create SolanaQueryTool struct implementation [pending]
 ### Dependencies: None
-### Description: Design and implement the core data structures for crate management tools and extend the database schema to support crate-specific operations
+### Description: Implement the SolanaQueryTool struct following the established pattern in tools.rs with database pool and embedding client dependencies
 ### Details:
-Create RustCrateManager struct in crates/mcp/src/tools.rs with fields for database pool, embedding client, and HTTP client for docs.rs API. Extend database schema with a 'crates' table containing fields: id, name, version, description, documentation_url, last_updated, status (active/inactive/updating), and metadata JSONB. Add indexes for name and version lookups. Create CrateInfo and CrateStatus structs in crates/database/src/models.rs. Implement transaction helper methods in DatabasePool for atomic operations.
+Create a new SolanaQueryTool struct in crates/mcp/src/tools.rs with db_pool and embedding_client fields. Implement a new() constructor that initializes the embedding client and accepts a DatabasePool. Follow the exact pattern used in RustQueryTool for consistency with the existing codebase architecture.
 
-## 2. Implement add_rust_crate Tool with docs.rs Integration [pending]
-### Dependencies: 10.1
-### Description: Build the add_rust_crate tool with automatic documentation fetching from docs.rs and parsing capabilities
+## 2. Implement Solana-specific semantic search with metadata filtering [pending]
+### Dependencies: 9.1
+### Description: Add semantic_search method to SolanaQueryTool with support for querying Solana documents and filtering by metadata fields like format, complexity, and topic
 ### Details:
-Implement AddRustCrateTool in crates/mcp/src/tools.rs following the Tool trait pattern. Add docs.rs API client in crates/doc-loader/src/loaders.rs with rate limiting (max 10 requests/minute) using tokio::time::interval. Parse HTML documentation using scraper crate to extract modules, structs, functions, and examples. Store parsed documentation in documents table with proper metadata (crate_name, version, module_path). Generate embeddings for documentation chunks. Implement version checking to detect updates. Add the tool to McpHandler registry in handlers.rs.
+Implement semantic_search method that queries documents where doc_type='solana'. Parse and utilize Solana-specific metadata including category (architecture-diagrams, sequence-diagrams, zk-cryptography), format (markdown, pdf, bob, msc), section, complexity, and topic fields. Add proper pgvector similarity search using the <=> operator. Support result ranking with relevance scores and handle different content formats appropriately.
 
-## 3. Implement remove_rust_crate Tool with Cascade Deletion [pending]
-### Dependencies: 10.1, 10.2
-### Description: Create the remove_rust_crate tool with proper cascade deletion of associated documents and embeddings
+## 3. Add specialized content formatting for technical diagrams and PDFs [pending]
+### Dependencies: 9.2
+### Description: Implement content formatting logic that handles BOB diagrams, MSC charts, and PDF metadata with context-aware presentation
 ### Details:
-Implement RemoveRustCrateTool with transaction support for atomic deletion. Query and delete all documents where metadata->>'crate_name' matches the target crate. Delete associated embeddings from embeddings table using document IDs. Remove crate entry from crates table. Implement orphan cleanup to identify and remove dangling embeddings. Add soft-delete option with status='inactive' for recoverable deletions. Log all deletion operations for audit trail.
+Create formatting logic that detects content type from metadata and applies appropriate formatting. For BOB/MSC diagrams, preserve ASCII art structure and add descriptive headers. For PDF documents, display metadata summary with file location, size, and content description. For markdown content, format with proper headers and code blocks. Include cross-reference links when available in metadata.
 
-## 4. Implement list_rust_crates Tool with Pagination [pending]
-### Dependencies: 10.1, 10.2
-### Description: Build the list_rust_crates tool with pagination support and comprehensive status information display
+## 4. Implement Tool trait for SolanaQueryTool with MCP definition [pending]
+### Dependencies: 9.3
+### Description: Implement the Tool trait with comprehensive tool definition and execute method for MCP integration
 ### Details:
-Implement ListRustCratesTool with configurable pagination (default 20 items/page). Return crate information including name, version, document count, last updated timestamp, and status. Add filtering options by status (active/inactive/updating) and search by crate name pattern. Include statistics: total documents, total embeddings, average documents per crate. Implement sorting options (name, version, last_updated, document_count). Format output as structured JSON with metadata about pagination (current_page, total_pages, total_items).
+Implement the Tool trait's definition() method returning JSON with tool name 'solana_query', description mentioning Solana blockchain documentation including architecture diagrams and ZK cryptography. Define inputSchema with query (string), limit (integer 1-20), format filter (optional string: markdown/pdf/bob/msc), and complexity filter (optional string). Implement execute() method that validates parameters, calls semantic_search, and returns formatted results.
 
-## 5. Implement check_rust_status Tool and Dependency Analysis [pending]
-### Dependencies: 10.1, 10.2, 10.3, 10.4
-### Description: Create the check_rust_status tool for health monitoring and implement cargo metadata parsing for dependency analysis
+## 5. Register SolanaQueryTool in MCP handler [pending]
+### Dependencies: 9.4
+### Description: Add SolanaQueryTool registration to McpHandler::new() method to make it available through the MCP server
 ### Details:
-Implement CheckRustStatusTool to report overall system health including database connectivity, total crates/documents/embeddings count, storage usage statistics, and last update timestamps. Add cargo metadata parser using std::process::Command to extract crate dependencies from Cargo.toml files. Implement update detection by comparing local versions with docs.rs latest versions. Create health check endpoints for monitoring integration. Add metrics collection for tool usage patterns and query performance. Generate dependency graph visualization data in JSON format.
+In crates/mcp/src/handlers.rs, modify McpHandler::new() to instantiate SolanaQueryTool using the provided db_pool. Register the tool in the tools HashMap with key 'solana_query'. Ensure proper error handling during tool initialization. Update any relevant documentation or comments to reflect the new tool availability.
 

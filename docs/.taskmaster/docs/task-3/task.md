@@ -1,482 +1,247 @@
-# Task 3: Session Management and Security Implementation
+# Task 3: Implement Streamable HTTP Transport Foundation
 
 ## Overview
 
-This task implements comprehensive session management with `Mcp-Session-Id` headers and robust security measures for the Doc Server MCP implementation. Building on the Streamable HTTP transport foundation from Task 2, this adds essential security features including Origin header validation, DNS rebinding protection, and secure session lifecycle management.
+This task implements the critical transition from the deprecated HTTP+SSE transport (protocol version 2024-11-05) to the new Streamable HTTP transport (protocol version 2025-06-18) following the MCP specification. This forms the foundation for reliable MCP server communication and is essential for maintaining compatibility with modern MCP clients like Toolman and Cursor.
 
 ## Background
 
-Session management is critical for maintaining stateful MCP connections and ensuring secure communication between clients and the Doc Server. The MCP 2025-06-18 specification requires proper session handling with unique identifiers, while security best practices demand protection against common web vulnerabilities like DNS rebinding attacks and session hijacking.
+The current Doc Server implementation uses the deprecated HTTP+SSE transport that is no longer supported in the latest MCP specification. This creates stability and compatibility issues with modern MCP clients. The new Streamable HTTP transport provides:
 
-### Key Requirements
-
-- **Secure Session IDs**: Cryptographically secure UUID v4 generation
-- **Header Compliance**: Proper `Mcp-Session-Id` header handling per MCP specification
-- **Origin Validation**: Protection against DNS rebinding attacks
-- **Session Lifecycle**: Automatic expiry and cleanup mechanisms
-- **Localhost Binding**: Secure local deployment configuration
-- **Concurrency Safety**: Thread-safe session management for multiple clients
+- **Unified Endpoint Architecture**: Single `/mcp` endpoint supporting both POST and GET methods
+- **Improved Session Management**: Proper session tracking with `Mcp-Session-Id` headers
+- **Enhanced Reliability**: Better connection handling and message delivery guarantees
+- **Protocol Compliance**: Full compliance with MCP 2025-06-18 specification
+- **Backward Compatibility**: Graceful handling of legacy transport attempts
 
 ## Implementation Guide
 
-### Phase 1: Session Module and Data Structures
+### Phase 1: Core Transport Module Structure
 
-#### 1.1 Create Session Data Model
+#### 1.1 Create Base Transport Module
 
-Create `crates/mcp/src/session.rs` with core session structures:
-
-```rust
-use chrono::{DateTime, Duration, Utc};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use uuid::Uuid;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Session {
-    pub session_id: Uuid,
-    pub created_at: DateTime<Utc>,
-    pub last_accessed: DateTime<Utc>,
-    pub ttl: Duration,
-    pub client_info: Option<ClientInfo>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClientInfo {
-    pub user_agent: Option<String>,
-    pub origin: Option<String>,
-    pub ip_address: Option<String>,
-}
-
-impl Session {
-    pub fn new(ttl: Option<Duration>) -> Self {
-        let now = Utc::now();
-        Self {
-            session_id: Uuid::new_v4(),
-            created_at: now,
-            last_accessed: now,
-            ttl: ttl.unwrap_or_else(|| Duration::minutes(30)),
-            client_info: None,
-        }
-    }
-    
-    pub fn is_expired(&self) -> bool {
-        let now = Utc::now();
-        now - self.last_accessed > self.ttl
-    }
-    
-    pub fn refresh(&mut self) {
-        self.last_accessed = Utc::now();
-    }
-}
-```
-
-#### 1.2 Implement Session Manager
-
-```rust
-pub struct SessionManager {
-    sessions: Arc<RwLock<HashMap<Uuid, Session>>>,
-    default_ttl: Duration,
-    max_sessions: usize,
-}
-
-impl SessionManager {
-    pub fn new(default_ttl: Duration, max_sessions: usize) -> Self {
-        Self {
-            sessions: Arc::new(RwLock::new(HashMap::new())),
-            default_ttl,
-            max_sessions,
-        }
-    }
-    
-    pub fn create_session(&self, client_info: Option<ClientInfo>) -> Result<Session, SessionError> {
-        let mut sessions = self.sessions.write().map_err(|_| SessionError::LockError)?;
-        
-        if sessions.len() >= self.max_sessions {
-            return Err(SessionError::MaxSessionsReached);
-        }
-        
-        let mut session = Session::new(Some(self.default_ttl));
-        session.client_info = client_info;
-        
-        sessions.insert(session.session_id, session.clone());
-        
-        tracing::info!("Created new session: {}", session.session_id);
-        Ok(session)
-    }
-    
-    pub fn get_session(&self, session_id: Uuid) -> Result<Option<Session>, SessionError> {
-        let sessions = self.sessions.read().map_err(|_| SessionError::LockError)?;
-        
-        if let Some(session) = sessions.get(&session_id) {
-            if session.is_expired() {
-                drop(sessions);
-                self.delete_session(session_id)?;
-                return Ok(None);
-            }
-            Ok(Some(session.clone()))
-        } else {
-            Ok(None)
-        }
-    }
-    
-    pub fn update_last_accessed(&self, session_id: Uuid) -> Result<(), SessionError> {
-        let mut sessions = self.sessions.write().map_err(|_| SessionError::LockError)?;
-        
-        if let Some(session) = sessions.get_mut(&session_id) {
-            session.refresh();
-            tracing::debug!("Updated last_accessed for session: {}", session_id);
-        }
-        
-        Ok(())
-    }
-    
-    pub fn delete_session(&self, session_id: Uuid) -> Result<bool, SessionError> {
-        let mut sessions = self.sessions.write().map_err(|_| SessionError::LockError)?;
-        
-        let removed = sessions.remove(&session_id).is_some();
-        if removed {
-            tracing::info!("Deleted session: {}", session_id);
-        }
-        
-        Ok(removed)
-    }
-    
-    pub fn cleanup_expired_sessions(&self) -> Result<usize, SessionError> {
-        let mut sessions = self.sessions.write().map_err(|_| SessionError::LockError)?;
-        
-        let initial_count = sessions.len();
-        sessions.retain(|_, session| !session.is_expired());
-        let removed_count = initial_count - sessions.len();
-        
-        if removed_count > 0 {
-            tracing::info!("Cleaned up {} expired sessions", removed_count);
-        }
-        
-        Ok(removed_count)
-    }
-    
-    pub fn session_count(&self) -> Result<usize, SessionError> {
-        let sessions = self.sessions.read().map_err(|_| SessionError::LockError)?;
-        Ok(sessions.len())
-    }
-}
-```
-
-### Phase 2: Security Validation Layer
-
-#### 2.1 Create Security Module
-
-Create `crates/mcp/src/security.rs` with Origin validation:
+Create `crates/mcp/src/transport.rs` with the foundational structure:
 
 ```rust
 use axum::{
-    extract::{ConnectInfo, Request},
-    http::{HeaderMap, HeaderValue, StatusCode},
-    middleware::Next,
-    response::Response,
+    extract::{Request, State},
+    http::{HeaderMap, StatusCode},
+    response::{Response, Sse},
+    routing::{get, post},
+    Json, Router
 };
-use std::collections::HashSet;
-use std::net::SocketAddr;
+use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
+use tokio::sync::broadcast;
 use tower_http::cors::CorsLayer;
+use uuid::Uuid;
+
+// Core transport configuration
+#[derive(Clone, Debug)]
+pub struct TransportConfig {
+    pub protocol_version: String,
+    pub session_timeout: Duration,
+    pub heartbeat_interval: Duration,
+}
+
+// Session management
+pub type SessionId = Uuid;
 
 #[derive(Debug, Clone)]
-pub struct SecurityConfig {
-    pub allowed_origins: HashSet<String>,
-    pub strict_origin_validation: bool,
-    pub localhost_only: bool,
-    pub require_origin_header: bool,
+pub struct McpSession {
+    pub id: SessionId,
+    pub created_at: Instant,
+    pub last_activity: Arc<RwLock<Instant>>,
+    pub message_sender: broadcast::Sender<SseMessage>,
 }
 
-impl Default for SecurityConfig {
-    fn default() -> Self {
-        let mut allowed_origins = HashSet::new();
-        allowed_origins.insert("http://localhost".to_string());
-        allowed_origins.insert("http://127.0.0.1".to_string());
-        allowed_origins.insert("https://localhost".to_string());
-        allowed_origins.insert("https://127.0.0.1".to_string());
-        
-        Self {
-            allowed_origins,
-            strict_origin_validation: true,
-            localhost_only: true,
-            require_origin_header: false,
-        }
-    }
-}
-
-pub async fn origin_validation_middleware(
-    security_config: axum::extract::State<SecurityConfig>,
-    request: Request,
-    next: Next,
-) -> Result<Response, StatusCode> {
-    let headers = request.headers();
-    
-    // Check Origin header if present or required
-    if let Some(origin) = headers.get("origin") {
-        if let Ok(origin_str) = origin.to_str() {
-            if !validate_origin(origin_str, &security_config) {
-                tracing::warn!("Blocked request with invalid origin: {}", origin_str);
-                return Err(StatusCode::FORBIDDEN);
-            }
-        } else {
-            tracing::warn!("Invalid Origin header format");
-            return Err(StatusCode::BAD_REQUEST);
-        }
-    } else if security_config.require_origin_header {
-        tracing::warn!("Missing required Origin header");
-        return Err(StatusCode::BAD_REQUEST);
-    }
-    
-    // Validate Host header for DNS rebinding protection
-    if let Some(host) = headers.get("host") {
-        if let Ok(host_str) = host.to_str() {
-            if security_config.localhost_only && !is_localhost_host(host_str) {
-                tracing::warn!("Blocked request with non-localhost host: {}", host_str);
-                return Err(StatusCode::FORBIDDEN);
-            }
-        }
-    }
-    
-    Ok(next.run(request).await)
-}
-
-fn validate_origin(origin: &str, config: &SecurityConfig) -> bool {
-    if !config.strict_origin_validation {
-        return true;
-    }
-    
-    // Check against allowed origins list
-    if config.allowed_origins.contains(origin) {
-        return true;
-    }
-    
-    // Check for localhost patterns
-    if config.localhost_only {
-        return is_localhost_origin(origin);
-    }
-    
-    false
-}
-
-fn is_localhost_origin(origin: &str) -> bool {
-    origin.starts_with("http://localhost")
-        || origin.starts_with("https://localhost")
-        || origin.starts_with("http://127.0.0.1")
-        || origin.starts_with("https://127.0.0.1")
-        || origin.starts_with("http://[::1]")
-        || origin.starts_with("https://[::1]")
-}
-
-fn is_localhost_host(host: &str) -> bool {
-    host.starts_with("localhost")
-        || host.starts_with("127.0.0.1")
-        || host.starts_with("[::1]")
+pub struct SessionManager {
+    sessions: Arc<RwLock<HashMap<SessionId, McpSession>>>,
+    config: TransportConfig,
 }
 ```
 
-#### 2.2 Implement Server Binding Security
+#### 1.2 Define Transport Constants
 
 ```rust
-// In server.rs
-impl McpServer {
-    pub async fn bind_secure(&self, port: u16) -> Result<(), ServerError> {
-        let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
-        
-        tracing::info!("Binding server to secure localhost address: {}", addr);
-        
-        let listener = tokio::net::TcpListener::bind(addr).await
-            .map_err(|e| ServerError::BindError(e.to_string()))?;
-        
-        let app = self.create_router_with_security();
-        
-        axum::serve(
-            listener,
-            app.into_make_service_with_connect_info::<SocketAddr>()
-        ).await
-            .map_err(|e| ServerError::ServerError(e.to_string()))?;
-        
-        Ok(())
-    }
-    
-    fn create_router_with_security(&self) -> Router {
-        let security_config = SecurityConfig::default();
-        
-        self.router()
-            .layer(axum::middleware::from_fn_with_state(
-                security_config,
-                origin_validation_middleware
-            ))
-    }
-}
+// MCP Protocol Headers
+pub const MCP_PROTOCOL_VERSION: &str = "MCP-Protocol-Version";
+pub const MCP_SESSION_ID: &str = "Mcp-Session-Id";
+pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
+pub const LEGACY_PROTOCOL_VERSION: &str = "2024-11-05";
+
+// Content Types
+pub const APPLICATION_JSON: &str = "application/json";
+pub const TEXT_EVENT_STREAM: &str = "text/event-stream";
 ```
 
-### Phase 3: Mcp-Session-Id Header Handling
+### Phase 2: Unified MCP Endpoint Handler
 
-#### 3.1 Update Transport Layer
-
-Modify `transport.rs` to handle session headers:
+#### 2.1 Implement Main Handler
 
 ```rust
-// In transport.rs
-use crate::session::{Session, SessionManager};
-
-const MCP_SESSION_ID_HEADER: &str = "Mcp-Session-Id";
-
 pub async fn unified_mcp_handler(
     State(state): State<Arc<McpServerState>>,
     headers: HeaderMap,
     request: Request<Body>,
 ) -> Result<Response<Body>, McpError> {
-    // Extract or create session
-    let session = extract_or_create_session(&headers, &state.session_manager).await?;
+    // Extract protocol version and session ID
+    let protocol_version = extract_protocol_version(&headers)?;
+    let session_id = extract_or_create_session_id(&headers, &state.transport).await?;
     
-    // Update session activity
-    state.session_manager.update_last_accessed(session.session_id)
-        .map_err(|e| McpError::SessionError(e.to_string()))?;
+    // Route based on HTTP method and content negotiation
+    match request.method() {
+        &Method::POST => handle_json_rpc_request(state, session_id, request).await,
+        &Method::GET => handle_sse_stream_request(state, session_id, headers).await,
+        _ => Err(McpError::MethodNotAllowed),
+    }
+}
+```
+
+#### 2.2 Implement Request Processing
+
+```rust
+async fn handle_json_rpc_request(
+    state: Arc<McpServerState>,
+    session_id: SessionId,
+    mut request: Request<Body>,
+) -> Result<Response<Body>, McpError> {
+    let body = hyper::body::to_bytes(request.into_body()).await?;
+    let json_rpc: JsonRpcMessage = serde_json::from_slice(&body)?;
     
-    // Process request with session context
-    let mut response = match request.method() {
-        &Method::POST => handle_json_rpc_request(state, session.clone(), request).await?,
-        &Method::GET => handle_sse_stream_request(state, session.clone(), headers).await?,
-        &Method::DELETE => handle_session_delete_request(state, session.clone()).await?,
-        _ => return Err(McpError::MethodNotAllowed),
-    }?;
+    // Process through existing MCP handler
+    let response = state.handler.handle_message(json_rpc).await?;
     
-    // Add session header to response
-    response.headers_mut().insert(
-        MCP_SESSION_ID_HEADER,
-        HeaderValue::from_str(&session.session_id.to_string())
-            .map_err(|_| McpError::HeaderError)?
-    );
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", APPLICATION_JSON)
+        .header(MCP_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSION)
+        .header(MCP_SESSION_ID, session_id.to_string())
+        .body(serde_json::to_vec(&response)?.into())?)
+}
+```
+
+### Phase 3: SSE Streaming Infrastructure
+
+#### 3.1 Create SSE Stream Handler
+
+```rust
+use axum::response::sse::{Event, Sse};
+use futures::stream::Stream;
+use tokio_stream::wrappers::BroadcastStream;
+
+pub async fn handle_sse_stream_request(
+    state: Arc<McpServerState>,
+    session_id: SessionId,
+    headers: HeaderMap,
+) -> Result<Response<Body>, McpError> {
+    // Validate Accept header for SSE
+    if !accepts_event_stream(&headers) {
+        return Err(McpError::NotAcceptable);
+    }
     
-    Ok(response)
+    // Create or get existing session
+    let session = state.transport.get_or_create_session(session_id).await?;
+    
+    // Create SSE stream
+    let stream = create_sse_stream(session.message_sender.subscribe())
+        .map_err(|e| McpError::StreamError(e.to_string()))?;
+    
+    let sse = Sse::new(stream)
+        .keep_alive(axum::response::sse::KeepAlive::new()
+            .interval(Duration::from_secs(30))
+            .text("heartbeat"));
+    
+    Ok(sse.into_response())
 }
 
-async fn extract_or_create_session(
-    headers: &HeaderMap,
-    session_manager: &SessionManager,
-) -> Result<Session, McpError> {
-    // Try to extract session ID from headers
-    if let Some(session_id_header) = headers.get(MCP_SESSION_ID_HEADER) {
-        if let Ok(session_id_str) = session_id_header.to_str() {
-            if let Ok(session_id) = Uuid::parse_str(session_id_str) {
-                // Try to get existing session
-                if let Some(session) = session_manager.get_session(session_id)
-                    .map_err(|e| McpError::SessionError(e.to_string()))? {
-                    return Ok(session);
-                }
-                // Session not found or expired, create new one
+fn create_sse_stream(
+    mut receiver: broadcast::Receiver<SseMessage>,
+) -> impl Stream<Item = Result<Event, Box<dyn Error + Send + Sync>>> {
+    async_stream::stream! {
+        while let Ok(message) = receiver.recv().await {
+            let event = Event::default()
+                .id(message.id.to_string())
+                .data(message.data);
+            
+            match message.event_type.as_deref() {
+                Some(event_type) => yield Ok(event.event(event_type)),
+                None => yield Ok(event),
             }
         }
     }
-    
-    // Create new session
-    let client_info = extract_client_info(headers);
-    session_manager.create_session(client_info)
-        .map_err(|e| McpError::SessionError(e.to_string()))
-}
-
-fn extract_client_info(headers: &HeaderMap) -> Option<ClientInfo> {
-    Some(ClientInfo {
-        user_agent: headers.get("user-agent")
-            .and_then(|h| h.to_str().ok())
-            .map(|s| s.to_string()),
-        origin: headers.get("origin")
-            .and_then(|h| h.to_str().ok())
-            .map(|s| s.to_string()),
-        ip_address: None, // Can be extracted from ConnectInfo if needed
-    })
 }
 ```
 
-### Phase 4: Session Lifecycle Management
+### Phase 4: Backward Compatibility Detection
 
-#### 4.1 Implement Session Cleanup Task
+#### 4.1 Legacy Transport Detection
 
 ```rust
-// In session.rs
-impl SessionManager {
-    pub fn start_cleanup_task(&self, cleanup_interval: Duration) {
-        let session_manager = Arc::clone(&Arc::new(self.clone()));
+pub fn detect_legacy_transport(headers: &HeaderMap) -> bool {
+    // Check for missing protocol version (legacy indicator)
+    if headers.get(MCP_PROTOCOL_VERSION).is_none() {
+        return true;
+    }
+    
+    // Check for legacy protocol version
+    if let Some(version) = headers.get(MCP_PROTOCOL_VERSION) {
+        if let Ok(version_str) = version.to_str() {
+            return version_str == LEGACY_PROTOCOL_VERSION;
+        }
+    }
+    
+    false
+}
+
+pub async fn handle_legacy_transport(
+    headers: &HeaderMap,
+    method: &Method,
+) -> Result<Response<Body>, McpError> {
+    tracing::warn!("Legacy transport detected, returning compatibility response");
+    
+    // Return appropriate error for legacy clients
+    Ok(Response::builder()
+        .status(StatusCode::UPGRADE_REQUIRED)
+        .header("Content-Type", APPLICATION_JSON)
+        .body(serde_json::to_vec(&json!({
+            "error": "Transport upgrade required",
+            "supported_version": SUPPORTED_PROTOCOL_VERSION,
+            "deprecated_version": LEGACY_PROTOCOL_VERSION
+        }))?.into())?)
+}
+```
+
+### Phase 5: Server Integration
+
+#### 5.1 Update Main Server
+
+```rust
+// In crates/mcp/src/server.rs
+impl McpServer {
+    pub fn new() -> Self {
+        let transport = Arc::new(TransportManager::new(TransportConfig {
+            protocol_version: SUPPORTED_PROTOCOL_VERSION.to_string(),
+            session_timeout: Duration::from_secs(300),
+            heartbeat_interval: Duration::from_secs(30),
+        }));
         
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(cleanup_interval);
-            
-            loop {
-                interval.tick().await;
-                
-                match session_manager.cleanup_expired_sessions() {
-                    Ok(removed_count) => {
-                        if removed_count > 0 {
-                            tracing::debug!("Cleanup task removed {} expired sessions", removed_count);
-                        }
-                    }
-                    Err(e) => {
-                        tracing::error!("Session cleanup failed: {:?}", e);
-                    }
-                }
-            }
+        let state = Arc::new(McpServerState {
+            handler: Arc::new(McpHandler::new()),
+            transport,
         });
         
-        tracing::info!("Started session cleanup task with interval: {:?}", cleanup_interval);
+        Self { state }
     }
-}
-```
-
-#### 4.2 Add DELETE Endpoint for Session Termination
-
-```rust
-// In transport.rs
-async fn handle_session_delete_request(
-    state: Arc<McpServerState>,
-    session: Session,
-) -> Result<Response<Body>, McpError> {
-    // Delete the session
-    let deleted = state.session_manager.delete_session(session.session_id)
-        .map_err(|e| McpError::SessionError(e.to_string()))?;
     
-    if deleted {
-        Ok(Response::builder()
-            .status(StatusCode::NO_CONTENT)
-            .header("Content-Type", "application/json")
-            .body(Body::empty())?)
-    } else {
-        Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_vec(&json!({
-                "error": "Session not found"
-            }))?.into())?)
+    pub fn router(&self) -> Router {
+        Router::new()
+            .route("/mcp", post(unified_mcp_handler).get(unified_mcp_handler))
+            .route("/health", get(health_check))
+            .layer(CorsLayer::permissive())
+            .with_state(Arc::clone(&self.state))
     }
-}
-```
-
-### Phase 5: Error Handling and Types
-
-#### 5.1 Define Session Error Types
-
-```rust
-// In session.rs
-#[derive(Debug, thiserror::Error)]
-pub enum SessionError {
-    #[error("Session not found: {0}")]
-    SessionNotFound(Uuid),
-    
-    #[error("Session expired: {0}")]
-    SessionExpired(Uuid),
-    
-    #[error("Maximum number of sessions reached")]
-    MaxSessionsReached,
-    
-    #[error("Lock acquisition failed")]
-    LockError,
-    
-    #[error("Invalid session ID format: {0}")]
-    InvalidSessionId(String),
-    
-    #[error("Session configuration error: {0}")]
-    ConfigError(String),
 }
 ```
 
@@ -484,37 +249,36 @@ pub enum SessionError {
 
 ### Dependencies
 
-Update `Cargo.toml` with required dependencies:
-
 ```toml
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-tokio = { version = "1.0", features = ["time", "sync"] }
-tracing = "0.1"
-thiserror = "1.0"
-serde = { version = "1.0", features = ["derive"] }
+axum = { version = "0.7", features = ["ws", "headers"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+async-stream = "0.3"
+tokio-stream = { version = "0.1", features = ["sync"] }
 serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+tracing = "0.1"
 ```
 
 ### Configuration
 
 ```rust
-#[derive(Debug, Clone)]
-pub struct SessionConfig {
-    pub default_ttl: Duration,
+pub struct TransportConfig {
+    pub protocol_version: String,
+    pub session_timeout: Duration,
+    pub heartbeat_interval: Duration,
     pub max_sessions: usize,
-    pub cleanup_interval: Duration,
-    pub strict_expiry: bool,
+    pub message_buffer_size: usize,
 }
 
-impl Default for SessionConfig {
+impl Default for TransportConfig {
     fn default() -> Self {
         Self {
-            default_ttl: Duration::minutes(30),
+            protocol_version: "2025-06-18".to_string(),
+            session_timeout: Duration::from_secs(300),
+            heartbeat_interval: Duration::from_secs(30),
             max_sessions: 1000,
-            cleanup_interval: Duration::minutes(5),
-            strict_expiry: true,
+            message_buffer_size: 100,
         }
     }
 }
@@ -522,166 +286,178 @@ impl Default for SessionConfig {
 
 ## Code Examples
 
-### Session Creation and Management
+### Session Management
 
 ```rust
-// Example usage in server initialization
-let session_config = SessionConfig::default();
-let session_manager = SessionManager::new(
-    session_config.default_ttl,
-    session_config.max_sessions,
-);
-
-// Start background cleanup task
-session_manager.start_cleanup_task(session_config.cleanup_interval);
-
-// Create session during request handling
-let client_info = ClientInfo {
-    user_agent: Some("MCP Client 1.0".to_string()),
-    origin: Some("http://localhost:3000".to_string()),
-    ip_address: Some("127.0.0.1".to_string()),
-};
-
-let session = session_manager.create_session(Some(client_info))?;
-tracing::info!("Created session: {}", session.session_id);
+impl SessionManager {
+    pub async fn create_session(&self) -> Result<SessionId, McpError> {
+        let session_id = Uuid::new_v4();
+        let (sender, _) = broadcast::channel(self.config.message_buffer_size);
+        
+        let session = McpSession {
+            id: session_id,
+            created_at: Instant::now(),
+            last_activity: Arc::new(RwLock::new(Instant::now())),
+            message_sender: sender,
+        };
+        
+        let mut sessions = self.sessions.write().await;
+        sessions.insert(session_id, session);
+        
+        Ok(session_id)
+    }
+    
+    pub async fn cleanup_expired_sessions(&self) -> Result<usize, McpError> {
+        let mut sessions = self.sessions.write().await;
+        let now = Instant::now();
+        let expired_count = sessions.len();
+        
+        sessions.retain(|_, session| {
+            let last_activity = *session.last_activity.read().unwrap();
+            now.duration_since(last_activity) < self.config.session_timeout
+        });
+        
+        Ok(expired_count - sessions.len())
+    }
+}
 ```
 
-### Origin Validation
+### Error Handling
 
 ```rust
-// Security configuration
-let mut security_config = SecurityConfig::default();
-security_config.allowed_origins.insert("https://app.example.com".to_string());
-security_config.strict_origin_validation = true;
-
-// Apply as middleware
-let app = Router::new()
-    .route("/mcp", post(unified_mcp_handler))
-    .layer(axum::middleware::from_fn_with_state(
-        security_config,
-        origin_validation_middleware
-    ));
+#[derive(Debug, thiserror::Error)]
+pub enum McpTransportError {
+    #[error("Protocol version not supported: {0}")]
+    UnsupportedProtocolVersion(String),
+    
+    #[error("Session not found: {0}")]
+    SessionNotFound(Uuid),
+    
+    #[error("Invalid session ID: {0}")]
+    InvalidSessionId(String),
+    
+    #[error("Stream error: {0}")]
+    StreamError(String),
+    
+    #[error("Transport configuration error: {0}")]
+    ConfigError(String),
+}
 ```
 
 ## Dependencies
 
-- **Task 2**: Streamable HTTP Transport Foundation must be implemented
-- **Chrono**: Date/time handling for session timestamps and TTL
-- **UUID**: Cryptographically secure session ID generation
-- **Tokio**: Async runtime for cleanup tasks and concurrency
-- **Axum**: Web framework integration for middleware and headers
+- **Task 1**: Basic MCP server infrastructure must be in place
+- **rmcp ≥ 0.5**: Upgrade workspace dependency for MCP 2025-06-18 support
+- **Axum 0.7**: Web framework for HTTP handling
+- **Tower-HTTP**: Middleware for CORS and tracing
+- **Tokio**: Async runtime and streaming utilities
+- **UUID**: Session ID generation
 
 ## Risk Considerations
 
-### Security Risks
+### Technical Risks
 
-1. **Session Hijacking**: Weak session ID generation or transmission
-   - **Mitigation**: Use cryptographically secure UUID v4 generation
-   - **Validation**: Test with security scanning tools
+1. **Protocol Compatibility**: Ensuring full compliance with MCP 2025-06-18
+   - **Mitigation**: Comprehensive testing against official MCP specification
+   - **Validation**: Integration tests with multiple MCP clients
 
-2. **DNS Rebinding Attacks**: Malicious websites accessing local server
-   - **Mitigation**: Strict Origin header validation and localhost binding
-   - **Testing**: Simulate rebinding attacks in test environment
+2. **Session Management Complexity**: Memory leaks from uncleaned sessions
+   - **Mitigation**: Automatic session cleanup with configurable timeouts
+   - **Monitoring**: Session count metrics and cleanup logging
 
-3. **Session Fixation**: Attacker sets known session ID
-   - **Mitigation**: Always generate new session IDs server-side
-   - **Validation**: Never accept client-provided session IDs for creation
+3. **SSE Connection Stability**: Network interruptions causing stream failures
+   - **Mitigation**: Proper error handling and reconnection logic
+   - **Testing**: Network simulation tests with connection drops
 
-4. **Cross-Origin Request Forgery**: Unauthorized cross-origin requests
-   - **Mitigation**: Proper CORS configuration and Origin validation
-   - **Testing**: Verify CORS policies with various origin combinations
+4. **Backward Compatibility**: Breaking existing client integrations
+   - **Mitigation**: Graceful legacy transport detection and helpful error messages
+   - **Rollback**: Configuration flag to temporarily re-enable old transport
 
 ### Performance Risks
 
-1. **Memory Leaks**: Unbounded session growth
-   - **Solution**: Configurable session limits and automatic cleanup
-   - **Monitoring**: Track session count and memory usage metrics
+1. **Memory Usage**: Unbounded session growth
+   - **Solution**: Session limits and automatic cleanup
+   - **Monitoring**: Memory usage tracking per session
 
-2. **Lock Contention**: High contention on session storage
-   - **Solution**: Consider using more granular locking or concurrent maps
-   - **Benchmarking**: Test with high concurrent session operations
-
-### Operational Risks
-
-1. **Session Loss**: Server restart causes all sessions to expire
-   - **Future Solution**: Redis or persistent storage for production
-   - **Mitigation**: Document session persistence requirements
+2. **Connection Overhead**: High SSE connection count
+   - **Solution**: Connection pooling and efficient stream management
+   - **Benchmarking**: Load testing with 100+ concurrent connections
 
 ## Success Metrics
 
-### Security Metrics
+### Functional Metrics
 
-- **Origin Validation**: 100% blocking of non-allowed origins
-- **Session Security**: Zero successful session hijacking attempts in security tests
-- **DNS Rebinding Protection**: Complete blocking of rebinding attack vectors
-- **Header Compliance**: Proper `Mcp-Session-Id` handling in all requests/responses
+- **Protocol Compliance**: 100% compliance with MCP 2025-06-18 specification
+- **Transport Reliability**: 99.9% successful message delivery rate
+- **Session Management**: Zero memory leaks in 24-hour stress tests
+- **Backward Compatibility**: Graceful handling of legacy transport attempts
 
 ### Performance Metrics
 
-- **Session Creation**: < 10ms per session creation operation
-- **Session Lookup**: < 1ms per session retrieval operation
-- **Cleanup Performance**: < 100ms to clean 1000+ expired sessions
-- **Memory Usage**: Linear scaling with active session count
-- **Concurrent Handling**: Support for 500+ concurrent session operations
+- **Response Time**: < 100ms for JSON-RPC request processing
+- **Connection Setup**: < 50ms for SSE stream initialization
+- **Memory Usage**: < 10MB overhead for 100 concurrent sessions
+- **CPU Usage**: < 5% CPU for normal operation load
 
-### Functional Metrics
+### Integration Metrics
 
-- **Session Lifecycle**: 100% proper session creation, access, and expiry
-- **Error Handling**: Appropriate HTTP status codes for all error conditions
-- **Header Processing**: Correct bidirectional header handling
-- **Integration**: Seamless integration with existing MCP transport layer
+- **Client Compatibility**: Successful integration with Cursor and Toolman
+- **Connection Stability**: 99% uptime for long-running sessions
+- **Error Recovery**: < 1s reconnection time after network interruption
 
 ## Timeline
 
-### Week 1: Foundation (Days 1-3)
-- Session module and data structures
-- Security validation layer
-- Basic Origin header validation
+### Week 1: Foundation (Days 1-2)
+- Core transport module structure
+- Session management implementation
+- Basic error handling
 
-### Week 2: Integration (Days 4-6)
-- Mcp-Session-Id header handling
-- Transport layer integration
-- Session lifecycle management
+### Week 1: Handler Implementation (Days 3-4)
+- Unified MCP endpoint handler
+- JSON-RPC request processing
+- Content negotiation logic
 
-### Week 2: Testing and Security (Days 7-10)
-- Comprehensive testing suite
-- Security audit and penetration testing
-- Performance benchmarking
-- Documentation and deployment guides
+### Week 2: Streaming (Days 5-7)
+- SSE streaming infrastructure
+- Event formatting and delivery
+- Connection management
+
+### Week 2: Integration (Days 8-10)
+- Server integration
+- Backward compatibility
+- Testing and validation
 
 ## Validation Criteria
 
 ### Unit Tests
 
-- Session creation, retrieval, and expiry logic
-- Origin validation with various input combinations
-- UUID generation and validation
-- Error handling for all edge cases
+- Session creation and cleanup
+- Protocol version detection
+- Message serialization/deserialization
+- Error handling scenarios
 
 ### Integration Tests
 
-- End-to-end session lifecycle with MCP client
-- Security validation with simulated attacks
-- Concurrent session handling under load
-- Header propagation across request/response cycles
-
-### Security Tests
-
-- DNS rebinding attack prevention
-- Session hijacking attempt blocking
-- Origin validation with malicious inputs
-- CORS policy enforcement
+- End-to-end JSON-RPC communication
+- SSE stream functionality
+- Multiple concurrent sessions
+- Legacy transport detection
 
 ### Production Validation
 
-- Kubernetes deployment with secure session management
-- Real-world testing with Cursor and Toolman clients
-- Performance monitoring under production load
-- Security scanning and vulnerability assessment
+- Kubernetes deployment with new transport
+- Real-world testing with Cursor integration
+- Performance benchmarking under load
+- Monitoring and alerting verification
 
 ## Documentation
 
-- **Session Management API**: Complete documentation of session operations
-- **Security Guide**: Best practices for secure deployment
-- **Configuration Reference**: All session and security configuration options
+- **Transport Architecture**: Complete documentation of the new transport layer
+- **Migration Guide**: Step-by-step guide for upgrading from legacy transport
+- **API Reference**: Detailed documentation of all transport endpoints
 - **Troubleshooting Guide**: Common issues and resolution procedures
+
+## Notes from Assessment
+- Current transport is a placeholder; implement full Streamable HTTP
+- SSE module references break compilation today; treat SSE only as stream response
+- Protocol version must be negotiated and echoed; add headers consistently

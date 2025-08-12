@@ -1,25 +1,25 @@
-# Autonomous Agent Prompt: BirdEye Query Tool Implementation
+# Autonomous Agent Prompt: OpenAI Embedding Client with Batch Processing
 
 ## Mission
-Implement `birdeye_query` tool for semantic search across BirdEye blockchain API documentation.
+Implement optimized OpenAI embedding generation with batch processing to achieve approximately 70% cost reduction while maintaining performance.
 
 ## Primary Objectives
-1. **Tool Implementation**: Create BirdEyeQueryTool with vector search
-2. **Metadata Integration**: Filter by API endpoints, methods, and categories
-3. **Response Formatting**: Structure responses with source attribution
-4. **MCP Integration**: Register tool in existing MCP handler system
-5. **Performance Optimization**: Ensure < 2 second query response time
+1. **Batch API Integration**: Implement OpenAI Batch API with JSONL format
+2. **Rate Limiting**: Token bucket algorithm for API compliance
+3. **Queue Management**: Batch processing system for large datasets
+4. **Error Handling**: Retry logic with exponential backoff
+5. **Cost Optimization**: Track and validate 50% cost reduction
 
 ## Implementation Steps
-1. Create BirdEyeQueryTool struct and implementation
-2. Add metadata filtering for API documentation
-3. Implement response formatting and relevance scoring
-4. Register tool in MCP handler system
-5. Add comprehensive testing and validation
+1. Create OpenAI Batch API models and data structures
+2. Implement rate limiting with token bucket algorithm
+3. Build batch processing queue system
+4. Add comprehensive retry logic and error handling
+5. Implement cost tracking and reporting
 
 ## Success Criteria
-- [ ] Vector similarity search functional
-- [ ] Metadata filtering by API categories
-- [ ] Proper MCP tool registration
-- [ ] Response time < 2 seconds
-- [ ] Source attribution in responses
+- [ ] Batch API integration with JSONL format
+- [ ] Rate limiting compliance (3000 RPM / 1M TPM)
+- [ ] ~70% cost reduction achieved and validated
+- [ ] Processing time < 20 minutes for 20k embeddings
+- [ ] Robust error handling and retry mechanisms

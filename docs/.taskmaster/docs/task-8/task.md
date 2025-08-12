@@ -1,25 +1,27 @@
-# Task 8: BirdEye Query Tool Implementation
+# Task 8: OpenAI Embedding Client with Batch Processing
 
 ## Overview
-Implement `birdeye_query` tool for semantic search across BirdEye API documentation with metadata filtering and response formatting.
+Implement optimized OpenAI embedding generation using text-embedding-3-large model with batch processing targeting ~70% cost reduction per assessment.
 
 ## Implementation Guide
-- Create BirdEyeQueryTool with semantic search capabilities
-- Implement metadata filtering for API endpoints and methods
-- Add response formatting with source attribution
-- Integrate with existing MCP tool registration system
-- Optimize query performance for API documentation
+- Implement OpenAI Batch API integration with JSONL format
+- Configure text-embedding-3-large with 3072 or 1024 dimensions
+- Create batch queue system for 20,000 line chunks
+- Implement rate limiting (3000 RPM / 1M TPM) with token bucket
+- Add retry logic with exponential backoff
+- Implement cost tracking and reporting system
 
 ## Technical Requirements
-- Vector similarity search using OpenAI embeddings
-- JSONB metadata filtering for API categories
-- Tool registration in MCP handler
-- Response formatting with relevance scoring
-- Query performance optimization
+- OpenAI Batch API integration
+- JSONL format batch processing
+- Rate limiting with token bucket algorithm
+- Exponential backoff retry mechanism
+- Cost tracking and 50% reduction validation
+- Secure API key management
 
 ## Success Metrics
-- Query response time < 2 seconds
-- Accurate search results with metadata filtering
-- Proper tool registration and MCP integration
-- Source attribution in all responses
-- High relevance scoring for API documentation
+- ~70% cost reduction through batch processing (baseline vs. batched)
+- Rate limiting compliance (3000 RPM / 1M TPM)
+- Processing time < 20 minutes for 20k embeddings
+- Retry mechanism handles failures gracefully
+- Cost tracking accurate and comprehensive

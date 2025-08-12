@@ -1,47 +1,51 @@
-# Acceptance Criteria: Database Migration and Schema Optimization
+# Acceptance Criteria: Streamable HTTP Response Semantics, Keep-Alive, and Error Handling
 
 ## Functional Requirements
 
-### FR-1: Migration System
-- [ ] Version-controlled database migrations
-- [ ] Forward migration execution  
-- [ ] Rollback capability for failed migrations
-- [ ] Migration history tracking
-- [ ] Atomic migration operations
+### FR-1: Streamable HTTP Response Behavior
+- [ ] Unified `/mcp` endpoint supports POST (JSON-RPC) and GET (event-stream)
+- [ ] GET responds with `Content-Type: text/event-stream` and proper SSE events
+- [ ] Heartbeat messages emitted every 30 seconds on active streams
+- [ ] Idle streams closed after 90 seconds of inactivity
 
-### FR-2: Schema Optimization
-- [ ] Optimized indexes for vector search
-- [ ] Proper foreign key constraints
-- [ ] Optimized data types for storage efficiency
-- [ ] Partitioning strategy for large datasets
-- [ ] Archive strategy for old data
+### FR-2: MCP Header Compliance
+- [ ] `MCP-Protocol-Version: 2025-06-18` included in all responses
+- [ ] `Mcp-Session-Id: <uuid>` included in all responses
+- [ ] Accept header negotiation supports `application/json,text/event-stream`
 
-### FR-3: Performance Optimization
-- [ ] Query execution time < 2 seconds
-- [ ] Optimized connection pooling configuration
-- [ ] Database configuration tuning
-- [ ] Index usage optimization
-- [ ] Memory usage optimization
+### FR-3: Error Handling
+- [ ] HTTP status mapping for common conditions (400, 401, 403, 404, 405, 413, 429, 500)
+- [ ] JSON-RPC 2.0 compliant error objects (code, message, optional data)
+- [ ] No sensitive data in error bodies; include stable error codes and correlation id
+
+### FR-4: Observability
+- [ ] Structured logs include request id, session id, and negotiated protocol version
+- [ ] Metrics counters for streams opened/closed, heartbeats sent, timeouts
 
 ## Test Cases
 
-### TC-1: Migration Execution
-**Given**: New migration available
-**When**: Migration executed
-**Then**: Schema updated successfully
-**And**: Migration recorded in history
-**And**: No data loss occurs
+### TC-1: Stream Initialization
+**Given**: Client requests GET `/mcp` with `Accept: text/event-stream`
+**Then**: Response 200 with event-stream and initial event delivered
 
-### TC-2: Performance Validation
-**Given**: Optimized database configuration
-**When**: Query performance tested
-**Then**: Response time < 2 seconds
-**And**: Connection pool efficiency validated
-**And**: Resource usage within limits
+### TC-2: Heartbeat and Timeout
+**Given**: Active stream with no messages
+**Then**: Heartbeat every 30s; connection closed after 90s idle
+
+### TC-3: JSON-RPC Error Formatting
+**When**: Malformed JSON-RPC request sent via POST `/mcp`
+**Then**: 400 with JSON-RPC error object; no sensitive data
+
+### TC-4: Header Compliance
+**Then**: All responses include `Mcp-Session-Id` and `MCP-Protocol-Version`
 
 ## Deliverables
-- [ ] Complete migration framework
-- [ ] Optimized database schema
-- [ ] Performance tuning configuration
-- [ ] Monitoring integration
-- [ ] Migration documentation
+- [ ] Stream response implementation with keep-alive and idle timeout
+- [ ] Error handling module with HTTP mapping and JSON-RPC formatting
+- [ ] Logging and metrics for stream lifecycle and errors
+
+## Production Validation (4-step)
+1. Push branch to GitHub (build triggers)
+2. CI builds container and runs clippy/tests
+3. Deploy via Helm to Kubernetes
+4. Real-world testing with a compliant MCP client (verify streams, headers, errors)

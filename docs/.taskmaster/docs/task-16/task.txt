@@ -1,11 +1,11 @@
-# Task ID: 16
-# Title: CI/CD Pipeline Enhancement
+# Task ID: 15
+# Title: Load Testing and Performance Optimization
 # Status: pending
-# Dependencies: 12
+# Dependencies: 14
 # Priority: medium
-# Description: Enhance GitHub Actions workflow for comprehensive testing, security scanning, and automated deployment validation.
+# Description: Conduct comprehensive load testing to validate performance targets and optimize system bottlenecks.
 # Details:
-Add integration test stage with database fixtures. Implement security scanning (cargo-audit, cargo-deny). Add performance regression testing. Implement blue-green deployment strategy. Add smoke tests post-deployment. Configure branch protection rules. Implement automated rollback on failure. Add dependency update automation with Dependabot. Enhance caching with sccache optimization.
+Create load testing suite using scripts/load_test_sse.js as base. Test with 100+ concurrent connections using k6 or vegeta. Identify and optimize query bottlenecks with EXPLAIN ANALYZE. Implement query result caching with TTL. Optimize vector similarity search with approximation techniques. Add connection pooling optimization. Profile CPU and memory usage under load. Implement request coalescing for duplicate queries.
 
 # Test Strategy:
-Test pipeline with various failure scenarios, validate rollback mechanisms, test parallel job execution, verify security scan detection, and measure pipeline execution time (< 10 minutes).
+Run sustained load tests (1 hour) with gradual ramp-up, measure p50/p95/p99 latencies, test connection limit handling, verify memory stability under load, and validate cache effectiveness.

@@ -1,219 +1,180 @@
-# Toolman Guide: Session Management and Security Implementation
+# Toolman Guide: Streamable HTTP Transport Foundation Implementation
 
 ## Tool Selection Rationale
 
-For implementing Session Management and Security features, the selected tools focus on filesystem operations for creating security modules, updating transport integration, and establishing comprehensive testing. This task requires creating new security and session modules while maintaining integration with the existing transport layer from Task 2.
+For implementing the Streamable HTTP Transport Foundation, the selected tools focus on filesystem operations for code implementation and file management. This task involves creating new transport modules, updating existing server code, and establishing proper integration patterns.
 
 ### Primary Tools
 
 #### Filesystem Tools
-- **read_file**: Essential for understanding existing transport and server architecture
-- **write_file**: Required for creating session management and security modules
-- **edit_file**: Needed for integrating session management with existing transport layer
-- **list_directory**: Helpful for exploring project structure and test organization
+- **read_file**: Essential for understanding existing MCP server architecture
+- **write_file**: Required for creating new transport module and test files
+- **edit_file**: Needed for updating existing server integration points
+- **list_directory**: Helpful for exploring project structure and dependencies
 - **create_directory**: May be needed for test directory structure
-- **search_files**: Useful for finding security patterns and session-related code
+- **search_files**: Useful for finding related code patterns and dependencies
 
 ## When to Use Each Tool
 
-### Phase 1: Analysis and Architecture Understanding
+### Phase 1: Analysis and Planning
 
 **Use read_file for:**
-- Understanding transport implementation (`crates/mcp/src/transport.rs`) from Task 2
-- Examining server structure (`crates/mcp/src/server.rs`) for integration points
-- Reviewing current error handling patterns (`crates/mcp/src/lib.rs`)
-- Checking existing dependencies in `Cargo.toml`
-- Understanding current header handling and middleware patterns
+- Understanding current server architecture (`crates/mcp/src/server.rs`)
+- Examining existing handler implementations (`crates/mcp/src/handlers.rs`)
+- Reviewing module structure (`crates/mcp/src/lib.rs`)
+- Checking current Cargo.toml dependencies
+- Understanding existing error handling patterns
 
 **Use list_directory for:**
-- Exploring `crates/mcp/src/` directory structure
-- Understanding test directory organization (`crates/mcp/tests/`)
-- Identifying existing middleware or security patterns
+- Exploring the `crates/mcp/src/` directory structure
+- Identifying existing test directories and patterns
+- Understanding overall project layout
 
 **Use search_files for:**
-- Finding existing UUID usage or generation patterns
-- Locating current header handling code
-- Identifying existing security or validation code
-- Finding middleware integration examples
-- Searching for existing session-related code
+- Finding references to current transport implementation
+- Locating existing SSE or HTTP handling code
+- Identifying error types and handling patterns
+- Finding configuration management examples
 
-### Phase 2: Core Implementation
+### Phase 2: Implementation
 
 **Use write_file for:**
-- Creating session management module (`crates/mcp/src/session.rs`)
-- Creating security validation module (`crates/mcp/src/security.rs`)
-- Writing comprehensive unit tests (`crates/mcp/tests/session_tests.rs`)
-- Writing security tests (`crates/mcp/tests/security_tests.rs`)
-- Creating integration tests (`crates/mcp/tests/session_integration_tests.rs`)
+- Creating the main transport module (`crates/mcp/src/transport.rs`)
+- Writing comprehensive unit tests (`crates/mcp/tests/transport_tests.rs`)
+- Creating integration test files
+- Adding documentation files
 
 **Use create_directory for:**
-- Ensuring test directory structure exists
-- Creating subdirectories for organized testing
-
-### Phase 3: Integration and Updates
+- Ensuring test directory structure exists (`crates/mcp/tests/`)
+- Creating any needed subdirectories for organization
 
 **Use edit_file for:**
-- Updating `crates/mcp/src/lib.rs` to include new modules
-- Modifying `crates/mcp/src/transport.rs` to integrate session handling
-- Updating `crates/mcp/src/server.rs` for session manager initialization
-- Modifying `Cargo.toml` to add new dependencies (chrono, uuid)
-- Updating existing error types to include session errors
+- Updating `crates/mcp/src/server.rs` to integrate new transport
+- Modifying `crates/mcp/src/lib.rs` to include new transport module
+- Updating `Cargo.toml` if new dependencies are required
+- Modifying existing error handling to include transport errors
+
+### Phase 3: Integration and Testing
 
 **Use read_file for:**
 - Verifying integration changes are correct
-- Checking that existing functionality is preserved
-- Validating test implementations
+- Checking test file implementation
+- Reviewing error handling integration
+
+**Use edit_file for:**
+- Fine-tuning integration points
+- Adjusting error handling and logging
+- Updating configuration management
+- Refining test implementations
 
 **Use search_files for:**
-- Ensuring all session integration points are covered
+- Ensuring all references to old transport are updated
 - Verifying consistent error handling patterns
-- Checking for any missed header handling locations
+- Checking for any missed integration points
 
 ## Best Practices
 
-### Security-First Implementation
-1. **Start with security module**: Implement Origin validation and DNS rebinding protection first
-2. **Validate early**: Test security measures before adding functional features
-3. **Defense in depth**: Layer multiple security measures for robust protection
-4. **Secure defaults**: Configure for maximum security by default
+### File Reading Strategy
+1. **Start with architecture**: Read `server.rs` first to understand current structure
+2. **Understand handlers**: Review existing handler patterns before implementing transport
+3. **Check dependencies**: Examine `Cargo.toml` for existing async/HTTP dependencies
+4. **Review tests**: Look at existing test patterns before writing new tests
 
-### Session Management Strategy
-1. **Thread safety first**: Implement proper locking before functional operations
-2. **Test concurrency**: Verify thread safety with concurrent operations
-3. **Memory management**: Implement cleanup mechanisms early to prevent leaks
-4. **Error resilience**: Handle all error conditions gracefully
+### Implementation Approach
+1. **Incremental development**: Create transport module structure first, then add functionality
+2. **Test-driven development**: Write tests alongside implementation
+3. **Integration points**: Update server integration only after transport module is complete
+4. **Dependency management**: Use edit_file for Cargo.toml only if absolutely necessary
 
-### Integration Approach
-1. **Minimal transport changes**: Preserve existing transport functionality
-2. **Header compliance**: Follow MCP specification exactly for header handling
-3. **Backward compatibility**: Ensure existing MCP tools continue working
-4. **Incremental testing**: Test each integration point independently
+### Code Organization
+1. **Modular structure**: Keep transport logic separate from server logic
+2. **Error handling**: Maintain consistency with existing error patterns
+3. **Configuration**: Follow existing configuration management approaches
+4. **Testing**: Place tests in appropriate directories following project conventions
 
 ## Tool Usage Patterns
 
-### Security Implementation Pattern
+### Discovery Pattern
 ```
-1. read_file -> examine existing middleware patterns
-2. write_file -> create security.rs module
-3. edit_file -> integrate security middleware
-4. write_file -> create security tests
-5. read_file -> verify integration
-```
-
-### Session Management Pattern
-```
-1. read_file -> understand transport header handling
-2. write_file -> create session.rs module  
-3. write_file -> create comprehensive session tests
-4. edit_file -> integrate with transport layer
-5. search_files -> verify all integration points
+1. list_directory -> understand structure
+2. read_file -> examine key files
+3. search_files -> find related patterns
+4. read_file -> deep dive into specific implementations
 ```
 
-### Server Integration Pattern
+### Implementation Pattern
 ```
-1. read_file -> examine current server initialization
-2. edit_file -> add session manager to server state
-3. edit_file -> update lib.rs with new modules
-4. edit_file -> update Cargo.toml dependencies
-5. read_file -> verify all changes are correct
+1. write_file -> create new module skeleton
+2. edit_file -> add module to lib.rs
+3. write_file -> implement core functionality
+4. write_file -> create comprehensive tests
 ```
 
-## Common Implementation Pitfalls
+### Integration Pattern
+```
+1. read_file -> verify current server implementation
+2. edit_file -> update server to use new transport
+3. read_file -> confirm changes are correct
+4. search_files -> ensure no references to old transport remain
+```
 
-### Security Issues to Avoid
-- **Weak session IDs**: Always use cryptographically secure UUID v4 generation
-- **Origin bypasses**: Don't trust client-provided origin information for security decisions
-- **Session fixation**: Never accept client-provided session IDs for new sessions
-- **Information disclosure**: Don't leak session details in error messages
+## Common Pitfalls to Avoid
 
-### Performance Pitfalls
-- **Lock contention**: Design session storage for minimal lock holding time
-- **Memory leaks**: Implement proper session cleanup from the start
-- **Blocking operations**: Keep background cleanup tasks non-blocking
-- **Unbounded growth**: Always implement session limits and cleanup
+### File Management
+- **Don't overwrite important files**: Always read existing files before editing
+- **Maintain backup approach**: Understand existing functionality before replacing
+- **Preserve existing patterns**: Follow project conventions for error handling and structure
 
-### Integration Problems
-- **Header case sensitivity**: Handle HTTP header names case-insensitively
-- **Middleware ordering**: Place security validation before session handling
-- **Error propagation**: Maintain consistent error handling patterns
-- **State management**: Ensure thread-safe access to session state
+### Dependency Management
+- **Minimal dependency changes**: Only add new dependencies if absolutely required
+- **Version compatibility**: Ensure any new dependencies work with existing versions
+- **Feature flags**: Use existing dependency features rather than adding new ones
 
-## Specific Tool Usage Guidelines
-
-### Creating Security Module
-1. **read_file** existing middleware patterns first
-2. **write_file** security.rs with Origin validation
-3. Focus on DNS rebinding protection implementation
-4. Test with various Origin header combinations
-
-### Implementing Session Management
-1. **write_file** session.rs with proper data structures
-2. Implement thread-safe operations using Arc<RwLock<>>
-3. Add comprehensive error handling
-4. Include background cleanup task implementation
-
-### Transport Integration
-1. **read_file** transport.rs to understand current structure
-2. **edit_file** to add session header extraction
-3. Preserve all existing functionality
-4. Add session context to request handling
-
-### Testing Strategy
-1. **write_file** unit tests for each module independently
-2. Create security tests with attack simulation
-3. Write integration tests for full request/response cycle
-4. Include concurrent access tests for session management
+### Integration Complexity
+- **Incremental integration**: Don't update server integration until transport is complete
+- **Preserve functionality**: Ensure all existing MCP tools continue to work
+- **Test thoroughly**: Create comprehensive tests before integration
 
 ## Troubleshooting Guide
 
-### Compilation Issues
-- Check `Cargo.toml` for correct dependency versions
-- Verify all modules are properly declared in `lib.rs`
-- Ensure proper imports for UUID and chrono types
-- Validate async/await syntax in session operations
+### File Not Found Issues
+- Use `list_directory` to verify path structure
+- Check for typos in file paths
+- Ensure you're in the correct working directory context
 
 ### Integration Problems
-- Use `search_files` to find all header handling locations
-- Verify middleware ordering in server setup
-- Check session state is properly passed through request lifecycle
-- Ensure error types are consistent with existing patterns
+- Use `search_files` to find all references to components being updated
+- Read existing error handling patterns before implementing new ones
+- Verify module declarations in lib.rs after adding new modules
 
-### Security Validation Issues
-- Test Origin validation with localhost variants
-- Verify DNS rebinding protection with various Host headers
-- Check that security logging works for all validation failures
-- Validate CORS integration doesn't conflict with Origin validation
+### Test Failures
+- Read existing test patterns to understand project testing conventions
+- Use `list_directory` to find appropriate test directories
+- Check Cargo.toml for existing test dependencies
 
-### Session Management Issues
-- Test concurrent session operations with multiple threads
-- Verify session cleanup removes expired sessions only
-- Check session limits are properly enforced
-- Ensure background cleanup task starts correctly
+### Compilation Errors
+- Read dependency versions in Cargo.toml
+- Check existing import patterns in similar modules
+- Verify feature flags are consistent with project standards
 
 ## Success Indicators
 
-### Security Implementation
-- All Origin validation tests pass
-- DNS rebinding attacks are properly blocked
-- Security events are logged with appropriate detail
-- Server binds only to localhost for security
-
-### Session Management
-- Sessions created with secure UUID v4 IDs
-- Thread-safe operations work under concurrency
-- Background cleanup removes expired sessions
-- Memory usage remains stable over time
+### Code Quality
+- All new code follows existing project patterns
+- Error handling is consistent with project conventions
+- Module structure matches project organization
+- Tests cover all critical functionality paths
 
 ### Integration Success
+- Server starts successfully with new transport
 - All existing MCP tools continue to function
-- Headers handled correctly in both directions
-- Transport layer enhanced without breaking changes
-- Performance impact within acceptable limits
+- Health checks work properly
+- No compilation warnings or errors
 
-### Test Coverage
-- Unit tests cover all session and security operations
-- Integration tests verify end-to-end functionality
-- Security tests simulate various attack scenarios
-- Performance tests validate concurrency and cleanup
+### Functionality Verification
+- New transport handles POST and GET requests properly
+- Session management works correctly
+- SSE streaming functions as expected
+- Backward compatibility detection works
 
-By following this comprehensive tool usage guide, you'll implement secure session management that integrates seamlessly with the existing transport infrastructure while providing robust protection against common web security vulnerabilities.
+By following this tool usage guide, you'll be able to implement the Streamable HTTP Transport Foundation efficiently while maintaining code quality and integration consistency.

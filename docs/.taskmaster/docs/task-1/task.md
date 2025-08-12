@@ -44,8 +44,8 @@ The Doc Server is transitioning from a deprecated HTTP+SSE transport to the new 
 1. **Existing Tool Validation**
    - Test `rust_query` tool functionality
    - Verify MCP server health checks at `/health`
-   - Test SSE endpoint at `/sse`
-   - Validate JSON-RPC message handling
+   - Test Streamable HTTP stream via GET `/mcp` with `Accept: text/event-stream`
+   - Validate JSON-RPC message handling over POST `/mcp`
 
 2. **Test Suite Execution**
    ```bash

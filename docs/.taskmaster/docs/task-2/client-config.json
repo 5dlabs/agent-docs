@@ -1,17 +1,22 @@
 {
   "remoteTools": [
-    "read_file",
-    "write_file",
-    "edit_file",
-    "list_directory",
-    "create_directory",
-    "search_files"
+    "rust_query",
+    "kubernetes_listResources",
+    "kubernetes_getResource",
+    "kubernetes_describeResource"
   ],
   "localServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-filesystem", "/workspace/docs"],
-      "env": {}
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file"],
+      "workingDirectory": "project_root"
+    },
+    "database": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"],
+      "tools": ["query", "execute", "schema"],
+      "workingDirectory": "project_root"
     }
   }
 }

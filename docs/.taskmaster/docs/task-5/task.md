@@ -1,25 +1,93 @@
-# Task 5: Error Handling and Status Codes
+# Task 5: Protocol Version Negotiation and Headers
 
 ## Overview
-Implement comprehensive error handling with proper HTTP status codes and JSON-RPC error responses for the Doc Server MCP implementation.
+
+Implement MCP protocol version negotiation and header compliance for proper client-server communication and backward compatibility. This task ensures the Doc Server can handle multiple protocol versions and negotiate appropriate communication parameters with diverse MCP clients.
+
+## Background
+
+The MCP specification requires proper protocol version negotiation during the initialize phase. The server must support multiple protocol versions (2025-06-18, 2025-03-26, 2024-11-05) and negotiate the best compatible version with clients.
 
 ## Implementation Guide
-- Create standardized error types and response formats
-- Implement proper HTTP status code mapping
-- Add structured error logging and monitoring
-- Create error recovery mechanisms
-- Implement client-friendly error messages
+
+### Phase 1: Protocol Version Registry
+- Create `protocol_version.rs` module with ProtocolVersion enum
+- Implement version parsing and comparison logic
+- Define supported versions and compatibility matrix
+
+### Phase 2: Header Management
+- Implement header extraction middleware
+- Add MCP-Protocol-Version and Accept header validation
+- Create content type validation for responses
+
+### Phase 3: Initialize Handler Enhancement
+- Modify initialize request handler for version negotiation
+- Store negotiated version in session state
+- Return appropriate InitializeResult with protocol version
+
+### Phase 4: Session State Integration
+- Create session state management with protocol version tracking
+- Implement session storage and retrieval
+- Add version consistency enforcement
+
+### Phase 5: Response Management
+- Implement version-specific response formatting
+- Add proper Content-Type and MCP headers
+- Ensure CORS compatibility
 
 ## Technical Requirements
-- JSON-RPC 2.0 error specification compliance
-- HTTP status code standards (400, 401, 403, 404, 500, etc.)
-- Structured logging with error context
-- Error recovery and graceful degradation
-- Client error message clarity
+
+### Dependencies
+```toml
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+```
+
+### Core Types
+```rust
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProtocolVersion {
+    V2025_06_18,
+    V2025_03_26, 
+    V2024_11_05,
+}
+
+pub struct SessionState {
+    pub session_id: Uuid,
+    pub negotiated_version: ProtocolVersion,
+    pub created_at: DateTime<Utc>,
+}
+```
 
 ## Success Metrics
-- All error conditions return appropriate status codes
-- JSON-RPC errors follow specification
-- Error logging provides debugging context
-- No sensitive information in error responses
-- Graceful degradation under failure conditions
+- Protocol version negotiation works with all supported versions
+- Proper header handling in requests and responses
+- Session state maintains version consistency
+- Backward compatibility with legacy clients
+- Error handling for unsupported versions
+
+## Notes from Assessment
+- Echo negotiated version in all responses; include `Mcp-Session-Id`
+- Treat 2024-11-05 as legacy; return `426 UPGRADE_REQUIRED` guidance when detected
+
+## Dependencies
+- Task 2: Streamable HTTP Transport Foundation
+- Axum framework for header extraction
+- UUID for session management
+- Chrono for session timestamps
+
+## Risk Considerations
+- Version compatibility issues with clients
+- Session state management complexity
+- Header parsing edge cases
+- Performance impact of version checks
+
+## Validation Criteria
+- Unit tests for version negotiation logic
+- Integration tests with various client versions
+- Header validation tests
+- Session state management tests
+- Error handling verification

@@ -1,251 +1,220 @@
-# Acceptance Criteria: Streamable HTTP Transport Foundation
+# Acceptance Criteria: Task 2 - Data Migration and Validation Pipeline
 
 ## Functional Requirements
 
-### FR-1: Unified MCP Endpoint Implementation
-- [ ] Single `/mcp` endpoint implemented supporting both POST and GET methods
-- [ ] POST method handles JSON-RPC requests with `application/json` content type
-- [ ] GET method handles SSE stream requests with `text/event-stream` accept header
-- [ ] Proper HTTP status codes returned (200 OK, 400 Bad Request, 426 Upgrade Required)
-- [ ] Content negotiation based on Accept and Content-Type headers
-- [ ] Request routing logic correctly distinguishes between JSON-RPC and SSE requests
+### 1. Migration Framework Using doc-loader Crate
+- [ ] Migration scripts created for all documentation types:
+  - [ ] Rust crates and standard library documentation
+  - [ ] Jupyter notebooks and data science content
+  - [ ] Kubernetes documentation (Cilium, Talos)
+  - [ ] DeFi protocol documentation (Meteora, Raydium)
+  - [ ] Systems programming content (eBPF, best practices)
+- [ ] Extensible migration framework supporting new document types
+- [ ] Progress tracking with percentage completion and ETA calculation
+- [ ] Migration state persistence and recovery mechanisms
+- [ ] Configurable batch sizes and processing parameters
 
-### FR-2: MCP Protocol Compliance
-- [ ] `MCP-Protocol-Version: 2025-06-18` header included in all responses
-- [ ] Protocol version validation for incoming requests
-- [ ] `Mcp-Session-Id` header support with UUID v4 session identifiers
-- [ ] JSON-RPC message format compliance (request, response, notification)
-- [ ] Proper UTF-8 encoding for all message content
-- [ ] Error responses follow JSON-RPC 2.0 error specification
+### 2. Blank Database Bootstrap Implementation
+- [ ] Initial database setup and schema validation
+- [ ] Comprehensive data loading pipeline:
+  - [ ] Document parsing with error handling
+  - [ ] Metadata extraction and validation
+  - [ ] Embedding generation with batching optimization
+  - [ ] Vector storage with pgvector integration
+  - [ ] Search index creation and optimization
+- [ ] Incremental migration support with checkpointing
+- [ ] Migration resumption from last successful checkpoint
+- [ ] Database connection pooling optimization for migrations
+ - [ ] Execution scheduled early in plan (after assessment and DB readiness)
 
-### FR-3: Session Management
-- [ ] Session creation with unique UUID identifiers
-- [ ] Session storage with thread-safe access (Arc<RwLock<HashMap>>)
-- [ ] Session expiration after configurable timeout (default 5 minutes)
-- [ ] Automatic cleanup of expired sessions
-- [ ] Session activity tracking for proper lifecycle management
-- [ ] Support for at least 100 concurrent sessions
+### 3. Data Validation and Integrity Checks
+- [ ] Checksum validation for all source documents
+- [ ] Record count validation and comparison against source
+- [ ] Schema conformance validation:
+  - [ ] Document structure validation against expected schema
+  - [ ] Metadata field presence and type validation
+  - [ ] Vector dimension consistency checks (3072 dimensions)
+- [ ] Duplicate detection and intelligent merging strategies
+- [ ] Cross-reference validation between related records
+- [ ] Data consistency checks across document relationships
 
-### FR-4: SSE Streaming Infrastructure
-- [ ] Server-Sent Events stream initialization for GET requests
-- [ ] Proper SSE event formatting with data, event, and id fields
-- [ ] Event ID generation for stream resumability
-- [ ] Heartbeat messages every 30 seconds to maintain connection
-- [ ] JSON-RPC message delivery through SSE events
-- [ ] Stream cleanup on client disconnect
-- [ ] Support for multiple concurrent SSE connections per session
+### 4. Parallel Processing and Performance Optimization
+- [ ] Parallel processing architecture achieving ≥1000 docs/minute:
+  - [ ] Document processing parallelization with worker pools
+  - [ ] Embedding generation batching (configurable batch sizes)
+  - [ ] Database transaction optimization for bulk operations
+- [ ] Safe concurrency patterns:
+  - [ ] Thread-safe progress tracking
+  - [ ] Atomic batch operations
+  - [ ] Resource contention management
+- [ ] Backpressure management and adaptive throttling
+- [ ] Performance monitoring with bottleneck detection
+- [ ] Configurable parallelism based on system resources
 
-### FR-5: Backward Compatibility
-- [ ] Detection of legacy HTTP+SSE transport attempts (protocol 2024-11-05)
-- [ ] Graceful handling of requests missing `MCP-Protocol-Version` header
-- [ ] Appropriate error responses (426 Upgrade Required) for legacy clients
-- [ ] Clear upgrade instructions in error response body
-- [ ] Logging of legacy transport detection for monitoring
-- [ ] No breaking changes to existing tool functionality
-
-### FR-6: Integration with Existing MCP Infrastructure
-- [ ] Seamless integration with existing `McpHandler` for JSON-RPC processing
-- [ ] Preservation of all existing MCP tool functionality
-- [ ] CORS configuration maintained for web client compatibility
-- [ ] Health check endpoints continue to function
-- [ ] Existing error handling and logging infrastructure preserved
-- [ ] No modifications required to existing MCP tools
+### 5. CLI and Kubernetes Job Interfaces
+- [ ] CLI command implementation (`cargo run --bin migrate`):
+  - [ ] Progress reporting with detailed status and ETA
+  - [ ] Configuration options for different scenarios
+  - [ ] Validation and dry-run capabilities
+  - [ ] Interactive and non-interactive modes
+- [ ] Kubernetes Job template with:
+  - [ ] Resource allocation and limits configuration
+  - [ ] ConfigMap integration for migration parameters
+  - [ ] Status reporting and monitoring integration
+  - [ ] Pod restart policies and failure handling
+- [ ] Migration history persistence in database
+- [ ] Comprehensive rollback procedures for failed batches
 
 ## Non-Functional Requirements
 
-### NFR-1: Performance
-- [ ] JSON-RPC request processing latency < 100ms (95th percentile)
-- [ ] SSE stream initialization time < 50ms
-- [ ] Memory usage < 10MB for 100 concurrent sessions
-- [ ] CPU utilization < 5% under normal load (10 concurrent requests/second)
-- [ ] Session cleanup operation < 10ms for 1000+ expired sessions
-- [ ] Support for 1000+ concurrent connections without degradation
+### 1. Performance Requirements
+- [ ] Processing throughput target sized to infra; document actual achieved throughput
+- [ ] Complete 184 MB dataset migration within project window; record wall time
+- [ ] Memory usage remains stable during large dataset processing
+- [ ] Database connection efficiency (< 100 concurrent connections)
+- [ ] CPU utilization optimized across available cores
 
-### NFR-2: Reliability
-- [ ] 99.9% uptime for session management operations
-- [ ] Zero memory leaks during 24-hour stress testing
-- [ ] Graceful handling of network interruptions
-- [ ] Automatic recovery from connection failures
-- [ ] Message delivery guarantee for SSE streams
-- [ ] Error recovery within 1 second of failure detection
+### 2. Reliability Requirements
+- [ ] Error rate < 0.1% with automatic retry mechanisms
+- [ ] Rollback capability for any failed migration batch
+- [ ] Complete batch rollback execution < 5 minutes
+- [ ] Migration resumption from any checkpoint
+- [ ] Data integrity maintained across all failure scenarios
 
-### NFR-3: Scalability
-- [ ] Horizontal scaling support through stateless design
-- [ ] Linear performance scaling with concurrent connection count
-- [ ] Memory usage scaling proportional to active session count
-- [ ] No hardcoded limits preventing scale-up
-- [ ] Efficient session storage with O(1) lookup performance
-- [ ] Background cleanup operations don't impact active requests
-
-### NFR-4: Security
-- [ ] Session IDs use cryptographically secure UUID generation
-- [ ] No sensitive data exposure in error messages or logs
-- [ ] Proper input validation for all request parameters
-- [ ] Protection against session fixation attacks
-- [ ] Rate limiting consideration for session creation
-- [ ] Secure session storage preventing unauthorized access
-
-### NFR-5: Maintainability
-- [ ] Code follows Rust best practices and style guidelines
-- [ ] Comprehensive unit test coverage (>90% line coverage)
-- [ ] Clear separation of concerns between transport and business logic
-- [ ] Well-documented public API with usage examples
-- [ ] Structured logging with appropriate log levels
-- [ ] Error messages provide actionable debugging information
+### 3. Operational Requirements
+- [ ] Comprehensive logging for audit trails and debugging
+- [ ] Progress monitoring with real-time status updates
+- [ ] Resource usage monitoring and alerting
+- [ ] Migration scheduling and automation capabilities
+- [ ] Integration with existing monitoring and alerting systems
 
 ## Test Cases
 
-### TC-1: JSON-RPC Request Processing
-**Scenario**: Client sends POST request with valid JSON-RPC message
-**Given**: MCP server is running with new transport
-**When**: POST request sent to `/mcp` with `Content-Type: application/json`
-**And**: Request body contains valid JSON-RPC message
-**And**: `MCP-Protocol-Version: 2025-06-18` header present
-**Then**: Server processes request through existing MCP handler
-**And**: Returns 200 OK status with JSON-RPC response
-**And**: Response includes `MCP-Protocol-Version` and `Mcp-Session-Id` headers
-**And**: Session is created or retrieved for subsequent requests
+### Test Case 1: Full 184 MB Dataset Migration
+**Given**: Empty database and complete 184 MB dataset
+**When**: Full migration executed with optimal settings
+**Then**:
+- All documents processed and stored successfully
+- Checksum validation confirms data integrity
+- Processing rate ≥1000 docs/minute achieved
+- Migration completes within 3 hours
+- Final record count matches source expectations
 
-### TC-2: SSE Stream Initialization
-**Scenario**: Client requests SSE stream for server messages
-**Given**: MCP server is running with session management
-**When**: GET request sent to `/mcp` with `Accept: text/event-stream`
-**And**: `MCP-Protocol-Version: 2025-06-18` header present
-**Then**: Server initializes SSE stream with proper headers
-**And**: Returns 200 OK with `Content-Type: text/event-stream`
-**And**: Stream includes heartbeat messages every 30 seconds
-**And**: Session is tracked for message delivery
+### Test Case 2: Migration Failure and Rollback
+**Given**: Migration in progress with simulated failure
+**When**: Failure occurs during processing batch
+**Then**:
+- Failure detected within 30 seconds
+- Automatic rollback initiated for failed batch
+- Database returned to consistent pre-batch state
+- Migration can resume from last successful checkpoint
+- No data corruption or orphaned records
 
-### TC-3: Session Management
-**Scenario**: Multiple requests with same session ID
-**Given**: Client has established session with server
-**When**: Multiple requests sent with same `Mcp-Session-Id` header
-**Then**: All requests use same session context
-**And**: Session activity is updated for each request
-**And**: Session remains active until timeout period
-**And**: Session cleanup occurs after timeout expires
+### Test Case 3: Incremental Migration and Resumption
+**Given**: Partially completed migration with checkpoint
+**When**: Migration resumed from checkpoint
+**Then**:
+- Progress tracking shows accurate completion percentage
+- Only remaining documents processed
+- No duplicate processing of completed batches
+- Final state identical to complete migration
+- Checksum validation confirms consistency
 
-### TC-4: Legacy Transport Detection
-**Scenario**: Legacy client attempts deprecated transport
-**Given**: MCP server is running with backward compatibility
-**When**: Request sent without `MCP-Protocol-Version` header
-**Or**: Request sent with `MCP-Protocol-Version: 2024-11-05`
-**Then**: Server detects legacy transport attempt
-**And**: Returns 426 Upgrade Required status
-**And**: Response includes upgrade instructions
-**And**: Legacy detection is logged for monitoring
+### Test Case 4: Parallel Processing Scalability
+**Given**: Migration configured with various parallelism levels
+**When**: Processing with 1, 4, 8, and 16 parallel workers
+**Then**:
+- Throughput scales appropriately with worker count
+- Resource utilization optimized for each configuration
+- No race conditions or data corruption
+- Memory usage remains within acceptable bounds
+- Performance monitoring shows bottleneck identification
 
-### TC-5: Concurrent Session Handling
-**Scenario**: Multiple clients connect simultaneously
-**Given**: MCP server supports concurrent connections
-**When**: 100 clients connect with different session IDs
-**And**: Each client sends JSON-RPC requests
-**Then**: All sessions are managed independently
-**And**: No session data corruption occurs
-**And**: Performance remains within acceptable limits
-**And**: Memory usage scales linearly with session count
+### Test Case 5: Data Validation Accuracy
+**Given**: Dataset with intentionally corrupted documents
+**When**: Migration with validation enabled
+**Then**:
+- Corrupted documents detected and reported
+- Schema validation catches malformed metadata
+- Duplicate detection identifies and handles duplicates
+- Vector dimension validation prevents inconsistent data
+- Error reporting provides actionable information
 
-### TC-6: Error Handling
-**Scenario**: Invalid requests and error conditions
-**Given**: MCP server with comprehensive error handling
-**When**: Malformed JSON-RPC request is sent
-**Or**: Invalid session ID format is provided
-**Or**: Unsupported protocol version is used
-**Then**: Appropriate error response is returned
-**And**: Error follows JSON-RPC error format
-**And**: No server crash or instability occurs
-**And**: Error details logged for debugging
+### Test Case 6: CLI and Kubernetes Interface Functionality
+**Given**: Migration interfaces configured and available
+**When**: Migration executed via CLI and Kubernetes Job
+**Then**:
+- Both interfaces provide equivalent functionality
+- Progress reporting works consistently
+- Configuration options properly applied
+- Resource limits respected in Kubernetes environment
+- Status monitoring provides accurate information
 
-### TC-7: Integration with Existing Tools
-**Scenario**: Existing MCP tools continue to function
-**Given**: Doc Server with rust_query and management tools
-**When**: Client sends requests for existing tool operations
-**Through**: New Streamable HTTP transport
-**Then**: All tools respond correctly through new transport
-**And**: Tool functionality is unchanged
-**And**: Response formats remain consistent
-**And**: No tool registration changes required
+## Deliverables Checklist
 
-## Deliverables
+### Core Implementation
+- [ ] Migration framework extending doc-loader crate
+- [ ] Parallel processing system with worker pools
+- [ ] Data validation pipeline with integrity checks
+- [ ] CLI interface with comprehensive options
+- [ ] Kubernetes Job template and configuration
 
-### D-1: Core Transport Implementation
-- [ ] `crates/mcp/src/transport.rs` - Complete transport module implementation
-- [ ] Session management with thread-safe storage
-- [ ] Unified endpoint handler for POST/GET methods
-- [ ] SSE streaming infrastructure with proper event formatting
-- [ ] Backward compatibility detection and handling
-- [ ] Integration with existing MCP handler infrastructure
+### Supporting Infrastructure
+- [ ] Database schema validation and setup
+- [ ] Checkpointing and state persistence
+- [ ] Progress monitoring and reporting system
+- [ ] Error handling and rollback procedures
+- [ ] Performance monitoring and optimization
 
-### D-2: Server Integration
-- [ ] Updated `crates/mcp/src/server.rs` using new transport
-- [ ] Router configuration with unified `/mcp` endpoint
-- [ ] Transport configuration management
-- [ ] Dependency updates in `Cargo.toml` if required
-- [ ] Module declarations in `crates/mcp/src/lib.rs`
-
-### D-3: Test Suite
-- [ ] Unit tests for transport components (session management, protocol handling)
-- [ ] Integration tests for end-to-end request/response cycles
-- [ ] Concurrency tests for multiple simultaneous connections
-- [ ] Error handling tests for various failure scenarios
-- [ ] Performance benchmarks for latency and throughput
-- [ ] Compatibility tests with existing MCP tools
-
-### D-4: Documentation
-- [ ] Code documentation with comprehensive doc comments
-- [ ] API documentation for transport configuration
-- [ ] Migration guide from old transport to new transport
-- [ ] Troubleshooting guide for common transport issues
+### Documentation and Operations
+- [ ] Migration procedures and operational guide
+- [ ] Troubleshooting guide for common issues
 - [ ] Performance tuning recommendations
+- [ ] Disaster recovery and rollback procedures
+- [ ] Monitoring and alerting configuration
 
 ## Validation Criteria
 
-### V-1: Functional Validation
-- [ ] All functional requirements pass automated test suite
-- [ ] Manual testing with Cursor MCP client successful
-- [ ] Integration testing with Toolman client successful
-- [ ] Backward compatibility verified with legacy client simulation
-- [ ] All existing MCP tools function correctly through new transport
+### Automated Testing
+```bash
+# Full migration validation
+cargo test --package doc-loader migration_tests
+cargo run --bin migrate -- --validate --dry-run
 
-### V-2: Performance Validation
-- [ ] Load testing with 100 concurrent connections passes performance requirements
-- [ ] Memory leak testing over 24-hour period shows stable memory usage
-- [ ] Latency benchmarks meet 95th percentile requirements
-- [ ] Session cleanup performance meets requirements under load
-- [ ] CPU utilization remains within acceptable limits
+# Performance benchmarking
+cargo test --release migration_performance
 
-### V-3: Integration Validation
-- [ ] Kubernetes deployment successful with new transport
-- [ ] Health checks continue to function in production environment
-- [ ] Monitoring and logging work correctly with new transport
-- [ ] CORS policies function properly for web-based clients
-- [ ] Database connectivity and tool operations unaffected
+# Kubernetes Job validation
+kubectl apply -f k8s/migration-job.yaml --dry-run=client
+kubectl validate -f k8s/migration-job.yaml
+```
 
-### V-4: Reliability Validation
-- [ ] Connection stability testing under various network conditions
-- [ ] Graceful handling of client disconnections and reconnections
-- [ ] Error recovery testing with simulated failures
-- [ ] Session timeout and cleanup functionality verified
-- [ ] No data loss or corruption during transport operations
+### Manual Validation
+1. **Complete Migration**: Execute full 184 MB dataset migration
+2. **Failure Recovery**: Test rollback procedures with simulated failures
+3. **Performance Validation**: Measure throughput under various configurations
+4. **Data Integrity**: Validate checksums and record counts
+5. **Interface Testing**: Test both CLI and Kubernetes interfaces
 
 ## Definition of Done
 
-**This task is considered complete when:**
+Task 18 is complete when:
 
-1. **All Functional Requirements** (FR-1 through FR-6) are implemented and verified
-2. **All Non-Functional Requirements** (NFR-1 through NFR-5) meet specified criteria
-3. **All Test Cases** (TC-1 through TC-7) pass in automated test suite
-4. **All Deliverables** (D-1 through D-4) are completed and reviewed
-5. **All Validation Criteria** (V-1 through V-4) are satisfied through testing
-6. **Production Deployment** successful in Kubernetes cluster with new transport
-7. **Client Integration** verified with at least two MCP clients (Cursor, Toolman)
-8. **Performance Benchmarks** meet all specified performance requirements
-9. **Code Review** completed with approval from technical reviewers
-10. **Documentation** complete and accessible for future maintenance
+1. **Complete Pipeline**: Migration framework handles all documentation types
+2. **Performance Achieved**: ≥1000 docs/minute throughput consistently demonstrated
+3. **Validation Comprehensive**: 100% data integrity verification implemented
+4. **Interfaces Functional**: Both CLI and Kubernetes interfaces operational
+5. **Rollback Reliable**: Failed migration recovery tested and validated
+6. **Documentation Complete**: Operational procedures and troubleshooting guides
+7. **Production Ready**: System validated with full 184 MB dataset
 
-**Additional Completion Criteria:**
-- Zero critical or high-severity bugs in transport functionality
-- Memory usage stable over extended testing periods
-- All existing functionality preserved without regression
-- Migration path documented and tested
-- Monitoring and alerting functional for new transport layer
+## Success Metrics
+
+- Processing throughput: ≥1000 documents per minute sustained
+- Total migration time: 184 MB dataset completed < 3 hours
+- Data integrity: 100% checksum validation success
+- Error rate: < 0.1% processing errors with successful retry
+- Rollback time: Complete batch rollback < 5 minutes
+- Memory efficiency: Stable usage throughout migration process
+- Operational reliability: 99.9% successful migration completion rate
+- Recovery capability: 100% successful checkpoint resumption

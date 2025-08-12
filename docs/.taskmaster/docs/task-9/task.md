@@ -1,25 +1,25 @@
-# Task 9: Solana Query Tool Implementation
+# Task 9: BirdEye Query Tool Implementation
 
 ## Overview
-Implement `solana_query` tool for semantic search across Solana blockchain platform documentation including core docs, architecture diagrams, and cryptography specifications.
+Implement `birdeye_query` tool for semantic search across BirdEye API documentation with metadata filtering and response formatting.
 
 ## Implementation Guide
-- Create SolanaQueryTool with comprehensive search capabilities
-- Implement metadata filtering for documentation categories
-- Add support for multiple content formats (markdown, PDF, diagrams)
-- Integrate with existing MCP tool registration
-- Optimize for blockchain documentation complexity levels
+- Create BirdEyeQueryTool with semantic search capabilities
+- Implement metadata filtering for API endpoints and methods
+- Add response formatting with source attribution
+- Integrate with existing MCP tool registration system
+- Optimize query performance for API documentation
 
 ## Technical Requirements
-- Vector similarity search with format-aware processing
-- JSONB metadata filtering for categories and complexity
-- Multi-format content handling (markdown, PDF, BOB, MSC)
-- Tool registration and MCP integration
-- Performance optimization for large documentation set
+- Vector similarity search using OpenAI embeddings
+- JSONB metadata filtering for API categories
+- Tool registration in MCP handler
+- Response formatting with relevance scoring
+- Query performance optimization
 
 ## Success Metrics
 - Query response time < 2 seconds
-- Multi-format content search capability
-- Accurate categorization and filtering
-- Complexity-aware result ranking
-- Comprehensive Solana ecosystem coverage
+- Accurate search results with metadata filtering
+- Proper tool registration and MCP integration
+- Source attribution in all responses
+- High relevance scoring for API documentation

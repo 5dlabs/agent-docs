@@ -1,25 +1,23 @@
-# Task 19: Security Audit and Compliance
+# Task 19: Basic Security for Single-User Environment
 
 ## Overview
-Conduct comprehensive security audit and ensure compliance with security best practices for production deployment of the Doc Server.
+Implement practical, lightweight security measures appropriate for a single-user environment (5–6 agents). Emphasize sane defaults without heavy compliance overhead.
 
 ## Implementation Guide
-- Perform security vulnerability assessment
-- Implement security hardening measures
-- Add security monitoring and alerting
-- Ensure compliance with security standards
-- Create incident response procedures
+- Origin validation and localhost binding for MCP server
+- Input size limits and basic request validation
+- Rate limiting suitable for single-user (low thresholds)
+- Secrets via environment variables; avoid logging sensitive data
+- Minimal audit logs for tool invocations and errors
 
 ## Technical Requirements
-- Security vulnerability scanning
-- Penetration testing for common attacks
-- Security hardening configuration
-- Monitoring and alerting for security events
-- Incident response documentation
+- CORS/Origin checks; DNS rebinding protections
+- Request size limits (e.g., 1–2 MB)
+- Simple token-bucket rate limiter
+- Structured logging with redaction
 
 ## Success Metrics
-- Zero critical security vulnerabilities
-- All security hardening measures implemented
-- Security monitoring operational
-- Compliance requirements met
-- Incident response procedures tested and documented
+- No P0/P1 vulnerabilities in basic scan
+- Blocks cross-origin and oversized request attempts
+- No sensitive data in logs
+- Stable under expected agent usage

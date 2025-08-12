@@ -1,25 +1,25 @@
-# Autonomous Agent Prompt: OpenAI Embedding Client with Batch Processing
+# Autonomous Agent Prompt: Database Migration and Schema Optimization
 
 ## Mission
-Implement optimized OpenAI embedding generation with batch processing to achieve 50% cost reduction while maintaining performance.
+Optimize PostgreSQL database schema and implement comprehensive migration system for production deployment.
 
 ## Primary Objectives
-1. **Batch API Integration**: Implement OpenAI Batch API with JSONL format
-2. **Rate Limiting**: Token bucket algorithm for API compliance
-3. **Queue Management**: Batch processing system for large datasets
-4. **Error Handling**: Retry logic with exponential backoff
-5. **Cost Optimization**: Track and validate 50% cost reduction
+1. **Migration System**: Create versioned database migration framework
+2. **Schema Optimization**: Optimize tables and indexes for vector search
+3. **Connection Pooling**: Configure optimal connection management
+4. **Performance Tuning**: Optimize queries and database configuration
+5. **Monitoring Integration**: Add database health monitoring
 
 ## Implementation Steps
-1. Create OpenAI Batch API models and data structures
-2. Implement rate limiting with token bucket algorithm
-3. Build batch processing queue system
-4. Add comprehensive retry logic and error handling
-5. Implement cost tracking and reporting
+1. Create migration framework with version control
+2. Analyze and optimize existing schema
+3. Add performance indexes and constraints  
+4. Configure connection pooling
+5. Implement database monitoring
 
 ## Success Criteria
-- [ ] Batch API integration with JSONL format
-- [ ] Rate limiting compliance (3000 RPM / 1M TPM)
-- [ ] 50% cost reduction achieved and validated
-- [ ] Processing time < 20 minutes for 20k embeddings
-- [ ] Robust error handling and retry mechanisms
+- [ ] Migration system with rollback capability
+- [ ] Query performance < 2 seconds
+- [ ] Optimized connection pooling
+- [ ] Database monitoring operational
+- [ ] Zero data loss during migrations

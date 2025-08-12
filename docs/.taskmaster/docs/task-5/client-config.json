@@ -3,6 +3,8 @@
     "read_file",
     "write_file",
     "edit_file",
+    "list_directory",
+    "create_directory",
     "search_files"
   ],
   "localServers": {

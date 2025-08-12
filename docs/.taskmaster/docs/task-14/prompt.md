@@ -1,109 +1,191 @@
-# Autonomous Agent Prompt: Production Monitoring and Observability
+# Autonomous Agent Prompt: Container Image Optimization
 
-You are tasked with implementing comprehensive monitoring with Prometheus metrics, structured logging, and distributed tracing for production observability.
+You are tasked with optimizing Docker images for size, security, and performance with multi-stage builds, minimal attack surface, and comprehensive security scanning integration.
 
 ## Your Mission
 
-Implement a complete observability stack with Prometheus metrics, structured JSON logging with correlation IDs, OpenTelemetry tracing, custom Grafana dashboards, and performance profiling endpoints.
+Transform the existing Dockerfile to achieve production-ready container images with cargo-chef optimization, distroless runtime, binary compression, graceful shutdown handling, and integrated security scanning.
 
 ## Execution Steps
 
-### Step 1: Set up Prometheus Metrics Infrastructure
-- Add prometheus and prometheus-hyper crates to Cargo.toml
-- Create `crates/mcp/src/metrics.rs` module for custom metrics
-- Define key metrics:
-  - query_latency_histogram for database queries
-  - embedding_generation_time_histogram for AI operations
-  - cache_hit_rate_counter for cache performance
-  - active_connections_gauge for connection monitoring
-  - request_counter for request tracking
-- Integrate metrics registry into McpServer
-- Add GET /metrics endpoint for Prometheus scraping
+### Step 1: Implement cargo-chef for Dependency Caching
+- Examine current Dockerfile structure and dependency handling
+- Install cargo-chef in builder stage for optimal dependency caching
+- Create dedicated chef stage with `cargo chef prepare` for recipe.json generation
+- Add dependencies stage with `cargo chef cook` for separate dependency building
+- Modify builder stage to use pre-built dependencies from chef stage
+- Verify build time improvements for code-only changes
 
-### Step 2: Implement Structured JSON Logging
-- Configure tracing-subscriber with json formatter
-- Add correlation ID middleware to generate X-Correlation-ID headers
-- Implement correlation ID propagation through async operations
-- Add structured fields: service_name, version, environment, timestamp
-- Replace existing logging with structured JSON format
-- Ensure correlation IDs propagate through database queries
+### Step 2: Migrate to Distroless Runtime Image
+- Replace current debian:bookworm-slim with gcr.io/distroless/cc-debian12
+- Remove apt-get installations from runtime stage (unnecessary in distroless)
+- Ensure required shared libraries (libssl, libpq) are available or statically linked
+- Update HEALTHCHECK to use application's built-in /health endpoint
+- Configure USER directive compatible with distroless nonroot user
+- Test container startup and functionality with distroless base
 
-### Step 3: Add OpenTelemetry Tracing with Jaeger
-- Add opentelemetry, opentelemetry-jaeger, tracing-opentelemetry crates
-- Configure OpenTelemetry pipeline with Jaeger exporter
-- Create spans for key operations:
-  - Database queries in queries.rs
-  - Embedding generation operations
-  - Tool execution in handlers.rs
-  - SSE connections and streaming
-- Add trace context propagation headers (traceparent, tracestate)
-- Configure sampling rate via OTEL_TRACE_SAMPLE_RATE
+### Step 3: Add Binary Optimization and Compression
+- Configure Cargo.toml with size optimization settings:
+  - opt-level = "z" for size optimization
+  - lto = true for link-time optimization
+  - codegen-units = 1 for better optimization
+  - panic = "abort" to reduce binary size
+- Add strip command in builder stage to remove debug symbols
+- Install and apply UPX compression with --best flag
+- Target 60-70% binary size reduction while maintaining performance
+- Verify compressed binary functionality
 
-### Step 4: Create Custom Performance Metrics
-- Instrument DocumentQueries methods with timing metrics
-- Add per-tool metrics in McpHandler::handle_tool_call
-- Track embedding generation performance with batch timing
-- Monitor database connection pool metrics (active, idle, pending)
-- Create custom histogram buckets (0.1s, 0.5s, 1s, 2s, 5s)
-- Export metrics with labels for Grafana dashboard filtering
+### Step 4: Implement Graceful Shutdown and Signal Handling
+- Navigate to `crates/mcp/src/http_server.rs`
+- Implement tokio::signal handlers for SIGTERM and SIGINT
+- Add graceful shutdown logic:
+  - Close database connections cleanly
+  - Complete in-flight HTTP requests
+  - Shutdown embedding service connections
+- Set 30-second timeout for shutdown sequence
+- Update Dockerfile with STOPSIGNAL SIGTERM
+- Ensure signal handling works with non-root user
 
-### Step 5: Implement Performance Profiling Endpoints
-- Add pprof crate for CPU and memory profiling
-- Create /debug/pprof/profile endpoint for CPU profiling
-- Add /debug/pprof/heap endpoint for memory snapshots
-- Implement authentication middleware for profiling endpoints
-- Add rate limiting to prevent profiling abuse
-- Configure profiling via ENABLE_PROFILING environment variable
+### Step 5: Integrate Security Scanning Pipeline
+- Create `scripts/scan_image.sh` with Trivy vulnerability scanning
+- Configure severity thresholds (CRITICAL and HIGH must be zero)
+- Add GitHub Action workflow for automated security scanning
+- Generate SBOM (Software Bill of Materials) for compliance
+- Add scanning to CI/CD pipeline with failure conditions
+- Document security scanning process and remediation procedures
 
 ## Required Outputs
 
-1. **Prometheus Metrics System** with custom metrics and /metrics endpoint
-2. **Structured Logging Infrastructure** with JSON format and correlation IDs
-3. **OpenTelemetry Integration** with Jaeger for distributed tracing
-4. **Performance Monitoring** with detailed timing and resource metrics
-5. **Profiling Endpoints** for production debugging and optimization
+Generate these optimization artifacts:
+
+1. **Enhanced Dockerfile** with cargo-chef, distroless, and optimizations
+2. **Signal Handling Code** in http_server.rs for graceful shutdown
+3. **Security Scanning Scripts** and CI/CD integration
+4. **Build Configuration** optimized for size and security
+5. **Documentation** covering security and operational procedures
 
 ## Key Technical Requirements
 
-1. **Metrics Coverage**: All critical operations instrumented
-2. **Correlation Tracking**: Request tracing across all components
-3. **Performance Impact**: < 5% overhead from observability
-4. **Security**: Profiling endpoints protected and rate limited
-5. **Integration**: Compatible with existing Kubernetes deployment
+1. **Size Target**: Final image size < 100MB
+2. **Security**: Zero CRITICAL and HIGH vulnerabilities
+3. **Performance**: Startup time < 5 seconds
+4. **Reliability**: Graceful shutdown within 30 seconds
+5. **Compliance**: SBOM generation and vulnerability tracking
+
+## Dockerfile Structure Requirements
+
+```dockerfile
+# Multi-stage build with cargo-chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.70 AS chef
+WORKDIR /app
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+RUN cargo build --release
+RUN strip target/release/doc-server
+RUN upx --best target/release/doc-server
+
+FROM gcr.io/distroless/cc-debian12 AS runtime
+COPY --from=builder /app/target/release/doc-server /usr/local/bin/
+USER nonroot:nonroot
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["/usr/local/bin/doc-server", "--health-check"]
+ENTRYPOINT ["/usr/local/bin/doc-server"]
+```
+
+## Security Scanning Configuration
+
+```bash
+#!/bin/bash
+# scripts/scan_image.sh
+trivy image --exit-code 1 --severity HIGH,CRITICAL doc-server:latest
+trivy image --format sarif --output results.sarif doc-server:latest
+trivy image --format spdx-json --output sbom.spdx.json doc-server:latest
+```
 
 ## Tools at Your Disposal
 
-- File system access for code implementation
-- Database access for query instrumentation
-- HTTP server modification capabilities
-- Container and Kubernetes deployment testing
+- File system access for Dockerfile and script modifications
+- Container build and testing capabilities
+- Security scanning tools integration
+- Performance measurement and optimization tools
 
 ## Success Criteria
 
-Your implementation is complete when:
-- Prometheus metrics endpoint exposes comprehensive system metrics
-- Structured logging provides searchable JSON logs with correlation IDs
-- OpenTelemetry tracing shows end-to-end request flows
-- Performance metrics enable SLA monitoring and alerting
-- Profiling endpoints assist with production debugging
-- All observability features integrate seamlessly with existing system
+Your optimization is complete when:
+- cargo-chef reduces rebuild times for code-only changes by 80%+
+- Distroless base image reduces attack surface significantly
+- Binary optimization achieves target size reduction
+- Graceful shutdown handles all signals properly within timeout
+- Security scanning prevents deployment of vulnerable images
+- All performance and size targets are consistently met
 
 ## Important Implementation Notes
 
-- Keep performance overhead minimal (< 5%)
-- Ensure thread safety for metrics collection
-- Implement proper error handling for observability failures
-- Add appropriate security for profiling endpoints
-- Test observability stack in production-like environment
+- Test container functionality thoroughly after each optimization
+- Verify all required shared libraries are available in distroless
+- Ensure graceful shutdown works correctly in Kubernetes environment
+- Validate security scanning integration doesn't break CI/CD pipeline
+- Monitor startup performance to ensure optimizations don't degrade it
+
+## Signal Handling Implementation
+
+```rust
+// In crates/mcp/src/http_server.rs
+use tokio::signal;
+
+pub async fn run_server_with_shutdown() -> Result<(), Box<dyn std::error::Error>> {
+    let server = create_server().await?;
+    
+    let graceful = server.with_graceful_shutdown(shutdown_signal());
+    
+    if let Err(e) = graceful.await {
+        eprintln!("Server error: {}", e);
+    }
+    
+    Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    println!("Shutdown signal received, starting graceful shutdown...");
+}
+```
 
 ## Validation Commands
 
+Before completion, run:
 ```bash
 cd /workspace
-cargo test --package mcp metrics
-cargo test --package mcp tracing
-curl http://localhost:8080/metrics
-curl http://localhost:8080/debug/pprof/profile?seconds=10
+docker build -t doc-server:optimized .
+docker images doc-server:optimized  # Verify size < 100MB
+./scripts/scan_image.sh doc-server:optimized
+docker run --rm doc-server:optimized --health-check
 ```
 
-Begin implementation focusing on comprehensive observability with minimal performance impact.
+Begin optimization focusing on security, performance, and operational excellence.

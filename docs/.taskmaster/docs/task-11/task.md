@@ -1,25 +1,25 @@
-# Task 11: Rust Crate Management Tools Enhancement
+# Task 11: Additional Query Tools Implementation
 
 ## Overview
-Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`) with improved functionality and integration.
+Implement remaining query tools for comprehensive documentation coverage: `cilium_query`, `talos_query`, `meteora_query`, `raydium_query`, `ebpf_query`, `rust_best_practices_query`, and `jupyter_query`.
 
 ## Implementation Guide
-- Enhance add_rust_crate with version management and feature selection
-- Improve remove_rust_crate with cleanup verification
-- Add comprehensive status reporting to check_rust_status
-- Implement atomic operations for crate management
-- Add progress tracking and user feedback
+- Create standardized query tool architecture
+- Implement type-specific metadata filtering for each documentation type
+- Add specialized response formatting per tool category
+- Ensure consistent MCP integration pattern
+- Optimize performance across all query tools
 
 ## Technical Requirements
-- Atomic crate operations with rollback capability
-- Enhanced error handling and validation
-- Progress tracking for long-running operations
-- Comprehensive status reporting
-- Integration with batch embedding processing
+- Standardized QueryTool trait implementation
+- Type-specific metadata schemas
+- Consistent error handling patterns
+- Unified response formatting
+- Performance parity across all tools
 
 ## Success Metrics
-- Atomic crate operations with zero data corruption
-- Enhanced user experience with progress feedback
-- Comprehensive error handling and recovery
-- Integration with new embedding batch processing
-- Improved performance for crate management operations
+- All remaining query tools functional with < 2s response time
+- Consistent user experience across tools
+- Type-specific optimization for each documentation category
+- Complete MCP tool registration
+- Comprehensive test coverage for all tools

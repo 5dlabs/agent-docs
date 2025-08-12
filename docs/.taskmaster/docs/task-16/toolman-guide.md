@@ -1,370 +1,308 @@
-# Toolman Guide: Task 16 - CI/CD Pipeline Enhancement
+# Toolman Guide: Task 15 - Load Testing and Performance Optimization
 
 ## Overview
 
-This task enhances the GitHub Actions CI/CD pipeline with comprehensive testing, security scanning, performance regression detection, and blue-green deployment capabilities with automated rollback.
+This task implements comprehensive load testing and performance optimization to validate system performance under stress and optimize bottlenecks. Focus areas include database optimization, caching, request coalescing, and memory stability.
 
 ## Core Tools
 
 ### Filesystem Server Tools
 
 #### read_file
-**Purpose**: Analyze current CI/CD configuration and deployment patterns
+**Purpose**: Analyze existing performance patterns and load testing infrastructure
 **When to Use**: 
-- Examine existing `.github/workflows/deploy-doc-server.yml`
-- Study current Kubernetes deployment configurations
-- Review existing test infrastructure and patterns
-- Analyze current security scanning and monitoring setup
+- Examine existing `scripts/load_test_sse.js` for baseline patterns
+- Study current database query implementations for optimization opportunities
+- Review existing caching mechanisms and performance monitoring
+- Analyze memory allocation patterns in hot code paths
 
 #### write_file
-**Purpose**: Create enhanced pipeline configuration and deployment scripts
+**Purpose**: Create load testing scripts and performance optimization implementations
 **When to Use**:
-- Implement enhanced GitHub Actions workflow with all stages
-- Create blue-green deployment scripts and configurations
-- Write comprehensive smoke test suite
-- Add security scanning configurations and policies
+- Implement k6 load testing scenarios with comprehensive coverage
+- Create database optimization scripts and index configurations
+- Write caching layer implementation with TTL and invalidation
+- Add request coalescing logic and memory optimization code
 
 #### edit_file
-**Purpose**: Modify existing configurations to integrate enhancements
+**Purpose**: Optimize existing code for performance and add instrumentation
 **When to Use**:
-- Update existing workflow with additional testing stages
-- Modify Kubernetes deployment manifests for blue-green strategy
-- Integrate security scanning into existing pipeline stages
-- Add performance testing to current benchmark framework
+- Add performance instrumentation to existing query handlers
+- Optimize database connection pooling and query patterns
+- Integrate caching into existing query flows
+- Add memory profiling and leak detection instrumentation
 
 ### Kubernetes Tools
 
 #### kubernetes_getResource
-**Purpose**: Examine current deployment configuration for enhancement
+**Purpose**: Examine deployment configuration for performance optimization
 **When to Use**:
-- Review existing deployment and service configurations
-- Check current ingress and load balancer setup
-- Validate current resource limits and scaling policies
-- Examine existing monitoring and health check configurations
+- Review current resource limits and scaling configuration
+- Check existing performance monitoring setup
+- Validate load balancer configuration for testing
+- Examine current deployment scaling policies
 
 #### kubernetes_listResources
-**Purpose**: Discover CI/CD and deployment infrastructure components
+**Purpose**: Discover performance testing infrastructure components
 **When to Use**:
-- Find existing deployment environments (staging, production)
-- Locate current monitoring and logging infrastructure
-- Identify existing service mesh or ingress controller setup
-- Check for current blue-green deployment infrastructure
-
-#### kubernetes_describeResource
-**Purpose**: Get detailed information about deployment status and health
-**When to Use**:
-- Troubleshoot deployment issues during blue-green transitions
-- Validate health check configurations and status
-- Monitor resource utilization during deployment processes
-- Check event logs for deployment troubleshooting
+- Find existing monitoring and metrics collection systems
+- Locate load testing infrastructure and tools
+- Identify performance testing namespaces and resources
+- Check for existing horizontal pod autoscaling configuration
 
 ## Implementation Flow
 
-### Phase 1: Integration Testing Enhancement
-1. Add PostgreSQL service container to GitHub Actions
-2. Create database fixtures and comprehensive test data
-3. Implement integration tests covering all MCP functionality
-4. Add parallel test execution and reporting
+### Phase 1: Load Testing Infrastructure
+1. Create comprehensive k6 test scenarios for various load patterns
+2. Implement performance monitoring and metrics collection
+3. Set up automated test execution pipeline
+4. Configure performance thresholds and alerting
 
-### Phase 2: Security Scanning Integration
-1. Integrate cargo-audit and cargo-deny for dependency scanning
-2. Add Trivy container image vulnerability scanning
-3. Implement SAST tools for static code analysis
-4. Configure security alerting and reporting
+### Phase 2: Database Performance Optimization
+1. Identify slow queries using database profiling tools
+2. Implement vector similarity search optimizations
+3. Add query result caching with intelligent invalidation
+4. Optimize database connection pooling parameters
 
-### Phase 3: Performance Regression Testing
-1. Add performance benchmarks to CI pipeline
-2. Implement baseline comparison and regression detection
-3. Configure performance alerting and reporting
-4. Integrate load testing for major releases
+### Phase 3: Application Performance Tuning
+1. Implement request coalescing for duplicate queries
+2. Add memory allocation optimization for high-frequency operations
+3. Optimize HTTP client connection pooling
+4. Implement lazy loading and streaming optimizations
 
-### Phase 4: Blue-Green Deployment Implementation
-1. Design Kubernetes blue-green deployment strategy
-2. Implement traffic switching and health checking logic
-3. Add automated rollback on deployment failures
-4. Configure deployment monitoring and alerting
+### Phase 4: Memory and Resource Management
+1. Add comprehensive memory profiling during load testing
+2. Identify and resolve memory leaks
+3. Optimize garbage collection for consistent performance
+4. Implement resource cleanup and lifecycle management
 
-### Phase 5: Smoke Testing and Validation
-1. Create comprehensive post-deployment smoke tests
-2. Implement health verification and functional testing
-3. Add monitoring integration and alert validation
-4. Configure automated rollback on smoke test failures
+### Phase 5: Performance Validation and Monitoring
+1. Execute comprehensive load testing scenarios
+2. Validate SLA compliance under various load conditions
+3. Implement performance regression testing
+4. Create operational runbooks for performance troubleshooting
 
 ## Best Practices
 
-### Pipeline Optimization
-- Run tests in parallel where possible to minimize execution time
-- Use caching strategies for dependencies and build artifacts
-- Implement early failure detection to stop pipeline quickly
-- Optimize container image builds with multi-stage Dockerfiles
+### Load Testing Strategy
+- Start with realistic user patterns and data volumes
+- Gradually increase load to identify breaking points
+- Test different scenarios (ramp-up, sustained, spike)
+- Monitor both application and infrastructure metrics
 
-### Security Integration
-- Fail fast on CRITICAL and HIGH severity vulnerabilities
-- Implement security policy as code with cargo-deny
-- Regular dependency updates with automated PR creation
-- Maintain security scan result history for trend analysis
+### Database Optimization
+- Use EXPLAIN ANALYZE to identify query bottlenecks
+- Implement appropriate indexing strategies
+- Consider read replicas for read-heavy workloads
+- Monitor connection pool utilization and tune accordingly
 
-### Deployment Strategy
-- Implement gradual traffic shifting for safer deployments
-- Use health checks at multiple levels (container, application, business logic)
-- Maintain deployment history for quick rollback capability
-- Monitor key metrics during deployment process
+### Caching Implementation
+- Cache at multiple levels (query results, embeddings, computed values)
+- Implement intelligent cache invalidation strategies
+- Monitor cache hit rates and adjust TTL accordingly
+- Use cache warming for predictable query patterns
 
-### Testing Strategy
-- Separate unit, integration, and end-to-end testing stages
-- Use realistic test data and scenarios
-- Implement test result aggregation and reporting
-- Maintain test environment consistency with production
+### Memory Management
+- Profile memory usage under realistic load conditions
+- Implement object pooling for frequently allocated objects
+- Monitor garbage collection performance and tune parameters
+- Use streaming for large data processing where possible
 
 ## Task-Specific Implementation Guidelines
 
-### 1. Enhanced GitHub Actions Workflow
-```yaml
-name: Enhanced CI/CD Pipeline
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+### 1. k6 Load Testing Configuration
+```javascript
+// scripts/load_test_comprehensive.js
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+import { Rate, Trend } from 'k6/metrics';
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-  security-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Rust Security Audit
-        uses: actions-rs/audit@v1
-      - name: Cargo Deny
-        uses: EmbarkStudios/cargo-deny-action@v1
-
-  performance-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Run Performance Benchmarks
-        run: cargo bench --output-format json > bench_results.json
-      - name: Compare Performance
-        run: ./scripts/compare_performance.sh
-
-  deploy:
-    needs: [test, security-scan, performance-test]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Blue-Green Deploy
-        run: ./scripts/blue_green_deploy.sh
+export let options = {
+  stages: [
+    { duration: '2m', target: 10 },
+    { duration: '5m', target: 50 },
+    { duration: '2m', target: 100 },
+    { duration: '10m', target: 100 },
+    { duration: '2m', target: 0 },
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)<2000', 'p(99)<5000'],
+    http_req_failed: ['rate<0.01'],
+    sse_connection_time: ['p(95)<1000'],
+  },
+};
 ```
 
-### 2. Blue-Green Deployment Script
-```bash
-#!/bin/bash
-# scripts/blue_green_deploy.sh
+### 2. Database Query Optimization
+```sql
+-- HNSW index for vector similarity search
+CREATE INDEX embeddings_hnsw_idx ON embeddings 
+USING hnsw (embedding vector_cosine_ops) 
+WITH (m = 16, ef_construction = 64);
 
-NAMESPACE="production"
-APP_NAME="doc-server"
-NEW_VERSION=$1
-
-# Deploy to green environment
-kubectl apply -f k8s/green-deployment.yaml
-kubectl set image deployment/${APP_NAME}-green ${APP_NAME}=${APP_NAME}:${NEW_VERSION} -n ${NAMESPACE}
-
-# Wait for deployment to be ready
-kubectl rollout status deployment/${APP_NAME}-green -n ${NAMESPACE} --timeout=300s
-
-# Run health checks
-if ./scripts/health_check.sh green; then
-    # Switch traffic to green
-    kubectl patch service ${APP_NAME} -p '{"spec":{"selector":{"version":"green"}}}' -n ${NAMESPACE}
-    echo "Deployment successful, traffic switched to green"
-    
-    # Scale down blue environment
-    kubectl scale deployment ${APP_NAME}-blue --replicas=0 -n ${NAMESPACE}
-else
-    echo "Health checks failed, keeping blue environment"
-    kubectl delete deployment ${APP_NAME}-green -n ${NAMESPACE}
-    exit 1
-fi
+-- IVF index for large datasets
+CREATE INDEX embeddings_ivf_idx ON embeddings 
+USING ivfflat (embedding vector_cosine_ops) 
+WITH (lists = 100);
 ```
 
-### 3. Comprehensive Smoke Tests
+### 3. Request Coalescing Implementation
 ```rust
-// tests/smoke_tests.rs
-use reqwest::Client;
-use serde_json::json;
+use std::collections::HashMap;
+use tokio::sync::{Mutex, oneshot};
 
-#[tokio::test]
-async fn test_health_endpoint() {
-    let client = Client::new();
-    let response = client
-        .get("http://doc-server:8080/health")
-        .send()
-        .await
-        .expect("Failed to send request");
-    
-    assert_eq!(response.status(), 200);
+pub struct QueryCoalescer {
+    in_flight: Mutex<HashMap<String, Vec<oneshot::Sender<QueryResult>>>>,
 }
 
-#[tokio::test]
-async fn test_mcp_tool_functionality() {
-    let client = Client::new();
-    let response = client
-        .post("http://doc-server:8080/mcp")
-        .json(&json!({
-            "jsonrpc": "2.0",
-            "method": "tools/call",
-            "params": {
-                "name": "rust_query",
-                "arguments": {
-                    "query": "async fn",
-                    "limit": 5
-                }
-            },
-            "id": 1
-        }))
-        .send()
-        .await
-        .expect("Failed to send request");
-    
-    assert_eq!(response.status(), 200);
-    let body: serde_json::Value = response.json().await.unwrap();
-    assert!(body["result"]["content"].is_array());
+impl QueryCoalescer {
+    pub async fn execute_or_wait(&self, query: String) -> Result<QueryResult> {
+        let mut in_flight = self.in_flight.lock().await;
+        
+        if let Some(waiters) = in_flight.get_mut(&query) {
+            let (tx, rx) = oneshot::channel();
+            waiters.push(tx);
+            drop(in_flight);
+            rx.await.map_err(|_| "Query cancelled")
+        } else {
+            in_flight.insert(query.clone(), Vec::new());
+            drop(in_flight);
+            
+            let result = self.execute_query(&query).await;
+            
+            let mut waiters = self.in_flight.lock().await.remove(&query).unwrap_or_default();
+            for waiter in waiters {
+                let _ = waiter.send(result.clone());
+            }
+            
+            result
+        }
+    }
 }
 ```
 
-### 4. Security Scanning Configuration
-```toml
-# .cargo/deny.toml
-[advisories]
-db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/rustsec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "warn"
-notice = "warn"
+### 4. Caching Layer Implementation
+```rust
+use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
 
-[licenses]
-unlicensed = "deny"
-allow = [
-    "MIT",
-    "Apache-2.0",
-    "Apache-2.0 WITH LLVM-exception",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "ISC",
-    "Unicode-DFS-2016",
-]
-deny = [
-    "GPL-2.0",
-    "GPL-3.0",
-    "AGPL-3.0",
-]
+pub struct QueryCache {
+    cache: RwLock<HashMap<String, (QueryResult, Instant)>>,
+    ttl: Duration,
+}
 
-[bans]
-multiple-versions = "warn"
-wildcards = "allow"
+impl QueryCache {
+    pub async fn get_or_execute<F, Fut>(&self, key: &str, executor: F) -> Result<QueryResult>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<QueryResult>>,
+    {
+        // Try cache first
+        if let Some(result) = self.get_cached(key).await {
+            return Ok(result);
+        }
+        
+        // Execute and cache result
+        let result = executor().await?;
+        self.set_cached(key, result.clone()).await;
+        Ok(result)
+    }
+}
 ```
 
-### 5. Performance Regression Detection
-```bash
-#!/bin/bash
-# scripts/compare_performance.sh
-
-BASELINE_FILE="baseline_performance.json"
-CURRENT_FILE="bench_results.json"
-THRESHOLD=10  # 10% regression threshold
-
-if [ ! -f "$BASELINE_FILE" ]; then
-    echo "No baseline found, creating baseline from current results"
-    cp "$CURRENT_FILE" "$BASELINE_FILE"
-    exit 0
-fi
-
-# Compare performance metrics
-python3 scripts/performance_comparison.py \
-    --baseline "$BASELINE_FILE" \
-    --current "$CURRENT_FILE" \
-    --threshold $THRESHOLD
-
-if [ $? -ne 0 ]; then
-    echo "Performance regression detected!"
-    exit 1
-fi
+### 5. Memory Profiling Integration
+```rust
+#[cfg(feature = "profiling")]
+pub fn start_memory_profiling() {
+    let guard = pprof::ProfilerGuard::new(100).unwrap();
+    
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(60)).await;
+        
+        match guard.report().build() {
+            Ok(report) => {
+                let file = std::fs::File::create("heap.pb").unwrap();
+                let profile = report.pprof().unwrap();
+                profile.write_to_writer(file).unwrap();
+            }
+            Err(e) => eprintln!("Profiling error: {}", e),
+        }
+    });
+}
 ```
 
 ## Troubleshooting
 
-### Common Pipeline Issues
+### Load Testing Issues
 
-#### Integration Test Failures
-- Verify PostgreSQL service container startup and health
-- Check database fixture loading and test data consistency
-- Validate test isolation and cleanup between runs
-- Monitor test execution time and resource usage
+#### High Response Times
+- Check database query performance and indexes
+- Verify connection pool sizing and configuration
+- Monitor resource utilization (CPU, memory, network)
+- Analyze application bottlenecks with profiling
 
-#### Security Scan Failures
-- Review dependency vulnerability reports and remediation options
-- Check license compliance issues and approved license list
-- Validate cargo-deny configuration and policy settings
-- Monitor security scan execution time and reliability
+#### Memory Growth During Testing
+- Enable memory profiling to identify leak sources
+- Check for unclosed database connections
+- Verify proper cleanup of temporary objects
+- Monitor garbage collection frequency and effectiveness
 
-#### Blue-Green Deployment Issues
-- Verify Kubernetes cluster connectivity and permissions
-- Check deployment health checks and readiness probes
-- Monitor traffic switching and load balancer configuration
-- Validate rollback procedures and automation
+#### Connection Exhaustion
+- Tune database connection pool sizing
+- Implement connection retry logic with backoff
+- Monitor connection lifecycle and cleanup
+- Check for connection leaks in error scenarios
 
-#### Performance Regression Detection
-- Ensure consistent benchmark execution environment
-- Validate baseline performance data and comparison logic
-- Check for environmental factors affecting performance
-- Monitor benchmark stability and reliability
+### Performance Optimization Issues
 
-### Pipeline Performance Issues
+#### Cache Ineffectiveness
+- Analyze query patterns and cache key design
+- Adjust TTL based on data change frequency
+- Monitor cache hit/miss ratios
+- Implement cache warming strategies
 
-#### Slow Pipeline Execution
-- Optimize parallel job execution and dependencies
-- Use build caching for dependencies and artifacts
-- Minimize container image sizes and layer caching
-- Profile pipeline stages for optimization opportunities
-
-#### Resource Exhaustion
-- Monitor GitHub Actions runner resource usage
-- Optimize test execution memory and CPU usage
-- Use appropriate runner sizes for different job types
-- Implement resource cleanup after job completion
+#### Database Performance Degradation
+- Validate index usage with EXPLAIN ANALYZE
+- Monitor database resource utilization
+- Check for lock contention and long-running queries
+- Consider query optimization and rewriting
 
 ## Validation Steps
 
-### Development Testing
-1. **Pipeline Validation**: Test all stages in feature branch
-2. **Security Integration**: Test with known vulnerabilities
-3. **Performance Testing**: Validate regression detection logic
-4. **Deployment Testing**: Test blue-green deployment in staging
+### Load Testing Validation
+1. **Baseline Testing**: Establish performance baselines
+2. **Ramp-up Testing**: Validate gradual load handling
+3. **Sustained Load**: Test extended operation under load
+4. **Spike Testing**: Verify handling of traffic bursts
 
-### Production Validation
-1. **Full Pipeline**: Execute complete enhanced pipeline
-2. **Rollback Testing**: Validate automated rollback procedures
-3. **Performance Impact**: Measure pipeline execution time
-4. **Monitoring Integration**: Verify alerting and notifications
+### Performance Optimization Validation
+1. **Query Performance**: Measure database query improvements
+2. **Cache Effectiveness**: Validate cache hit rates and performance
+3. **Memory Stability**: Confirm no leaks during extended testing
+4. **Resource Utilization**: Monitor efficient resource usage
+
+### Quality Assurance
+```bash
+# Execute comprehensive load testing
+k6 run --out influxdb scripts/load_test_comprehensive.js
+
+# Performance benchmarking
+cargo bench performance_benchmarks
+
+# Memory leak detection
+valgrind --tool=memcheck --leak-check=full ./target/release/doc-server
+
+# Cache performance testing
+cargo test cache_performance --release
+```
 
 ## Success Indicators
 
-- Enhanced pipeline executes in < 10 minutes consistently
-- Integration tests provide comprehensive coverage with database
-- Security scanning prevents vulnerable dependencies deployment
-- Performance regression detection catches degradation automatically
-- Blue-green deployment enables zero-downtime updates
-- Automated rollback procedures work reliably
-- Smoke tests validate deployment success comprehensively
-- Pipeline reliability > 99% success rate
+- Load testing validates 100+ concurrent connection handling
+- Response times consistently meet p95 < 2s, p99 < 5s targets
+- Database query performance improved by 50%+ through optimization
+- Cache hit rates > 70% for repeated query patterns
+- Memory usage stable during 1-hour sustained load testing
+- Request coalescing eliminates duplicate processing effectively
+- Performance regression testing prevents degradation
+- System handles spike loads gracefully with quick recovery

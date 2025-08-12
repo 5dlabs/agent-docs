@@ -1,10 +1,7 @@
 {
   "remoteTools": [
     "rust_query",
-    "add_rust_crate",
-    "remove_rust_crate", 
-    "list_rust_crates",
-    "check_rust_status"
+    "solana_query"
   ],
   "localServers": {
     "filesystem": {

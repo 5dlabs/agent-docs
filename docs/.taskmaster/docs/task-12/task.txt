@@ -1,43 +1,43 @@
-# Task ID: 12
-# Title: Kubernetes Deployment Configuration
+# Task ID: 11
+# Title: Implement Additional Query Tools Suite
 # Status: pending
-# Dependencies: 1
-# Priority: high
-# Description: Create and optimize Helm charts for production Kubernetes deployment with proper resource allocation and security policies.
+# Dependencies: 8, 9
+# Priority: low
+# Description: Create the remaining query tools for jupyter, cilium, talos, meteora, raydium, ebpf, and rust_best_practices documentation types.
 # Details:
-Create Helm chart structure in helm/doc-server/ directory. Define values.yaml with configurable parameters (image, resources, replicas). Create deployment manifest with proper resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi). Configure service with ClusterIP and optional LoadBalancer. Add ingress rules for external access. Implement ConfigMap for environment variables. Add Secret management for API keys and database credentials. Configure PodDisruptionBudget for high availability.
+Follow established QueryTool pattern for each documentation type. Implement type-specific metadata parsing and filtering. Add specialized response formatting per documentation type. Ensure consistent error handling and validation. Register all tools in MCP server with proper definitions. Implement tool-specific caching strategies. Add performance monitoring per tool. Create shared utility functions for common operations.
 
 # Test Strategy:
-Test Helm chart installation with helm lint and dry-run, validate resource allocation under load, test rolling updates with zero downtime, verify secret mounting and environment injection, and test auto-scaling behavior.
+Test each tool with type-specific queries, validate metadata extraction and filtering, verify response formatting consistency, test error handling for edge cases, and benchmark individual tool performance.
 
 # Subtasks:
-## 1. Create Helm Chart Structure and Base Configuration [pending]
+## 1. Create shared utility module for query tools [pending]
 ### Dependencies: None
-### Description: Initialize the Helm chart directory structure and create the base Chart.yaml file with proper metadata and dependencies
+### Description: Implement a common utilities module with shared functions for metadata parsing, response formatting, and performance monitoring that all query tools can use
 ### Details:
-Create helm/doc-server/ directory structure with standard Helm chart layout (templates/, charts/, values.yaml). Define Chart.yaml with apiVersion: v2, name: doc-server, version and appVersion matching Cargo.toml. Set up .helmignore file to exclude unnecessary files. Create helpers template (_helpers.tpl) for common label and selector functions
+Create crates/mcp/src/query_utils.rs module with: parse_metadata_field() generic function for extracting typed fields from JSONB, format_document_response() for consistent markdown formatting across all tools, calculate_relevance_score() for similarity-based ranking, create_performance_monitor() for tracking query execution times, and validate_query_params() for standard parameter validation. Export these utilities from lib.rs for use by all QueryTool implementations.
 
-## 2. Define values.yaml with Configurable Parameters [pending]
-### Dependencies: 12.1
-### Description: Create comprehensive values.yaml file with all configurable parameters for deployment customization including image settings, resources, and scaling options
+## 2. Implement Jupyter and Cilium query tools [pending]
+### Dependencies: 11.1
+### Description: Create JupyterQueryTool and CiliumQueryTool following the established RustQueryTool pattern with type-specific metadata handling
 ### Details:
-Define image configuration (repository: ghcr.io/5dlabs/agent-docs/doc-server, tag, pullPolicy). Set resource limits and requests (CPU: 500m-2000m, Memory: 512Mi-2Gi). Configure replicaCount (default: 2), autoscaling parameters (min: 2, max: 10, targetCPU: 70%). Add service configuration (type: ClusterIP, port: 3001). Define ingress settings (enabled: false by default, host, TLS). Include environment variables for DATABASE_URL, PORT (3001), RUST_LOG, and other app configs
+In crates/mcp/src/tools.rs, implement JupyterQueryTool with notebook-specific metadata parsing (kernel, language, cell_types), and CiliumQueryTool with network policy metadata (policy_type, namespace, endpoints). Add corresponding vector_search methods in crates/database/src/queries.rs filtering by doc_type='jupyter' and doc_type='cilium'. Use shared utilities for common operations. Register both tools in McpHandler::new() with appropriate tool definitions including input schemas.
 
-## 3. Create Deployment and Service Manifests [pending]
-### Dependencies: 12.2
-### Description: Implement Kubernetes deployment manifest with proper resource allocation, health checks, and create service manifests for both ClusterIP and optional LoadBalancer
+## 3. Implement Talos and Meteora query tools [pending]
+### Dependencies: 11.1
+### Description: Create TalosQueryTool and MeteoraQueryTool with specialized metadata parsing for Kubernetes and DeFi documentation
 ### Details:
-Create deployment.yaml with container spec using values from values.yaml, implement readiness/liveness probes on /health endpoint, configure resource limits/requests from values, add security context (runAsNonRoot: true, runAsUser: 1000). Create service.yaml supporting both ClusterIP and LoadBalancer types, expose port 3001 targeting container port. Add proper labels and selectors using helm helpers. Include pod annotations for Prometheus metrics scraping (/metrics)
+Implement TalosQueryTool in crates/mcp/src/tools.rs with Kubernetes-specific metadata (resource_type, api_version, namespace), and MeteoraQueryTool with DeFi protocol metadata (pool_type, liquidity_params, reward_structure). Add talos_vector_search and meteora_vector_search methods to DocumentQueries. Implement custom response formatting for technical specifications and protocol parameters. Register tools in handlers.rs with comprehensive tool definitions.
 
-## 4. Implement ConfigMap, Secret Management and Ingress [pending]
-### Dependencies: 12.3
-### Description: Create ConfigMap for environment variables, implement Secret management for sensitive data, and configure Ingress rules for external access
+## 4. Implement Raydium and eBPF query tools [pending]
+### Dependencies: 11.1
+### Description: Create RaydiumQueryTool and EbpfQueryTool with domain-specific metadata parsing and response formatting
 ### Details:
-Create configmap.yaml for non-sensitive environment variables (RUST_LOG, PORT, monitoring configs). Implement secret.yaml template for API keys and DATABASE_URL with base64 encoding. Create ingress.yaml with conditional rendering based on values.yaml, support multiple hosts and TLS configuration, add annotations for ingress controller (nginx/traefik). Mount ConfigMap and Secrets as environment variables in deployment. Add support for external secrets operator integration
+Build RaydiumQueryTool with AMM and liquidity pool metadata support (amm_version, pool_address, fee_structure), and EbpfQueryTool with kernel programming metadata (program_type, kernel_version, hook_points). Add corresponding vector search methods in queries.rs. Implement specialized formatting for code examples and technical diagrams. Add caching strategy using tokio::sync::RwLock for frequently accessed technical documentation. Register in MCP handler.
 
-## 5. Add High Availability and Production Features [pending]
-### Dependencies: 12.4
-### Description: Implement PodDisruptionBudget, HorizontalPodAutoscaler, and other production-ready features for high availability and reliability
+## 5. Implement RustBestPractices tool and integration testing [pending]
+### Dependencies: 11.2, 11.3, 11.4
+### Description: Create RustBestPracticesQueryTool and comprehensive integration tests for all seven new query tools
 ### Details:
-Create poddisruptionbudget.yaml with minAvailable: 1 or maxUnavailable: 1. Implement hpa.yaml for horizontal pod autoscaling based on CPU/memory metrics. Add networkpolicy.yaml for pod-to-pod communication restrictions. Create servicemonitor.yaml for Prometheus Operator integration. Add priorityclass.yaml for pod scheduling priority. Implement pod anti-affinity rules to spread pods across nodes. Add topologySpreadConstraints for even distribution across zones
+Implement RustBestPracticesQueryTool with pattern/anti-pattern metadata (practice_category, rust_version, complexity_level). Add rust_best_practices_vector_search to queries.rs. Create integration tests in crates/mcp/tests/ validating all seven tools' query accuracy, metadata filtering, response formatting, error handling, and performance benchmarks (< 2 seconds per query). Verify proper tool registration and MCP protocol compliance for all tools.
 

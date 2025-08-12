@@ -1,301 +1,249 @@
-# Acceptance Criteria: Session Management and Security Implementation
+# Acceptance Criteria: Streamable HTTP Transport Foundation
 
 ## Functional Requirements
 
-### FR-1: Secure Session ID Generation
-- [ ] Session IDs generated using cryptographically secure UUID v4 with proper entropy
-- [ ] No predictable patterns in session ID generation across multiple sessions
-- [ ] Session IDs are unique across all active and recently expired sessions
-- [ ] UUID generation uses system-provided secure random number generator
-- [ ] Session IDs are properly formatted as RFC 4122 compliant UUIDs
-- [ ] No client-provided session IDs accepted for new session creation
+### FR-1: Unified MCP Endpoint Implementation
+- [ ] Single `/mcp` endpoint implemented supporting both POST and GET methods
+- [ ] POST method handles JSON-RPC requests with `application/json` content type
+- [ ] GET method handles SSE stream requests with `text/event-stream` accept header
+- [ ] Proper HTTP status codes returned (200 OK, 400 Bad Request, 426 Upgrade Required)
+- [ ] Content negotiation based on Accept and Content-Type headers
+- [ ] Request routing logic correctly distinguishes between JSON-RPC and SSE requests
 
-### FR-2: Session Storage and Management
-- [ ] Thread-safe session storage using `Arc<RwLock<HashMap<Uuid, Session>>>`
-- [ ] Session creation with configurable TTL (default 30 minutes)
-- [ ] Session retrieval with automatic expiry checking
-- [ ] Session activity tracking with `last_accessed` timestamp updates
-- [ ] Configurable maximum session limit with enforcement
-- [ ] Session count tracking and reporting for monitoring
+### FR-2: MCP Protocol Compliance
+- [ ] `MCP-Protocol-Version: 2025-06-18` header included in all responses
+- [ ] Protocol version validation for incoming requests
+- [ ] `Mcp-Session-Id` header support with UUID v4 session identifiers
+- [ ] JSON-RPC message format compliance (request, response, notification)
+- [ ] Proper UTF-8 encoding for all message content
+- [ ] Error responses follow JSON-RPC 2.0 error specification
 
-### FR-3: Session Lifecycle Management
-- [ ] Automatic session expiry based on TTL and last access time
-- [ ] Background cleanup task running at configurable intervals (default 5 minutes)
-- [ ] Session cleanup removes expired sessions without affecting active ones
-- [ ] Session renewal on valid request activity
-- [ ] Explicit session deletion via DELETE requests
-- [ ] Graceful session cleanup on server shutdown
+### FR-3: Session Management
+- [ ] Session creation with unique UUID identifiers
+- [ ] Session storage with thread-safe access (Arc<RwLock<HashMap>>)
+- [ ] Session expiration after configurable timeout (default 5 minutes)
+- [ ] Automatic cleanup of expired sessions
+- [ ] Session activity tracking for proper lifecycle management
+- [ ] Support for at least 100 concurrent sessions
 
-### FR-4: MCP Header Compliance
-- [ ] `Mcp-Session-Id` header extracted from incoming requests
-- [ ] `Mcp-Session-Id` header included in all outgoing responses
-- [ ] Header value validation (proper UUID format)
-- [ ] Session creation when header is missing or invalid
-- [ ] Session retrieval when valid header is present
-- [ ] Header case-insensitive handling per HTTP specification
+### FR-4: SSE Streaming Infrastructure
+- [ ] Server-Sent Events stream initialization for GET requests
+- [ ] Proper SSE event formatting with data, event, and id fields
+- [ ] Event ID generation for stream resumability
+- [ ] Heartbeat messages every 30 seconds to maintain connection
+- [ ] JSON-RPC message delivery through SSE events
+- [ ] Stream cleanup on client disconnect
+- [ ] Support for multiple concurrent SSE connections per session
 
-### FR-5: Origin Header Validation
-- [ ] Origin header extraction and validation for all requests
-- [ ] Configurable allowed origins list with default localhost variants
-- [ ] Strict origin validation mode with whitelist enforcement
-- [ ] DNS rebinding protection through origin pattern matching
-- [ ] Support for localhost, 127.0.0.1, and [::1] origin patterns
-- [ ] Proper error responses (403 Forbidden) for invalid origins
+### FR-5: Backward Compatibility
+- [ ] Detection of legacy HTTP+SSE transport attempts (protocol 2024-11-05)
+- [ ] Graceful handling of requests missing `MCP-Protocol-Version` header
+- [ ] Appropriate error responses (426 Upgrade Required) for legacy clients
+- [ ] Clear upgrade instructions in error response body
+- [ ] Logging of legacy transport detection for monitoring
+- [ ] No breaking changes to existing tool functionality
 
-### FR-6: Security Measures
-- [ ] Server binding restricted to localhost (127.0.0.1) for local deployments
-- [ ] Host header validation to prevent DNS rebinding attacks
-- [ ] Security configuration with strict mode enforcement
-- [ ] CORS integration with security policy enforcement
-- [ ] Security event logging for all validation failures
-- [ ] Protection against session fixation attacks
-
-### FR-7: Client Information Tracking
-- [ ] User-Agent header extraction and storage in session
-- [ ] Origin header storage for audit and security purposes
-- [ ] IP address extraction from connection info when available
-- [ ] Client information optional and privacy-conscious
-- [ ] Client data included in session creation logging
-- [ ] Client information available for security analysis
+### FR-6: Integration with Existing MCP Infrastructure
+- [ ] Seamless integration with existing `McpHandler` for JSON-RPC processing
+- [ ] Preservation of all existing MCP tool functionality
+- [ ] CORS configuration maintained for web client compatibility
+- [ ] Health check endpoints continue to function
+- [ ] Existing error handling and logging infrastructure preserved
+- [ ] No modifications required to existing MCP tools
 
 ## Non-Functional Requirements
 
-### NFR-1: Performance
-- [ ] Session creation time < 10ms (95th percentile)
-- [ ] Session lookup time < 1ms (95th percentile)
-- [ ] Session cleanup time < 100ms for 1000+ expired sessions
-- [ ] Background cleanup task doesn't block request processing
-- [ ] Memory usage scales linearly with active session count
-- [ ] Support for 1000+ concurrent sessions without performance degradation
+### NFR-1: Performance (scaled for small user base)
+- [ ] JSON-RPC request processing latency target: < 200ms (95th percentile)
+- [ ] Stream initialization time < 100ms
+- [ ] Memory usage appropriate for 5–6 agents; no leaks under 30-minute sessions
+- [ ] Session cleanup operation < 50ms for typical loads
+- [ ] Support for 10–20 concurrent connections without degradation
 
-### NFR-2: Scalability
-- [ ] Session storage design supports horizontal scaling (stateless except sessions)
-- [ ] Lock contention minimized with efficient read/write patterns
-- [ ] Background tasks scale with session volume
-- [ ] Memory footprint remains bounded under high session load
-- [ ] Session limits prevent resource exhaustion
-- [ ] Graceful degradation when session limits are reached
+### NFR-2: Reliability
+- [ ] 99.9% uptime for session management operations
+- [ ] Zero memory leaks during 24-hour stress testing
+- [ ] Graceful handling of network interruptions
+- [ ] Automatic recovery from connection failures
+- [ ] Message delivery guarantee for SSE streams
+- [ ] Error recovery within 1 second of failure detection
 
-### NFR-3: Reliability
-- [ ] Zero memory leaks during 24-hour continuous operation
-- [ ] Session operations atomic with proper error handling
-- [ ] Recovery from lock acquisition failures
-- [ ] Graceful handling of concurrent session operations
-- [ ] Consistent session state across all operations
-- [ ] Automatic recovery from background task failures
+### NFR-3: Scalability
+- [ ] Horizontal scaling support through stateless design
+- [ ] Linear performance scaling with concurrent connection count
+- [ ] Memory usage scaling proportional to active session count
+- [ ] No hardcoded limits preventing scale-up
+- [ ] Efficient session storage with O(1) lookup performance
+- [ ] Background cleanup operations don't impact active requests
 
 ### NFR-4: Security
-- [ ] Session IDs resistant to brute force attacks (128-bit entropy)
-- [ ] No session information disclosure in error messages
-- [ ] Origin validation prevents cross-origin attacks
-- [ ] DNS rebinding attacks blocked by Host/Origin validation
-- [ ] Session hijacking prevention through secure ID generation
-- [ ] Timing attack resistance in session validation
+- [ ] Session IDs use cryptographically secure UUID generation
+- [ ] No sensitive data exposure in error messages or logs
+- [ ] Proper input validation for all request parameters
+- [ ] Protection against session fixation attacks
+- [ ] Rate limiting consideration for session creation
+- [ ] Secure session storage preventing unauthorized access
 
-### NFR-5: Observability
-- [ ] Structured logging for all session lifecycle events
-- [ ] Security event logging with appropriate severity levels
-- [ ] Session metrics available for monitoring (count, creation rate, cleanup rate)
-- [ ] Error logging with sufficient context for debugging
-- [ ] Performance metrics tracking for session operations
-- [ ] Audit trail for security-related decisions
+### NFR-5: Maintainability
+- [ ] Code follows Rust best practices and style guidelines
+- [ ] Comprehensive unit test coverage (>90% line coverage)
+- [ ] Clear separation of concerns between transport and business logic
+- [ ] Well-documented public API with usage examples
+- [ ] Structured logging with appropriate log levels
+- [ ] Error messages provide actionable debugging information
 
 ## Test Cases
 
-### TC-1: Session Creation and Header Handling
-**Scenario**: Client makes request without session ID
-**Given**: MCP server with session management enabled
-**When**: Request sent to `/mcp` without `Mcp-Session-Id` header
-**Then**: New session created with secure UUID v4 ID
-**And**: Response includes `Mcp-Session-Id` header with new session ID
-**And**: Session stored in session manager with proper TTL
-**And**: Session creation logged with appropriate details
+### TC-1: JSON-RPC Request Processing
+**Scenario**: Client sends POST request with valid JSON-RPC message
+**Given**: MCP server is running with new transport
+**When**: POST request sent to `/mcp` with `Content-Type: application/json`
+**And**: Request body contains valid JSON-RPC message
+**And**: `MCP-Protocol-Version: 2025-06-18` header present
+**Then**: Server processes request through existing MCP handler
+**And**: Returns 200 OK status with JSON-RPC response
+**And**: Response includes `MCP-Protocol-Version` and `Mcp-Session-Id` headers
+**And**: Session is created or retrieved for subsequent requests
 
-### TC-2: Session Retrieval and Activity Tracking
-**Scenario**: Client makes request with existing session ID
-**Given**: Client has valid session ID from previous request
-**When**: Request sent with `Mcp-Session-Id` header containing valid UUID
-**Then**: Existing session retrieved and validated
-**And**: Session `last_accessed` timestamp updated
-**And**: Response includes same session ID in header
-**And**: Session activity logged for monitoring
+### TC-2: SSE Stream Initialization
+**Scenario**: Client requests SSE stream for server messages
+**Given**: MCP server is running with session management
+**When**: GET request sent to `/mcp` with `Accept: text/event-stream`
+**And**: `MCP-Protocol-Version: 2025-06-18` header present
+**Then**: Server initializes SSE stream with proper headers
+**And**: Returns 200 OK with `Content-Type: text/event-stream`
+**And**: Stream includes heartbeat messages every 30 seconds
+**And**: Session is tracked for message delivery
 
-### TC-3: Session Expiry and Cleanup
-**Scenario**: Session expires due to inactivity
-**Given**: Session created with 5-minute TTL
-**When**: No requests made for 6 minutes
-**And**: Background cleanup task runs
-**Then**: Expired session removed from storage
-**And**: Subsequent request with expired session ID creates new session
-**And**: Cleanup operation logged with removed session count
+### TC-3: Session Management
+**Scenario**: Multiple requests with same session ID
+**Given**: Client has established session with server
+**When**: Multiple requests sent with same `Mcp-Session-Id` header
+**Then**: All requests use same session context
+**And**: Session activity is updated for each request
+**And**: Session remains active until timeout period
+**And**: Session cleanup occurs after timeout expires
 
-### TC-4: Origin Validation Security
-**Scenario**: Request with invalid origin header
-**Given**: Server configured with localhost-only origin validation
-**When**: Request sent with `Origin: http://malicious-site.com`
-**Then**: Request blocked with 403 Forbidden status
-**And**: Security violation logged with origin details
-**And**: No session created or updated
-**And**: Response includes security error message
+### TC-4: Legacy Transport Detection
+**Scenario**: Legacy client attempts deprecated transport
+**Given**: MCP server is running with backward compatibility
+**When**: Request sent without `MCP-Protocol-Version` header
+**Or**: Request sent with `MCP-Protocol-Version: 2024-11-05`
+**Then**: Server detects legacy transport attempt
+**And**: Returns 426 Upgrade Required status
+**And**: Response includes upgrade instructions
+**And**: Legacy detection is logged for monitoring
 
-### TC-5: DNS Rebinding Protection
-**Scenario**: DNS rebinding attack attempt
-**Given**: Server running on localhost with Host validation
-**When**: Request sent with `Host: attacker.com` but connecting to localhost
-**Then**: Request blocked with 403 Forbidden status
-**And**: DNS rebinding attempt logged as security event
-**And**: No server processing of request content
-**And**: Connection terminated cleanly
-
-### TC-6: Concurrent Session Handling
-**Scenario**: Multiple concurrent requests with different sessions
-**Given**: 100 clients with different session IDs making simultaneous requests
-**When**: All clients send requests within 1-second window
-**Then**: All sessions handled independently without data corruption
-**And**: No session ID collisions occur
+### TC-5: Concurrent Session Handling
+**Scenario**: Multiple clients connect simultaneously
+**Given**: MCP server supports concurrent connections
+**When**: 100 clients connect with different session IDs
+**And**: Each client sends JSON-RPC requests
+**Then**: All sessions are managed independently
+**And**: No session data corruption occurs
 **And**: Performance remains within acceptable limits
-**And**: All responses include correct session IDs
+**And**: Memory usage scales linearly with session count
 
-### TC-7: Session Limit Enforcement
-**Scenario**: Session creation when at maximum limit
-**Given**: Server configured with maximum 10 sessions
-**And**: 10 active sessions already exist
-**When**: New client attempts to create session
-**Then**: Session creation fails with appropriate error
-**And**: HTTP 429 Too Many Requests status returned
-**And**: Error logged with session limit details
-**And**: Existing sessions remain unaffected
+### TC-6: Error Handling
+**Scenario**: Invalid requests and error conditions
+**Given**: MCP server with comprehensive error handling
+**When**: Malformed JSON-RPC request is sent
+**Or**: Invalid session ID format is provided
+**Or**: Unsupported protocol version is used
+**Then**: Appropriate error response is returned
+**And**: Error follows JSON-RPC error format
+**And**: No server crash or instability occurs
+**And**: Error details logged for debugging
 
-### TC-8: DELETE Session Termination
-**Scenario**: Explicit session termination
-**Given**: Client with active session
-**When**: DELETE request sent to `/mcp` with session ID
-**Then**: Session removed from storage immediately
-**And**: HTTP 204 No Content status returned
-**And**: Session deletion logged
-**And**: Subsequent requests with same session ID create new session
-
-### TC-9: Malformed Session ID Handling
-**Scenario**: Request with invalid session ID format
-**Given**: Client sends request with malformed session ID
-**When**: `Mcp-Session-Id` header contains non-UUID value
-**Then**: Invalid session ID ignored gracefully
-**And**: New session created automatically
-**And**: Invalid format logged as warning
-**And**: Response includes new valid session ID
-
-### TC-10: Security Configuration Validation
-**Scenario**: Server startup with security configuration
-**Given**: Security configuration with custom allowed origins
-**When**: Server starts with configuration validation
-**Then**: Configuration validated and applied successfully
-**And**: Security settings logged at startup
-**And**: Origin validation works according to configuration
-**And**: Invalid configuration prevents server startup
+### TC-7: Integration with Existing Tools
+**Scenario**: Existing MCP tools continue to function
+**Given**: Doc Server with rust_query and management tools
+**When**: Client sends requests for existing tool operations
+**Through**: New Streamable HTTP transport
+**Then**: All tools respond correctly through new transport
+**And**: Tool functionality is unchanged
+**And**: Response formats remain consistent
+**And**: No tool registration changes required
 
 ## Deliverables
 
-### D-1: Core Session Management
-- [ ] `crates/mcp/src/session.rs` - Complete session management implementation
-- [ ] Session struct with all required fields (ID, timestamps, TTL, client info)
-- [ ] SessionManager with thread-safe operations
-- [ ] Background cleanup task with configurable intervals
-- [ ] Comprehensive error handling with proper error types
-- [ ] Configuration structures for session management
+### D-1: Core Transport Implementation
+- [ ] `crates/mcp/src/transport.rs` - Complete transport module implementation
+- [ ] Session management with thread-safe storage
+- [ ] Unified endpoint handler for POST/GET methods
+- [ ] SSE streaming infrastructure with proper event formatting
+- [ ] Backward compatibility detection and handling
+- [ ] Integration with existing MCP handler infrastructure
 
-### D-2: Security Implementation
-- [ ] `crates/mcp/src/security.rs` - Complete security validation layer
-- [ ] Origin validation middleware for Axum integration
-- [ ] DNS rebinding protection with Host header validation
-- [ ] SecurityConfig with configurable validation rules
-- [ ] Security logging and event tracking
-- [ ] CORS integration with security policies
+### D-2: Server Integration
+- [ ] Updated `crates/mcp/src/server.rs` using new transport
+- [ ] Router configuration with unified `/mcp` endpoint
+- [ ] Transport configuration management
+- [ ] Dependency updates in `Cargo.toml` if required
+- [ ] Module declarations in `crates/mcp/src/lib.rs`
 
-### D-3: Transport Integration
-- [ ] Updated `crates/mcp/src/transport.rs` with session header handling
-- [ ] Session extraction and creation logic
-- [ ] Header injection in all responses
-- [ ] DELETE endpoint for session termination
-- [ ] Client information extraction from headers
-- [ ] Session context propagation through request lifecycle
+### D-3: Test Suite
+- [ ] Unit tests for transport components (session management, protocol handling)
+- [ ] Integration tests for end-to-end request/response cycles
+- [ ] Concurrency tests for multiple simultaneous connections
+- [ ] Error handling tests for various failure scenarios
+- [ ] Performance benchmarks for latency and throughput
+- [ ] Compatibility tests with existing MCP tools
 
-### D-4: Server Integration
-- [ ] Updated `crates/mcp/src/server.rs` with session manager initialization
-- [ ] Security configuration and middleware setup
-- [ ] Session manager integration with server state
-- [ ] Background task startup during server initialization
-- [ ] Secure server binding configuration
-- [ ] Module declarations and dependency management
-
-### D-5: Test Suite
-- [ ] Unit tests for session management operations
-- [ ] Unit tests for security validation functions
-- [ ] Integration tests for end-to-end session lifecycle
-- [ ] Security tests simulating attack scenarios
-- [ ] Performance tests for concurrent session handling
-- [ ] Load tests for session cleanup operations
-
-### D-6: Documentation
-- [ ] Session management API documentation
-- [ ] Security configuration guide
-- [ ] Deployment security recommendations
-- [ ] Troubleshooting guide for session issues
-- [ ] Performance tuning guidelines
-- [ ] Security audit checklist
+### D-4: Documentation
+- [ ] Code documentation with comprehensive doc comments
+- [ ] API documentation for transport configuration
+- [ ] Migration guide from old transport to new transport
+- [ ] Troubleshooting guide for common transport issues
+- [ ] Performance tuning recommendations
 
 ## Validation Criteria
 
 ### V-1: Functional Validation
-- [ ] All functional requirements verified through automated tests
-- [ ] Manual testing with MCP clients (Cursor, Toolman)
-- [ ] Session lifecycle tested under various scenarios
-- [ ] Header handling verified with real HTTP clients
-- [ ] Error handling tested for all failure modes
-- [ ] Security validation tested with simulated attacks
+- [ ] All functional requirements pass automated test suite
+- [ ] Manual testing with Cursor MCP client successful
+- [ ] Integration testing with Toolman client successful
+- [ ] Backward compatibility verified with legacy client simulation
+- [ ] All existing MCP tools function correctly through new transport
 
-### V-2: Performance Validation
-- [ ] Load testing with 1000+ concurrent sessions
-- [ ] Performance benchmarking meets all NFR requirements
-- [ ] Memory leak testing over 24-hour period
-- [ ] Background cleanup performance under various loads
-- [ ] Response time testing under session management overhead
-- [ ] Resource usage monitoring during peak loads
+### V-2: Performance Validation (right-sized)
+- [ ] Validation with 5–6 concurrent agents passes targets
+- [ ] Memory stable during 30-minute interactive sessions
+- [ ] Latency benchmarks meet adjusted targets
+- [ ] Session cleanup time within requirement under typical load
 
-### V-3: Security Validation
-- [ ] Penetration testing for DNS rebinding attacks
-- [ ] Origin spoofing attack prevention verification
-- [ ] Session hijacking attempt simulation
-- [ ] Brute force attack resistance testing
-- [ ] CORS policy enforcement validation
-- [ ] Security configuration audit
+### V-3: Integration Validation
+- [ ] Kubernetes deployment successful with new transport
+- [ ] Health checks continue to function in production environment
+- [ ] Monitoring and logging work correctly with new transport
+- [ ] CORS policies function properly for web-based clients
+- [ ] Database connectivity and tool operations unaffected
 
-### V-4: Integration Validation
-- [ ] Kubernetes deployment with session management
-- [ ] Integration with existing MCP transport layer
-- [ ] Compatibility with all existing MCP tools
-- [ ] Health monitoring integration
-- [ ] Logging and observability integration
-- [ ] Production environment validation
+### V-4: Reliability Validation
+- [ ] Connection stability testing under various network conditions
+- [ ] Graceful handling of client disconnections and reconnections
+- [ ] Error recovery testing with simulated failures
+- [ ] Session timeout and cleanup functionality verified
+- [ ] No data loss or corruption during transport operations
 
 ## Definition of Done
 
 **This task is considered complete when:**
 
-1. **All Functional Requirements** (FR-1 through FR-7) are implemented and verified
+1. **All Functional Requirements** (FR-1 through FR-6) are implemented and verified
 2. **All Non-Functional Requirements** (NFR-1 through NFR-5) meet specified criteria
-3. **All Test Cases** (TC-1 through TC-10) pass in automated test suite
-4. **All Deliverables** (D-1 through D-6) are completed and reviewed
+3. **All Test Cases** (TC-1 through TC-7) pass in automated test suite
+4. **All Deliverables** (D-1 through D-4) are completed and reviewed
 5. **All Validation Criteria** (V-1 through V-4) are satisfied through testing
-6. **Security Audit** completed with no high-severity vulnerabilities
-7. **Performance Benchmarks** meet all specified performance requirements
-8. **Production Deployment** successful with session management enabled
-9. **Client Integration** verified with MCP clients maintaining session state
-10. **Code Review** completed with security-focused review approval
+6. **Production Deployment** successful in Kubernetes cluster with new transport
+7. **Client Integration** verified with at least two MCP clients (Cursor, Toolman)
+8. **Performance Benchmarks** meet all specified performance requirements
+9. **Code Review** completed with approval from technical reviewers
+10. **Documentation** complete and accessible for future maintenance
 
 **Additional Completion Criteria:**
-- Zero critical security vulnerabilities in session management
-- Memory usage stable under extended high-load testing
-- All existing MCP functionality preserved without regression
-- Security documentation complete and reviewed
-- Session management monitoring operational in production environment
-- Incident response procedures documented for security events
+- Zero critical or high-severity bugs in transport functionality
+- Memory usage stable over extended testing periods
+- All existing functionality preserved without regression
+- Migration path documented and tested
+- Monitoring and alerting functional for new transport layer

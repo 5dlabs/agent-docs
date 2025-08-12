@@ -1,219 +1,210 @@
-# Acceptance Criteria: Task 18 - Data Migration and Validation Pipeline
+# Acceptance Criteria: Task 18 - Documentation and API Reference Generation
 
 ## Functional Requirements
 
-### 1. Migration Framework Using doc-loader Crate
-- [ ] Migration scripts created for all documentation types:
-  - [ ] Rust crates and standard library documentation
-  - [ ] Jupyter notebooks and data science content
-  - [ ] Kubernetes documentation (Cilium, Talos)
-  - [ ] DeFi protocol documentation (Meteora, Raydium)
-  - [ ] Systems programming content (eBPF, best practices)
-- [ ] Extensible migration framework supporting new document types
-- [ ] Progress tracking with percentage completion and ETA calculation
-- [ ] Migration state persistence and recovery mechanisms
-- [ ] Configurable batch sizes and processing parameters
+### 1. Rust API Documentation Generation
+- [ ] `cargo doc --all-features --no-deps` generates comprehensive documentation
+- [ ] All workspace crates documented (database, mcp, embeddings, doc-loader, llm)
+- [ ] External links and search indexes properly configured
+- [ ] All public APIs include documentation comments
+- [ ] Code examples included and tested for accuracy
+- [ ] Documentation hosted and accessible via web interface
+- [ ] Cross-references between modules and crates functional
 
-### 2. Blank Database Bootstrap Implementation
-- [ ] Initial database setup and schema validation
-- [ ] Comprehensive data loading pipeline:
-  - [ ] Document parsing with error handling
-  - [ ] Metadata extraction and validation
-  - [ ] Embedding generation with batching optimization
-  - [ ] Vector storage with pgvector integration
-  - [ ] Search index creation and optimization
-- [ ] Incremental migration support with checkpointing
-- [ ] Migration resumption from last successful checkpoint
-- [ ] Database connection pooling optimization for migrations
+### 2. OpenAPI/Swagger Specification Creation
+- [ ] `openapi.yaml` file created with OpenAPI 3.0 specification
+- [ ] POST /mcp endpoint documented with JSON-RPC request/response schemas
+- [ ] GET /mcp endpoint documented for SSE event streams
+- [ ] Authentication headers documented (Authorization, MCP-Protocol-Version)
+- [ ] All MCP tools documented with input schemas and examples:
+  - [ ] rust_query, jupyter_query, cilium_query, talos_query
+  - [ ] meteora_query, raydium_query, ebpf_query, rust_best_practices_query
+  - [ ] add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status
+- [ ] Error response schemas and status codes documented
+- [ ] OpenAPI specification validated with standard tools
 
-### 3. Data Validation and Integrity Checks
-- [ ] Checksum validation for all source documents
-- [ ] Record count validation and comparison against source
-- [ ] Schema conformance validation:
-  - [ ] Document structure validation against expected schema
-  - [ ] Metadata field presence and type validation
-  - [ ] Vector dimension consistency checks (3072 dimensions)
-- [ ] Duplicate detection and intelligent merging strategies
-- [ ] Cross-reference validation between related records
-- [ ] Data consistency checks across document relationships
+### 3. Kubernetes Deployment Guide
+- [ ] Helm chart structure documented in `helm/doc-server/`
+- [ ] Comprehensive `values.yaml` configuration guide:
+  - [ ] Image settings and repository configuration
+  - [ ] Resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi)
+  - [ ] Replica counts and scaling configuration
+  - [ ] Ingress rules and networking setup
+- [ ] ConfigMap and Secret management procedures:
+  - [ ] Database credentials and API keys
+  - [ ] Environment variable configuration
+  - [ ] Certificate and TLS configuration
+- [ ] PodDisruptionBudget setup for high availability
+- [ ] Troubleshooting section with common deployment issues
+- [ ] Monitoring and logging integration guide
 
-### 4. Parallel Processing and Performance Optimization
-- [ ] Parallel processing architecture achieving ≥1000 docs/minute:
-  - [ ] Document processing parallelization with worker pools
-  - [ ] Embedding generation batching (configurable batch sizes)
-  - [ ] Database transaction optimization for bulk operations
-- [ ] Safe concurrency patterns:
-  - [ ] Thread-safe progress tracking
-  - [ ] Atomic batch operations
-  - [ ] Resource contention management
-- [ ] Backpressure management and adaptive throttling
-- [ ] Performance monitoring with bottleneck detection
-- [ ] Configurable parallelism based on system resources
+### 4. MCP Tool Usage and Client Integration
+- [ ] rust_query tool usage documented with examples
+- [ ] Cursor IDE integration guide:
+  - [ ] MCP configuration setup
+  - [ ] Tool invocation examples
+  - [ ] Troubleshooting common issues
+- [ ] Toolman client setup and usage documentation
+- [ ] All query tools documented with usage examples
+- [ ] JSON-RPC message format specifications
+- [ ] Error handling and retry logic documentation
+- [ ] Authentication and session management guide
+- [ ] Performance optimization tips for clients
 
-### 5. CLI and Kubernetes Job Interfaces
-- [ ] CLI command implementation (`cargo run --bin migrate`):
-  - [ ] Progress reporting with detailed status and ETA
-  - [ ] Configuration options for different scenarios
-  - [ ] Validation and dry-run capabilities
-  - [ ] Interactive and non-interactive modes
-- [ ] Kubernetes Job template with:
-  - [ ] Resource allocation and limits configuration
-  - [ ] ConfigMap integration for migration parameters
-  - [ ] Status reporting and monitoring integration
-  - [ ] Pod restart policies and failure handling
-- [ ] Migration history persistence in database
-- [ ] Comprehensive rollback procedures for failed batches
+### 5. Architecture Diagrams and Performance Guide
+- [ ] Mermaid diagrams for system architecture:
+  - [ ] High-level system overview
+  - [ ] MCP server component interaction
+  - [ ] Database and embedding service integration
+  - [ ] Client connection and request flow
+- [ ] Data flow documentation from ingestion to response
+- [ ] Performance tuning guide:
+  - [ ] Database connection pooling optimization
+  - [ ] Embedding batch size configuration
+  - [ ] Cache strategy recommendations
+  - [ ] Resource allocation guidelines
+- [ ] Vector search performance benchmarks
+- [ ] Monitoring setup with metrics and alerting
+- [ ] Operational runbooks for production deployment
 
 ## Non-Functional Requirements
 
-### 1. Performance Requirements
-- [ ] Processing throughput ≥1000 documents per minute consistently
-- [ ] Complete 184 MB dataset migration within 3 hours
-- [ ] Memory usage remains stable during large dataset processing
-- [ ] Database connection efficiency (< 100 concurrent connections)
-- [ ] CPU utilization optimized across available cores
+### 1. Documentation Quality
+- [ ] All examples tested and validated for correctness
+- [ ] Consistent formatting and style across all documents
+- [ ] Clear step-by-step procedures with prerequisites
+- [ ] Comprehensive troubleshooting guides
+- [ ] Regular documentation updates with code changes
 
-### 2. Reliability Requirements
-- [ ] Error rate < 0.1% with automatic retry mechanisms
-- [ ] Rollback capability for any failed migration batch
-- [ ] Complete batch rollback execution < 5 minutes
-- [ ] Migration resumption from any checkpoint
-- [ ] Data integrity maintained across all failure scenarios
+### 2. Accessibility and Usability
+- [ ] Documentation searchable and well-organized
+- [ ] Clear navigation and cross-references
+- [ ] Multiple formats available (HTML, PDF, Markdown)
+- [ ] Responsive design for mobile and desktop viewing
+- [ ] Accessibility compliance (WCAG 2.1 AA)
 
-### 3. Operational Requirements
-- [ ] Comprehensive logging for audit trails and debugging
-- [ ] Progress monitoring with real-time status updates
-- [ ] Resource usage monitoring and alerting
-- [ ] Migration scheduling and automation capabilities
-- [ ] Integration with existing monitoring and alerting systems
+### 3. Maintenance and Integration
+- [ ] Documentation generation integrated into CI/CD pipeline
+- [ ] Automated validation and link checking
+- [ ] Version control and change tracking
+- [ ] Regular review and update process
+- [ ] Integration with existing documentation systems
 
 ## Test Cases
 
-### Test Case 1: Full 184 MB Dataset Migration
-**Given**: Empty database and complete 184 MB dataset
-**When**: Full migration executed with optimal settings
+### Test Case 1: API Documentation Generation
+**Given**: All Rust crates with public APIs
+**When**: `cargo doc` command executed
 **Then**:
-- All documents processed and stored successfully
-- Checksum validation confirms data integrity
-- Processing rate ≥1000 docs/minute achieved
-- Migration completes within 3 hours
-- Final record count matches source expectations
+- Documentation generated for all public APIs
+- Examples compile and execute correctly
+- Cross-references and links functional
+- Search functionality works properly
 
-### Test Case 2: Migration Failure and Rollback
-**Given**: Migration in progress with simulated failure
-**When**: Failure occurs during processing batch
+### Test Case 2: OpenAPI Specification Validation
+**Given**: Complete OpenAPI specification
+**When**: Specification validated with tools
 **Then**:
-- Failure detected within 30 seconds
-- Automatic rollback initiated for failed batch
-- Database returned to consistent pre-batch state
-- Migration can resume from last successful checkpoint
-- No data corruption or orphaned records
+- OpenAPI 3.0 specification valid
+- All endpoints documented with examples
+- Client code generation possible
+- Interactive API documentation functional
 
-### Test Case 3: Incremental Migration and Resumption
-**Given**: Partially completed migration with checkpoint
-**When**: Migration resumed from checkpoint
+### Test Case 3: Kubernetes Deployment from Guide
+**Given**: Fresh Kubernetes cluster and documentation
+**When**: Following deployment guide step-by-step
 **Then**:
-- Progress tracking shows accurate completion percentage
-- Only remaining documents processed
-- No duplicate processing of completed batches
-- Final state identical to complete migration
-- Checksum validation confirms consistency
+- Successful deployment of doc-server
+- All services accessible and healthy
+- Configuration options work as documented
+- Troubleshooting guide resolves common issues
 
-### Test Case 4: Parallel Processing Scalability
-**Given**: Migration configured with various parallelism levels
-**When**: Processing with 1, 4, 8, and 16 parallel workers
+### Test Case 4: Client Integration Following Guide
+**Given**: Cursor IDE and integration documentation
+**When**: Following MCP integration guide
 **Then**:
-- Throughput scales appropriately with worker count
-- Resource utilization optimized for each configuration
-- No race conditions or data corruption
-- Memory usage remains within acceptable bounds
-- Performance monitoring shows bottleneck identification
+- MCP connection established successfully
+- All documented tools accessible and functional
+- Examples work as documented
+- Error scenarios handled appropriately
 
-### Test Case 5: Data Validation Accuracy
-**Given**: Dataset with intentionally corrupted documents
-**When**: Migration with validation enabled
+### Test Case 5: Architecture Understanding
+**Given**: System architecture documentation
+**When**: New team member reviews documentation
 **Then**:
-- Corrupted documents detected and reported
-- Schema validation catches malformed metadata
-- Duplicate detection identifies and handles duplicates
-- Vector dimension validation prevents inconsistent data
-- Error reporting provides actionable information
-
-### Test Case 6: CLI and Kubernetes Interface Functionality
-**Given**: Migration interfaces configured and available
-**When**: Migration executed via CLI and Kubernetes Job
-**Then**:
-- Both interfaces provide equivalent functionality
-- Progress reporting works consistently
-- Configuration options properly applied
-- Resource limits respected in Kubernetes environment
-- Status monitoring provides accurate information
+- Complete understanding of system components
+- Data flow clear and traceable
+- Performance characteristics understood
+- Operational procedures executable
 
 ## Deliverables Checklist
 
-### Core Implementation
-- [ ] Migration framework extending doc-loader crate
-- [ ] Parallel processing system with worker pools
-- [ ] Data validation pipeline with integrity checks
-- [ ] CLI interface with comprehensive options
-- [ ] Kubernetes Job template and configuration
+### Core Documentation
+- [ ] Generated Rust API documentation
+- [ ] OpenAPI specification (openapi.yaml)
+- [ ] Kubernetes deployment guide
+- [ ] Client integration guides (Cursor, Toolman)
+- [ ] Architecture documentation with diagrams
 
-### Supporting Infrastructure
-- [ ] Database schema validation and setup
-- [ ] Checkpointing and state persistence
-- [ ] Progress monitoring and reporting system
-- [ ] Error handling and rollback procedures
-- [ ] Performance monitoring and optimization
+### Supporting Materials
+- [ ] Performance tuning guide
+- [ ] Troubleshooting documentation
+- [ ] Operational runbooks
+- [ ] Example configurations and code samples
+- [ ] Video tutorials for complex procedures
 
-### Documentation and Operations
-- [ ] Migration procedures and operational guide
-- [ ] Troubleshooting guide for common issues
-- [ ] Performance tuning recommendations
-- [ ] Disaster recovery and rollback procedures
-- [ ] Monitoring and alerting configuration
+### Infrastructure
+- [ ] Documentation hosting setup
+- [ ] Search functionality implementation
+- [ ] Automated generation pipeline
+- [ ] Version control and update process
+- [ ] Feedback and contribution system
 
 ## Validation Criteria
 
-### Automated Testing
+### Automated Validation
 ```bash
-# Full migration validation
-cargo test --package doc-loader migration_tests
-cargo run --bin migrate -- --validate --dry-run
+# Documentation generation
+cargo doc --all-features --no-deps
 
-# Performance benchmarking
-cargo test --release migration_performance
+# OpenAPI validation
+swagger-codegen validate -i openapi.yaml
+npx @apidevtools/swagger-cli validate openapi.yaml
 
-# Kubernetes Job validation
-kubectl apply -f k8s/migration-job.yaml --dry-run=client
-kubectl validate -f k8s/migration-job.yaml
+# Helm chart validation
+helm template helm/doc-server --validate
+helm lint helm/doc-server
+
+# Link checking
+markdown-link-check docs/**/*.md
 ```
 
 ### Manual Validation
-1. **Complete Migration**: Execute full 184 MB dataset migration
-2. **Failure Recovery**: Test rollback procedures with simulated failures
-3. **Performance Validation**: Measure throughput under various configurations
-4. **Data Integrity**: Validate checksums and record counts
-5. **Interface Testing**: Test both CLI and Kubernetes interfaces
+1. **Completeness Review**: All required topics covered comprehensively
+2. **Accuracy Testing**: All examples and procedures tested
+3. **Usability Testing**: New users can follow guides successfully
+4. **Technical Review**: Subject matter experts validate content
+5. **Accessibility Audit**: Documentation meets accessibility standards
 
 ## Definition of Done
 
-Task 18 is complete when:
+Task 17 is complete when:
 
-1. **Complete Pipeline**: Migration framework handles all documentation types
-2. **Performance Achieved**: ≥1000 docs/minute throughput consistently demonstrated
-3. **Validation Comprehensive**: 100% data integrity verification implemented
-4. **Interfaces Functional**: Both CLI and Kubernetes interfaces operational
-5. **Rollback Reliable**: Failed migration recovery tested and validated
-6. **Documentation Complete**: Operational procedures and troubleshooting guides
-7. **Production Ready**: System validated with full 184 MB dataset
+1. **API Documentation**: All public Rust APIs comprehensively documented
+2. **OpenAPI Specification**: Complete and validated API specification
+3. **Deployment Guide**: Successful Kubernetes deployment possible following guide
+4. **Client Integration**: Cursor and Toolman integration guides functional
+5. **Architecture Documentation**: Complete system understanding possible
+6. **Validation Complete**: All automated and manual validation passed
+7. **User Feedback**: Initial user testing confirms documentation usability
 
 ## Success Metrics
 
-- Processing throughput: ≥1000 documents per minute sustained
-- Total migration time: 184 MB dataset completed < 3 hours
-- Data integrity: 100% checksum validation success
-- Error rate: < 0.1% processing errors with successful retry
-- Rollback time: Complete batch rollback < 5 minutes
-- Memory efficiency: Stable usage throughout migration process
-- Operational reliability: 99.9% successful migration completion rate
-- Recovery capability: 100% successful checkpoint resumption
+- 100% of public APIs documented with examples
+- OpenAPI specification enables successful client generation
+- Kubernetes deployment success rate > 95% following guide
+- Client integration success rate > 90% for new users
+- Documentation completeness score > 95% via automated analysis
+- User satisfaction rating > 4.5/5 for documentation quality
+- Time to productive use < 30 minutes for new developers
+- Documentation maintenance overhead < 10% of development time

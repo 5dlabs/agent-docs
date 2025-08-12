@@ -1,27 +1,30 @@
-# Task 7: OpenAI Embedding Client with Batch Processing
+# Task 7: Database Migration and Schema Optimization
 
 ## Overview
-Implement optimized OpenAI embedding generation using text-embedding-3-large model with batch processing for 50% cost reduction.
+Optimize PostgreSQL database schema and implement migration system for production deployment with performance improvements.
 
 ## Implementation Guide
-- Implement OpenAI Batch API integration with JSONL format
-- Configure text-embedding-3-large with 3072 or 1024 dimensions
-- Create batch queue system for 20,000 line chunks
-- Implement rate limiting (3000 RPM / 1M TPM) with token bucket
-- Add retry logic with exponential backoff
-- Implement cost tracking and reporting system
+- Create database migration system with version tracking
+- Optimize schema for vector search performance  
+- Add proper indexing strategies for document retrieval
+- Implement connection pooling optimization
+- Add database health monitoring and metrics
+- Document pgvector 2000-dimension index limitation; plan for either dimension reduction or future pgvector upgrade to enable vector index
 
 ## Technical Requirements
-- OpenAI Batch API integration
-- JSONL format batch processing
-- Rate limiting with token bucket algorithm
-- Exponential backoff retry mechanism
-- Cost tracking and 50% reduction validation
-- Secure API key management
+- PostgreSQL with pgvector extension
+- Migration versioning and rollback capability
+- Optimized indexes for query performance
+- Connection pool configuration
+- Database monitoring integration
+
+## Notes from Assessment
+- Current embeddings are 3072-dim (OpenAI text-embedding-3-large); vector index cannot be created
+- Queries must rely on metadata filters + full scan similarity; performance workarounds required
 
 ## Success Metrics
-- 50% cost reduction through batch processing
-- Rate limiting compliance (3000 RPM / 1M TPM)
-- Processing time < 20 minutes for 20k embeddings
-- Retry mechanism handles failures gracefully
-- Cost tracking accurate and comprehensive
+- Query performance improvements (< 2s response time)
+- Successful schema migrations without data loss
+- Optimized connection pooling for concurrent access
+- Database health monitoring operational
+- Backup and recovery procedures validated

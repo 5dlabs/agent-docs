@@ -1,43 +1,43 @@
-# Task ID: 14
-# Title: Production Monitoring and Observability
+# Task ID: 13
+# Title: Container Image Optimization
 # Status: pending
-# Dependencies: 12
+# Dependencies: 2
 # Priority: medium
-# Description: Implement comprehensive monitoring with Prometheus metrics, structured logging, and distributed tracing for production observability.
+# Description: Optimize Docker image for size, security, and performance with multi-stage builds and minimal attack surface.
 # Details:
-Add Prometheus metrics endpoint (/metrics) with custom metrics (query latency, embedding generation time, cache hit rate). Implement structured JSON logging with correlation IDs. Add OpenTelemetry tracing with Jaeger integration. Create custom dashboards in Grafana for key metrics. Implement alerting rules for SLA violations. Add performance profiling endpoints (pprof compatible). Use tracing and tracing-subscriber with json feature.
+Enhance existing Dockerfile with cargo-chef for dependency caching. Implement distroless or alpine-based runtime image. Add security scanning with trivy or snyk. Optimize binary size with strip and upx compression. Implement proper signal handling for graceful shutdown. Add non-root user with minimal permissions. Configure proper health check endpoints. Reduce image layers and optimize build cache. Target image size < 100MB.
 
 # Test Strategy:
-Validate metrics endpoint format and values, test log aggregation and searching, verify trace propagation across services, test alert triggering for various scenarios, and validate dashboard accuracy under load.
+Scan image for vulnerabilities, measure image size and layer count, test graceful shutdown handling, verify health checks in container runtime, and benchmark startup time (< 5 seconds).
 
 # Subtasks:
-## 1. Set up Prometheus metrics infrastructure [pending]
+## 1. Implement cargo-chef for Dependency Caching [pending]
 ### Dependencies: None
-### Description: Initialize Prometheus metrics collection with prometheus-rust crate, create metrics registry, and implement /metrics endpoint in the HTTP server
+### Description: Replace current manual dependency caching approach with cargo-chef to optimize Docker build times and improve layer caching efficiency
 ### Details:
-Add prometheus and prometheus-hyper crates to Cargo.toml dependencies. Create a metrics module in crates/mcp/src/metrics.rs to define custom metrics (query_latency_histogram, embedding_generation_time_histogram, cache_hit_rate_counter, active_connections_gauge, request_counter). Integrate metrics registry into McpServer and add GET /metrics endpoint to expose Prometheus-formatted metrics. Ensure metrics are thread-safe using Arc and lazy_static for global registry.
+Install cargo-chef in builder stage. Create chef stage with cargo chef prepare for generating recipe.json. Add dependencies stage with cargo chef cook for building dependencies separately. Modify builder stage to use pre-built dependencies from chef. This will significantly reduce rebuild times when only source code changes.
 
-## 2. Implement structured JSON logging with correlation IDs [pending]
+## 2. Migrate to Distroless Runtime Image [pending]
+### Dependencies: 13.1
+### Description: Replace debian:bookworm-slim base image with gcr.io/distroless/cc-debian12 for minimal attack surface and reduced image size
+### Details:
+Switch runtime FROM to gcr.io/distroless/cc-debian12. Remove apt-get installations in runtime stage as distroless includes only essential libraries. Ensure libssl and libpq shared libraries are available or statically link them. Update HEALTHCHECK to use built-in /health endpoint since curl won't be available. Set proper USER directive compatible with distroless nonroot user.
+
+## 3. Add Binary Optimization and Compression [pending]
+### Dependencies: 13.1
+### Description: Implement strip and UPX compression to reduce binary size while maintaining performance
+### Details:
+Add strip command in builder stage after cargo build to remove debug symbols. Install and apply UPX compression with --best flag for maximum compression. Configure Cargo.toml with opt-level=z, lto=true, codegen-units=1 for size optimization. Add panic=abort to reduce binary size further. Target final binary size reduction of 60-70%.
+
+## 4. Implement Graceful Shutdown and Signal Handling [pending]
 ### Dependencies: None
-### Description: Replace current logging with structured JSON format using tracing-subscriber's json feature and add correlation ID propagation across requests
+### Description: Add proper SIGTERM/SIGINT signal handling in the Rust application for container orchestration compatibility
 ### Details:
-Configure tracing-subscriber with json formatter in http_server.rs main function. Create middleware in server.rs to generate and inject X-Correlation-ID headers for each request. Add correlation_id field to all log spans using tracing::span! macro. Include structured fields like service_name, version, environment, timestamp in all log outputs. Ensure correlation IDs propagate through async operations and database queries.
+Implement tokio::signal handlers in http_server.rs for SIGTERM and SIGINT. Add graceful shutdown logic to close database connections and complete in-flight requests. Set proper timeout for shutdown sequence (30 seconds). Update Dockerfile with STOPSIGNAL SIGTERM. Ensure non-root user can receive and handle signals properly.
 
-## 3. Add OpenTelemetry tracing with Jaeger integration [pending]
-### Dependencies: 14.1, 14.2
-### Description: Implement distributed tracing using OpenTelemetry SDK with Jaeger exporter for end-to-end request visibility
+## 5. Integrate Security Scanning Pipeline [pending]
+### Dependencies: 13.2, 13.3
+### Description: Add Trivy vulnerability scanning to CI/CD pipeline and create security scanning script for local development
 ### Details:
-Add opentelemetry, opentelemetry-jaeger, and tracing-opentelemetry crates. Configure OpenTelemetry pipeline with Jaeger exporter in main initialization. Create spans for key operations: database queries (queries.rs), embedding generation, tool execution (handlers.rs), SSE connections. Add trace context propagation headers (traceparent, tracestate) to all HTTP responses. Configure sampling rate via OTEL_TRACE_SAMPLE_RATE environment variable.
-
-## 4. Create custom metrics for query performance monitoring [pending]
-### Dependencies: 14.1, 14.3
-### Description: Instrument database queries and tool executions with detailed performance metrics including p50/p95/p99 latencies
-### Details:
-Add timing instrumentation to DocumentQueries methods in queries.rs using histogram metrics. Implement per-tool metrics in McpHandler::handle_tool_call with labels for tool_name and status. Track embedding generation time in batch processing. Add database connection pool metrics (active, idle, pending connections). Create custom buckets for latency histograms based on expected SLA (0.1s, 0.5s, 1s, 2s, 5s). Export metrics with appropriate labels for Grafana dashboard filtering.
-
-## 5. Implement performance profiling endpoints [pending]
-### Dependencies: 14.1, 14.2
-### Description: Add pprof-compatible profiling endpoints for CPU and memory analysis in production
-### Details:
-Add pprof crate for profiling support. Create /debug/pprof/profile endpoint for CPU profiling with configurable duration. Add /debug/pprof/heap endpoint for memory profiling snapshots. Implement authentication middleware to protect profiling endpoints. Add rate limiting to prevent profiling abuse. Configure profiling to be opt-in via ENABLE_PROFILING environment variable. Document profiling endpoints in runbook for production debugging.
+Create scripts/scan_image.sh with Trivy scanning for vulnerabilities and misconfigurations. Add GitHub Action workflow for automated scanning on builds. Configure severity thresholds (CRITICAL/HIGH must be zero). Generate SBOM (Software Bill of Materials) for compliance. Add scanning results to build artifacts. Document security scanning process in documentation.
 

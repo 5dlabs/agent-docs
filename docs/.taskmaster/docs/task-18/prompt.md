@@ -1,130 +1,106 @@
-# Autonomous Agent Prompt: Data Migration and Validation Pipeline
+# Autonomous Agent Prompt: Documentation and API Reference Generation
 
-You are tasked with implementing an automated data migration pipeline to populate the database with 184 MB of documentation data, supporting both initial load and incremental migrations with comprehensive validation and rollback capabilities.
+You are tasked with creating comprehensive documentation including API reference, deployment guides, integration examples, and architecture diagrams using cargo doc, OpenAPI/Swagger, and mermaid diagrams.
 
 ## Your Mission
 
-Create a robust data migration system with parallel processing (≥1000 docs/minute), comprehensive validation, checkpointing, rollback procedures, and both CLI and Kubernetes Job interfaces.
+Generate complete documentation ecosystem covering Rust API documentation, OpenAPI specification, Kubernetes deployment guides, MCP tool usage examples, and client integration guides for Cursor and Toolman.
 
 ## Execution Steps
 
-### Step 1: Create Migration Framework Using doc-loader Crate
-- Examine existing `crates/doc-loader` architecture for extension points
-- Create migration scripts for each documentation type:
-  - Rust crates and standard library documentation
-  - Jupyter notebooks and data science content
-  - Kubernetes documentation (Cilium, Talos)
-  - DeFi protocol documentation (Meteora, Raydium)
-  - Systems programming content (eBPF, best practices)
-- Design extensible migration framework supporting new document types
-- Implement progress tracking with percentage completion and ETA
+### Step 1: Generate Rust API Documentation with cargo doc
+- Use `cargo doc --all-features --no-deps` for comprehensive API documentation
+- Configure rustdoc settings for external links and search indexes
+- Generate documentation for all workspace crates (database, mcp, embeddings, doc-loader, llm)
+- Include examples from code comments and ensure all public APIs documented
+- Prepare documentation for hosting and integration
 
-### Step 2: Implement Blank Database Bootstrap Scenario
-- Design initial database setup and schema validation
-- Create comprehensive data loading pipeline:
-  - Document parsing and metadata extraction
-  - Embedding generation with batching optimization
-  - Vector storage with pgvector integration
-  - Metadata indexing and search optimization
-- Implement incremental migration support with checkpointing
-- Add migration state persistence and recovery
+### Step 2: Create OpenAPI/Swagger Specification
+- Create `openapi.yaml` documenting MCP server HTTP endpoints
+- Document POST /mcp and GET /mcp endpoints with JSON-RPC schemas
+- Include SSE event stream documentation for server-sent events
+- Add authentication headers and MCP-Protocol-Version documentation
+- Define schemas for all MCP tools with example requests/responses
+- Validate OpenAPI specification with standard validators
 
-### Step 3: Add Data Validation and Integrity Checks
-- Implement checksum validation for source documents
-- Add record count validation and comparison
-- Create schema conformance validation:
-  - Document structure validation
-  - Metadata field validation
-  - Vector dimension consistency checks
-- Implement duplicate detection and merging strategies
-- Add data consistency validation across related records
+### Step 3: Write Kubernetes Deployment Guide
+- Document Helm chart creation in `helm/doc-server/` directory
+- Write comprehensive `values.yaml` configuration guide
+- Document resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi)
+- Include ConfigMap and Secret management procedures
+- Add PodDisruptionBudget setup for high availability
+- Create troubleshooting section for common deployment issues
 
-### Step 4: Implement Parallel Processing and Performance Optimization
-- Design parallel processing architecture for ≥1000 docs/minute throughput
-- Implement safe concurrency patterns:
-  - Document processing parallelization
-  - Embedding generation batching
-  - Database transaction optimization
-- Add backpressure management and resource monitoring
-- Implement performance monitoring and bottleneck detection
-- Add configurable parallelism based on system resources
+### Step 4: Document MCP Tool Usage with Client Integration
+- Document rust_query tool usage with detailed examples
+- Create Cursor IDE integration guide with MCP configuration
+- Write Toolman client setup and usage documentation
+- Include examples for all query tools (jupyter, cilium, talos, meteora, etc.)
+- Document JSON-RPC message formats and error handling
+- Add troubleshooting guide for client integration issues
 
-### Step 5: Create CLI and Kubernetes Job Interfaces
-- Create CLI command for manual migration execution:
-  - Progress reporting with detailed status
-  - Configuration options for different migration scenarios
-  - Validation and dry-run capabilities
-- Implement Kubernetes Job template:
-  - Resource allocation and limits
-  - ConfigMap integration for configuration
-  - Status reporting and monitoring integration
-- Add migration history persistence in database
-- Implement rollback procedures for failed migration batches
+### Step 5: Create Architecture Diagrams and Performance Guide
+- Generate mermaid diagrams for system architecture
+- Document data flow from ingestion through vector search
+- Write performance tuning guide with optimization parameters
+- Include benchmarks for vector search with different index types
+- Document monitoring setup with metrics and alerting
+- Create operational runbooks for production deployment
 
 ## Required Outputs
 
-1. **Migration Framework** with support for all documentation types
-2. **Parallel Processing System** achieving ≥1000 docs/minute throughput
-3. **Validation Pipeline** with checksums, counts, and schema verification
-4. **CLI Interface** with progress reporting and configuration options
-5. **Kubernetes Integration** with Job template and monitoring
+1. **Complete API Documentation** generated with cargo doc
+2. **OpenAPI Specification** with comprehensive endpoint documentation
+3. **Kubernetes Deployment Guide** with Helm charts and procedures
+4. **Client Integration Guides** for Cursor and Toolman
+5. **Architecture Documentation** with diagrams and performance guide
 
 ## Key Technical Requirements
 
-1. **Performance**: ≥1000 documents/minute processing throughput
-2. **Reliability**: Rollback capability for any failed migration batch
-3. **Validation**: Comprehensive data integrity and consistency checks
-4. **Scalability**: Configurable parallelism based on available resources
-5. **Monitoring**: Detailed progress reporting with ETA and completion status
-
-## Migration Data Specifications
-
-- **Total Volume**: 184 MB of documentation data
-- **Document Types**: Rust, Jupyter, Kubernetes, DeFi, eBPF, Best Practices
-- **Processing Target**: Complete migration in < 3 hours
-- **Validation Requirements**: 100% data integrity verification
-- **Rollback Capability**: Any failed batch must be recoverable
+1. **Completeness**: All public APIs and endpoints documented
+2. **Accuracy**: Examples tested and validated for correctness
+3. **Usability**: Clear step-by-step procedures and troubleshooting
+4. **Standards Compliance**: OpenAPI 3.0 and documentation best practices
+5. **Maintainability**: Documentation integrated with code generation
 
 ## Tools at Your Disposal
 
-- File system access for migration script creation and data processing
-- Database access for schema validation and data operations
-- doc-loader crate extension capabilities
-- Kubernetes Job creation and monitoring tools
+- File system access for documentation creation and organization
+- Rust documentation generation tools (cargo doc, rustdoc)
+- OpenAPI specification validation and generation tools
+- Kubernetes deployment and Helm chart creation capabilities
 
 ## Success Criteria
 
-Your implementation is complete when:
-- Migration pipeline processes 184 MB dataset successfully
-- Parallel processing achieves ≥1000 docs/minute throughput
-- Validation ensures 100% data integrity with matching checksums
-- Rollback procedures work reliably for any failure scenario
-- CLI and Kubernetes interfaces provide comprehensive migration control
-- Progress reporting enables monitoring and ETA estimation
+Your documentation is complete when:
+- Rust API documentation covers all public interfaces comprehensively
+- OpenAPI specification enables client generation and integration
+- Kubernetes deployment guide enables successful production deployment
+- Client integration guides enable seamless MCP tool usage
+- Architecture documentation provides complete system understanding
+- All examples and procedures tested and validated
 
-## Important Implementation Notes
+## Documentation Structure
 
-- Implement proper error handling and recovery mechanisms
-- Use database transactions for atomic batch operations
-- Monitor memory usage during large dataset processing
-- Add comprehensive logging for debugging and audit trails
-- Test rollback procedures thoroughly before production use
-
-## Performance Targets
-
-- **Throughput**: ≥1000 documents processed per minute
-- **Total Time**: 184 MB dataset migration < 3 hours
-- **Memory Usage**: Stable memory consumption during processing
-- **Error Rate**: < 0.1% processing errors with automatic retry
-- **Rollback Time**: Complete batch rollback < 5 minutes
+```
+docs/
+├── api/                 # Generated API documentation
+├── openapi.yaml        # OpenAPI specification
+├── deployment/         # Kubernetes and Helm guides
+├── integration/        # Client integration guides
+├── architecture/       # System architecture and diagrams
+├── performance/        # Performance tuning guide
+└── troubleshooting/    # Common issues and solutions
+```
 
 ## Validation Commands
 
 ```bash
 cd /workspace
-cargo run --bin migrate -- --validate --dry-run
-cargo run --bin migrate -- --full-migration --parallel 8
-kubectl apply -f k8s/migration-job.yaml
+cargo doc --all-features --no-deps --open
+swagger-codegen validate -i openapi.yaml
+helm template helm/doc-server --validate
+markdown-link-check docs/**/*.md
 ```
 
-Begin implementation focusing on data integrity, performance, and operational reliability.
+Begin documentation creation focusing on completeness, accuracy, and usability for end users and developers.
