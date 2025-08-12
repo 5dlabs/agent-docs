@@ -1,0 +1,43 @@
+# Task ID: 8
+# Title: Implement BirdEye Query Tool
+# Status: pending
+# Dependencies: 6, 7
+# Priority: medium
+# Description: Create the birdeye_query tool for querying BirdEye blockchain API documentation with semantic search and metadata filtering.
+# Details:
+Implement BirdeyeQueryTool struct following the pattern in tools.rs. Add semantic search using pgvector similarity (<=> operator). Parse BirdEye-specific metadata (api_version, endpoint, method, parameters, response_schema). Implement result ranking with relevance scores. Format responses with endpoint details and example usage. Add parameter validation for query and limit fields. Register tool in MCP handler with proper definition. Cache frequently accessed endpoints for performance.
+
+# Test Strategy:
+Test query accuracy for various BirdEye endpoints, validate metadata filtering by API version and category, test response formatting and completeness, verify integration with MCP server, and benchmark query performance (< 2 seconds).
+
+# Subtasks:
+## 1. Create BirdEyeQueryTool struct and basic implementation [pending]
+### Dependencies: None
+### Description: Define the BirdEyeQueryTool struct following the existing RustQueryTool pattern in tools.rs with required fields for database pool, embedding client, and optional caching mechanism
+### Details:
+Create BirdEyeQueryTool struct in crates/mcp/src/tools.rs with fields for db_pool (DatabasePool), embedding_client (EmbeddingClient), and a cache using HashMap<String, (String, chrono::DateTime<Utc>)> for frequently accessed endpoints. Implement new() constructor method that initializes database pool and embedding client. Add helper method to validate cache entries based on TTL (15 minutes). Create placeholder methods for semantic_search and metadata filtering that will be implemented in subsequent subtasks.
+
+## 2. Implement semantic search with pgvector similarity [pending]
+### Dependencies: 8.1
+### Description: Add birdeye_vector_search method to DocumentQueries and implement semantic search functionality using pgvector's <=> operator for BirdEye documents
+### Details:
+In crates/database/src/queries.rs, create birdeye_vector_search method similar to rust_vector_search but filtering for doc_type='birdeye'. Implement proper vector similarity search using embedding <=> $1 ORDER BY embedding <=> $1 syntax when real embeddings are available. For now, use fallback query filtering by doc_type and metadata fields. In BirdEyeQueryTool, implement semantic_search method that generates embeddings for the query using embedding_client, calls birdeye_vector_search, and calculates relevance scores based on similarity distance.
+
+## 3. Parse and filter BirdEye-specific metadata [pending]
+### Dependencies: 8.2
+### Description: Implement metadata extraction and filtering for BirdEye API fields including api_version, endpoint, method, parameters, and response_schema
+### Details:
+Enhance semantic_search method to parse metadata JSONB fields specific to BirdEye documents (api_version, endpoint, method, parameters, response_schema) as shown in ingest_birdeye_simple.py. Add filtering capabilities to narrow results by API version (e.g., 'v1', 'v2'), HTTP method (GET, POST), or endpoint category. Extract and validate these fields from the metadata column during result processing. Implement helper methods parse_birdeye_metadata() and filter_by_metadata() to handle JSON parsing and filtering logic.
+
+## 4. Format responses with endpoint details and examples [pending]
+### Dependencies: 8.3
+### Description: Implement result formatting that presents BirdEye API documentation with endpoint details, parameter descriptions, and usage examples
+### Details:
+Create format_birdeye_response() method that formats search results with structured output including endpoint URL, HTTP method, required/optional parameters from metadata, response schema details, and example API calls. Extract parameter descriptions and types from the parameters field in metadata. Generate example curl commands or code snippets based on endpoint configuration. Format responses similar to the existing Rust documentation formatting but tailored for API documentation presentation. Include relevance scores in the output for transparency.
+
+## 5. Register tool in MCP handler and add caching [pending]
+### Dependencies: 8.4
+### Description: Register BirdEyeQueryTool in the MCP handler, implement Tool trait, add parameter validation, and implement endpoint caching for performance
+### Details:
+Implement Tool trait for BirdEyeQueryTool with definition() method returning proper JSON schema including name='birdeye_query', description, and inputSchema with query and limit parameters. Add execute() method with parameter validation for query (required string) and limit (optional integer 1-20). In handlers.rs, instantiate and register BirdEyeQueryTool in McpHandler::new() similar to RustQueryTool. Implement cache_endpoint() and get_cached_endpoint() methods to store frequently accessed endpoints with 15-minute TTL. Update semantic_search to check cache before database queries for common endpoints.
+

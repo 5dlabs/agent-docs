@@ -1,0 +1,26 @@
+{
+  "remoteTools": [
+    "read_file",
+    "write_file",
+    "edit_file", 
+    "search_files",
+    "kubernetes_listResources",
+    "kubernetes_getResource", 
+    "kubernetes_createResource",
+    "kubernetes_describeResource",
+    "brave_web_search",
+    "context7"
+  ],
+  "localServers": {
+    "filesystem": {
+      "command": "npx", 
+      "args": ["@modelcontextprotocol/server-filesystem", "/workspace/docs"],
+      "env": {}
+    },
+    "kubernetes": {
+      "command": "kubectl-mcp-server",
+      "args": ["--kubeconfig", "/etc/kubernetes/config"],
+      "env": {}
+    }
+  }
+}
