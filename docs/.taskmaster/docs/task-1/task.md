@@ -83,6 +83,14 @@ The Doc Server is transitioning from a deprecated HTTP+SSE transport to the new 
 - Kubernetes cluster access
 - GitHub repository permissions
 
+### Environment Configuration
+The project uses `requirements.yaml` file to define environment variables and secrets for Kubernetes deployment. Key environment variables that must be configured include:
+- **VECTOR_DATABASE_URL**: Connection string for the PostgreSQL database with pgvector extension
+- **DATABASE_URL**: Connection string for the main PostgreSQL database 
+- **OPENAI_API_KEY**: API key for OpenAI embedding service
+
+Additional configuration is defined in `requirements.yaml` including rate limiting, batch processing settings, and monitoring parameters. Review this file during the assessment to understand the complete configuration requirements.
+
 ## Expected Deliverables
 
 1. **System Assessment Report**
