@@ -16,10 +16,12 @@ async fn create_test_server() -> Router {
     // In a real scenario, you'd set up a test database
     let database_url = std::env::var("TEST_DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://test:test@localhost:5432/test".to_string());
-    
+
     match doc_server_database::DatabasePool::new(&database_url).await {
         Ok(db_pool) => {
-            let server = McpServer::new(db_pool).await.expect("Failed to create server");
+            let server = McpServer::new(db_pool)
+                .await
+                .expect("Failed to create server");
             server.create_router()
         }
         Err(_) => {
@@ -97,14 +99,18 @@ async fn test_post_mcp_includes_protocol_header() {
 
     // Check that the response includes the MCP protocol version header
     let headers = response.headers();
-    
+
     assert!(
         headers.contains_key("MCP-Protocol-Version"),
         "Response should include MCP-Protocol-Version header"
     );
-    
+
     assert_eq!(
-        headers.get("MCP-Protocol-Version").unwrap().to_str().unwrap(),
+        headers
+            .get("MCP-Protocol-Version")
+            .unwrap()
+            .to_str()
+            .unwrap(),
         SUPPORTED_PROTOCOL_VERSION,
         "Protocol version should be {SUPPORTED_PROTOCOL_VERSION}"
     );
@@ -131,9 +137,10 @@ async fn test_post_mcp_successful_response() {
     // Should be successful (200 OK or similar)
     assert!(
         response.status().is_success() || response.status().is_server_error(),
-        "Response status: {:?}", response.status()
+        "Response status: {:?}",
+        response.status()
     );
-    
+
     // Should have the protocol header regardless of success/failure
     let headers = response.headers();
     assert!(headers.contains_key("MCP-Protocol-Version"));
@@ -159,7 +166,7 @@ async fn test_routing_integration() {
     let app = create_test_server().await;
 
     // Test that both GET and POST routes exist for /mcp but behave differently
-    
+
     // GET should return 405
     let get_request = Request::builder()
         .method(Method::GET)
@@ -180,10 +187,10 @@ async fn test_routing_integration() {
         .unwrap();
 
     let post_response = app.oneshot(post_request).await.unwrap();
-    
+
     // Should NOT be method not allowed - any other error is fine for this test
     assert_ne!(post_response.status(), StatusCode::METHOD_NOT_ALLOWED);
-    
+
     // Should have protocol header
     let headers = post_response.headers();
     assert!(headers.contains_key("MCP-Protocol-Version"));

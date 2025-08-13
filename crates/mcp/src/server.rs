@@ -60,9 +60,8 @@ impl McpServer {
             // TODO: MCP SSE endpoint for real-time communication
             // .route("/sse", get(sse_handler))
             // MCP JSON-RPC endpoint for tool calls
-            .route("/mcp", post(mcp_handler))
+            .route("/mcp", post(mcp_handler).get(mcp_get_handler))
             // GET /mcp returns 405 Method Not Allowed
-            .route("/mcp", get(mcp_get_handler))
             // Add CORS for Toolman compatibility
             .layer(
                 CorsLayer::new()
@@ -106,7 +105,12 @@ async fn mcp_handler(
         }
         Err(e) => {
             error!("MCP request failed: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, headers, "Internal Server Error").into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                headers,
+                "Internal Server Error",
+            )
+                .into_response()
         }
     }
 }
