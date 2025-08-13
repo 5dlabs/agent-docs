@@ -30,14 +30,7 @@ fn test_transport_error_variants_exist() {
     assert_eq!(TransportError::MethodNotAllowed.to_string(), "method not allowed");
 }
 
-#[test]
-fn test_mcp_server_state_compiles() {
-    // Test that McpServerState can be created
-    let _config = TransportConfig { protocol_version: "2025-06-18".to_string() };
-    
-    // If this compiles, the struct is correctly defined
-    assert!(true, "McpServerState compiles correctly");
-}
+// McpServerState is a server type; we only assert name resolvability elsewhere
 
 #[tokio::test]
 async fn test_unified_mcp_handler_signature() {
@@ -54,7 +47,7 @@ async fn test_unified_mcp_handler_signature() {
         
     // We only validate signature presence in MVP; do not call actual handler due to state type
     let _ = (headers, post_req);
-    assert!(true);
+    let _ = ();
     
     // Test GET request (should fail with MethodNotAllowed)
     let get_req = Request::builder()
@@ -63,7 +56,6 @@ async fn test_unified_mcp_handler_signature() {
         .unwrap();
         
     let _ = get_req;
-    assert!(true);
 }
 
 #[test]
@@ -79,5 +71,4 @@ fn test_transport_api_surface() {
     let _handler_fn = unified_mcp_handler;
     
     // If we get here without compile errors, the API surface is correct
-    assert!(true, "Transport module API surface is correct");
 }
