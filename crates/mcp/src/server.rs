@@ -105,7 +105,12 @@ async fn mcp_handler(
         }
         Err(e) => {
             error!("MCP request failed: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, headers, "Internal Server Error").into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                headers,
+                "Internal Server Error",
+            )
+                .into_response()
         }
     }
 }
