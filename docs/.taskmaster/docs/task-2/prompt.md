@@ -47,6 +47,18 @@ Use these comments to drive fixes so the workspace builds locally and CI is gree
   cargo run --bin migrate -- --full-migration --parallel 8
   ```
 
+## Pre-PR Gate (must pass before submitting any PR)
+
+- Linters:
+  ```bash
+  cargo fmt --all -- --check
+  cargo clippy --workspace --all-targets -- -D warnings
+  ```
+- CI:
+  - Ensure all required GitHub Actions checks are green on the branch and on `main` after merge commit simulation (if applicable).
+- CLAUDE:
+  - Ensure CLAUDE validation/checks are green (project CLAUDE pipelines and guardrails as configured in `CLAUDE.md`/repo tooling).
+
 ## Definition of Done
 
 - All compilation errors resolved across workspace.
