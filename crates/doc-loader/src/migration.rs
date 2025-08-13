@@ -525,7 +525,7 @@ impl MigrationPipeline {
             batch_number: batch_idx,
             processed_count: self.progress_tracker.processed.load(Ordering::Relaxed),
             timestamp: Utc::now(),
-            validation_hash: format!("checkpoint_{}", batch_idx), // TODO: Implement proper hash
+            validation_hash: format!("checkpoint_{batch_idx}"), // TODO: Implement proper hash
         };
 
         debug!("Creating checkpoint: {:?}", checkpoint);

@@ -36,7 +36,7 @@ impl fmt::Display for DocType {
             DocType::Ebpf => "ebpf",
             DocType::RustBestPractices => "rust_best_practices",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
