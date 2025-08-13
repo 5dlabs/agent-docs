@@ -1,5 +1,7 @@
 # Autonomous Agent Prompt: Implement Streamable HTTP Transport Foundation
 
+> IMPORTANT: At the end of this job, submit a pull request with your changes. Create a branch, open a PR to `main`, include a clear title and summary, and link back to `docs/.taskmaster/docs/task-3/task.md`.
+
 ## Mission
 
 You are tasked with implementing the critical migration from deprecated HTTP+SSE transport to the new Streamable HTTP transport following MCP 2025-06-18 specification. This task is essential for maintaining compatibility with modern MCP clients and ensuring reliable communication for the Doc Server project.
