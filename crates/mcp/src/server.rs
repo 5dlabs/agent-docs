@@ -4,6 +4,7 @@ use crate::handlers::McpHandler;
 use anyhow::Result;
 use doc_server_database::DatabasePool;
 // use crate::sse::sse_handler; // TODO: implement SSE handler
+use crate::headers::{MCP_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSION};
 use axum::{
     extract::State,
     http::{HeaderMap, Method, StatusCode},
@@ -14,7 +15,6 @@ use serde_json::Value;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{debug, error, info};
-use crate::headers::{MCP_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSION};
 
 /// MCP server state
 #[derive(Clone)]
