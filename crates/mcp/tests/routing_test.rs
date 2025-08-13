@@ -106,7 +106,7 @@ async fn test_post_mcp_includes_protocol_header() {
     assert_eq!(
         headers.get("MCP-Protocol-Version").unwrap().to_str().unwrap(),
         SUPPORTED_PROTOCOL_VERSION,
-        "Protocol version should be {}", SUPPORTED_PROTOCOL_VERSION
+        "Protocol version should be {SUPPORTED_PROTOCOL_VERSION}"
     );
 }
 
