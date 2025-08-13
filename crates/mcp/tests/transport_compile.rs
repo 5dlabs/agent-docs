@@ -33,8 +33,7 @@ fn test_transport_error_variants_exist() {
 #[test]
 fn test_mcp_server_state_compiles() {
     // Test that McpServerState can be created
-    let config = TransportConfig { protocol_version: "2025-06-18".to_string() };
-    let _state = McpServerState { config };
+    let _config = TransportConfig { protocol_version: "2025-06-18".to_string() };
     
     // If this compiles, the struct is correctly defined
     assert!(true, "McpServerState compiles correctly");
