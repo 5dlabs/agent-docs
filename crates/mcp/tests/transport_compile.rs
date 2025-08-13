@@ -1,7 +1,9 @@
 //! Compile-surface test for transport module (MVP)
 
 use doc_server_mcp::server::McpServerState;
-use doc_server_mcp::transport::{unified_mcp_handler, TransportConfig, TransportError, SessionManager, McpSession, SessionId};
+use doc_server_mcp::transport::{
+    unified_mcp_handler, McpSession, SessionId, SessionManager, TransportConfig, TransportError,
+};
 use std::time::Duration;
 
 #[test]
@@ -56,11 +58,11 @@ fn test_session_management_types() {
     // Test that session management types can be created
     let config = TransportConfig::default();
     let _session_manager = SessionManager::new(config);
-    
+
     // Test session creation
     let session = McpSession::new();
     assert!(!session.is_expired(Duration::from_secs(1)));
-    
+
     // Test session ID type
     let _session_id: SessionId = session.id;
 }
@@ -74,7 +76,7 @@ fn test_transport_api_surface() {
     let _session_manager = SessionManager::new(config);
     let _error = TransportError::MethodNotAllowed;
     let _session = McpSession::new();
-    
+
     // Ensure the server type is name-resolvable without constructing it
     fn assert_type<T>() {}
     assert_type::<McpServerState>();

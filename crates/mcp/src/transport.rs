@@ -72,14 +72,14 @@ impl McpSession {
             message_sender: sender,
         }
     }
-    
+
     /// Update session activity timestamp
     pub fn update_activity(&self) {
         if let Ok(mut last_activity) = self.last_activity.write() {
             *last_activity = Instant::now();
         }
     }
-    
+
     /// Check if session has expired
     pub fn is_expired(&self, timeout: Duration) -> bool {
         if let Ok(last_activity) = self.last_activity.read() {
@@ -105,19 +105,22 @@ impl SessionManager {
             config,
         }
     }
-    
+
     /// Create a new session
     pub fn create_session(&self) -> Result<SessionId, TransportError> {
         let session = McpSession::new();
         let session_id = session.id;
-        
-        let mut sessions = self.sessions.write().map_err(|_| TransportError::SessionLockError)?;
+
+        let mut sessions = self
+            .sessions
+            .write()
+            .map_err(|_| TransportError::SessionLockError)?;
         sessions.insert(session_id, session);
-        
+
         debug!("Created new session: {}", session_id);
         Ok(session_id)
     }
-    
+
     /// Get or create session from headers
     pub fn get_or_create_session(&self, headers: &HeaderMap) -> Result<SessionId, TransportError> {
         // Try to extract session ID from headers
@@ -139,14 +142,17 @@ impl SessionManager {
                 }
             }
         }
-        
+
         // Create new session if none found or existing is invalid
         self.create_session()
     }
-    
+
     /// Update session activity
     pub fn update_session_activity(&self, session_id: SessionId) -> Result<(), TransportError> {
-        let sessions = self.sessions.read().map_err(|_| TransportError::SessionLockError)?;
+        let sessions = self
+            .sessions
+            .read()
+            .map_err(|_| TransportError::SessionLockError)?;
         if let Some(session) = sessions.get(&session_id) {
             session.update_activity();
             Ok(())
@@ -154,27 +160,31 @@ impl SessionManager {
             Err(TransportError::SessionNotFound(session_id))
         }
     }
-    
+
     /// Clean up expired sessions
     pub fn cleanup_expired_sessions(&self) -> Result<usize, TransportError> {
-        let mut sessions = self.sessions.write().map_err(|_| TransportError::SessionLockError)?;
+        let mut sessions = self
+            .sessions
+            .write()
+            .map_err(|_| TransportError::SessionLockError)?;
         let initial_count = sessions.len();
-        
-        sessions.retain(|_id, session| {
-            !session.is_expired(self.config.session_timeout)
-        });
-        
+
+        sessions.retain(|_id, session| !session.is_expired(self.config.session_timeout));
+
         let cleaned_count = initial_count - sessions.len();
         if cleaned_count > 0 {
             debug!("Cleaned up {} expired sessions", cleaned_count);
         }
-        
+
         Ok(cleaned_count)
     }
-    
+
     /// Get session count for monitoring
     pub fn session_count(&self) -> Result<usize, TransportError> {
-        let sessions = self.sessions.read().map_err(|_| TransportError::SessionLockError)?;
+        let sessions = self
+            .sessions
+            .read()
+            .map_err(|_| TransportError::SessionLockError)?;
         Ok(sessions.len())
     }
 }
@@ -184,28 +194,28 @@ impl SessionManager {
 pub enum TransportError {
     #[error("Method not allowed")]
     MethodNotAllowed,
-    
+
     #[error("Unsupported protocol version: {0}")]
     UnsupportedProtocolVersion(String),
-    
+
     #[error("Session not found: {0}")]
     SessionNotFound(Uuid),
-    
+
     #[error("Invalid session ID: {0}")]
     InvalidSessionId(String),
-    
+
     #[error("Session lock error")]
     SessionLockError,
-    
+
     #[error("Missing content type")]
     MissingContentType,
-    
+
     #[error("Invalid content type: {0}")]
     InvalidContentType(String),
-    
+
     #[error("JSON parsing error: {0}")]
     JsonParseError(String),
-    
+
     #[error("Internal server error: {0}")]
     InternalError(String),
 }
@@ -219,31 +229,23 @@ impl IntoResponse for TransportError {
             TransportError::UnsupportedProtocolVersion(_) => {
                 (StatusCode::BAD_REQUEST, "Unsupported Protocol Version")
             }
-            TransportError::SessionNotFound(_) => {
-                (StatusCode::BAD_REQUEST, "Session Not Found")
-            }
-            TransportError::InvalidSessionId(_) => {
-                (StatusCode::BAD_REQUEST, "Invalid Session ID")
-            }
+            TransportError::SessionNotFound(_) => (StatusCode::BAD_REQUEST, "Session Not Found"),
+            TransportError::InvalidSessionId(_) => (StatusCode::BAD_REQUEST, "Invalid Session ID"),
             TransportError::SessionLockError => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Session Lock Error")
             }
-            TransportError::MissingContentType => {
-                (StatusCode::BAD_REQUEST, "Missing Content-Type")
-            }
+            TransportError::MissingContentType => (StatusCode::BAD_REQUEST, "Missing Content-Type"),
             TransportError::InvalidContentType(_) => {
                 (StatusCode::BAD_REQUEST, "Invalid Content-Type")
             }
-            TransportError::JsonParseError(_) => {
-                (StatusCode::BAD_REQUEST, "Invalid JSON")
-            }
+            TransportError::JsonParseError(_) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
             TransportError::InternalError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
             }
         };
-        
+
         error!("Transport error: {}", self);
-        
+
         // Create JSON error response
         let error_response = json!({
             "error": {
@@ -252,10 +254,10 @@ impl IntoResponse for TransportError {
                 "data": self.to_string()
             }
         });
-        
+
         let mut headers = HeaderMap::new();
         set_standard_headers(&mut headers, None);
-        
+
         (status, headers, Json(error_response)).into_response()
     }
 }
@@ -270,28 +272,35 @@ pub async fn unified_mcp_handler(
     headers: HeaderMap,
     request: Request<Body>,
 ) -> Result<Response, TransportError> {
-    debug!("Received MCP request: {:?} {}", request.method(), request.uri());
-    
+    debug!(
+        "Received MCP request: {:?} {}",
+        request.method(),
+        request.uri()
+    );
+
     // Validate protocol version first
     if let Err(status) = validate_protocol_version(&headers) {
         return match status {
             StatusCode::BAD_REQUEST => Err(TransportError::UnsupportedProtocolVersion(
-                headers.get("MCP-Protocol-Version")
+                headers
+                    .get("MCP-Protocol-Version")
                     .and_then(|v| v.to_str().ok())
                     .unwrap_or("missing")
-                    .to_string()
+                    .to_string(),
             )),
-            _ => Err(TransportError::InternalError("Protocol validation failed".to_string()))
+            _ => Err(TransportError::InternalError(
+                "Protocol validation failed".to_string(),
+            )),
         };
     }
-    
+
     match request.method() {
         &Method::POST => handle_json_rpc_request(state, headers, request).await,
         &Method::GET => {
             // MVP: Return 405 for GET requests (SSE not implemented yet)
             warn!("GET request to /mcp endpoint - returning 405 Method Not Allowed");
             Err(TransportError::MethodNotAllowed)
-        },
+        }
         _ => {
             warn!("Unsupported HTTP method: {}", request.method());
             Err(TransportError::MethodNotAllowed)
@@ -306,71 +315,71 @@ async fn handle_json_rpc_request(
     request: Request<Body>,
 ) -> Result<Response, TransportError> {
     debug!("Processing JSON-RPC request");
-    
+
     // Validate Content-Type
     let content_type = headers
         .get("content-type")
         .ok_or(TransportError::MissingContentType)?
         .to_str()
         .map_err(|_| TransportError::InvalidContentType("invalid header value".to_string()))?;
-    
+
     if !content_type.starts_with("application/json") {
         return Err(TransportError::InvalidContentType(content_type.to_string()));
     }
-    
+
     // Get or create session using the session manager from server state
     let session_id = state.session_manager.get_or_create_session(&headers)?;
-    
+
     // Extract request body
     let body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
         .await
         .map_err(|e| TransportError::InternalError(format!("Failed to read body: {}", e)))?;
-    
+
     // Parse JSON-RPC request
     let json_request: Value = serde_json::from_slice(&body_bytes)
         .map_err(|e| TransportError::JsonParseError(e.to_string()))?;
-    
+
     debug!("Parsed JSON-RPC request: {}", json_request);
-    
+
     // Process through existing MCP handler
     match state.handler.handle_request(json_request).await {
         Ok(response) => {
             debug!("MCP handler response: {}", response);
-            
+
             // Update session activity
             let _ = state.session_manager.update_session_activity(session_id);
-            
+
             // Create response with proper headers
             let mut response_headers = HeaderMap::new();
             set_standard_headers(&mut response_headers, Some(session_id));
-            response_headers.insert(
-                "content-type", 
-                "application/json".parse().unwrap()
-            );
-            
+            response_headers.insert("content-type", "application/json".parse().unwrap());
+
             Ok((StatusCode::OK, response_headers, Json(response)).into_response())
         }
         Err(e) => {
             error!("MCP handler failed: {}", e);
-            Err(TransportError::InternalError(format!("Handler error: {}", e)))
+            Err(TransportError::InternalError(format!(
+                "Handler error: {}",
+                e
+            )))
         }
     }
 }
 
 /// Initialize transport with session cleanup task
-/// 
+///
 /// This function starts a background task that periodically cleans up expired sessions.
 /// It should be called during server startup.
 pub async fn initialize_transport(session_manager: SessionManager) {
     let cleanup_interval = Duration::from_secs(60); // Cleanup every minute
     let manager = session_manager.clone();
-    
+
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(cleanup_interval);
-        
+
         loop {
             interval.tick().await;
-            
+
             match manager.cleanup_expired_sessions() {
                 Ok(cleaned) => {
                     if cleaned > 0 {
@@ -383,6 +392,6 @@ pub async fn initialize_transport(session_manager: SessionManager) {
             }
         }
     });
-    
+
     debug!("Transport initialized with session cleanup task");
 }

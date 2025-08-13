@@ -1,14 +1,16 @@
 //! MCP server implementation
 
 use crate::handlers::McpHandler;
-use crate::transport::{initialize_transport, unified_mcp_handler, SessionManager, TransportConfig};
+use crate::transport::{
+    initialize_transport, unified_mcp_handler, SessionManager, TransportConfig,
+};
 use anyhow::Result;
-use doc_server_database::DatabasePool;
 use axum::{
     http::{Method, StatusCode},
     routing::{any, get},
     Json, Router,
 };
+use doc_server_database::DatabasePool;
 use serde_json::Value;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
@@ -32,16 +34,16 @@ impl McpServer {
     /// Create a new MCP server
     pub async fn new(db_pool: DatabasePool) -> Result<Self> {
         let handler = Arc::new(McpHandler::new(db_pool.clone()).await?);
-        
+
         // Initialize transport configuration
         let transport_config = TransportConfig::default();
         let session_manager = SessionManager::new(transport_config.clone());
-        
+
         // Initialize the transport with session cleanup
         initialize_transport(session_manager.clone()).await;
-        
-        let state = McpServerState { 
-            db_pool, 
+
+        let state = McpServerState {
+            db_pool,
             handler,
             session_manager,
             transport_config,
