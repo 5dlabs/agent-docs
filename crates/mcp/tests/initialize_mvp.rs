@@ -96,8 +96,7 @@ async fn test_initialize_response_structure() {
     for key in expected_keys {
         assert!(
             mock_response.get(key).is_some(),
-            "Response should contain key: {}",
-            key
+            "Response should contain key: {key}"
         );
     }
     

@@ -68,5 +68,4 @@ fn test_headers_module_api_surface() {
     let _set_headers_fn = set_standard_headers;
     
     // If we get here without compile errors, the API surface is correct
-    assert!(true, "Headers module API surface is correct");
 }
