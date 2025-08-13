@@ -2,13 +2,12 @@
 
 ## Functional Requirements
 
-### FR-1: Unified MCP Endpoint Implementation
-- [ ] Single `/mcp` endpoint implemented supporting both POST and GET methods
-- [ ] POST method handles JSON-RPC requests with `application/json` content type
-- [ ] GET method handles SSE stream requests with `text/event-stream` accept header
-- [ ] Proper HTTP status codes returned (200 OK, 400 Bad Request, 426 Upgrade Required)
-- [ ] Content negotiation based on Accept and Content-Type headers
-- [ ] Request routing logic correctly distinguishes between JSON-RPC and SSE requests
+### FR-1: Unified MCP Endpoint Implementation (MVP scope)
+- [ ] Single `/mcp` endpoint implemented supporting POST method only
+- [ ] POST handles JSON-RPC requests with `application/json` content type
+- [ ] GET requests return `405 Method Not Allowed`
+- [ ] Proper HTTP status codes returned (200 OK, 400 Bad Request, 405 Method Not Allowed)
+- [ ] Basic Content-Type validation for requests and responses
 
 ### FR-2: MCP Protocol Compliance
 - [ ] `MCP-Protocol-Version: 2025-06-18` header included in all responses
@@ -18,30 +17,16 @@
 - [ ] Proper UTF-8 encoding for all message content
 - [ ] Error responses follow JSON-RPC 2.0 error specification
 
-### FR-3: Session Management
+### FR-3: Session Management (right-sized)
 - [ ] Session creation with unique UUID identifiers
 - [ ] Session storage with thread-safe access (Arc<RwLock<HashMap>>)
 - [ ] Session expiration after configurable timeout (default 5 minutes)
 - [ ] Automatic cleanup of expired sessions
 - [ ] Session activity tracking for proper lifecycle management
-- [ ] Support for at least 100 concurrent sessions
+- [ ] Support for at least 20 concurrent sessions
 
-### FR-4: SSE Streaming Infrastructure
-- [ ] Server-Sent Events stream initialization for GET requests
-- [ ] Proper SSE event formatting with data, event, and id fields
-- [ ] Event ID generation for stream resumability
-- [ ] Heartbeat messages every 30 seconds to maintain connection
-- [ ] JSON-RPC message delivery through SSE events
-- [ ] Stream cleanup on client disconnect
-- [ ] Support for multiple concurrent SSE connections per session
-
-### FR-5: Backward Compatibility
-- [ ] Detection of legacy HTTP+SSE transport attempts (protocol 2024-11-05)
-- [ ] Graceful handling of requests missing `MCP-Protocol-Version` header
-- [ ] Appropriate error responses (426 Upgrade Required) for legacy clients
-- [ ] Clear upgrade instructions in error response body
-- [ ] Logging of legacy transport detection for monitoring
-- [ ] No breaking changes to existing tool functionality
+### (Removed) SSE Streaming and Legacy Compatibility
+- SSE streaming and legacy HTTP+SSE compatibility are out of scope for MVP
 
 ### FR-6: Integration with Existing MCP Infrastructure
 - [ ] Seamless integration with existing `McpHandler` for JSON-RPC processing
@@ -53,20 +38,19 @@
 
 ## Non-Functional Requirements
 
-### NFR-1: Performance (scaled for small user base)
+### NFR-1: Performance (scaled for single-user MVP)
 - [ ] JSON-RPC request processing latency target: < 200ms (95th percentile)
-- [ ] Stream initialization time < 100ms
-- [ ] Memory usage appropriate for 5–6 agents; no leaks under 30-minute sessions
+- [ ] Memory usage appropriate for ~20 agents; no leaks under 30-minute sessions
 - [ ] Session cleanup operation < 50ms for typical loads
-- [ ] Support for 10–20 concurrent connections without degradation
+- [ ] Support for ~20 concurrent connections without degradation
 
-### NFR-2: Reliability
+### NFR-2: Reliability (MVP)
 - [ ] 99.9% uptime for session management operations
 - [ ] Zero memory leaks during 24-hour stress testing
 - [ ] Graceful handling of network interruptions
 - [ ] Automatic recovery from connection failures
-- [ ] Message delivery guarantee for SSE streams
 - [ ] Error recovery within 1 second of failure detection
+  
 
 ### NFR-3: Scalability
 - [ ] Horizontal scaling support through stateless design
@@ -105,17 +89,7 @@
 **And**: Response includes `MCP-Protocol-Version` and `Mcp-Session-Id` headers
 **And**: Session is created or retrieved for subsequent requests
 
-### TC-2: SSE Stream Initialization
-**Scenario**: Client requests SSE stream for server messages
-**Given**: MCP server is running with session management
-**When**: GET request sent to `/mcp` with `Accept: text/event-stream`
-**And**: `MCP-Protocol-Version: 2025-06-18` header present
-**Then**: Server initializes SSE stream with proper headers
-**And**: Returns 200 OK with `Content-Type: text/event-stream`
-**And**: Stream includes heartbeat messages every 30 seconds
-**And**: Session is tracked for message delivery
-
-### TC-3: Session Management
+### TC-2: Session Management
 **Scenario**: Multiple requests with same session ID
 **Given**: Client has established session with server
 **When**: Multiple requests sent with same `Mcp-Session-Id` header
@@ -124,17 +98,7 @@
 **And**: Session remains active until timeout period
 **And**: Session cleanup occurs after timeout expires
 
-### TC-4: Legacy Transport Detection
-**Scenario**: Legacy client attempts deprecated transport
-**Given**: MCP server is running with backward compatibility
-**When**: Request sent without `MCP-Protocol-Version` header
-**Or**: Request sent with `MCP-Protocol-Version: 2024-11-05`
-**Then**: Server detects legacy transport attempt
-**And**: Returns 426 Upgrade Required status
-**And**: Response includes upgrade instructions
-**And**: Legacy detection is logged for monitoring
-
-### TC-5: Concurrent Session Handling
+### TC-3: Concurrent Session Handling
 **Scenario**: Multiple clients connect simultaneously
 **Given**: MCP server supports concurrent connections
 **When**: 100 clients connect with different session IDs
@@ -144,7 +108,7 @@
 **And**: Performance remains within acceptable limits
 **And**: Memory usage scales linearly with session count
 
-### TC-6: Error Handling
+### TC-4: Error Handling
 **Scenario**: Invalid requests and error conditions
 **Given**: MCP server with comprehensive error handling
 **When**: Malformed JSON-RPC request is sent
@@ -155,7 +119,7 @@
 **And**: No server crash or instability occurs
 **And**: Error details logged for debugging
 
-### TC-7: Integration with Existing Tools
+### TC-5: Integration with Existing Tools
 **Scenario**: Existing MCP tools continue to function
 **Given**: Doc Server with rust_query and management tools
 **When**: Client sends requests for existing tool operations
@@ -167,12 +131,12 @@
 
 ## Deliverables
 
-### D-1: Core Transport Implementation
+### D-1: Core Transport Implementation (MVP)
 - [ ] `crates/mcp/src/transport.rs` - Complete transport module implementation
 - [ ] Session management with thread-safe storage
-- [ ] Unified endpoint handler for POST/GET methods
-- [ ] SSE streaming infrastructure with proper event formatting
-- [ ] Backward compatibility detection and handling
+- [ ] Unified endpoint handler for POST method (GET returns 405)
+- [ ] No SSE streaming implementation required
+- [ ] No legacy/backward compatibility handling required
 - [ ] Integration with existing MCP handler infrastructure
 
 ### D-2: Server Integration
@@ -203,7 +167,7 @@
 - [ ] All functional requirements pass automated test suite
 - [ ] Manual testing with Cursor MCP client successful
 - [ ] Integration testing with Toolman client successful
-- [ ] Backward compatibility verified with legacy client simulation
+
 - [ ] All existing MCP tools function correctly through new transport
 
 ### V-2: Performance Validation (right-sized)
