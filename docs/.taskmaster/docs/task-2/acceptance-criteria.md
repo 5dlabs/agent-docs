@@ -13,6 +13,7 @@
 - [ ] Progress tracking with percentage completion and ETA calculation
 - [ ] Migration state persistence and recovery mechanisms
 - [ ] Configurable batch sizes and processing parameters
+- [ ] Ensure all data from source dump (sql/data/docs_database_dump.sql.gz) is migrated to new tables
 
 ### 2. Blank Database Bootstrap Implementation
 - [ ] Initial database setup and schema validation
