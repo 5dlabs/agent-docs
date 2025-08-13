@@ -1,12 +1,14 @@
 //! MCP server implementation
 
 use crate::handlers::McpHandler;
+use crate::headers::set_standard_headers;
 use anyhow::Result;
 use doc_server_database::DatabasePool;
 // use crate::sse::sse_handler; // TODO: implement SSE handler
 use axum::{
     extract::State,
-    http::{Method, StatusCode},
+    http::{HeaderMap, Method, StatusCode},
+    response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
@@ -49,7 +51,7 @@ impl McpServer {
     }
 
     /// Create the router with all endpoints
-    fn create_router(&self) -> Router {
+    pub fn create_router(&self) -> Router {
         Router::new()
             // Health check endpoint
             .route("/health", get(health_check))
@@ -57,6 +59,8 @@ impl McpServer {
             // .route("/sse", get(sse_handler))
             // MCP JSON-RPC endpoint for tool calls
             .route("/mcp", post(mcp_handler))
+            // GET /mcp returns 405 Method Not Allowed
+            .route("/mcp", get(mcp_get_handler))
             // Add CORS for Toolman compatibility
             .layer(
                 CorsLayer::new()
@@ -77,21 +81,30 @@ async fn health_check() -> Result<Json<Value>, StatusCode> {
     })))
 }
 
+/// GET handler for /mcp - returns 405 Method Not Allowed  
+async fn mcp_get_handler() -> impl IntoResponse {
+    (StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed")
+}
+
 /// MCP JSON-RPC handler for tool calls
 async fn mcp_handler(
     State(state): State<McpServerState>,
     Json(payload): Json<Value>,
-) -> Result<Json<Value>, StatusCode> {
+) -> impl IntoResponse {
     debug!("Received MCP request: {}", payload);
+
+    // Create headers with the required MCP protocol version
+    let mut headers = HeaderMap::new();
+    set_standard_headers(&mut headers, None);
 
     match state.handler.handle_request(payload).await {
         Ok(response) => {
             debug!("MCP response: {}", response);
-            Ok(Json(response))
+            (headers, Json(response)).into_response()
         }
         Err(e) => {
             error!("MCP request failed: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            (StatusCode::INTERNAL_SERVER_ERROR, headers, "Internal Server Error").into_response()
         }
     }
 }
