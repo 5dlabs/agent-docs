@@ -12,6 +12,12 @@ This task has been implemented via [PR #5](https://github.com/5dlabs/agent-docs/
 
 Use these comments to drive fixes so the workspace builds locally and CI is green.
 
+## Branching and PR Updates
+
+- All remediation work must be committed to the existing feature branch: `feature/task-2-implementation`.
+- Push changes to that branch and update PR [#5](https://github.com/5dlabs/agent-docs/pull/5). Do not push remediation code directly to `main`.
+- Include concise commit messages referencing Task 2 remediation.
+
 ## Required Remediation Steps
 
 1. Resolve compilation errors in `crates/doc-loader/src/migration.rs`:
@@ -54,6 +60,7 @@ Use these comments to drive fixes so the workspace builds locally and CI is gree
   cargo fmt --all -- --check
   cargo clippy --workspace --all-targets -- -D warnings
   ```
+  These commands mirror the repository's GitHub Actions expectations; formatting must be clean and clippy warnings are treated as errors.
 - CI:
   - Ensure all required GitHub Actions checks are green on the branch and on `main` after merge commit simulation (if applicable).
 - CLAUDE:
