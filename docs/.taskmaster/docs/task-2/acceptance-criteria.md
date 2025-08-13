@@ -16,6 +16,10 @@
 - [ ] `crates/mcp/src/transport.rs` exists with `TransportConfig`, `TransportError`, and `unified_mcp_handler` signature
 - [ ] Publicly accessible from crate (via `lib.rs`)
 
+### FR-4: Minimal Routing/Headers Integration (to satisfy tests)
+- [ ] Router defines GET `/mcp` and returns `405 Method Not Allowed`
+- [ ] POST `/mcp` responses include `MCP-Protocol-Version: 2025-06-18`
+
 ## Non-Functional Requirements
 - [ ] Code compiles with no warnings related to new modules
 - [ ] Basic unit tests compile and run
@@ -32,6 +36,14 @@
 
 ### TC-3: Transport API Compile
 **Then**: A test references `unified_mcp_handler` and types successfully
+
+### TC-4: GET /mcp Returns 405
+**When**: Client issues GET `/mcp`
+**Then**: Response status is `405 Method Not Allowed`
+
+### TC-5: Protocol Header on POST
+**When**: Client issues POST `/mcp`
+**Then**: Response includes header `MCP-Protocol-Version: 2025-06-18`
 
 ## Deliverables
 - [ ] Updated `handlers.rs` initialize response
