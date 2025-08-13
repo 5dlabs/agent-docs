@@ -2,6 +2,26 @@
 
 > IMPORTANT: At the end of this job, submit a pull request with your changes. Create a branch, open a PR to `main`, include a clear title and summary, and link back to `docs/.taskmaster/docs/task-3/task.md`.
 
+## Process and CI Requirements
+
+- Always review the existing implementation first to determine whether the task is already completed or needs improvements/refactors rather than re-implementation.
+- Before opening a PR:
+  - Ensure your feature branch and `main` are both up to date:
+    - `git fetch --all --prune`
+    - Rebase/merge latest `origin/main` into your feature branch
+  - Push the feature branch to trigger CI and wait for it to complete successfully.
+  - CI must pass all checks: formatting, tests, Clippy, and Clippy Pedantic.
+    - Formatting: `cargo fmt --all -- --check`
+    - Lints: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
+    - Tests: `cargo test --all-features`
+- Follow repository standards at all times:
+  - GitHub workflow conventions in `github-guidelines.md` (also see `docs/github-guidelines.md`).
+  - Rust code conventions in `coding-guidelines.md` (also see `docs/coding-guidelines.md`).
+- Generate a Markdown report at the end named `task-3-runtime-report.md` (commit it under `docs/.taskmaster/docs/task-3/`):
+  - Note any tool-call issues (e.g., failed external tools, API timeouts) and dependency problems.
+  - Provide actionable suggestions to improve reliability and runtime performance.
+  - Include links to relevant logs or CI runs where applicable.
+
 ## Mission
 
 You are tasked with implementing the critical migration from deprecated HTTP+SSE transport to the new Streamable HTTP transport following MCP 2025-06-18 specification. This task is essential for maintaining compatibility with modern MCP clients and ensuring reliable communication for the Doc Server project.
