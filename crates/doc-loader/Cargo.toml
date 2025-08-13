@@ -14,6 +14,14 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 reqwest = { workspace = true }
+sqlx = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+pgvector = { workspace = true }
+
+# CLI support for migration binary
+clap = { version = "4.4", features = ["derive", "env"] }
+tracing-subscriber = { workspace = true }
 
 # HTML parsing for docs.rs content
 scraper = "0.20"
@@ -21,6 +29,10 @@ html5ever = "0.27"
 
 # URL handling
 url = "2.5"
+
+# Internal dependencies
+doc-server-database = { path = "../database" }
+doc-server-embeddings = { path = "../embeddings" }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

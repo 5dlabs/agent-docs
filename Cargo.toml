@@ -55,7 +55,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 rmcp = "0.1"
 
 # Vector operations (for pgvector compatibility)
-pgvector = { version = "0.4", features = ["serde"] }
+pgvector = { version = "0.4", features = ["serde", "sqlx"] }
 
 # Testing
 mockall = "0.13"
@@ -68,10 +68,10 @@ unsafe_code = "forbid"
 missing_docs = "warn"
 
 [workspace.lints.clippy]
-all = "warn"
-pedantic = "warn"
-nursery = "warn"
-cargo = "warn"
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
 
 # Allow some pedantic lints that are too noisy
 module_name_repetitions = "allow"

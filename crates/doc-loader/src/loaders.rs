@@ -1,6 +1,7 @@
 //! Document loaders for various sources
 
 /// Rust crate documentation loader
+#[derive(Default)]
 pub struct RustLoader;
 
 impl RustLoader {
