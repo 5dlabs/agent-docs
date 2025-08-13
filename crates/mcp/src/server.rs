@@ -60,9 +60,8 @@ impl McpServer {
             // TODO: MCP SSE endpoint for real-time communication
             // .route("/sse", get(sse_handler))
             // MCP JSON-RPC endpoint for tool calls
-            .route("/mcp", post(mcp_handler))
+            .route("/mcp", post(mcp_handler).get(mcp_get_handler))
             // GET /mcp returns 405 Method Not Allowed
-            .route("/mcp", get(mcp_get_handler))
             // Add CORS for Toolman compatibility
             .layer(
                 CorsLayer::new()
