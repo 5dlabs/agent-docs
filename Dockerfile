@@ -2,7 +2,7 @@
 # Optimized for production Kubernetes deployment
 
 # Build stage
-FROM rust:1.75-slim as builder
+FROM rust:1.88-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -18,6 +18,9 @@ WORKDIR /app
 # Copy Cargo workspace files
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ ./crates/
+
+# Prebuild dependencies to leverage Docker layer caching
+RUN cargo fetch
 
 # Build in release mode
 RUN cargo build --release --bin http_server
