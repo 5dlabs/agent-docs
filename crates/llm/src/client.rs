@@ -3,6 +3,7 @@
 use anyhow::Result;
 
 /// LLM client for summarization
+#[derive(Default)]
 pub struct LlmClient;
 
 impl LlmClient {
@@ -10,7 +11,7 @@ impl LlmClient {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Summarize text
     pub async fn summarize(&self, _text: &str) -> Result<String> {
         // TODO: Implement LLM integration

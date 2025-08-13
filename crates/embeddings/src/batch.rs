@@ -1,6 +1,7 @@
 //! Batch processing for embeddings
 
 /// Batch processor for OpenAI API calls
+#[derive(Default)]
 pub struct BatchProcessor;
 
 impl BatchProcessor {

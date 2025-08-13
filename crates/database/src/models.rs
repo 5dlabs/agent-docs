@@ -3,10 +3,11 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::fmt;
 use uuid::Uuid;
 
 /// Document types supported by the system
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "doc_type", rename_all = "snake_case")]
 pub enum DocType {
     Rust,
@@ -19,6 +20,24 @@ pub enum DocType {
     Solana,
     Ebpf,
     RustBestPractices,
+}
+
+impl fmt::Display for DocType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            DocType::Rust => "rust",
+            DocType::Jupyter => "jupyter",
+            DocType::Birdeye => "birdeye",
+            DocType::Cilium => "cilium",
+            DocType::Talos => "talos",
+            DocType::Meteora => "meteora",
+            DocType::Raydium => "raydium",
+            DocType::Solana => "solana",
+            DocType::Ebpf => "ebpf",
+            DocType::RustBestPractices => "rust_best_practices",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 /// Main document record
