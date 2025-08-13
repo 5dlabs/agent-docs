@@ -65,7 +65,9 @@ fn test_transport_api_surface() {
     // Types
     let _config = TransportConfig { protocol_version: "2025-06-18".to_string() };
     let _error = TransportError::MethodNotAllowed;
-    let _ = McpServerState { db_pool: unsafe { std::mem::zeroed() }, handler: Arc::new(unsafe { std::mem::zeroed() }) };
+    // Ensure the server type is name-resolvable without constructing it
+    fn assert_type<T>() {}
+    assert_type::<McpServerState>();
     
     // Function - just verify it can be referenced
     let _handler_fn = unified_mcp_handler;
