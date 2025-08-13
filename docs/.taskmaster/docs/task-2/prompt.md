@@ -22,9 +22,12 @@ Update the codebase to align with the latest MCP protocol version and prepare a 
 - [ ] Initialize returns `2025-06-18` and no `sse`
 - [ ] `headers.rs` compiles and exports constants/helpers
 - [ ] `transport.rs` compiles and exports required types and function
+- [ ] Router exposes GET `/mcp` that returns 405; POST `/mcp` includes `MCP-Protocol-Version`
 
 ## Testing
 - Add minimal tests `initialize_mvp.rs`, `headers_compile.rs`, and `transport_compile.rs` to verify presence and API surface
+- Add a routing test asserting GET `/mcp` returns 405
+- Add a header test asserting POST `/mcp` includes `MCP-Protocol-Version: 2025-06-18`
 
 ## Notes
 - Keep changes minimal; Task 3 will implement logic and wire routing to the new handler
