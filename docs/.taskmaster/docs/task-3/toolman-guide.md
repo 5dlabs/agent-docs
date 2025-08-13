@@ -171,10 +171,10 @@ For implementing the Streamable HTTP Transport Foundation, the selected tools fo
 - Health checks work properly
 - No compilation warnings or errors
 
-### Functionality Verification
-- New transport handles POST and GET requests properly
+### Functionality Verification (MVP)
+- New transport handles POST requests properly; GET returns 405
 - Session management works correctly
-- SSE streaming functions as expected
-- Backward compatibility detection works
+- Streaming is out of scope for MVP
+- No legacy/backward compatibility handling in MVP
 
 By following this tool usage guide, you'll be able to implement the Streamable HTTP Transport Foundation efficiently while maintaining code quality and integration consistency.

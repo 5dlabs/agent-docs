@@ -9,7 +9,7 @@ The Doc Server is a comprehensive documentation server that transforms from a si
 ### ✅ Completed Infrastructure
 - **Database**: Migrated from `rust_docs_vectors` to `docs` with harmonized schema
 - **Production Database**: PostgreSQL with pgvector extension in dedicated cluster
-- **MCP Server**: HTTP/SSE server with Toolman integration on port 3001 (requires Streamable HTTP migration)
+- **MCP Server**: Streamable HTTP server (JSON-only MVP) with Toolman integration on port 3001
 - **Data Storage**: 184MB database dump with 40+ Rust crates, BirdEye API docs, Solana documentation
 - **Embeddings**: 4,000+ documents with OpenAI text-embedding-3-large (3072 dimensions)
 
@@ -154,21 +154,19 @@ Only Rust crates support dynamic management via MCP tools:
 
 ## Connection Architecture
 
-### MCP Transport
+### MCP Transport (MVP)
 
-- **Protocol**: HTTP with Server-Sent Events (SSE)
+- **Protocol**: Streamable HTTP (MCP 2025-06-18), JSON-only responses for MVP
 - **Port**: 3001 (configurable via PORT environment variable)
 - **Endpoints**:
   - `/health` - Health check
-  - `/sse` - SSE keep-alive connection
-  - `/mcp` - Tool requests and responses
+  - `/mcp` - Tool requests and responses (POST only; GET returns 405)
 
-### Planned SSE Keep-Alive System
+### Planned Streaming (Post-MVP)
 
-- Heartbeat messages every 30 seconds
-- Connection timeout detection at 90 seconds  
-- Automatic client-side reconnection with exponential backoff
-- Message buffering during disconnection periods
+- Heartbeat messages every 30 seconds (event-stream)
+- Idle timeout at 90 seconds
+- Client reconnection and message replay support
 - Connection state tracking and monitoring
 
 ### Toolman Integration

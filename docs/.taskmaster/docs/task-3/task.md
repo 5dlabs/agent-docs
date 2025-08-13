@@ -8,11 +8,11 @@ This task implements the critical transition from the deprecated HTTP+SSE transp
 
 The current Doc Server implementation uses the deprecated HTTP+SSE transport that is no longer supported in the latest MCP specification. This creates stability and compatibility issues with modern MCP clients. The new Streamable HTTP transport provides:
 
-- **Unified Endpoint Architecture**: Single `/mcp` endpoint supporting both POST and GET methods
+- **Unified Endpoint Architecture (MVP)**: Single `/mcp` endpoint supporting POST (JSON) only; GET returns 405
 - **Improved Session Management**: Proper session tracking with `Mcp-Session-Id` headers
 - **Enhanced Reliability**: Better connection handling and message delivery guarantees
 - **Protocol Compliance**: Full compliance with MCP 2025-06-18 specification
-- **Backward Compatibility**: Graceful handling of legacy transport attempts
+- **No Legacy Compatibility (MVP)**: Require latest protocol header; reject others
 
 ## Implementation Guide
 
@@ -26,8 +26,8 @@ Create `crates/mcp/src/transport.rs` with the foundational structure:
 use axum::{
     extract::{Request, State},
     http::{HeaderMap, StatusCode},
-    response::{Response, Sse},
-    routing::{get, post},
+    response::Response,
+    routing::post,
     Json, Router
 };
 use serde_json::Value;
@@ -69,11 +69,8 @@ pub struct SessionManager {
 pub const MCP_PROTOCOL_VERSION: &str = "MCP-Protocol-Version";
 pub const MCP_SESSION_ID: &str = "Mcp-Session-Id";
 pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
-pub const LEGACY_PROTOCOL_VERSION: &str = "2024-11-05";
-
 // Content Types
 pub const APPLICATION_JSON: &str = "application/json";
-pub const TEXT_EVENT_STREAM: &str = "text/event-stream";
 ```
 
 ### Phase 2: Unified MCP Endpoint Handler
@@ -93,7 +90,7 @@ pub async fn unified_mcp_handler(
     // Route based on HTTP method and content negotiation
     match request.method() {
         &Method::POST => handle_json_rpc_request(state, session_id, request).await,
-        &Method::GET => handle_sse_stream_request(state, session_id, headers).await,
+        &Method::GET => Err(McpError::MethodNotAllowed),
         _ => Err(McpError::MethodNotAllowed),
     }
 }
@@ -122,9 +119,7 @@ async fn handle_json_rpc_request(
 }
 ```
 
-### Phase 3: SSE Streaming Infrastructure
-
-#### 3.1 Create SSE Stream Handler
+### (Removed) Phase 3: SSE Streaming Infrastructure (out of scope for MVP)
 
 ```rust
 use axum::response::sse::{Event, Sse};
@@ -174,9 +169,7 @@ fn create_sse_stream(
 }
 ```
 
-### Phase 4: Backward Compatibility Detection
-
-#### 4.1 Legacy Transport Detection
+### (Removed) Phase 4: Backward Compatibility Detection (out of scope for MVP)
 
 ```rust
 pub fn detect_legacy_transport(headers: &HeaderMap) -> bool {
@@ -237,7 +230,7 @@ impl McpServer {
     
     pub fn router(&self) -> Router {
         Router::new()
-            .route("/mcp", post(unified_mcp_handler).get(unified_mcp_handler))
+            .route("/mcp", post(unified_mcp_handler))
             .route("/health", get(health_check))
             .layer(CorsLayer::permissive())
             .with_state(Arc::clone(&self.state))

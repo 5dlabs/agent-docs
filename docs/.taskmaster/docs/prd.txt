@@ -19,7 +19,7 @@ The Doc Server is a comprehensive documentation platform that provides AI assist
 - **Solana Documentation**: 400+ documents including core docs, architecture diagrams, ZK cryptography PDFs (needs cluster validation)
 
 ### 🔧 Current Implementation Status
-- **MCP Server**: HTTP/SSE server using deprecated transport (MUST migrate to Streamable HTTP)
+- **MCP Server**: Streamable HTTP server (migration to JSON-only MVP in progress)
 - **Database Schema**: Unified tables supporting multiple documentation types (needs cluster deployment)
 - **Production Database**: PostgreSQL with pgvector extension in dedicated cluster (ready for connection)
 - **Data Migration**: 184MB database with 4,000+ documents ready for cluster deployment
@@ -154,7 +154,7 @@ Only Rust crates support dynamic management via MCP:
 - Cursor MCP integration working
 
 #### Required Implementation - Streamable HTTP Transport (MCP 2025-06-18)
-- **Single MCP Endpoint**: Unified endpoint supporting both POST and GET methods
+- **Single MCP Endpoint (MVP)**: POST only (GET returns 405)
 - **Session Management**: Implement Mcp-Session-Id header support for stateful sessions
 - **Protocol Version Headers**: MCP-Protocol-Version header compliance
 - **Resumable Connections**: SSE event IDs for connection resumability and message redelivery
@@ -466,11 +466,11 @@ CREATE TABLE document_sources (
 
 ### Compliance and Standards
 
-#### MCP Transport Compliance Checklist
-- [ ] **Single MCP Endpoint**: Implement unified `/mcp` endpoint supporting POST/GET
+-#### MCP Transport Compliance Checklist
+- [ ] **Single MCP Endpoint (MVP)**: Implement unified `/mcp` endpoint supporting POST only (GET returns 405)
 - [ ] **Protocol Version Header**: Include `MCP-Protocol-Version: 2025-06-18` in all responses
 - [ ] **Session Management**: Support `Mcp-Session-Id` headers for stateful connections
-- [ ] **SSE Event IDs**: Implement resumable connections with proper event identification
+- [ ] **SSE Event IDs**: (Post-MVP)
 - [ ] **Security Headers**: Validate `Origin` header to prevent DNS rebinding attacks
 - [ ] **Error Handling**: Return proper JSON-RPC error responses per MCP specification
 

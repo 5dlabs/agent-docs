@@ -1,29 +1,27 @@
 # Task 5: Protocol Version Negotiation and Headers
 
-## Overview
+## Overview (MVP scope)
 
-Implement MCP protocol version negotiation and header compliance for proper client-server communication and backward compatibility. This task ensures the Doc Server can handle multiple protocol versions and negotiate appropriate communication parameters with diverse MCP clients.
+Implement strict MCP protocol header handling for the single supported protocol version `2025-06-18`. Drop negotiation and legacy support for MVP. Ensure headers are extracted/validated and echoed consistently.
 
 ## Background
 
-The MCP specification requires proper protocol version negotiation during the initialize phase. The server must support multiple protocol versions (2025-06-18, 2025-03-26, 2024-11-05) and negotiate the best compatible version with clients.
+For MVP, we support only the latest Streamable HTTP protocol (2025-06-18). Clients must send `MCP-Protocol-Version: 2025-06-18`; other versions are rejected with HTTP 400.
 
 ## Implementation Guide
 
-### Phase 1: Protocol Version Registry
-- Create `protocol_version.rs` module with ProtocolVersion enum
-- Implement version parsing and comparison logic
-- Define supported versions and compatibility matrix
+### Phase 1: Protocol Header Utilities (Simplified)
+- Create `headers.rs` with constants and simple validators for `MCP-Protocol-Version` and `Mcp-Session-Id`
+- Validate only `2025-06-18`; return 400 otherwise
 
 ### Phase 2: Header Management
 - Implement header extraction middleware
 - Add MCP-Protocol-Version and Accept header validation
 - Create content type validation for responses
 
-### Phase 3: Initialize Handler Enhancement
-- Modify initialize request handler for version negotiation
-- Store negotiated version in session state
-- Return appropriate InitializeResult with protocol version
+### Phase 3: Initialize Handler
+- Ensure initialize response includes `protocolVersion: "2025-06-18"`
+- Store fixed version in session state for consistency
 
 ### Phase 4: Session State Integration
 - Create session state management with protocol version tracking
@@ -31,7 +29,6 @@ The MCP specification requires proper protocol version negotiation during the in
 - Add version consistency enforcement
 
 ### Phase 5: Response Management
-- Implement version-specific response formatting
 - Add proper Content-Type and MCP headers
 - Ensure CORS compatibility
 
@@ -46,32 +43,22 @@ uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
 
-### Core Types
+### Core Types (Simplified)
 ```rust
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ProtocolVersion {
-    V2025_06_18,
-    V2025_03_26, 
-    V2024_11_05,
-}
-
 pub struct SessionState {
     pub session_id: Uuid,
-    pub negotiated_version: ProtocolVersion,
+    pub protocol_version: &'static str, // always "2025-06-18" in MVP
     pub created_at: DateTime<Utc>,
 }
 ```
 
 ## Success Metrics
-- Protocol version negotiation works with all supported versions
 - Proper header handling in requests and responses
-- Session state maintains version consistency
-- Backward compatibility with legacy clients
-- Error handling for unsupported versions
+- Session state maintains version consistency (fixed 2025-06-18)
+- Error handling for unsupported versions (400)
 
 ## Notes from Assessment
-- Echo negotiated version in all responses; include `Mcp-Session-Id`
-- Treat 2024-11-05 as legacy; return `426 UPGRADE_REQUIRED` guidance when detected
+- Echo version `2025-06-18` in all responses; include `Mcp-Session-Id`
 
 ## Dependencies
 - Task 2: Streamable HTTP Transport Foundation

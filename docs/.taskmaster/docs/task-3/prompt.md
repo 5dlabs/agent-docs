@@ -10,11 +10,11 @@ The current Doc Server implementation uses deprecated HTTP+SSE transport (protoc
 
 ## Primary Objectives
 
-1. **Create Core Transport Module**: Implement `crates/mcp/src/transport.rs` with full Streamable HTTP support using Axum 0.7
-2. **Unified MCP Endpoint**: Create single `/mcp` endpoint supporting both POST and GET methods with proper content negotiation
-3. **SSE Streaming Infrastructure**: Implement Server-Sent Events streaming for multiple server messages with proper session management
-4. **Backward Compatibility**: Add detection and graceful handling for legacy transport attempts
-5. **Server Integration**: Wire new transport into existing MCP server infrastructure replacing old endpoints
+1. **Create Core Transport Module (MVP)**: Implement `crates/mcp/src/transport.rs` with Streamable HTTP POST-only support using Axum 0.7
+2. **Unified MCP Endpoint (MVP)**: Create single `/mcp` endpoint supporting POST (JSON) only; return 405 for GET
+3. **No Streaming**: Skip SSE streaming for MVP; clients will receive single JSON responses
+4. **No Legacy Support**: Require `MCP-Protocol-Version: 2025-06-18`; reject others with 400
+5. **Server Integration**: Wire new transport into existing MCP server infrastructure, removing any `/sse` references
 
 ## Step-by-Step Implementation
 
@@ -22,18 +22,18 @@ The current Doc Server implementation uses deprecated HTTP+SSE transport (protoc
 
 1. Create `crates/mcp/src/transport.rs` with core imports:
    ```rust
-   use axum::{
-       extract::{Request, State},
-       http::{HeaderMap, Method, StatusCode},
-       response::{Response, Sse},
-       routing::{get, post},
-       Json, Router
-   };
+    use axum::{
+        extract::{Request, State},
+        http::{HeaderMap, Method, StatusCode},
+        response::Response,
+        routing::post,
+        Json, Router
+    };
    use serde_json::{json, Value};
    use std::collections::HashMap;
    use std::sync::{Arc, RwLock};
    use std::time::{Duration, Instant};
-   use tokio::sync::broadcast;
+    use tokio::sync::broadcast;
    use uuid::Uuid;
    ```
 
@@ -62,7 +62,7 @@ The current Doc Server implementation uses deprecated HTTP+SSE transport (protoc
    pub const MCP_PROTOCOL_VERSION: &str = "MCP-Protocol-Version";
    pub const MCP_SESSION_ID: &str = "Mcp-Session-Id";
    pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
-   pub const LEGACY_PROTOCOL_VERSION: &str = "2024-11-05";
+    // MVP: Only latest supported
    ```
 
 ### Step 2: Session Management
@@ -181,13 +181,11 @@ The current Doc Server implementation uses deprecated HTTP+SSE transport (protoc
 
 ## Success Criteria
 
-### Functional Requirements
-- [ ] Single `/mcp` endpoint supports both POST and GET methods
+### Functional Requirements (MVP)
+- [ ] Single `/mcp` endpoint supports POST only; GET returns 405
 - [ ] Proper `MCP-Protocol-Version: 2025-06-18` header handling
 - [ ] Session management with UUID-based session IDs
-- [ ] SSE streaming with event IDs and heartbeat messages
 - [ ] JSON-RPC request/response cycle maintained
-- [ ] Graceful legacy transport detection and error responses
 
 ### Technical Requirements
 - [ ] All existing MCP tools continue to work without modification
@@ -213,18 +211,16 @@ The current Doc Server implementation uses deprecated HTTP+SSE transport (protoc
 
 2. **Integration Tests**: Test complete request/response cycles
    - POST requests with JSON-RPC messages
-   - GET requests for SSE stream initialization
+   - 405 on GET to /mcp
    - Session tracking across multiple requests
    - Concurrent session handling
 
 3. **Compatibility Tests**: Verify client integration
    - Cursor MCP client connection and tool usage
-   - Legacy transport detection and error responses
-   - Protocol version negotiation
+   - Protocol version fixed handling
 
 4. **Performance Tests**: Validate under load
-   - Multiple concurrent sessions (50+ connections)
-   - Long-running SSE streams (30+ minutes)
+   - Multiple concurrent sessions (~20 connections)
    - Session cleanup performance
    - Memory usage under various loads
 
@@ -234,7 +230,7 @@ The current Doc Server implementation uses deprecated HTTP+SSE transport (protoc
 2. **Memory Management**: Implement proper session cleanup to prevent memory leaks
 3. **Protocol Compliance**: Strict adherence to MCP 2025-06-18 specification
 4. **Error Handling**: Comprehensive error responses with helpful debugging information
-5. **Backward Compatibility**: Graceful degradation for legacy clients with clear upgrade instructions
+5. **Backward Compatibility**: Out of scope for MVP
 
 ## Focus Areas
 
@@ -247,8 +243,7 @@ The current Doc Server implementation uses deprecated HTTP+SSE transport (protoc
 
 1. **Core Transport Module**: Complete `transport.rs` implementation
 2. **Updated Server Integration**: Modified server files using new transport
-3. **Comprehensive Tests**: Unit and integration tests covering all functionality
-4. **Migration Documentation**: Clear documentation of changes and upgrade procedures
-5. **Validation Results**: Evidence of successful testing with MCP clients
+3. **Comprehensive Tests**: Unit and integration tests covering MVP functionality
+4. **Validation Results**: Evidence of successful testing with MCP clients
 
 Implement this foundation carefully as it forms the basis for all future MCP communication in the Doc Server project. The success of this task is critical for the reliability and compatibility of the entire system.
