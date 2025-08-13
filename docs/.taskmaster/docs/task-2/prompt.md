@@ -23,15 +23,26 @@ Use these comments to drive fixes so the workspace builds locally and CI is gree
 1. Resolve compilation errors in `crates/doc-loader/src/migration.rs`:
    - Ensure the embeddings client implements/uses the correct trait(s) exported by `crates/embeddings` (e.g., `EmbeddingClient` or equivalent) and is imported with proper crate path.
    - Fix pgvector usage: add/import the `pgvector` crate and enable required features in relevant crates (`database`, `doc-loader`), and confirm model types align with `sqlx`/`postgres` integration.
+
 2. Fix test targeting and package IDs:
    - Verify `Cargo.toml` package names/paths for `doc-loader` match test invocations; adjust tests or package names so `cargo test --package doc-loader migration_tests` resolves.
    - Ensure performance tests compile by gating long-running tests behind `--release` or feature flags as appropriate.
+
 3. Ensure database schema and migrations are wired for tests:
    - Provide test fixtures or a lightweight schema setup for unit/integration tests.
    - Confirm vector column dimensions (3072) and types match embedding model outputs.
+
 4. Harden CLI and rollback flows:
    - Validate resume-from-checkpoint and batch-atomic rollback with simulated failures.
    - Ensure progress/ETA reporting is thread-safe and low overhead.
+   - Explicitly verify that all data from the source dump (sql/data/docs_database_dump.sql.gz) is successfully migrated to the new tables (documents and document_sources).
+     - After migration, query the new database to confirm record counts match the source dump.
+     - Validate that all document types, metadata, content, and embeddings (if applicable) have been transferred without loss or corruption.
+     - Add checks in the migration script to compare source vs. target record counts and raise errors on mismatch.
+
+5. Test full migration pipeline:
+   - Load the source dump into a test database.
+   - Run the migration and validate all data is present in target tables.
 
 ## Validation Requirements (local and CI)
 
