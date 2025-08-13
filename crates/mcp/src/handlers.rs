@@ -99,10 +99,9 @@ impl McpHandler {
     /// Handle initialize request
     async fn handle_initialize(&self, _request: &Value) -> Result<Value> {
         Ok(json!({
-            "protocolVersion": "2024-11-05",
+            "protocolVersion": "2025-06-18",
             "capabilities": {
-                "tools": {},
-                "sse": true
+                "tools": {}
             },
             "serverInfo": {
                 "name": "doc-server-mcp",

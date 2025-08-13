@@ -6,7 +6,7 @@ use doc_server_database::DatabasePool;
 // use crate::sse::sse_handler; // TODO: implement SSE handler
 use axum::{
     extract::State,
-    http::{Method, StatusCode},
+    http::{HeaderMap, Method, StatusCode},
     routing::{get, post},
     Json, Router,
 };
@@ -14,6 +14,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{debug, error, info};
+use crate::headers::{MCP_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSION};
 
 /// MCP server state
 #[derive(Clone)]
@@ -56,7 +57,7 @@ impl McpServer {
             // TODO: MCP SSE endpoint for real-time communication
             // .route("/sse", get(sse_handler))
             // MCP JSON-RPC endpoint for tool calls
-            .route("/mcp", post(mcp_handler))
+            .route("/mcp", post(mcp_handler).get(mcp_get_method_not_allowed))
             // Add CORS for Toolman compatibility
             .layer(
                 CorsLayer::new()
@@ -87,6 +88,8 @@ async fn mcp_handler(
     match state.handler.handle_request(payload).await {
         Ok(response) => {
             debug!("MCP response: {}", response);
+            // Inject MCP-Protocol-Version header via axum response conversion by wrapping in Json
+            // Note: For MVP, we ensure the header is present at router/middleware level in Task 3.
             Ok(Json(response))
         }
         Err(e) => {
@@ -94,4 +97,9 @@ async fn mcp_handler(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+/// GET on /mcp should return 405 (for MVP)
+async fn mcp_get_method_not_allowed(_headers: HeaderMap) -> Result<Json<Value>, StatusCode> {
+    Err(StatusCode::METHOD_NOT_ALLOWED)
 }
