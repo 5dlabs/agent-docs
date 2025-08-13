@@ -1,12 +1,7 @@
-//! Test to verify transport module compiles and exports expected types and function
+//! Compile-surface test for transport module (MVP)
 
-use doc_server_mcp::transport::{
-    TransportConfig, TransportError, unified_mcp_handler
-};
+use doc_server_mcp::transport::{TransportConfig, TransportError, unified_mcp_handler};
 use doc_server_mcp::server::McpServerState;
-use axum::http::{HeaderMap, Request, Method};
-use axum::body::Body;
-use std::sync::Arc;
 
 #[test]
 fn test_transport_config_compiles() {
@@ -30,33 +25,7 @@ fn test_transport_error_variants_exist() {
     assert_eq!(TransportError::MethodNotAllowed.to_string(), "method not allowed");
 }
 
-// McpServerState is a server type; we only assert name resolvability elsewhere
-
-#[tokio::test]
-async fn test_unified_mcp_handler_signature() {
-    // Test that the unified_mcp_handler function exists with the correct signature
-    let _config = TransportConfig { protocol_version: "2025-06-18".to_string() };
-    let _state = McpServerState { db_pool: unsafe { std::mem::zeroed() }, handler: Arc::new(unsafe { std::mem::zeroed() }) };
-    let headers = HeaderMap::new();
-    
-    // Test POST request (should succeed)
-    let post_req = Request::builder()
-        .method(Method::POST)
-        .body(Body::empty())
-        .unwrap();
-        
-    // We only validate signature presence in MVP; do not call actual handler due to state type
-    let _ = (headers, post_req);
-    let _ = ();
-    
-    // Test GET request (should fail with MethodNotAllowed)
-    let get_req = Request::builder()
-        .method(Method::GET)
-        .body(Body::empty())
-        .unwrap();
-        
-    let _ = get_req;
-}
+// McpServerState is a server type; we only assert name resolvability in API surface test
 
 #[test]
 fn test_transport_api_surface() {
@@ -71,6 +40,5 @@ fn test_transport_api_surface() {
     
     // Function - just verify it can be referenced
     let _handler_fn = unified_mcp_handler;
-    
     // If we get here without compile errors, the API surface is correct
 }
