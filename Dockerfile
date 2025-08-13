@@ -1,29 +1,5 @@
-# Multi-stage Dockerfile for Agent Docs MCP Server
-# Optimized for production Kubernetes deployment
-
-# Build stage
-FROM rust:1.88-slim AS builder
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    libpq-dev \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
-WORKDIR /app
-
-# Copy Cargo workspace files
-COPY Cargo.toml Cargo.lock ./
-COPY crates/ ./crates/
-
-# Prebuild dependencies to leverage Docker layer caching
-RUN cargo fetch
-
-# Build in release mode
-RUN cargo build --release --bin http_server
+# Runtime-only Dockerfile for Agent Docs MCP Server
+# Expects a prebuilt binary at build/http_server in the build context
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -33,7 +9,10 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Create non-root user
 RUN useradd -r -s /bin/false -m -d /app mcpuser
@@ -42,9 +21,9 @@ RUN useradd -r -s /bin/false -m -d /app mcpuser
 WORKDIR /app
 RUN chown mcpuser:mcpuser /app
 
-# Copy binary from builder stage
-COPY --from=builder /app/target/release/http_server /app/
-COPY --chown=mcpuser:mcpuser --from=builder /app/target/release/http_server /app/
+# Copy prebuilt binary from CI artifact packaged in the build context
+COPY --chown=mcpuser:mcpuser build/http_server /app/http_server
+RUN chmod +x /app/http_server
 
 # Switch to non-root user
 USER mcpuser

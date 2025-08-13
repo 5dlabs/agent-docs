@@ -1,3 +1,5 @@
+**IMPORTANT:** Please make sure you submit a pull request at the end of this job.
+
 # Task 3: Implement Streamable HTTP Transport Foundation
 
 ## Overview
