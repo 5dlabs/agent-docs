@@ -95,7 +95,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./infra/images/server/Dockerfile
+          file: ./Dockerfile
           platforms: linux/amd64
           push: true
           tags: |
@@ -106,5 +106,37 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+
+  deploy:
+    needs: [version, build-and-push-image]
+    runs-on: [k8s-runner]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup tools
+        run: |
+          mkdir -p $HOME/bin
+          if [ -f /shared/kubectl ]; then
+            cp /shared/kubectl $HOME/bin/
+            chmod +x $HOME/bin/kubectl
+          fi
+          if [ -f /shared/helm ]; then
+            cp /shared/helm $HOME/bin/
+            chmod +x $HOME/bin/helm
+          fi
+          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Verify Kubernetes connectivity
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+      - name: Deploy with Helm
+        run: |
+          kubectl create namespace doc-server --dry-run=client -o yaml | kubectl apply -f -
+          helm upgrade --install doc-server ./helm/agent-docs-server \
+            --namespace doc-server \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/server \
+            --set image.tag=${{ needs.version.outputs.version }} \
+            --set image.pullPolicy=Always \
+            --wait \
+            --timeout=300s
 
 
