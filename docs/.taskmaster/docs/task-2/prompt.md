@@ -1,6 +1,6 @@
-# Autonomous Agent Remediation Prompt: Task 2 — Data Migration and Validation Pipeline (Implemented; Fix Outstanding Issues)
+# Autonomous Agent Remediation Prompt: Task 2 — Data Migration and Validation Pipeline (Implemented; Fix Build and Data Migration)
 
-This task has been implemented via [PR #5](https://github.com/5dlabs/agent-docs/pull/5), which adds a comprehensive data migration and validation pipeline. Your mission now is to remediate review findings, ensure tests/CI pass, and validate on the live cluster.
+This task has been implemented via [PR #5](https://github.com/5dlabs/agent-docs/pull/5), which adds a comprehensive data migration and validation pipeline. Your mission now is to remediate review findings, fix the build, and execute the data migration locally. Kubernetes changes are not required at this time.
 
 ## Context from PR #5
 
@@ -10,7 +10,7 @@ This task has been implemented via [PR #5](https://github.com/5dlabs/agent-docs/
   - Performance tests: `cargo test --release migration_performance` failed to compile; errors in `crates/doc-loader/src/migration.rs` (EmbeddingClient not recognized as a trait; pgvector unresolved).
   - Kubernetes validation: `kubectl apply -f k8s/migration-job.yaml --dry-run=client` succeeded.
 
-Use these comments to drive fixes so CI and live validation are green.
+Use these comments to drive fixes so the workspace builds locally and CI is green.
 
 ## Required Remediation Steps
 
@@ -27,7 +27,7 @@ Use these comments to drive fixes so CI and live validation are green.
    - Validate resume-from-checkpoint and batch-atomic rollback with simulated failures.
    - Ensure progress/ETA reporting is thread-safe and low overhead.
 
-## Validation Requirements (must pass locally, in CI, and on live cluster)
+## Validation Requirements (local and CI)
 
 - Local compile and tests:
   ```bash
@@ -38,19 +38,20 @@ Use these comments to drive fixes so CI and live validation are green.
 
 - GitHub CI: push changes and verify all required checks pass for `main`.
 
-- Live cluster validation (prod/staging as applicable):
+- Local data migration run (dev database):
   ```bash
-  kubectl apply -f k8s/migration-job.yaml --dry-run=client
-  kubectl apply -f k8s/migration-job.yaml
-  kubectl logs -f job/doc-server-migration -n doc-server
-  # Verify success criteria in logs and DB (counts, checksums, schema conformance)
+  # dry run validation
+  cargo run --bin migrate -- --validate --dry-run
+
+  # full migration with reasonable parallelism
+  cargo run --bin migrate -- --full-migration --parallel 8
   ```
 
 ## Definition of Done
 
 - All compilation errors resolved across workspace.
 - Unit/performance tests pass locally and in GitHub CI (green checks on `main`).
-- Kubernetes Job runs successfully on the live cluster with validated outcomes:
+- Local migration runs successfully (dry-run and full migration) with validated outcomes:
   - ≥1000 docs/minute achievable with configured workers
   - Checksum and schema validations pass (no unresolved duplicates)
   - Rollback and resume tested and reliable
