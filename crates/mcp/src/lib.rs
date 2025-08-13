@@ -4,6 +4,7 @@
 //! HTTP/SSE transport, and integration with the database and other services.
 
 pub mod handlers;
+pub mod headers;
 pub mod server;
 pub mod tools;
 pub mod transport;
