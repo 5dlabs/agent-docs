@@ -35,5 +35,3 @@ pub fn set_standard_headers(headers: &mut HeaderMap, session_id: Option<Uuid>) {
         }
     }
 }
-
-

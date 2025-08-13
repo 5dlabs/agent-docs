@@ -29,4 +29,3 @@ pub async fn unified_mcp_handler(
 ) -> Result<Response, TransportError> {
     Err(TransportError::MethodNotAllowed)
 }
-
