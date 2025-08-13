@@ -1,10 +1,8 @@
 //! MCP transport layer (MVP scaffold)
 
-use std::sync::Arc;
-
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::Response,
 };
 use thiserror::Error;

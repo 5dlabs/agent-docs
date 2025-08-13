@@ -4,7 +4,8 @@ use crate::handlers::McpHandler;
 use anyhow::Result;
 use doc_server_database::DatabasePool;
 // use crate::sse::sse_handler; // TODO: implement SSE handler
-use crate::headers::{MCP_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSION};
+// Headers utilities are used in subsequent tasks; unused for MVP POST handler
+// use crate::headers::{MCP_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSION};
 use axum::{
     extract::State,
     http::{HeaderMap, Method, StatusCode},

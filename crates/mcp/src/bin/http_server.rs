@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
     let mcp_server = McpServer::new(db_pool).await?;
 
     // Start HTTP server
-    let addr = format!("0.0.0.0:{}", port);
+    let addr = format!("0.0.0.0:{port}");
     info!("Doc Server listening on {}", addr);
 
     mcp_server.serve(&addr).await?;
