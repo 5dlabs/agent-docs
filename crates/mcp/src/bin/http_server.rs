@@ -342,30 +342,65 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     // Migration 7: Add partitioning for documents table (range partitioning by created_at)
     let partitioning_sql = r"
         -- Convert documents table to partitioned table (by monthly ranges)
-        -- This improves query performance for large datasets and enables easy archival
-        CREATE TABLE documents_partitioned (
-            LIKE documents INCLUDING ALL
-        ) PARTITION BY RANGE (created_at);
-        
-        -- Create initial partitions (current month and next 3 months)
-        CREATE TABLE documents_y2025_m01 PARTITION OF documents_partitioned 
-            FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');
-        CREATE TABLE documents_y2025_m02 PARTITION OF documents_partitioned
-            FOR VALUES FROM ('2025-02-01') TO ('2025-03-01'); 
-        CREATE TABLE documents_y2025_m03 PARTITION OF documents_partitioned
-            FOR VALUES FROM ('2025-03-01') TO ('2025-04-01');
-        CREATE TABLE documents_y2025_m04 PARTITION OF documents_partitioned
-            FOR VALUES FROM ('2025-04-01') TO ('2025-05-01');
-            
-        -- Copy data from existing table (if any exists)
-        INSERT INTO documents_partitioned SELECT * FROM documents;
-        
-        -- Rename tables atomically
-        ALTER TABLE documents RENAME TO documents_old;
-        ALTER TABLE documents_partitioned RENAME TO documents;
-        
-        -- Drop old table (comment out for safety in production)
-        -- DROP TABLE documents_old;
+        -- Dynamically create partitions to cover existing data and a small future window
+        DO $$
+        DECLARE
+            start_month DATE;
+            end_month DATE;
+            current_month DATE;
+            partition_name TEXT;
+        BEGIN
+            -- Create the partitioned parent table
+            CREATE TABLE IF NOT EXISTS documents_partitioned (
+                LIKE documents INCLUDING ALL
+            ) PARTITION BY RANGE (created_at);
+
+            -- Create a DEFAULT partition to avoid insert failures for out-of-range data
+            IF to_regclass('public.documents_default') IS NULL THEN
+                EXECUTE 'CREATE TABLE documents_default PARTITION OF documents_partitioned DEFAULT';
+            END IF;
+
+            -- Determine the range of months to create
+            SELECT date_trunc('month', COALESCE(MIN(created_at), CURRENT_DATE))::date INTO start_month
+            FROM documents;
+
+            SELECT GREATEST(
+                date_trunc('month', CURRENT_DATE + INTERVAL '3 months')::date,
+                COALESCE(date_trunc('month', MAX(created_at))::date, CURRENT_DATE::date)
+            ) INTO end_month
+            FROM documents;
+
+            current_month := start_month;
+            WHILE current_month <= end_month LOOP
+                partition_name := format('documents_y%sm%s', to_char(current_month, 'YYYY'), to_char(current_month, 'MM'));
+                -- Create monthly partition if missing
+                IF to_regclass(partition_name) IS NULL THEN
+                    EXECUTE format(
+                        'CREATE TABLE %I PARTITION OF documents_partitioned FOR VALUES FROM (%L) TO (%L)',
+                        partition_name,
+                        current_month::timestamptz,
+                        (current_month + INTERVAL '1 month')::timestamptz
+                    );
+                END IF;
+
+                -- Copy data for this month in a bounded batch
+                EXECUTE format(
+                    'INSERT INTO documents_partitioned SELECT * FROM documents WHERE created_at >= %L AND created_at < %L',
+                    current_month::timestamptz,
+                    (current_month + INTERVAL '1 month')::timestamptz
+                );
+
+                current_month := (current_month + INTERVAL '1 month')::date;
+            END LOOP;
+
+            -- Copy any rows with NULL created_at into default partition
+            EXECUTE 'INSERT INTO documents_partitioned SELECT * FROM documents WHERE created_at IS NULL';
+
+            -- Swap tables atomically after data is copied
+            ALTER TABLE documents RENAME TO documents_old;
+            ALTER TABLE documents_partitioned RENAME TO documents;
+        END
+        $$;
     ";
     migration_manager.register_migration(MigrationInfo {
         id: "007_partitioning".to_string(),
@@ -382,7 +417,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
             DROP TABLE documents;
             ALTER TABLE documents_temp RENAME TO documents;
         "
-            .to_string(),
+                .to_string(),
         ),
         dependencies: vec!["006_foreign_keys".to_string()],
         checksum: calculate_checksum(partitioning_sql),
