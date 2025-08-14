@@ -343,7 +343,7 @@ impl MigrationPipeline {
         let semaphore = Arc::new(Semaphore::new(self.config.parallel_workers));
 
         // Collect all documents to process
-        let documents = self.collect_documents().await?;
+        let documents = self.collect_documents()?;
         let total_documents = documents.len();
 
         info!("Found {} documents to process", total_documents);
@@ -630,8 +630,8 @@ mod tests {
         let (processed, total, progress, _) = tracker.get_progress();
         assert_eq!(processed, 10);
         assert_eq!(total, 100);
-        #[allow(clippy::float_cmp)]
-        assert_eq!(progress, 10.0);
+        // Float comparison in test context is acceptable here
+        assert!((progress - 10.0).abs() < f64::EPSILON);
     }
 
     #[tokio::test]
