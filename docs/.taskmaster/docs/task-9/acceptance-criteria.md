@@ -1,7 +1,9 @@
 # Acceptance Criteria: Task 9 - Config-Driven Documentation Query Tools
 
 ## Functional Requirements
+
 ### 1. Dynamic Tool Implementation
+
 - [ ] JSON config defined and validated (tools: name, docType, title, description, enabled)
 - [ ] Tools dynamically registered at startup from config (Rust docs tools remain hardcoded; all others are config-driven)
 - [ ] Unified query handler used by all dynamic tools
@@ -9,6 +11,7 @@
 - [ ] Result ranking with relevance scores implemented
 
 ### 2. Database Integration
+
 - [ ] Filters documents by `docType` from tool config
 - [ ] Vector similarity search functional
 - [ ] Metadata JSONB fields parsed when present
@@ -55,18 +58,25 @@
 - [ ] Meaningful error messages returned
 
 ## Test Cases
+
 ### Test Case 1: Basic Query (docType)
 
 **Given**: A configured tool `docs_api_query` with `docType` "api"
+
 **When**: A query "get price" is submitted via that tool
+
 **Then**: Results match the `docType` and include category-appropriate fields
+
 **And**: Response time < 2 seconds
 
 ### Test Case 2: Metadata Filtering
 
 **Given**: Multiple versions present in metadata (e.g., api_version)
+
 **When**: Query specifies a metadata filter (e.g., api_version="v1")
+
 **Then**:
+
 - Only matching-version results are returned
 - Filtering correctly applied
 - No mismatched versions in results
@@ -74,27 +84,38 @@
 ### Test Case 3: Registration from Config
 
 **Given**: Server starts with a config listing `docs_api_query` and `docs_solana_query`
+
 **When**: The MCP client calls `tools/list`
+
 **Then**: Both tools appear and invoke the same unified handler with their respective `docType`
 
 ### Test Case 4: Parameter Validation
+
 **Given**: Tool invoked via MCP
+
 **When**: Invalid `limit` (e.g., 100) provided
+
 **Then**:
+
 - A JSON-RPC error response is returned with code -32602 and a clear message
 - No database query is executed
 - HTTP status remains 200 with an `application/json` JSON-RPC error object (per JSON-only transport)
 
 ### Test Case 5: Response Formatting
+
 **Given**: Query returns multiple results
+
 **When**: Results are formatted for output
+
 **Then**:
+
 - Each result includes source attribution and relevance score
 - Category-appropriate fields included when present (e.g., endpoint URL, method, parameters for API docs)
 
 ## Deliverables
 
 ### Code Artifacts
+
 - [ ] JSON config and loader/validation
 - [ ] Unified query implementation and db queries
 - [ ] Dynamic tool registration code
@@ -102,6 +123,7 @@
 - [ ] Documentation comments in code
 
 ### Documentation
+
 - [ ] Tool usage examples (MCP JSON-RPC request/response)
 - [ ] Performance notes (< 2s target)
 - [ ] Troubleshooting guide
@@ -144,6 +166,7 @@ Task 9 is complete when:
 - Tool usage in production environment
 
 ### NFR-0: Code Quality and Automation
+
 - [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
 - [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
 - [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
