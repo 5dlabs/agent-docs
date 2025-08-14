@@ -1,9 +1,9 @@
 apiVersion: v2
 name: agent-docs-server
 description: Multi-Type Documentation Server with AI-Powered Semantic Search
+type: application
 version: 0.1.0
 appVersion: "0.1.0"
-type: application
 
 keywords:
   - documentation
