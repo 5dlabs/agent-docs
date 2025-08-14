@@ -22,4 +22,10 @@ Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_cra
 - Enhanced user experience with progress feedback
 - Comprehensive error handling and recovery
 - Integration with new embedding batch processing (Task 7)
-- Improved performance for crate management operations
+- Improved performance for crate management operations## CI/CD and Code Quality Requirements
+
+- Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
+- Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.
+- Branching: Implement on a feature branch (e.g., `feature/<task-id>-<short-name>`).
+- CI gate: Push to the feature branch and monitor GitHub Actions until all jobs are green and deployment completes successfully.
+- PR creation: Only open the pull request after CI is green and the deployment stage has succeeded.

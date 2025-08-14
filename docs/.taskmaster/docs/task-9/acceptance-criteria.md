@@ -152,4 +152,8 @@ Task 8 is complete when:
 - Query response time consistently < 2 seconds
 - Cache hit rate > 60% in production
 - Zero critical bugs in implementation
-- Tool usage in production environment
+- Tool usage in production environment### NFR-0: Code Quality and Automation
+- [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
+- [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
+- [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
+- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact

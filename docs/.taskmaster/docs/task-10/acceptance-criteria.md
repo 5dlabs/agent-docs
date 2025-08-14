@@ -180,4 +180,8 @@ Task 9 is complete when:
 - All metadata fields properly parsed and displayed
 - Cross-format search accuracy > 95%
 - Error handling covers all edge cases
-- Code review approval from technical lead
+- Code review approval from technical lead### NFR-0: Code Quality and Automation
+- [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
+- [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
+- [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
+- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact

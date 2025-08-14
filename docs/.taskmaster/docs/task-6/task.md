@@ -36,4 +36,10 @@ Align response behavior with MCP 2025-06-18 Streamable HTTP for JSON-only POST h
 1. Push branch to GitHub to trigger build
 2. CI builds container and runs clippy/tests
 3. Deploy via Helm to Kubernetes
-4. Real-world testing with a compliant MCP client; verify headers and errors
+4. Real-world testing with a compliant MCP client; verify headers and errors## CI/CD and Code Quality Requirements
+
+- Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
+- Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.
+- Branching: Implement on a feature branch (e.g., `feature/<task-id>-<short-name>`).
+- CI gate: Push to the feature branch and monitor GitHub Actions until all jobs are green and deployment completes successfully.
+- PR creation: Only open the pull request after CI is green and the deployment stage has succeeded.

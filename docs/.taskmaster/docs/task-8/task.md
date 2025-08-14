@@ -24,4 +24,10 @@ Implement optimized OpenAI embedding generation using text-embedding-3-large mod
 - Rate limiting compliance (3000 RPM / 1M TPM)
 - Processing time < 20 minutes for 20k embeddings
 - Retry mechanism handles failures gracefully
-- Cost tracking accurate and comprehensive
+- Cost tracking accurate and comprehensive## CI/CD and Code Quality Requirements
+
+- Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
+- Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.
+- Branching: Implement on a feature branch (e.g., `feature/<task-id>-<short-name>`).
+- CI gate: Push to the feature branch and monitor GitHub Actions until all jobs are green and deployment completes successfully.
+- PR creation: Only open the pull request after CI is green and the deployment stage has succeeded.

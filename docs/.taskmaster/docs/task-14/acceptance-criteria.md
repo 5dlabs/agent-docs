@@ -218,4 +218,8 @@ Task 13 is complete when:
 - Graceful shutdown success rate 100% within timeout
 - Resource usage minimal (< 50MB idle memory)
 - Security scan integration blocks vulnerable deployments
-- Operational documentation enables team self-service
+- Operational documentation enables team self-service### NFR-0: Code Quality and Automation
+- [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
+- [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
+- [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
+- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact

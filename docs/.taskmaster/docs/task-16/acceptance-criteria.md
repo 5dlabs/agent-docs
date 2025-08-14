@@ -207,4 +207,8 @@ Task 15 is complete when:
 - Error rate < 0.1% during all load testing scenarios
 - Database query performance improved by 50%+ from baseline
 - Request coalescing reduces duplicate processing by 80%+
-- System handles spike loads gracefully with quick recovery
+- System handles spike loads gracefully with quick recovery### NFR-0: Code Quality and Automation
+- [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
+- [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
+- [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
+- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact

@@ -61,4 +61,8 @@ cargo fmt --all -- --check
 1. Push to GitHub → CI build/tests
 2. Image built and published
 3. Helm deploy to cluster
-4. Real-world queries via MCP client confirm functionality
+4. Real-world queries via MCP client confirm functionality### NFR-0: Code Quality and Automation
+- [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
+- [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
+- [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
+- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact

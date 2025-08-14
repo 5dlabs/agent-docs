@@ -207,4 +207,8 @@ Task 17 is complete when:
 - Documentation completeness score > 95% via automated analysis
 - User satisfaction rating > 4.5/5 for documentation quality
 - Time to productive use < 30 minutes for new developers
-- Documentation maintenance overhead < 10% of development time
+- Documentation maintenance overhead < 10% of development time### NFR-0: Code Quality and Automation
+- [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
+- [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
+- [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
+- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact
