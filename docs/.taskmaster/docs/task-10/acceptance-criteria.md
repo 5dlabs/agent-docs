@@ -1,62 +1,38 @@
-# Acceptance Criteria: Task 10 - Solana Query Tool Implementation
+# Acceptance Criteria: Task 10 - Dynamic Tooling Extensions (Config-Driven)
 
 ## Functional Requirements
 
-### 1. SolanaQueryTool Structure Implementation
-- [ ] SolanaQueryTool struct created in `crates/mcp/src/tools.rs`
-- [ ] Contains db_pool and embedding_client fields
-- [ ] Implements new() constructor following RustQueryTool pattern
-- [ ] Proper error handling for initialization failures
-- [ ] Memory-efficient design with appropriate lifetimes
+### 1. Config and Registration
+- [ ] JSON config extended/validated to define tools: `name`, `docType`, `title`, `description`, `enabled`, optional `metadataHints`
+- [ ] Dynamic tool registration from config at startup (no new hardcoded domain tools)
+- [ ] Tools appear in `tools/list` using config-provided names and descriptions
 
-### 2. Semantic Search and Metadata Filtering
-- [ ] semantic_search method queries documents with doc_type='solana'
-- [ ] Metadata parsing handles all Solana-specific fields:
-  - [ ] category (architecture-diagrams, sequence-diagrams, zk-cryptography)
-  - [ ] format (markdown, pdf, bob, msc)
-  - [ ] section field extraction
-  - [ ] complexity level filtering
-  - [ ] topic-based categorization
-- [ ] pgvector similarity search using <=> operator
-- [ ] Relevance scoring with configurable thresholds
-- [ ] Result ranking by similarity and metadata relevance
+### 2. Unified Query + Metadata Filters
+- [ ] Unified handler accepts: `query` (required), `limit` (1–20), and optional filters: `format`, `complexity`, `category`, `topic`, `api_version`
+- [ ] Filters applied server-side against JSONB metadata where present
+- [ ] Vector similarity or fallback ranking used; include relevance score
+- [ ] Queries constrained to requested `docType`; response time < 2s
 
-### 3. Multi-Format Content Handling
-- [ ] BOB diagram formatting preserves ASCII art structure
-- [ ] MSC chart formatting maintains sequence flow
-- [ ] PDF content displays metadata summary with:
-  - [ ] File location and size information
-  - [ ] Content description extraction
-  - [ ] Page count and document metadata
-- [ ] Markdown formatting with proper headers
-- [ ] Cross-reference link resolution when available
+### 3. Adaptive Response Formatting
+- [ ] Diagram content (bob/msc) preserves ASCII formatting
+- [ ] PDFs summarized via metadata (location, size, description, page count when available)
+- [ ] Markdown snippets include headers/context
+- [ ] All responses include source attribution and relevance
 
-### 4. Tool Trait Implementation
-- [ ] Tool trait implemented with comprehensive definition
-- [ ] Tool name set to 'solana_query'
-- [ ] Description mentions Solana blockchain documentation and ZK cryptography
-- [ ] Input schema includes:
-  - [ ] query (string, required)
-  - [ ] limit (integer, 1-20 range, default 10)
-  - [ ] format (optional enum: markdown/pdf/bob/msc)
-  - [ ] complexity (optional string filter)
-- [ ] execute() method validates all parameters
-- [ ] Returns formatted JSON responses
+### 4. MCP Interface
+- [ ] Dynamic tools return definitions that reflect unified input schema (query, limit, optional filters)
+- [ ] Parameter validation returns helpful error messages for invalid inputs
 
 ### 5. MCP Handler Integration
-- [ ] SolanaQueryTool registered in McpHandler::new()
-- [ ] Tools HashMap contains 'solana_query' key
-- [ ] Proper error handling during tool instantiation
-- [ ] Tool availability confirmed through MCP protocol
+- [ ] Handler builds tools from config entries at startup
+- [ ] tools/list shows all enabled config tools; tools/call routes by `name`
+- [ ] Proper error handling during instantiation and invocation
 
 ## Non-Functional Requirements
 
 ### 1. Performance Requirements
-- [ ] Query response time consistently < 2 seconds
-- [ ] Efficient vector similarity search with proper indexing
-- [ ] Memory usage stable under concurrent queries
-- [ ] Database connection pooling optimized
-- [ ] No memory leaks during extended operation
+- [ ] Response time consistently < 2 seconds
+- [ ] Pooling used; memory stable under concurrent queries
 
 ### 2. Code Quality Standards
 - [ ] Follows RustQueryTool patterns exactly
@@ -74,59 +50,38 @@
 
 ## Test Cases
 
-### Test Case 1: Basic Solana Documentation Query
-**Given**: SolanaQueryTool is properly initialized
-**When**: Query executed with "validator architecture"
-**Then**:
-- Results returned within 2 seconds
-- Contains relevant Solana validator documentation
-- Metadata correctly parsed and displayed
-- Results ranked by relevance
+### Test Case 1: Config Registration
+**Given**: Config defines `solana_query` and `birdeye_query`
+**When**: Server starts and lists tools
+**Then**: Both tools appear with names/descriptions from config
 
-### Test Case 2: Format-Specific Filtering
-**Given**: Solana documentation includes multiple formats
-**When**: Query with format filter "pdf"
-**Then**:
-- Only PDF documents returned
-- PDF metadata displayed with file information
-- Content description extracted appropriately
-- No non-PDF results included
+### Test Case 2: Format Filter
+**Given**: Mixed formats exist for a docType
+**When**: Query with `format=pdf`
+**Then**: Only PDF results returned with summarized metadata
 
-### Test Case 3: Complexity-Based Filtering
-**Given**: Documents have complexity metadata
-**When**: Query with complexity filter "advanced"
-**Then**:
-- Only advanced-level documents returned
-- Complexity level displayed in results
-- Appropriate technical depth maintained
-- Lower complexity documents excluded
+### Test Case 3: Complexity Filter
+**Given**: Documents include `complexity`
+**When**: Query with `complexity=advanced`
+**Then**: Only advanced-level results returned and shown in output
 
-### Test Case 4: BOB Diagram Handling
-**Given**: BOB diagram documents exist in database
-**When**: Query returns BOB diagram content
-**Then**:
-- ASCII art structure preserved
-- Proper monospace formatting applied
-- Diagram description included
-- Cross-references resolved
+### Test Case 4: Diagram Formatting
+**Given**: Results include `bob`/`msc` diagrams
+**When**: Rendered
+**Then**: ASCII art preserved with monospace formatting
 
 ### Test Case 5: Error Handling
-**Given**: Invalid parameters provided
-**When**: Tool executed with invalid format
-**Then**:
-- Appropriate error message returned
-- No database exceptions thrown
-- Error details specify invalid parameter
-- System remains stable
+**Given**: Invalid `limit` or unsupported `format`
+**When**: tools/call executed
+**Then**: Validation error returned; no DB query performed
 
 ## Deliverables Checklist
 
 ### Code Implementation
-- [ ] SolanaQueryTool struct in `crates/mcp/src/tools.rs`
-- [ ] Metadata parsing utilities
-- [ ] Content formatting handlers
-- [ ] Tool trait implementation
-- [ ] MCP handler registration
+- [ ] Config schema and loader enhancements
+- [ ] Unified handler filter/formatting additions
+- [ ] Dynamic tool registration code
+- [ ] Integration tests for registration/routing/filters
 
 ### Testing Artifacts
 - [ ] Unit tests for SolanaQueryTool methods
@@ -147,10 +102,9 @@
 ### Automated Testing
 ```bash
 # All tests must pass
-cargo test --package mcp --lib solana_query
-cargo test --package mcp --test integration_solana
-cargo clippy --package mcp --lib -- -D warnings
-cargo fmt --package mcp -- --check
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic
+cargo test --all-features
 ```
 
 ### Manual Validation
@@ -162,15 +116,11 @@ cargo fmt --package mcp -- --check
 
 ## Definition of Done
 
-Task 9 is complete when:
-
-1. **Implementation Complete**: SolanaQueryTool fully implemented following patterns
-2. **Integration Working**: Tool registered and accessible through MCP
-3. **Tests Passing**: All unit and integration tests pass
-4. **Performance Met**: Query responses consistently under 2 seconds
-5. **Documentation Updated**: Code properly documented with examples
-6. **Quality Gates**: Clippy and rustfmt checks pass
-7. **Stakeholder Testing**: Manual validation confirms expected behavior
+1. Dynamic tools load from JSON config and list via MCP
+2. Unified handler routes calls and applies filters correctly
+3. Responses adapt formatting based on metadata and include attribution/relevance
+4. Performance target met (< 2s) in tests
+5. All quality gates pass (fmt, clippy pedantic, tests)
 
 ## Success Metrics
 

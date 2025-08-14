@@ -1,145 +1,50 @@
-# Autonomous Agent Prompt: Solana Query Tool Implementation
+# Autonomous Agent Prompt: Dynamic Tooling Extensions (Config-Driven) – Task 10
 
-You are tasked with implementing the `solana_query` tool for semantic search across Solana blockchain platform documentation including core docs, architecture diagrams, and cryptography specifications.
+## Mission
 
-## Your Mission
-
-Implement a comprehensive SolanaQueryTool that provides advanced search capabilities across multi-format Solana documentation with metadata-driven filtering and specialized content handling.
+Generalize and extend the config-driven tool system from Task 9. Do not create hardcoded per-domain tools (e.g., Solana). Instead:
+- Ensure the JSON config can declare additional tools (name, docType, title, description, enabled).
+- Enhance the unified query handler to support optional metadata filters and adaptive formatting across all configured docTypes.
+- Keep Rust docs tooling hardcoded; all other categories are config-driven.
 
 ## Execution Steps
 
-### Step 1: Create SolanaQueryTool Structure
-- Navigate to `crates/mcp/src/tools.rs`
-- Implement SolanaQueryTool struct with db_pool and embedding_client fields
-- Follow the exact pattern used in RustQueryTool for consistency
-- Add proper error handling and initialization
+1) Config and Loader
+- Validate schema supports fields: name, docType, title, description, enabled, and optional metadata hints (e.g., supported formats, topics).
+- Add/adjust example config entries to demonstrate multiple docTypes (e.g., solana, birdeye, cilium).
 
-### Step 2: Implement Semantic Search with Metadata Filtering
-- Add semantic_search method querying documents where doc_type='solana'
-- Parse Solana-specific metadata fields:
-  - category: architecture-diagrams, sequence-diagrams, zk-cryptography
-  - format: markdown, pdf, bob, msc
-  - section, complexity, topic fields
-- Implement pgvector similarity search using <=> operator
-- Add relevance scoring and result ranking
+2) Unified Query Enhancements
+- Accept optional arguments in the shared handler: `limit` (1–20), and generic filters such as `format`, `complexity`, `category`, `topic`, `api_version` when present in metadata.
+- Filter results by `docType` and apply provided filters server-side.
+- Maintain < 2s response target.
 
-### Step 3: Add Specialized Content Formatting
-- Detect content type from metadata
-- For BOB/MSC diagrams: preserve ASCII art structure
-- For PDF documents: display metadata summary with location and description
-- For markdown: format with proper headers and code blocks
-- Include cross-reference links when available
+3) Adaptive Response Formatting
+- If metadata indicates diagrams (bob/msc), preserve ASCII-block formatting.
+- If metadata indicates PDFs, output a concise metadata summary (location, size, description, page count, when available).
+- For markdown, present clean snippets with headers/context.
+- Always include source attribution and relevance score when available.
 
-### Step 4: Implement Tool Trait
-- Add comprehensive tool definition with name 'solana_query'
-- Include description mentioning Solana blockchain documentation coverage
-- Define inputSchema with:
-  - query (string, required)
-  - limit (integer 1-20, optional)
-  - format (optional: markdown/pdf/bob/msc)
-  - complexity (optional string filter)
-- Implement execute() method with parameter validation
-
-### Step 5: Register Tool in MCP Handler
-- Navigate to `crates/mcp/src/handlers.rs`
-- Modify McpHandler::new() to instantiate SolanaQueryTool
-- Register in tools HashMap with key 'solana_query'
-- Add proper error handling during initialization
-
-## Required Outputs
-
-Generate these implementation artifacts:
-
-1. **SolanaQueryTool struct** in tools.rs with proper initialization
-2. **Metadata parsing logic** for all Solana-specific fields
-3. **Content formatting handlers** for different document types
-4. **Tool trait implementation** with comprehensive definition
-5. **MCP handler integration** with proper registration
-
-## Key Technical Requirements
-
-1. **Performance**: Query response time < 2 seconds
-2. **Compatibility**: Follow existing RustQueryTool patterns exactly
-3. **Metadata Support**: Handle all documented Solana metadata fields
-4. **Format Handling**: Support markdown, PDF, BOB diagrams, MSC charts
-5. **Error Handling**: Graceful degradation for missing metadata
-
-## Tools at Your Disposal
-
-- File system access for code implementation
-- Database query execution for testing
-- Cargo tools for compilation and testing
-- Documentation generation for API docs
+4) Registration and Tests
+- Register dynamic tools solely from the JSON config (no new hardcoded tools).
+- Add tests to verify: tools/list includes configured tools; tools/call routes to the unified handler; metadata filters and formatting behave as expected.
 
 ## Success Criteria
+- Tools appear via `tools/list` based on the config.
+- `tools/call` returns results filtered by `docType` and optional metadata filters.
+- Responses include source attribution and relevance; formatting adapts to content type.
+- P50/P95 response times remain under 2 seconds in test runs.
 
-Your implementation is complete when:
-- SolanaQueryTool is properly structured following existing patterns
-- Semantic search works with metadata filtering
-- All content formats are handled appropriately
-- Tool is registered and available through MCP
-- Response formatting is consistent and informative
-- All tests pass and compilation succeeds
+## Quality Gates and CI/CD Process
 
-## Important Implementation Notes
-
-- Maintain exact consistency with RustQueryTool patterns
-- Use shared database query utilities where possible
-- Implement proper error messages for invalid parameters
-- Ensure metadata parsing handles missing fields gracefully
-- Add appropriate logging for debugging and monitoring
-
-## Validation Commands
-
-Before completion, run:
-```bash
-cd /workspace
-cargo test --package mcp --test solana_query
-cargo clippy --package mcp --lib
-cargo fmt --package mcp --check
-```
-
-Begin implementation focusing on code quality, performance, and maintainability.## Quality Gates and CI/CD Process
-
-- Run static analysis after every new function is written:
-  - Command: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
-  - Fix all warnings before proceeding to write the next function.
-- Before submission, ensure the workspace is clean:
+- After every new function: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings.
+- Before submission (blocking):
   - `cargo fmt --all -- --check`
   - `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
   - `cargo test --all-features`
-- Feature branch workflow and CI gating:
-  - Do all work on a feature branch (e.g., `feature/<task-id>-<short-name>`).
-  - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
-  - Require the deployment stage to complete successfully before creating a pull request.
-  - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
-## Worktree and Parallel Branching (Required for parallel tasks)
+- Branch & CI: Work on a feature branch, push, and require a green GitHub Actions workflow (including deployment) before opening a PR.
 
-- Use Git worktrees to isolate this task's working directory and feature branch to avoid conflicts with other tasks running in parallel.
-
-### Steps
-1. Create a dedicated worktree and feature branch for this task:
-updated: docs/.taskmaster/docs/task-10/task.txt (ID -> 10)
-updated: docs/.taskmaster/docs/task-11/task.txt (ID -> 11)
-updated: docs/.taskmaster/docs/task-12/task.txt (ID -> 12)
-updated: docs/.taskmaster/docs/task-13/task.txt (ID -> 13)
-updated: docs/.taskmaster/docs/task-14/task.txt (ID -> 14)
-updated: docs/.taskmaster/docs/task-15/task.txt (ID -> 15)
-updated: docs/.taskmaster/docs/task-16/task.txt (ID -> 16)
-updated: docs/.taskmaster/docs/task-17/task.txt (ID -> 17)
-updated: docs/.taskmaster/docs/task-18/task.txt (ID -> 18)
-updated: docs/.taskmaster/docs/task-5/task.txt (ID -> 5)
-updated: docs/.taskmaster/docs/task-6/task.txt (ID -> 6)
-updated: docs/.taskmaster/docs/task-7/task.txt (ID -> 7)
-updated: docs/.taskmaster/docs/task-8/task.txt (ID -> 8)
-updated: docs/.taskmaster/docs/task-9/task.txt (ID -> 9)
-Done. Changed: 14, Skipped: 18
-Done. Changed: 0, Skipped: 32
-2. Enter the worktree and do all work from there:
-
-3. Run your development session here (e.g., Claude Code) and follow the Quality Gates section (Clippy pedantic after each new function; fmt/clippy/tests before pushing).
-
-4. Push from this worktree and monitor GitHub Actions; create a PR only after CI is green and deployment succeeds.
-
-5. Manage worktrees when finished:
-/Users/jonathonfritz/code/work-projects/5dlabs/agent-docs  610a801 [main]
+## Implementation Notes
+- Reuse `DocumentQueries` and existing DB abstractions.
+- Do not add separate structs per docType; use the unified handler and config entries only (Rust docs tool remains hardcoded).
+- Ensure parameter validation returns helpful errors; keep 1–20 bound for `limit`.
+- Add structured logs for filter usage and result counts.

@@ -1,30 +1,26 @@
-# Task 10: Solana Query Tool Implementation
+# Task 10: Dynamic Tooling Extensions (Config-Driven)
 
 ## Overview
-Implement `solana_query` tool for semantic search across Solana blockchain platform documentation including core docs, architecture diagrams, and cryptography specifications.
+Generalize Task 9’s config-driven tool system: extend the JSON config and unified handler so new documentation categories (e.g., solana, birdeye, cilium) are added via config entries, not hardcoded tools. Rust docs remain the only hardcoded tool.
 
 ## Implementation Guide
-- Create SolanaQueryTool with comprehensive search capabilities
-- Implement metadata filtering for documentation categories
-- Add support for multiple content formats (markdown, PDF, diagrams)
-- Integrate with existing MCP tool registration
-- Optimize for blockchain documentation complexity levels
+- Extend config schema and loader (name, docType, title, description, enabled, optional metadata hints).
+- Enhance unified query handler to accept optional generic filters and adapt output formatting based on metadata.
+- Register tools strictly from config at startup; no new per-domain structs.
+- Add tests for registration, routing, filters, and formatting.
 
 ## Technical Requirements
-- Vector similarity search with format-aware processing
-- JSONB metadata filtering for categories and complexity
-- Multi-format content handling (markdown, PDF, BOB, MSC)
-- Tool registration and MCP integration
-- Performance optimization for large documentation set
+- Vector similarity or ranked search; include relevance score.
+- JSONB metadata filters: `format`, `complexity`, `category`, `topic`, `api_version` (when present).
+- Adaptive formatting for diagrams (bob/msc), PDFs (summary), markdown.
+- Performance target: < 2 seconds per query; use pooling and efficient queries.
 
 ## Success Metrics
-- Query response time < 2 seconds
-- Multi-format content search capability
-- Accurate categorization and filtering
-- Complexity-aware result ranking
-- Comprehensive Solana ecosystem coverage## CI/CD and Code Quality Requirements
+- Tools appear via `tools/list` solely from config.
+- Queries filtered by `docType` and optional metadata filters; relevance and attribution included.
+- p95 response < 2s across representative runs.## CI/CD and Code Quality Requirements
 
-- Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
+- Per-function linting: After creating any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
 - Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.
 - Branching: Implement on a feature branch (e.g., `feature/<task-id>-<short-name>`).
 - CI gate: Push to the feature branch and monitor GitHub Actions until all jobs are green and deployment completes successfully.
