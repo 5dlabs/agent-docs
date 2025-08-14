@@ -130,6 +130,15 @@ pub enum ContentTypeError {
     UnsupportedContentType(String),
 }
 
+/// Accept header validation errors
+#[derive(Debug, Error)]
+pub enum AcceptHeaderError {
+    #[error("Invalid Accept header value")]
+    InvalidHeaderValue,
+    #[error("Unacceptable media type: {0}")]
+    UnacceptableMediaType(String),
+}
+
 impl IntoResponse for ContentTypeError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
@@ -143,6 +152,33 @@ impl IntoResponse for ContentTypeError {
                 StatusCode::UNSUPPORTED_MEDIA_TYPE,
                 "Unsupported Content-Type",
             ),
+        };
+
+        let error_response = json!({
+            "error": {
+                "code": -32600,
+                "message": message,
+                "data": self.to_string()
+            }
+        });
+
+        let mut headers = HeaderMap::new();
+        set_standard_headers(&mut headers, None);
+        headers.insert(CONTENT_TYPE, HeaderValue::from_static(CONTENT_TYPE_JSON));
+
+        (status, headers, axum::Json(error_response)).into_response()
+    }
+}
+
+impl IntoResponse for AcceptHeaderError {
+    fn into_response(self) -> Response {
+        let (status, message) = match &self {
+            AcceptHeaderError::InvalidHeaderValue => {
+                (StatusCode::BAD_REQUEST, "Invalid Accept header value")
+            }
+            AcceptHeaderError::UnacceptableMediaType(_) => {
+                (StatusCode::NOT_ACCEPTABLE, "Not Acceptable")
+            }
         };
 
         let error_response = json!({
@@ -208,6 +244,72 @@ where
         } else {
             warn!("Missing Content-Type header");
             Err(ContentTypeError::MissingHeader)
+        }
+    }
+}
+
+/// Axum extractor for Accept header validation
+///
+/// Validates that the request accepts compatible content types for MCP responses.
+#[derive(Debug, Clone)]
+pub struct AcceptHeaderValidator {
+    /// The acceptable content types
+    pub accept_types: Vec<String>,
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for AcceptHeaderValidator
+where
+    S: Send + Sync,
+{
+    type Rejection = AcceptHeaderError;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let headers = &parts.headers;
+
+        debug!("Validating Accept header");
+
+        if let Some(value) = headers.get("accept") {
+            let accept_header = value
+                .to_str()
+                .map_err(|_| AcceptHeaderError::InvalidHeaderValue)?;
+
+            debug!("Found Accept header: {accept_header}");
+
+            // Parse Accept header to check for compatible media types
+            // Accept application/json, application/*, or */*
+            let acceptable_types = vec![
+                "application/json".to_string(),
+                "application/*".to_string(),
+                "*/*".to_string(),
+                "text/event-stream".to_string(), // For future SSE support
+            ];
+
+            // Check if any of our supported types match the Accept header
+            for acceptable_type in &acceptable_types {
+                if accept_header.contains(acceptable_type)
+                    || accept_header.contains("application/*")
+                    || accept_header.contains("*/*")
+                {
+                    return Ok(AcceptHeaderValidator {
+                        accept_types: vec![accept_header.to_string()],
+                    });
+                }
+            }
+
+            warn!("Unacceptable Accept header: {accept_header}");
+            Err(AcceptHeaderError::UnacceptableMediaType(
+                accept_header.to_string(),
+            ))
+        } else {
+            // Missing Accept header is acceptable (defaults to accepting anything)
+            debug!("No Accept header provided - defaulting to JSON");
+            Ok(AcceptHeaderValidator {
+                accept_types: vec!["application/json".to_string()],
+            })
         }
     }
 }

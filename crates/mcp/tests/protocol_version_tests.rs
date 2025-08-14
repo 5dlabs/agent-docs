@@ -11,9 +11,9 @@ use chrono::Duration;
 use doc_server_mcp::{
     headers::{
         extract_session_id, set_json_response_headers, set_standard_headers,
-        validate_protocol_version, ContentTypeError, ContentTypeValidator,
-        McpProtocolVersionHeader, ProtocolVersionError, CONTENT_TYPE_JSON, MCP_PROTOCOL_VERSION,
-        MCP_SESSION_ID, SUPPORTED_PROTOCOL_VERSION,
+        validate_protocol_version, AcceptHeaderValidator, ContentTypeError,
+        ContentTypeValidator, McpProtocolVersionHeader, ProtocolVersionError, CONTENT_TYPE_JSON,
+        MCP_PROTOCOL_VERSION, MCP_SESSION_ID, SUPPORTED_PROTOCOL_VERSION,
     },
     session::{
         ClientInfo, Session, SessionConfig, SessionError, SessionManager,
@@ -571,6 +571,118 @@ fn test_header_edge_cases() {
     let mut headers = HeaderMap::new();
     headers.insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static("2025-06-18"));
     assert!(validate_protocol_version(&headers).is_ok());
+}
+
+/// Test Accept header validation with valid cases
+#[test]
+fn test_accept_header_validator_valid_cases() {
+    use axum::extract::FromRequestParts;
+    use axum::http::Request;
+
+    // Test with application/json
+    let (mut parts, ()) = Request::builder()
+        .method("POST")
+        .uri("/")
+        .header("accept", "application/json")
+        .body(())
+        .unwrap()
+        .into_parts();
+
+    let result = tokio_test::block_on(AcceptHeaderValidator::from_request_parts(&mut parts, &()));
+    assert!(result.is_ok());
+
+    // Test with application/*
+    let (mut parts, ()) = Request::builder()
+        .method("POST")
+        .uri("/")
+        .header("accept", "application/*")
+        .body(())
+        .unwrap()
+        .into_parts();
+
+    let result = tokio_test::block_on(AcceptHeaderValidator::from_request_parts(&mut parts, &()));
+    assert!(result.is_ok());
+
+    // Test with */*
+    let (mut parts, ()) = Request::builder()
+        .method("POST")
+        .uri("/")
+        .header("accept", "*/*")
+        .body(())
+        .unwrap()
+        .into_parts();
+
+    let result = tokio_test::block_on(AcceptHeaderValidator::from_request_parts(&mut parts, &()));
+    assert!(result.is_ok());
+
+    // Test with text/event-stream (for future SSE support)
+    let (mut parts, ()) = Request::builder()
+        .method("GET")
+        .uri("/")
+        .header("accept", "text/event-stream")
+        .body(())
+        .unwrap()
+        .into_parts();
+
+    let result = tokio_test::block_on(AcceptHeaderValidator::from_request_parts(&mut parts, &()));
+    assert!(result.is_ok());
+}
+
+/// Test Accept header validation with invalid cases
+#[test]
+fn test_accept_header_validator_invalid_cases() {
+    use axum::extract::FromRequestParts;
+    use axum::http::Request;
+    use doc_server_mcp::headers::AcceptHeaderError;
+
+    // Test with unacceptable media type
+    let (mut parts, ()) = Request::builder()
+        .method("POST")
+        .uri("/")
+        .header("accept", "text/plain")
+        .body(())
+        .unwrap()
+        .into_parts();
+
+    let result = tokio_test::block_on(AcceptHeaderValidator::from_request_parts(&mut parts, &()));
+    assert!(result.is_err());
+    assert!(matches!(
+        result.unwrap_err(),
+        AcceptHeaderError::UnacceptableMediaType(_)
+    ));
+
+    // Test with xml (also unacceptable)
+    let (mut parts, ()) = Request::builder()
+        .method("POST")
+        .uri("/")
+        .header("accept", "application/xml")
+        .body(())
+        .unwrap()
+        .into_parts();
+
+    let result = tokio_test::block_on(AcceptHeaderValidator::from_request_parts(&mut parts, &()));
+    assert!(result.is_err());
+    assert!(matches!(
+        result.unwrap_err(),
+        AcceptHeaderError::UnacceptableMediaType(_)
+    ));
+}
+
+/// Test Accept header validation with missing header (should be OK)
+#[test]
+fn test_accept_header_validator_missing_header() {
+    use axum::extract::FromRequestParts;
+    use axum::http::Request;
+
+    let (mut parts, ()) = Request::builder()
+        .method("POST")
+        .uri("/")
+        .body(())
+        .unwrap()
+        .into_parts();
+
+    let result = tokio_test::block_on(AcceptHeaderValidator::from_request_parts(&mut parts, &()));
+    assert!(result.is_ok());
 }
 
 /// Integration test: Full protocol version validation workflow

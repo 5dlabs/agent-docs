@@ -1,16 +1,17 @@
 {
   "remoteTools": [
-    "rust_query",
-    "kubernetes_listResources",
-    "kubernetes_getResource",
-    "kubernetes_describeResource"
+    "read_file",
+    "write_file",
+    "edit_file",
+    "list_directory",
+    "create_directory",
+    "search_files"
   ],
   "localServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file"],
-      "workingDirectory": "project_root"
+      "args": ["@modelcontextprotocol/server-filesystem", "/workspace/docs"],
+      "env": {}
     }
   }
 }
