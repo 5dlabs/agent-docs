@@ -30,7 +30,7 @@
 **When**: Batch processing initiated
 **Then**: Data chunked into 20,000 line batches
 **And**: JSONL files generated correctly
-**And**: Batches submitted to OpenAI API
+**And**: Batches submitted to OpenAI API (live)
 **And**: Processing completes within time limits
 
 ### TC-2: Cost Reduction Validation
@@ -40,12 +40,19 @@
 **And**: Cost tracking accurate
 **And**: Savings properly calculated and reported
 
+### TC-3: Live Environment Validation
+**Given**: Live `DATABASE_URL` and `OPENAI_API_KEY`
+**When**: Running end-to-end batch embedding
+**Then**: No mocks or stubs used; real batch/job IDs recorded; results persisted and metrics captured
+
 ## Deliverables
 - [ ] Complete OpenAI Batch API client
 - [ ] Rate limiting implementation
 - [ ] Batch queue management system
 - [ ] Cost tracking and reporting
-- [ ] Comprehensive test suite### NFR-0: Code Quality and Automation
+- [ ] Comprehensive test suite
+
+### NFR-0: Code Quality and Automation
 - [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
 - [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
 - [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR

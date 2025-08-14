@@ -3,6 +3,10 @@
 ## Mission
 Implement optimized OpenAI embedding generation with batch processing to achieve approximately 70% cost reduction while maintaining performance.
 
+## Live Environment Requirement (Mandatory)
+- Test end-to-end against the live database (`DATABASE_URL`) and the real OpenAI Batch API using `OPENAI_API_KEY`.
+- Do not use mocks or stubs for API calls or database operations; collect real batch/job IDs and timings.
+
 ## Primary Objectives
 1. **Batch API Integration**: Implement OpenAI Batch API with JSONL format
 2. **Rate Limiting**: Token bucket algorithm for API compliance

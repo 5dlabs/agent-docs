@@ -1,26 +1,25 @@
-# Autonomous Agent Prompt: BirdEye Query Tool Implementation
+# Autonomous Agent Prompt: Config-Driven Documentation Query Tools (Dynamic Registration)
 
 ## Mission
-Implement `birdeye_query` tool for semantic search across BirdEye blockchain API documentation.
+Implement dynamic tool registration from a JSON config. Each configured tool maps to a `docType` and shares one unified query method. Keep Rust docs tools hardcoded; all other categories (e.g., birdeye, solana, cilium) are defined in config.
 
 ## Primary Objectives
-1. **Tool Implementation**: Create BirdEyeQueryTool with vector search
-2. **Metadata Integration**: Filter by API endpoints, methods, and categories
-3. **Response Formatting**: Structure responses with source attribution
-4. **MCP Integration**: Register tool in existing MCP handler system
-5. **Performance Optimization**: Ensure < 2 second query response time
+1. **Config Loader**: Read and validate JSON config (tools: name, docType, title, description, enabled)
+2. **Dynamic Registration**: Create tools at startup for each enabled config entry
+3. **Unified Query**: Route all tool calls to a shared handler filtering by `docType`
+4. **Response Formatting**: Include source attribution and relevance
+5. **Performance**: Ensure < 2 second query response time
 
 ## Implementation Steps
-1. Create BirdEyeQueryTool struct and implementation
-2. Add metadata filtering for API documentation
-3. Implement response formatting and relevance scoring
-4. Register tool in MCP handler system
-5. Add comprehensive testing and validation
+1. Define config schema and place example config file
+2. Implement config reader and validation
+3. Register tools dynamically in MCP server startup
+4. Implement unified query handler that accepts `docType`
+5. Add tests for registration and query routing
 
 ## Success Criteria
-- [ ] Vector similarity search functional
-- [ ] Metadata filtering by API categories
-- [ ] Proper MCP tool registration
+- [ ] Tools loaded from config and listed in `tools/list`
+- [ ] Unified query returns results filtered by `docType`
 - [ ] Response time < 2 seconds
 - [ ] Source attribution in responses## Quality Gates and CI/CD Process
 

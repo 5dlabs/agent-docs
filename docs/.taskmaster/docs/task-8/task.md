@@ -24,7 +24,14 @@ Implement optimized OpenAI embedding generation using text-embedding-3-large mod
 - Rate limiting compliance (3000 RPM / 1M TPM)
 - Processing time < 20 minutes for 20k embeddings
 - Retry mechanism handles failures gracefully
-- Cost tracking accurate and comprehensive## CI/CD and Code Quality Requirements
+- Cost tracking accurate and comprehensive
+
+## Live Validation Requirements (No Mocks)
+- Use the live production `DATABASE_URL` for read/write validation where applicable to end-to-end flows
+- Use a real OpenAI API key and the actual OpenAI Batch API (no mocks or stubs)
+- Capture and store batch IDs and receipts for auditing
+
+## CI/CD and Code Quality Requirements
 
 - Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
 - Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.

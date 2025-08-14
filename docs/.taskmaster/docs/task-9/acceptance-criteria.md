@@ -1,51 +1,43 @@
-# Acceptance Criteria: Task 9 - BirdEye Query Tool Implementation
+# Acceptance Criteria: Task 9 - Config-Driven Documentation Query Tools
 
 ## Functional Requirements
 
-### 1. Tool Implementation
-- [ ] BirdEyeQueryTool struct created in `crates/mcp/src/tools.rs`
-- [ ] Implements Tool trait with proper definition
+### 1. Dynamic Tool Implementation
+- [ ] JSON config defined and validated (tools: name, docType, title, description, enabled)
+- [ ] Tools dynamically registered at startup from config
+- [ ] Unified query handler used by all dynamic tools
 - [ ] Semantic search using pgvector similarity (<=> operator)
-- [ ] Metadata parsing for BirdEye-specific fields
 - [ ] Result ranking with relevance scores implemented
-- [ ] Cache mechanism for frequently accessed endpoints
 
 ### 2. Database Integration  
-- [ ] `birdeye_vector_search` method added to DocumentQueries
-- [ ] Filters documents by doc_type='birdeye'
+- [ ] Filters documents by `docType` from tool config
 - [ ] Vector similarity search functional
-- [ ] Metadata JSONB fields properly parsed
+- [ ] Metadata JSONB fields parsed when present
 - [ ] Query performance < 2 seconds
 
 ### 3. MCP Registration
-- [ ] Tool registered in McpHandler::new()
-- [ ] Appears in tools/list response
-- [ ] JSON-RPC invocation working
+- [ ] Tools registered dynamically during server startup
+- [ ] Appear in tools/list response with names from config
+- [ ] JSON-RPC invocation working for each dynamic tool
 - [ ] Parameter validation for query and limit
 - [ ] Error handling for invalid requests
 
 ### 4. Response Formatting
-- [ ] Endpoint details included in responses
-- [ ] Example usage generated for each result
-- [ ] Parameter descriptions extracted
-- [ ] Response schema documented
-- [ ] Relevance scores displayed
+- [ ] Source attribution and relevance scores displayed
+- [ ] Category-appropriate fields included when present (e.g., API endpoint/method)
 
 ## Non-Functional Requirements
 
 ### 1. Performance
 - [ ] Query response time < 2 seconds
-- [ ] Cache hit rate > 60% for popular endpoints
 - [ ] Concurrent query handling supported
-- [ ] Memory usage optimized for cache
 - [ ] Database connection pooling utilized
 
 ### 2. Data Quality
-- [ ] All BirdEye endpoints searchable
-- [ ] Metadata accurately extracted
+- [ ] All configured docTypes searchable
+- [ ] Metadata accurately extracted when available
 - [ ] No duplicate results in responses
 - [ ] Relevance ranking accurate
-- [ ] All API versions supported (v1, v2)
 
 ### 3. Error Handling
 - [ ] Graceful handling of missing embeddings
@@ -56,13 +48,12 @@
 
 ## Test Cases
 
-### Test Case 1: Basic Query
-**Given**: BirdEye documentation in database
-**When**: Query "defi price" submitted
-**Then**: 
-- Results include price-related endpoints
-- Response time < 2 seconds
-- Metadata includes endpoint and method
+### Test Case 1: Basic Query (docType)
+**Given**: Configured tool `birdeye_query` with docType `birdeye`
+**When**: Query "defi price" submitted via that tool
+**Then**: Results include price-related endpoints
+**And**: Response time < 2 seconds
+**And**: Metadata includes endpoint and method
 
 ### Test Case 2: Metadata Filtering
 **Given**: Multiple API versions present
@@ -72,13 +63,10 @@
 - Filtering correctly applied
 - No v2 endpoints in results
 
-### Test Case 3: Cache Functionality
-**Given**: Popular endpoint queried multiple times
-**When**: Same query repeated
-**Then**:
-- Second query faster than first
-- Cache hit recorded
-- Results identical
+### Test Case 3: Registration from Config
+**Given**: Server starts with a config listing `birdeye_query` and `solana_query`
+**When**: Server lists tools
+**Then**: Both tools appear in `tools/list` and invoke the same unified handler with different docType
 
 ### Test Case 4: Parameter Validation
 **Given**: Tool invoked via MCP
@@ -100,9 +88,9 @@
 ## Deliverables
 
 ### Code Artifacts
-- [ ] BirdEyeQueryTool implementation in tools.rs
-- [ ] Database query methods in queries.rs
-- [ ] Cache implementation with TTL
+- [ ] JSON config and loader/validation
+- [ ] Unified query implementation and db queries
+- [ ] Dynamic tool registration code
 - [ ] Integration tests in tests/
 - [ ] Documentation comments in code
 
