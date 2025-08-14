@@ -16,7 +16,6 @@ async fn test_initialize_protocol_version_2025_06_18() {
     match DatabasePool::new(&database_url).await {
         Ok(db_pool) => {
             let handler = McpHandler::new(db_pool)
-                .await
                 .expect("Failed to create handler");
 
             let request = json!({

@@ -24,7 +24,6 @@ async fn create_test_server() -> Router {
     match doc_server_database::DatabasePool::new(&database_url).await {
         Ok(db_pool) => {
             let server = McpServer::new(db_pool)
-                .await
                 .expect("Failed to create server");
             server.create_router()
         }
@@ -36,6 +35,7 @@ async fn create_test_server() -> Router {
 }
 
 // Create a mock router that simulates the transport behavior without database
+#[allow(clippy::too_many_lines)]
 fn create_mock_router() -> Router {
     use axum::{
         extract::{Request, State},
@@ -74,8 +74,8 @@ fn create_mock_router() -> Router {
             };
         }
 
-        match request.method() {
-            &Method::POST => {
+        match *request.method() {
+            Method::POST => {
                 // Validate Content-Type
                 let content_type = headers
                     .get("content-type")
@@ -95,9 +95,7 @@ fn create_mock_router() -> Router {
                 // Parse JSON body to check if it's valid
                 let body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
                     .await
-                    .map_err(|e| {
-                        TransportError::InternalError(format!("Failed to read body: {}", e))
-                    })?;
+                    .map_err(|e| TransportError::InternalError(format!("Failed to read body: {e}")))?;
 
                 let json_request: Value = serde_json::from_slice(&body_bytes)
                     .map_err(|e| TransportError::JsonParseError(e.to_string()))?;
@@ -142,7 +140,7 @@ fn create_mock_router() -> Router {
 
                 Ok((StatusCode::OK, response_headers, axum::Json(mock_response)).into_response())
             }
-            &Method::GET => Err(TransportError::MethodNotAllowed),
+            Method::GET => Err(TransportError::MethodNotAllowed),
             _ => Err(TransportError::MethodNotAllowed),
         }
     }
@@ -411,12 +409,9 @@ async fn test_tools_list_endpoint() {
     let tools = response_json["tools"].as_array().unwrap();
 
     // Should contain rust_query tool
-    let has_rust_query = tools.iter().any(|tool| {
-        tool.get("name")
-            .and_then(|n| n.as_str())
-            .map(|name| name == "rust_query")
-            .unwrap_or(false)
-    });
+    let has_rust_query = tools
+        .iter()
+        .any(|tool| tool.get("name").and_then(|n| n.as_str()).is_some_and(|name| name == "rust_query"));
     assert!(has_rust_query, "Should contain rust_query tool");
 }
 

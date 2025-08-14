@@ -62,13 +62,16 @@ fn test_headers_module_api_surface() {
     // This test verifies that all expected exports from the headers module are available
 
     // Constants
-    let _protocol_header = MCP_PROTOCOL_VERSION;
-    let _session_header = MCP_SESSION_ID;
-    let _supported_version = SUPPORTED_PROTOCOL_VERSION;
+    let protocol_header = MCP_PROTOCOL_VERSION;
+    let session_header = MCP_SESSION_ID;
+    let supported_version = SUPPORTED_PROTOCOL_VERSION;
+    assert_eq!(protocol_header, "MCP-Protocol-Version");
+    assert_eq!(session_header, "Mcp-Session-Id");
+    assert_eq!(supported_version, "2025-06-18");
 
     // Functions - just verify they can be referenced (not called in this test)
-    let _validate_fn = validate_protocol_version;
-    let _set_headers_fn = set_standard_headers;
+    let _validate_fn = validate_protocol_version as fn(&HeaderMap) -> Result<(), axum::http::StatusCode>;
+    let _set_headers_fn = set_standard_headers as fn(&mut HeaderMap, Option<Uuid>);
 
     // If we get here without compile errors, the API surface is correct
 }
