@@ -58,8 +58,11 @@
 - [ ] Optimized database schema
 - [ ] Performance tuning configuration
 - [ ] Monitoring integration
-- [ ] Migration documentation### NFR-0: Code Quality and Automation
+- [ ] Migration documentation
+
+### NFR-0: Code Quality and Automation
 - [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
 - [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
 - [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
-- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact
+- [ ] If a PR already exists, fix all formatting and linter errors locally and push updates to the SAME PR branch; do not open a new PR
+- [ ] PR creation/update is gated on a green CI pipeline and successful deployment of the server artifact

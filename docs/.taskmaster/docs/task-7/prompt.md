@@ -58,6 +58,7 @@ Optimize PostgreSQL database schema and implement comprehensive migration system
   - Do all work on a feature branch (e.g., `feature/<task-id>-<short-name>`).
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
-   - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+   - Only create the PR after the workflow is green and deployment has succeeded.
+   - If a PR already exists, resolve all formatting and linter errors locally, then push updates to the SAME PR branch; do not open a new PR.
 
  
