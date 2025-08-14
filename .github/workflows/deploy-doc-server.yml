@@ -272,7 +272,7 @@ jobs:
           
           # Helm upgrade/install
           helm upgrade --install doc-server ./helm/doc-server \
-            --namespace doc-server \
+            --namespace mcp \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/doc-server \
             --set image.tag=${{ needs.version.outputs.version }} \
             --set image.pullPolicy=Always \
