@@ -1,4 +1,4 @@
-# Task ID: 12
+# Task ID: 13
 # Title: Kubernetes Deployment Configuration
 # Status: pending
 # Dependencies: 1

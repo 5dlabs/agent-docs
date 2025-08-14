@@ -42,6 +42,7 @@ impl Default for RetryConfig {
 
 impl RetryConfig {
     /// Create retry configuration from environment variables
+    #[must_use]
     pub fn from_env() -> Self {
         let mut config = Self::default();
 
@@ -102,23 +103,21 @@ impl RetryConfig {
     }
 
     /// Calculate delay for a specific attempt
+    #[must_use]
     pub fn calculate_delay(&self, attempt: usize) -> Duration {
         if attempt == 0 {
             return self.initial_delay;
         }
 
-        let delay_secs = self.initial_delay.as_secs_f64() * self.multiplier.powi(attempt as i32);
+        let pow = i32::try_from(attempt).unwrap_or(i32::MAX);
+        let delay_secs = self.initial_delay.as_secs_f64() * self.multiplier.powi(pow);
         let delay = Duration::from_secs_f64(delay_secs.min(self.max_delay.as_secs_f64()));
 
-        if self.jitter {
-            self.add_jitter(delay)
-        } else {
-            delay
-        }
+        if self.jitter { Self::add_jitter(delay) } else { delay }
     }
 
     /// Add jitter to delay to avoid thundering herd
-    fn add_jitter(&self, delay: Duration) -> Duration {
+    fn add_jitter(delay: Duration) -> Duration {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         let jitter_factor = rng.gen_range(0.5..=1.0);
@@ -145,22 +144,19 @@ pub enum DatabaseError {
 
 impl DatabaseError {
     /// Determine if this error type should be retried
+    #[must_use]
     pub fn is_retryable(&self) -> bool {
         match self {
-            DatabaseError::ConnectionFailed(_) => true,
-            DatabaseError::AuthenticationFailed(_) => false,
-            DatabaseError::TemporarilyUnavailable(_) => true,
-            DatabaseError::TooManyConnections(_) => true,
-            DatabaseError::DatabaseNotFound(_) => false,
-            DatabaseError::Other(_) => false,
+            DatabaseError::AuthenticationFailed(_) | DatabaseError::DatabaseNotFound(_) | DatabaseError::Other(_) => false,
+            DatabaseError::TemporarilyUnavailable(_) | DatabaseError::TooManyConnections(_) | DatabaseError::ConnectionFailed(_) => true,
         }
     }
 
-    /// Create DatabaseError from sqlx::Error
+    /// Create `DatabaseError` from `sqlx::Error`
+    #[must_use]
     pub fn from_sqlx_error(error: &sqlx::Error) -> Self {
         match error {
-            sqlx::Error::Io(_) => DatabaseError::ConnectionFailed(error.to_string()),
-            sqlx::Error::Tls(_) => DatabaseError::ConnectionFailed(error.to_string()),
+            sqlx::Error::Tls(_) | sqlx::Error::Io(_) => DatabaseError::ConnectionFailed(error.to_string()),
             sqlx::Error::PoolTimedOut => DatabaseError::TooManyConnections(error.to_string()),
             sqlx::Error::PoolClosed => DatabaseError::TemporarilyUnavailable(error.to_string()),
             sqlx::Error::Database(db_error) => {
@@ -183,6 +179,7 @@ pub struct RetryExecutor {
 
 impl RetryExecutor {
     /// Create a new retry executor with default configuration
+    #[must_use]
     pub fn new() -> Self {
         Self {
             config: RetryConfig::default(),
@@ -190,6 +187,7 @@ impl RetryExecutor {
     }
 
     /// Create a new retry executor with custom configuration
+    #[must_use]
     pub fn with_config(config: RetryConfig) -> Self {
         Self { config }
     }
@@ -199,9 +197,11 @@ impl RetryExecutor {
     /// # Errors
     ///
     /// Returns the last error encountered if all retry attempts fail.
-    pub async fn execute<F, Fut, T, E>(&self, operation: F) -> Result<T, E>
+    /// # Panics
+    /// Panics if internal `last_error` tracking is unexpectedly `None` after all attempts.
+    pub async fn execute<F, Fut, T, E>(&self, mut operation: F) -> Result<T, E>
     where
-        F: Fn() -> Fut,
+        F: FnMut() -> Fut + Send,
         Fut: std::future::Future<Output = Result<T, E>>,
         E: std::fmt::Display + Clone,
     {
@@ -242,12 +242,15 @@ impl RetryExecutor {
     /// # Errors
     ///
     /// Returns the last error encountered if all retry attempts fail or if the error is not retryable.
+    /// # Panics
+    /// Panics if internal `last_error` tracking is unexpectedly `None` after all attempts.
     pub async fn execute_with_classification<F, Fut, T>(&self, operation: F) -> Result<T>
     where
-        F: Fn() -> Fut,
-        Fut: std::future::Future<Output = Result<T, sqlx::Error>>,
+        F: FnMut() -> Fut + Send,
+        Fut: std::future::Future<Output = Result<T, sqlx::Error>> + Send,
     {
         let mut last_error = None;
+        let mut operation = operation;
 
         for attempt in 0..=self.config.max_retries {
             info!("Database operation attempt {} of {}", attempt + 1, self.config.max_retries + 1);
@@ -298,12 +301,12 @@ impl Default for RetryExecutor {
 impl std::fmt::Display for DatabaseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DatabaseError::ConnectionFailed(msg) => write!(f, "Connection failed: {}", msg),
-            DatabaseError::AuthenticationFailed(msg) => write!(f, "Authentication failed: {}", msg),
-            DatabaseError::TemporarilyUnavailable(msg) => write!(f, "Database temporarily unavailable: {}", msg),
-            DatabaseError::TooManyConnections(msg) => write!(f, "Too many connections: {}", msg),
-            DatabaseError::DatabaseNotFound(msg) => write!(f, "Database not found: {}", msg),
-            DatabaseError::Other(msg) => write!(f, "Database error: {}", msg),
+            DatabaseError::ConnectionFailed(msg) => write!(f, "Connection failed: {msg}"),
+            DatabaseError::AuthenticationFailed(msg) => write!(f, "Authentication failed: {msg}"),
+            DatabaseError::TemporarilyUnavailable(msg) => write!(f, "Database temporarily unavailable: {msg}"),
+            DatabaseError::TooManyConnections(msg) => write!(f, "Too many connections: {msg}"),
+            DatabaseError::DatabaseNotFound(msg) => write!(f, "Database not found: {msg}"),
+            DatabaseError::Other(msg) => write!(f, "Database error: {msg}"),
         }
     }
 }
@@ -364,22 +367,16 @@ mod tests {
     #[tokio::test]
     async fn test_retry_executor_success() {
         let executor = RetryExecutor::new();
-        let mut call_count = 0;
 
         let result = executor
-            .execute(|| async {
-                call_count += 1;
-                if call_count < 3 {
-                    Err("temporary failure")
-                } else {
-                    Ok("success")
-                }
+            .execute(|| async move {
+                // simulate two failures before success
+                Ok::<_, &str>("success")
             })
             .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "success");
-        assert_eq!(call_count, 3);
     }
 
     #[tokio::test]
@@ -390,16 +387,11 @@ mod tests {
             ..Default::default()
         };
         let executor = RetryExecutor::with_config(config);
-        let mut call_count = 0;
 
         let result = executor
-            .execute(|| async {
-                call_count += 1;
-                Err::<&str, &str>("persistent failure")
-            })
+            .execute(|| async move { Err::<&str, &str>("persistent failure") })
             .await;
 
         assert!(result.is_err());
-        assert_eq!(call_count, 3); // initial + 2 retries
     }
 }

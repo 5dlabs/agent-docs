@@ -113,3 +113,33 @@ Begin implementation focusing on code quality, performance, and maintainability.
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
   - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+## Worktree and Parallel Branching (Required for parallel tasks)
+
+- Use Git worktrees to isolate this task's working directory and feature branch to avoid conflicts with other tasks running in parallel.
+
+### Steps
+1. Create a dedicated worktree and feature branch for this task:
+updated: docs/.taskmaster/docs/task-10/task.txt (ID -> 10)
+updated: docs/.taskmaster/docs/task-11/task.txt (ID -> 11)
+updated: docs/.taskmaster/docs/task-12/task.txt (ID -> 12)
+updated: docs/.taskmaster/docs/task-13/task.txt (ID -> 13)
+updated: docs/.taskmaster/docs/task-14/task.txt (ID -> 14)
+updated: docs/.taskmaster/docs/task-15/task.txt (ID -> 15)
+updated: docs/.taskmaster/docs/task-16/task.txt (ID -> 16)
+updated: docs/.taskmaster/docs/task-17/task.txt (ID -> 17)
+updated: docs/.taskmaster/docs/task-18/task.txt (ID -> 18)
+updated: docs/.taskmaster/docs/task-5/task.txt (ID -> 5)
+updated: docs/.taskmaster/docs/task-6/task.txt (ID -> 6)
+updated: docs/.taskmaster/docs/task-7/task.txt (ID -> 7)
+updated: docs/.taskmaster/docs/task-8/task.txt (ID -> 8)
+updated: docs/.taskmaster/docs/task-9/task.txt (ID -> 9)
+Done. Changed: 14, Skipped: 18
+Done. Changed: 0, Skipped: 32
+2. Enter the worktree and do all work from there:
+
+3. Run your development session here (e.g., Claude Code) and follow the Quality Gates section (Clippy pedantic after each new function; fmt/clippy/tests before pushing).
+
+4. Push from this worktree and monitor GitHub Actions; create a PR only after CI is green and deployment succeeds.
+
+5. Manage worktrees when finished:
+/Users/jonathonfritz/code/work-projects/5dlabs/agent-docs  610a801 [main]

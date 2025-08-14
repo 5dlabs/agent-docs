@@ -187,6 +187,7 @@ impl DatabasePool {
     }
 
     /// Get pool configuration
+    #[must_use]
     pub fn config(&self) -> &PoolConfig {
         &self.config
     }
@@ -236,13 +237,13 @@ impl DatabasePool {
         // Test basic connectivity
         match self.ping().await {
             Ok(()) => {
-                result.response_time_ms = start.elapsed().as_millis() as u64;
+                let elapsed_ms = start.elapsed().as_millis();
+                result.response_time_ms = u64::try_from(elapsed_ms).unwrap_or(u64::MAX);
                 
                 // Get connection pool status
-                if let Ok(pool_size) = self.get_pool_size().await {
-                    result.active_connections = pool_size.0;
-                    result.idle_connections = pool_size.1;
-                }
+                let pool_size = self.get_pool_size();
+                result.active_connections = pool_size.0;
+                result.idle_connections = pool_size.1;
             }
             Err(e) => {
                 result.is_healthy = false;
@@ -258,10 +259,11 @@ impl DatabasePool {
         }
 
         // Update metrics
-        self.metrics.last_health_check.store(
-            chrono::Utc::now().timestamp() as u64,
-            Ordering::Relaxed,
-        );
+        let now_sec = chrono::Utc::now().timestamp();
+        let now_u64 = u64::try_from(now_sec).unwrap_or(0);
+        self.metrics
+            .last_health_check
+            .store(now_u64, Ordering::Relaxed);
 
         Ok(result)
     }
@@ -276,7 +278,7 @@ impl DatabasePool {
         let metrics = self.get_metrics_snapshot();
         
         let pool_utilization = if self.config.max_connections > 0 {
-            (health.active_connections as f64 / self.config.max_connections as f64) * 100.0
+            (f64::from(health.active_connections) / f64::from(self.config.max_connections)) * 100.0
         } else {
             0.0
         };
@@ -290,15 +292,16 @@ impl DatabasePool {
     }
 
     /// Get current pool size (active, idle)
-    async fn get_pool_size(&self) -> Result<(u32, u32)> {
+    fn get_pool_size(&self) -> (u32, u32) {
         // Note: sqlx doesn't expose pool metrics directly
         // This is a simplified implementation
-        let active = self.pool.size() as u32;
+        let active = self.pool.size();
         let idle = if active > 0 { active - 1 } else { 0 }; // Rough estimate
-        Ok((active, idle))
+        (active, idle)
     }
 
     /// Get snapshot of current metrics
+    #[must_use]
     pub fn get_metrics_snapshot(&self) -> PoolMetricsSnapshot {
         let total_acquisitions = self.metrics.total_acquisitions.load(Ordering::Relaxed);
         let acquisition_failures = self.metrics.acquisition_failures.load(Ordering::Relaxed);
@@ -306,6 +309,7 @@ impl DatabasePool {
         let query_failures = self.metrics.query_failures.load(Ordering::Relaxed);
         let last_health_check = self.metrics.last_health_check.load(Ordering::Relaxed);
 
+        #[allow(clippy::cast_precision_loss)]
         let success_rate = if total_queries > 0 {
             ((total_queries - query_failures) as f64 / total_queries as f64) * 100.0
         } else {
@@ -313,7 +317,9 @@ impl DatabasePool {
         };
 
         let last_check_ago = if last_health_check > 0 {
-            chrono::Utc::now().timestamp() as u64 - last_health_check
+            let now_sec = chrono::Utc::now().timestamp();
+            let now_u64 = u64::try_from(now_sec).unwrap_or(0);
+            now_u64.saturating_sub(last_health_check)
         } else {
             0
         };
@@ -359,8 +365,8 @@ impl DatabasePool {
                         }
                         
                         info!(
-                            "Pool status: {}% utilization, {:.1}% success rate, {}ms avg response",
-                            status.pool_utilization_percent as u8,
+                            "Pool status: {:.0}% utilization, {:.1}% success rate, {}ms avg response",
+                            status.pool_utilization_percent,
                             status.metrics.success_rate_percent,
                             status.health.response_time_ms
                         );
@@ -374,6 +380,9 @@ impl DatabasePool {
     }
 
     /// Execute a query with metrics tracking
+    /// # Errors
+    ///
+    /// Returns any error produced by the provided `operation` closure.
     pub async fn execute_with_metrics<F, Fut, T>(&self, operation: F) -> Result<T>
     where
         F: FnOnce(&PgPool) -> Fut,
@@ -391,8 +400,4 @@ impl DatabasePool {
     }
 }
 
-impl HealthCheckCache {
-    fn is_expired(&self) -> bool {
-        self.cached_at.elapsed() >= self.ttl
-    }
-}
+impl HealthCheckCache {}

@@ -1,4 +1,4 @@
-# Task ID: 6
+# Task ID: 7
 # Title: Enhanced Database Connection and Migration Validation (Extend Existing, Live DB Safe)
 # Status: pending
 # Dependencies: 1

@@ -6,7 +6,7 @@
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Postgres, Row};
 use std::collections::HashMap;
 use tracing::{error, info, warn};
 use uuid::Uuid;
@@ -186,9 +186,9 @@ impl DatabaseMigrationManager {
     async fn get_applied_migrations(&self) -> Result<Vec<MigrationHistory>> {
         let rows = sqlx::query(
             r"
-            SELECT id, migration_id, version, status, applied_at, 
+            SELECT id, migration_id, version, status, applied_at,
                    execution_time_ms, error_message, applied_by
-            FROM migration_history 
+            FROM migration_history
             WHERE status IN ('completed', 'failed', 'rolledback')
             ORDER BY applied_at ASC
         ",
@@ -220,7 +220,7 @@ impl DatabaseMigrationManager {
     /// Returns an error if any migration fails or dependency validation fails.
     pub async fn apply_migrations(&self) -> Result<Vec<MigrationHistory>> {
         info!("Starting migration application process...");
-        
+
         let pending = self.get_pending_migrations().await?;
         if pending.is_empty() {
             info!("No pending migrations to apply");
@@ -232,19 +232,19 @@ impl DatabaseMigrationManager {
 
         for migration in pending {
             info!("Applying migration: {} ({})", migration.id, migration.version);
-            
+
             match self.apply_single_migration(&migration).await {
                 Ok(history) => {
-                    info!("Successfully applied migration: {} in {}ms", 
+                    info!("Successfully applied migration: {} in {}ms",
                           migration.id, history.execution_time_ms);
                     applied.push(history);
                 }
                 Err(e) => {
                     error!("Failed to apply migration {}: {}", migration.id, e);
-                    
+
                     // Record the failure
                     self.record_migration_failure(&migration, &e.to_string()).await?;
-                    
+
                     // Stop applying further migrations on failure
                     return Err(anyhow!("Migration {} failed: {}", migration.id, e));
                 }
@@ -258,7 +258,7 @@ impl DatabaseMigrationManager {
     /// Apply a single migration with transaction safety
     async fn apply_single_migration(&self, migration: &MigrationInfo) -> Result<MigrationHistory> {
         let start_time = std::time::Instant::now();
-        
+
         // Start transaction
         let mut tx = self.pool.begin().await?;
 
@@ -266,16 +266,21 @@ impl DatabaseMigrationManager {
         let history_id = self.record_migration_start(&mut tx, migration).await?;
 
         // Execute migration SQL
-        match sqlx::query(&migration.up_sql).execute(&mut tx).await {
+        match sqlx::query::<Postgres>(&migration.up_sql)
+            .execute(&mut *tx)
+            .await
+        {
             Ok(_) => {
-                let execution_time = start_time.elapsed().as_millis() as i64;
-                
+                let execution_time = i64::try_from(start_time.elapsed().as_millis()).unwrap_or(i64::MAX);
+
                 // Update migration as completed
-                let history = self.record_migration_completion(&mut tx, history_id, execution_time).await?;
-                
+                let history = self
+                    .record_migration_completion(&mut tx, history_id, execution_time)
+                    .await?;
+
                 // Commit transaction
                 tx.commit().await?;
-                
+
                 Ok(history)
             }
             Err(e) => {
@@ -287,10 +292,14 @@ impl DatabaseMigrationManager {
     }
 
     /// Record migration start in history
-    async fn record_migration_start(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, migration: &MigrationInfo) -> Result<Uuid> {
+    async fn record_migration_start(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        migration: &MigrationInfo,
+    ) -> Result<Uuid> {
         let history_id = Uuid::new_v4();
-        
-        sqlx::query(
+
+        sqlx::query::<Postgres>(
             r"
             INSERT INTO migration_history (id, migration_id, version, status, checksum, applied_by)
             VALUES ($1, $2, $3, 'running', $4, $5)
@@ -308,10 +317,15 @@ impl DatabaseMigrationManager {
     }
 
     /// Record migration completion
-    async fn record_migration_completion(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, history_id: Uuid, execution_time: i64) -> Result<MigrationHistory> {
-        sqlx::query(
+    async fn record_migration_completion(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        history_id: Uuid,
+        execution_time: i64,
+    ) -> Result<MigrationHistory> {
+        sqlx::query::<Postgres>(
             r"
-            UPDATE migration_history 
+            UPDATE migration_history
             SET status = 'completed', execution_time_ms = $2
             WHERE id = $1
         ",
@@ -322,11 +336,11 @@ impl DatabaseMigrationManager {
         .await?;
 
         // Fetch the updated record
-        let row = sqlx::query(
+        let row = sqlx::query::<Postgres>(
             r"
-            SELECT id, migration_id, version, status, applied_at, 
+            SELECT id, migration_id, version, status, applied_at,
                    execution_time_ms, error_message, applied_by
-            FROM migration_history 
+            FROM migration_history
             WHERE id = $1
         ",
         )
@@ -372,7 +386,7 @@ impl DatabaseMigrationManager {
     /// Returns an error if schema validation fails or required components are missing.
     pub async fn validate_schema(&self) -> Result<SchemaValidationReport> {
         info!("Validating database schema integrity...");
-        
+
         let mut report = SchemaValidationReport {
             is_valid: true,
             issues: Vec::new(),
@@ -383,10 +397,10 @@ impl DatabaseMigrationManager {
 
         // Check required extensions
         self.validate_extensions(&mut report).await?;
-        
+
         // Check required tables
         self.validate_tables(&mut report).await?;
-        
+
         // Check required indexes
         self.validate_indexes(&mut report).await?;
 
@@ -408,7 +422,7 @@ impl DatabaseMigrationManager {
     /// Validate required extensions
     async fn validate_extensions(&self, report: &mut SchemaValidationReport) -> Result<()> {
         let required_extensions = vec!["vector", "uuid-ossp"];
-        
+
         for ext_name in required_extensions {
             let row = sqlx::query(
                 "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = $1) as installed"
@@ -419,10 +433,10 @@ impl DatabaseMigrationManager {
 
             let installed: bool = row.get("installed");
             report.extensions.insert(ext_name.to_string(), installed);
-            
+
             if !installed {
                 report.is_valid = false;
-                report.issues.push(format!("Required extension '{}' is not installed", ext_name));
+                report.issues.push(format!("Required extension '{ext_name}' is not installed"));
             }
         }
 
@@ -432,12 +446,12 @@ impl DatabaseMigrationManager {
     /// Validate required tables
     async fn validate_tables(&self, report: &mut SchemaValidationReport) -> Result<()> {
         let required_tables = vec!["documents", "document_sources", "migration_history"];
-        
+
         for table_name in required_tables {
             let row = sqlx::query(
                 r"
                 SELECT EXISTS (
-                    SELECT 1 FROM information_schema.tables 
+                    SELECT 1 FROM information_schema.tables
                     WHERE table_schema = 'public' AND table_name = $1
                 ) as exists
                 "
@@ -448,10 +462,10 @@ impl DatabaseMigrationManager {
 
             let exists: bool = row.get("exists");
             report.tables.insert(table_name.to_string(), exists);
-            
+
             if !exists {
                 report.is_valid = false;
-                report.issues.push(format!("Required table '{}' does not exist", table_name));
+                report.issues.push(format!("Required table '{table_name}' does not exist"));
             }
         }
 
@@ -465,7 +479,7 @@ impl DatabaseMigrationManager {
             "idx_documents_source_name",
             "idx_migration_history_migration_id",
         ];
-        
+
         for index_name in required_indexes {
             let row = sqlx::query(
                 "SELECT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname = $1) as exists"
@@ -476,10 +490,10 @@ impl DatabaseMigrationManager {
 
             let exists: bool = row.get("exists");
             report.indexes.insert(index_name.to_string(), exists);
-            
+
             if !exists {
                 report.is_valid = false;
-                report.issues.push(format!("Required index '{}' does not exist", index_name));
+                report.issues.push(format!("Required index '{index_name}' does not exist"));
             }
         }
 
@@ -491,7 +505,7 @@ impl DatabaseMigrationManager {
         // Check if we can create a 3072-dimensional vector (OpenAI text-embedding-3-large)
         match sqlx::query("SELECT '[1,2,3]'::vector(3072) as test_vector")
             .fetch_one(&self.pool)
-            .await 
+            .await
         {
             Ok(_) => {
                 info!("pgvector supports 3072 dimensions (OpenAI text-embedding-3-large compatible)");
@@ -515,10 +529,10 @@ impl DatabaseMigrationManager {
     pub async fn get_migration_status(&self) -> Result<MigrationStatusSummary> {
         let applied = self.get_applied_migrations().await?;
         let pending = self.get_pending_migrations().await?;
-        
+
         let completed_count = applied.iter().filter(|m| matches!(m.status, MigrationStatus::Completed)).count();
         let failed_count = applied.iter().filter(|m| matches!(m.status, MigrationStatus::Failed)).count();
-        
+
         Ok(MigrationStatusSummary {
             total_registered: self.migrations.len(),
             completed: completed_count,

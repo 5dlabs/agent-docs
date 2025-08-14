@@ -1,4 +1,4 @@
-# Task ID: 5
+# Task ID: 6
 # Title: Streamable HTTP Response Enhancement (JSON-only MVP)
 # Status: pending
 # Dependencies: 3

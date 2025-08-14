@@ -1,4 +1,4 @@
-# Task ID: 7
+# Task ID: 8
 # Title: OpenAI Embedding Client with Batch Processing
 # Status: pending
 # Dependencies: 6
