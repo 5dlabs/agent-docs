@@ -8,6 +8,35 @@ use tracing::{info, warn};
 
 use crate::models::{DocType, Document};
 
+/// Trait for types that can report how many rows they represent
+pub trait RowCountable {
+    fn row_count(&self) -> usize;
+}
+
+/// Implementation for vectors (collections of items)
+impl<T> RowCountable for Vec<T> {
+    fn row_count(&self) -> usize {
+        self.len()
+    }
+}
+
+/// Implementation for single numeric results (like COUNT queries)
+impl RowCountable for i64 {
+    fn row_count(&self) -> usize {
+        // For count queries, the result represents the count itself
+        // Convert to usize, clamping to prevent overflow
+        (*self).try_into().unwrap_or(0)
+    }
+}
+
+/// Implementation for string results (like EXPLAIN queries)
+impl RowCountable for String {
+    fn row_count(&self) -> usize {
+        // For string results like EXPLAIN, we count this as 1 row
+        1
+    }
+}
+
 /// Document query operations
 pub struct DocumentQueries;
 
@@ -256,34 +285,45 @@ impl QueryPerformanceMonitor {
     ) -> Result<(T, QueryPerformanceMetrics)>
     where
         F: std::future::Future<Output = Result<T>>,
+        T: RowCountable,
     {
         let start = Instant::now();
         let result = operation.await;
         let execution_time = start.elapsed();
 
-        let metrics = QueryPerformanceMetrics {
-            query_name: query_name.to_string(),
-            execution_time_ms: u64::try_from(execution_time.as_millis()).unwrap_or(u64::MAX),
-            rows_returned: 0, // This would need to be passed from the operation
-            timestamp: chrono::Utc::now(),
-        };
-
-        // Log performance warnings
-        if execution_time > Duration::from_secs(2) {
-            warn!(
-                "Query '{}' took {}ms (exceeds 2s threshold)",
-                query_name, metrics.execution_time_ms
-            );
-        } else if execution_time > Duration::from_millis(500) {
-            info!(
-                "Query '{}' took {}ms",
-                query_name, metrics.execution_time_ms
-            );
-        }
-
         match result {
-            Ok(value) => Ok((value, metrics)),
+            Ok(value) => {
+                let row_count = value.row_count();
+                let metrics = QueryPerformanceMetrics {
+                    query_name: query_name.to_string(),
+                    execution_time_ms: u64::try_from(execution_time.as_millis()).unwrap_or(u64::MAX),
+                    rows_returned: row_count,
+                    timestamp: chrono::Utc::now(),
+                };
+
+                // Log performance warnings
+                if execution_time > Duration::from_secs(2) {
+                    warn!(
+                        "Query '{}' took {}ms (exceeds 2s threshold), returned {} rows",
+                        query_name, metrics.execution_time_ms, row_count
+                    );
+                } else if execution_time > Duration::from_millis(500) {
+                    info!(
+                        "Query '{}' took {}ms, returned {} rows",
+                        query_name, metrics.execution_time_ms, row_count
+                    );
+                }
+
+                Ok((value, metrics))
+            }
             Err(e) => {
+                let metrics = QueryPerformanceMetrics {
+                    query_name: query_name.to_string(),
+                    execution_time_ms: u64::try_from(execution_time.as_millis()).unwrap_or(u64::MAX),
+                    rows_returned: 0, // No rows returned on error
+                    timestamp: chrono::Utc::now(),
+                };
+
                 warn!(
                     "Query '{}' failed after {}ms: {}",
                     query_name, metrics.execution_time_ms, e
