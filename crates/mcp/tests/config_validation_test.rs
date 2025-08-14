@@ -34,7 +34,8 @@ async fn test_configuration_validation() {
         );
         assert!(
             tool.name.ends_with("_query"),
-            "Tool name should end with '_query': {}", tool.name
+            "Tool name should end with '_query': {}",
+            tool.name
         );
     }
 
@@ -207,7 +208,8 @@ fn test_tool_description_quality() {
         assert!(
             tool.description.len() > 50,
             "Tool description should be substantial: {} has only {} characters",
-            tool.name, tool.description.len()
+            tool.name,
+            tool.description.len()
         );
 
         // Check that description mentions the tool's domain
@@ -231,7 +233,7 @@ fn test_tool_description_quality() {
 
         assert!(
             mentions_domain,
-            "Tool description for {} should mention its domain. Description: {}", 
+            "Tool description for {} should mention its domain. Description: {}",
             tool.name, tool.description
         );
     }

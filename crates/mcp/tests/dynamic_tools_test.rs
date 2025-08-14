@@ -39,10 +39,9 @@ async fn test_dynamic_tools_registration() {
         );
 
         // Check that rust_query is always present (hardcoded)
-        let rust_query_exists = tools.iter().any(|tool| {
-            tool.get("name")
-                .and_then(|n| n.as_str()) == Some("rust_query")
-        });
+        let rust_query_exists = tools
+            .iter()
+            .any(|tool| tool.get("name").and_then(|n| n.as_str()) == Some("rust_query"));
         assert!(
             rust_query_exists,
             "rust_query tool should always be present"
@@ -63,10 +62,9 @@ async fn test_dynamic_tools_registration() {
 
         // Check that dynamic tools are registered
         for expected_tool in &expected_dynamic_tools {
-            let tool_exists = tools.iter().any(|tool| {
-                tool.get("name")
-                    .and_then(|n| n.as_str()) == Some(*expected_tool)
-            });
+            let tool_exists = tools
+                .iter()
+                .any(|tool| tool.get("name").and_then(|n| n.as_str()) == Some(*expected_tool));
             assert!(
                 tool_exists,
                 "Dynamic tool '{expected_tool}' should be registered"
