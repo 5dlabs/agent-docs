@@ -77,3 +77,11 @@ cargo = { level = "warn", priority = -1 }
 module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+
+# Release profile optimization for container size
+[profile.release]
+opt-level = "z"        # Optimize for size
+lto = true            # Link-time optimization
+codegen-units = 1     # Better optimization
+panic = "abort"       # Reduce binary size
+strip = true          # Remove debug symbols
