@@ -361,14 +361,15 @@ pub async fn unified_mcp_handler(
         };
     }
 
-    // Validate Accept header for method compatibility
+    // Validate Accept header for method compatibility (JSON-only policy)
+    // Note: For GET, SSE is disabled, so we skip Accept validation and return 405 below.
     validate_accept_header(&headers, request.method())?;
 
     match *request.method() {
         Method::POST => handle_json_rpc_request(state, headers, request).await,
         Method::DELETE => handle_delete_session_request(&state, &headers),
         Method::GET => {
-            // MVP: Return 405 for GET requests (SSE not implemented yet)
+            // JSON-only policy: SSE disabled. Always return 405 regardless of Accept header.
             warn!("GET request to /mcp endpoint - returning 405 Method Not Allowed");
             Err(TransportError::MethodNotAllowed)
         }
@@ -405,18 +406,8 @@ fn validate_accept_header(headers: &HeaderMap, method: &Method) -> Result<(), Tr
                     }
                 }
                 Method::GET => {
-                    // Future SSE support would validate text/event-stream here
-                    if accept_header.contains("text/event-stream")
-                        || accept_header.contains("text/*")
-                        || accept_header.contains("*/*")
-                    {
-                        Ok(())
-                    } else {
-                        warn!("Unacceptable Accept header for GET: {accept_header}");
-                        Err(TransportError::UnacceptableAcceptHeader(
-                            accept_header.to_string(),
-                        ))
-                    }
+                    // SSE disabled: skip Accept validation for GET. Handler returns 405.
+                    Ok(())
                 }
                 _ => Ok(()), // Other methods don't have specific Accept requirements
             }
