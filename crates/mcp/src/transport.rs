@@ -305,7 +305,7 @@ impl IntoResponse for TransportError {
 /// This handler processes all MCP requests according to the 2025-06-18 specification:
 /// - POST requests with application/json -> JSON-RPC processing
 /// - GET requests -> 405 Method Not Allowed (MVP does not support SSE)
-/// Unified MCP endpoint handler.
+///   Unified MCP endpoint handler.
 ///
 /// # Errors
 ///

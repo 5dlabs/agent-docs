@@ -31,7 +31,8 @@ impl RustQueryTool {
     /// # Errors
     ///
     /// Returns an error if the embedding client fails to initialize.
-    pub async fn new(db_pool: DatabasePool) -> Result<Self> {
+    #[must_use]
+    pub fn new(db_pool: DatabasePool) -> Result<Self> {
         let embedding_client = OpenAIEmbeddingClient::new()?;
 
         Ok(Self {

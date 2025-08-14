@@ -22,7 +22,7 @@ impl McpHandler {
         let mut tools: HashMap<String, Box<dyn Tool + Send + Sync>> = HashMap::new();
 
         // Register the rust_query tool
-        let rust_query_tool = RustQueryTool::new(db_pool).await?;
+        let rust_query_tool = RustQueryTool::new(db_pool)?;
         tools.insert("rust_query".to_string(), Box::new(rust_query_tool));
 
         Ok(Self { tools })
@@ -51,12 +51,12 @@ impl McpHandler {
     }
 
     /// Handle tools/list request
-    fn handle_tools_list(&self) -> Result<Value> {
+    fn handle_tools_list(&self) -> Value {
         let tools: Vec<Value> = self.tools.values().map(|tool| tool.definition()).collect();
 
-        Ok(json!({
+        json!({
             "tools": tools
-        }))
+        })
     }
 
     /// Handle tools/call request
@@ -105,8 +105,8 @@ impl McpHandler {
     }
 
     /// Handle initialize request
-    fn handle_initialize(&self, _request: &Value) -> Result<Value> {
-        Ok(json!({
+    fn handle_initialize(_request: &Value) -> Value {
+        json!({
             "protocolVersion": "2025-06-18",
             "capabilities": {
                 "tools": {}
@@ -115,6 +115,6 @@ impl McpHandler {
                 "name": "doc-server-mcp",
                 "version": env!("CARGO_PKG_VERSION")
             }
-        }))
+        })
     }
 }
