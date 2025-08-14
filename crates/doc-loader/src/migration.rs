@@ -343,7 +343,7 @@ impl MigrationPipeline {
         let semaphore = Arc::new(Semaphore::new(self.config.parallel_workers));
 
         // Collect all documents to process
-        let documents = self.collect_documents()?;
+        let documents = self.collect_documents();
         let total_documents = documents.len();
 
         info!("Found {} documents to process", total_documents);

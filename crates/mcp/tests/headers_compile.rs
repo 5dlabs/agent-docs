@@ -70,8 +70,8 @@ fn test_headers_module_api_surface() {
     assert_eq!(supported_version, "2025-06-18");
 
     // Functions - just verify they can be referenced (not called in this test)
-    let _validate_fn = validate_protocol_version as fn(&HeaderMap) -> Result<(), axum::http::StatusCode>;
-    let _set_headers_fn = set_standard_headers as fn(&mut HeaderMap, Option<Uuid>);
+    let _validate_fn: fn(&HeaderMap) -> Result<(), axum::http::StatusCode> = validate_protocol_version;
+    let _set_headers_fn: fn(&mut HeaderMap, Option<Uuid>) = set_standard_headers;
 
     // If we get here without compile errors, the API surface is correct
 }

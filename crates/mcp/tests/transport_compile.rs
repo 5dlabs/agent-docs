@@ -35,12 +35,15 @@ fn test_transport_config_default() {
 #[test]
 fn test_transport_error_variants_exist() {
     // Test that all expected error variants exist and can be constructed
-    let _method_error = TransportError::MethodNotAllowed;
+    let method_error = TransportError::MethodNotAllowed;
+    assert_eq!(method_error.to_string(), "Method not allowed");
     let _protocol_error = TransportError::UnsupportedProtocolVersion("invalid".to_string());
     let _session_error = TransportError::SessionNotFound(uuid::Uuid::new_v4());
     let _invalid_session = TransportError::InvalidSessionId("invalid".to_string());
-    let _lock_error = TransportError::SessionLockError;
-    let _content_error = TransportError::MissingContentType;
+    let lock_error = TransportError::SessionLockError;
+    assert_eq!(lock_error.to_string(), "Session lock error");
+    let content_error = TransportError::MissingContentType;
+    assert_eq!(content_error.to_string(), "Missing content type");
     let _invalid_content = TransportError::InvalidContentType("text/plain".to_string());
     let _json_error = TransportError::JsonParseError("invalid json".to_string());
     let _internal_error = TransportError::InternalError("internal error".to_string());
@@ -81,8 +84,8 @@ fn test_transport_api_surface() {
     let _session = McpSession::new();
 
     // Ensure the server type is name-resolvable without constructing it
-    fn assert_type<T>() {}
-    assert_type::<McpServerState>();
+    // Ensure type is name-resolvable
+    let _state_type: Option<McpServerState> = None;
 
     // Function - just verify it can be referenced
     let _handler_fn = unified_mcp_handler;
