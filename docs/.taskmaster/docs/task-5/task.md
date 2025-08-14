@@ -6,7 +6,7 @@ Implement strict MCP protocol header handling for the single supported protocol 
 
 ## Background
 
-For MVP, we support only the latest Streamable HTTP protocol (2025-06-18). Clients must send `MCP-Protocol-Version: 2025-06-18`; other versions are rejected with HTTP 400.
+For MVP, we support only the latest Streamable HTTP protocol (2025-06-18). Clients must send `MCP-Protocol-Version: 2025-06-18`; other versions are rejected with HTTP 400. Transport policy is JSON-only: SSE is disabled (no legacy HTTP+SSE); `GET /mcp` returns 405; server always responds with `Content-Type: application/json`.
 
 ## Implementation Guide
 
@@ -28,7 +28,7 @@ For MVP, we support only the latest Streamable HTTP protocol (2025-06-18). Clien
 - Implement session storage and retrieval
 - Add version consistency enforcement
 
-### Phase 5: Response Management
+### Phase 5: Response Management (JSON-only)
 - Add proper Content-Type and MCP headers
 - Ensure CORS compatibility
 
@@ -97,10 +97,10 @@ pub struct SessionState {
 - Echo `MCP-Protocol-Version: 2025-06-18` on every response (success and error).
 
 2) Header Validation (Requests)
-- Content negotiation:
-  - Validate `Content-Type` is either `application/json` (POST JSON-RPC) or `text/event-stream` (SSE, reserved for future). Return 415 for unsupported types.
-  - Validate `Accept` header when present: must include at least one of `application/json` (POST) or `text/event-stream` (SSE). Return 406 for unacceptable `Accept` values. For MVP, enforce `application/json` on POST.
-- Provide dedicated extractor/types for protocol version, `Content-Type`, and `Accept` with clear error variants and IntoResponse implementations.
+- Content negotiation (JSON-only):
+  - `Content-Type` for POST MUST be `application/json`; return 415 for any other value.
+  - If `Accept` is present, it MUST include `application/json`; ignore `text/event-stream` even if present. Return 406 if `Accept` excludes `application/json`.
+  - Provide dedicated extractor/types for protocol version, `Content-Type`, and `Accept` with clear error variants and IntoResponse implementations.
 
 3) Initialize Response and Session
 - `initialize` response must include `protocolVersion: "2025-06-18"`.
@@ -111,7 +111,7 @@ pub struct SessionState {
 4) Response Header Management (All Responses)
 - Always include `MCP-Protocol-Version`.
 - Include `Mcp-Session-Id` when a session was created/found.
-- Set `Content-Type` appropriately (`application/json` for JSON responses).
+- Set `Content-Type: application/json` on all responses.
 - Preserve CORS compatibility via `CorsLayer`.
 
 5) Security Hooks
@@ -122,7 +122,7 @@ pub struct SessionState {
 - Integration tests verifying:
   - 400 on missing or wrong `MCP-Protocol-Version`.
   - 415 on wrong `Content-Type` and 400 on missing `Content-Type` for POST.
-  - 406 when `Accept` is present but incompatible (add at least one test case).
+  - 406 when `Accept` is present but lacks `application/json`.
   - 200 for valid POST with required headers; response contains both `MCP-Protocol-Version` and `Mcp-Session-Id`.
   - 405 for GET `/mcp` (MVP: SSE not yet implemented).
 
