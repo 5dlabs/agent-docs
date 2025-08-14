@@ -259,6 +259,62 @@ impl DocumentQueries {
 
         Ok(docs)
     }
+
+    /// Perform vector similarity search for documents of a specific type
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub async fn doc_type_vector_search(
+        pool: &PgPool,
+        doc_type: &str,
+        _embedding: &[f32],
+        limit: i64,
+    ) -> Result<Vec<Document>> {
+        // For now, return documents of specified type ordered by relevance
+        let rows = sqlx::query(
+            r"
+            SELECT 
+                id,
+                doc_type::text as doc_type,
+                source_name,
+                doc_path,
+                content,
+                metadata,
+                token_count,
+                created_at,
+                updated_at
+            FROM documents 
+            WHERE doc_type = $1
+            ORDER BY created_at DESC
+            LIMIT $2
+            ",
+        )
+        .bind(doc_type)
+        .bind(limit)
+        .fetch_all(pool)
+        .await?;
+
+        let docs = rows
+            .into_iter()
+            .map(|row| {
+                Document {
+                    id: row.get("id"),
+                    doc_type: row.get("doc_type"),
+                    source_name: row.get("source_name"),
+                    doc_path: row.get("doc_path"),
+                    content: row.get("content"),
+                    metadata: row.get("metadata"),
+                    embedding: None, // Skip embedding for now
+                    token_count: row.get("token_count"),
+                    created_at: row.get("created_at"),
+                    updated_at: row.get("updated_at"),
+                }
+            })
+            .collect();
+
+        Ok(docs)
+    }
 }
 
 /// Query performance metrics

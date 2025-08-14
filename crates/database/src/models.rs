@@ -66,3 +66,20 @@ pub struct DocumentSource {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+/// Tool configuration from JSON
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolConfig {
+    pub name: String,
+    #[serde(rename = "docType")]
+    pub doc_type: String,
+    pub title: String,
+    pub description: String,
+    pub enabled: bool,
+}
+
+/// Tools configuration container
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolsConfig {
+    pub tools: Vec<ToolConfig>,
+}

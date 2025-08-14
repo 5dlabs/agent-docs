@@ -1,0 +1,67 @@
+{
+  "tools": [
+    {
+      "name": "birdeye_query",
+      "docType": "birdeye",
+      "title": "BirdEye API Documentation Query",
+      "description": "Search and retrieve information from BirdEye blockchain API documentation. Query across 600+ API endpoints with filtering by version, method, and parameters.",
+      "enabled": true
+    },
+    {
+      "name": "solana_query", 
+      "docType": "solana",
+      "title": "Solana Documentation Query",
+      "description": "Search Solana core documentation, architecture diagrams, ZK cryptography specifications, and development guides. Includes consensus, networking, and validator documentation.",
+      "enabled": true
+    },
+    {
+      "name": "jupyter_query",
+      "docType": "jupyter", 
+      "title": "Jupyter Notebook Documentation Query",
+      "description": "Search interactive notebook documentation and examples across data science and development workflows.",
+      "enabled": true
+    },
+    {
+      "name": "cilium_query",
+      "docType": "cilium",
+      "title": "Cilium Documentation Query", 
+      "description": "Search Cilium networking and security documentation for Kubernetes and cloud-native environments.",
+      "enabled": true
+    },
+    {
+      "name": "talos_query",
+      "docType": "talos",
+      "title": "Talos OS Documentation Query",
+      "description": "Search Talos OS documentation for minimal, secure, and immutable Linux distribution designed for Kubernetes.",
+      "enabled": true
+    },
+    {
+      "name": "meteora_query",
+      "docType": "meteora", 
+      "title": "Meteora Protocol Documentation Query",
+      "description": "Search Meteora DeFi protocol documentation including liquidity pools, farming, and yield strategies.",
+      "enabled": true
+    },
+    {
+      "name": "raydium_query",
+      "docType": "raydium",
+      "title": "Raydium Protocol Documentation Query", 
+      "description": "Search Raydium DEX and AMM documentation for Solana-based trading and liquidity provision.",
+      "enabled": true
+    },
+    {
+      "name": "ebpf_query",
+      "docType": "ebpf",
+      "title": "eBPF Documentation Query",
+      "description": "Search eBPF (extended Berkeley Packet Filter) documentation for kernel programming and observability.",
+      "enabled": true
+    },
+    {
+      "name": "rust_best_practices_query",
+      "docType": "rust_best_practices", 
+      "title": "Rust Best Practices Query",
+      "description": "Search curated Rust best practices, patterns, and guidelines for idiomatic and performant code.",
+      "enabled": true
+    }
+  ]
+}
