@@ -19,7 +19,7 @@ use tokio::sync::broadcast;
 use tracing::{debug, error, warn};
 use uuid::Uuid;
 
-use crate::headers::{set_standard_headers, validate_protocol_version, MCP_SESSION_ID};
+use crate::headers::{set_json_response_headers, set_standard_headers, validate_protocol_version, MCP_SESSION_ID, SUPPORTED_PROTOCOL_VERSION};
 use crate::security::{add_security_headers, validate_dns_rebinding, validate_origin};
 use crate::server::McpServerState;
 use crate::session::ClientInfo;
@@ -302,7 +302,7 @@ impl IntoResponse for TransportError {
         });
 
         let mut headers = HeaderMap::new();
-        set_standard_headers(&mut headers, None);
+        set_json_response_headers(&mut headers, None);
 
         (status, headers, Json(error_response)).into_response()
     }
@@ -394,6 +394,9 @@ fn get_or_create_comprehensive_session(
                 if let Ok(session) = state.comprehensive_session_manager.get_session(session_id) {
                     if session.is_expired() {
                         debug!("Comprehensive session expired: {}", session_id);
+                    } else if let Err(e) = session.validate_protocol_version(SUPPORTED_PROTOCOL_VERSION) {
+                        warn!("Session protocol version mismatch: {}", e);
+                        debug!("Invalidating session with wrong protocol version: {}", session_id);
                     } else {
                         // Update session activity
                         let _ = state
@@ -449,6 +452,7 @@ fn handle_delete_session_request(
 
                     // Create response with proper headers
                     let mut response_headers = HeaderMap::new();
+                    set_standard_headers(&mut response_headers, Some(session_id));
                     add_security_headers(&mut response_headers);
 
                     Ok((StatusCode::NO_CONTENT, response_headers, "").into_response())
@@ -457,6 +461,7 @@ fn handle_delete_session_request(
 
                     // Return 404 for non-existent sessions
                     let mut response_headers = HeaderMap::new();
+                    set_standard_headers(&mut response_headers, None);
                     add_security_headers(&mut response_headers);
 
                     Ok((StatusCode::NOT_FOUND, response_headers, "").into_response())
@@ -563,9 +568,8 @@ async fn handle_json_rpc_request(
 
             // Create response with proper headers
             let mut response_headers = HeaderMap::new();
-            set_standard_headers(&mut response_headers, Some(session_id));
+            set_json_response_headers(&mut response_headers, Some(session_id));
             add_security_headers(&mut response_headers);
-            response_headers.insert("content-type", "application/json".parse().unwrap());
 
             Ok((StatusCode::OK, response_headers, Json(response)).into_response())
         }

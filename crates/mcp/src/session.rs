@@ -1,7 +1,7 @@
 //! Session management for MCP server
 //!
 //! This module provides comprehensive session management including secure UUID v4 generation,
-//! TTL support, client information tracking, and thread-safe operations.
+//! TTL support, client information tracking, protocol version consistency, and thread-safe operations.
 
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -10,6 +10,9 @@ use std::sync::{Arc, RwLock};
 use thiserror::Error;
 use tracing::{debug, error, warn};
 use uuid::Uuid;
+
+/// The supported MCP protocol version (fixed for MVP)
+pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
 
 /// Client information extracted from request headers for security and audit purposes
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -35,6 +38,8 @@ pub struct Session {
     pub ttl: Duration,
     /// Client information for security and audit
     pub client_info: ClientInfo,
+    /// MCP protocol version for this session (fixed to 2025-06-18)
+    pub protocol_version: String,
 }
 
 impl Session {
@@ -48,6 +53,25 @@ impl Session {
             last_accessed: now,
             ttl,
             client_info: client_info.unwrap_or_default(),
+            protocol_version: "2025-06-18".to_string(), // Fixed protocol version for MVP
+        }
+    }
+
+    /// Create a new session with explicit protocol version
+    #[must_use]
+    pub fn new_with_version(
+        ttl: Duration,
+        client_info: Option<ClientInfo>,
+        protocol_version: String,
+    ) -> Self {
+        let now = Utc::now();
+        Self {
+            session_id: Uuid::new_v4(),
+            created_at: now,
+            last_accessed: now,
+            ttl,
+            client_info: client_info.unwrap_or_default(),
+            protocol_version,
         }
     }
 
@@ -75,6 +99,28 @@ impl Session {
     pub fn idle_time(&self) -> Duration {
         let now = Utc::now();
         now.signed_duration_since(self.last_accessed)
+    }
+
+    /// Check if the session's protocol version matches the supported version
+    #[must_use]
+    pub fn is_protocol_version_supported(&self) -> bool {
+        self.protocol_version == SUPPORTED_PROTOCOL_VERSION
+    }
+
+    /// Validate that the protocol version matches the expected version
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the protocol version doesn't match the expected version.
+    pub fn validate_protocol_version(&self, expected_version: &str) -> Result<(), SessionError> {
+        if self.protocol_version == expected_version {
+            Ok(())
+        } else {
+            Err(SessionError::ProtocolVersionMismatch {
+                session_version: self.protocol_version.clone(),
+                expected_version: expected_version.to_string(),
+            })
+        }
     }
 }
 
@@ -116,6 +162,14 @@ pub enum SessionError {
 
     #[error("Invalid session ID format: {0}")]
     InvalidSessionId(String),
+
+    #[error(
+        "Protocol version mismatch: session has {session_version}, expected {expected_version}"
+    )]
+    ProtocolVersionMismatch {
+        session_version: String,
+        expected_version: String,
+    },
 }
 
 /// Thread-safe session manager with comprehensive lifecycle management
@@ -162,8 +216,50 @@ impl SessionManager {
         sessions.insert(session_id, session);
 
         debug!(
-            "Created new session: {} (total: {})",
+            "Created new session: {} with protocol version {} (total: {})",
             session_id,
+            SUPPORTED_PROTOCOL_VERSION,
+            sessions.len()
+        );
+        Ok(session_id)
+    }
+
+    /// Create a new session with explicit protocol version
+    ///
+    /// # Errors
+    ///
+    /// Returns `SessionError::MaxSessionsReached` if the session limit is exceeded.
+    /// Returns `SessionError::LockError` if the session storage cannot be accessed.
+    pub fn create_session_with_version(
+        &self,
+        client_info: Option<ClientInfo>,
+        protocol_version: &str,
+    ) -> Result<Uuid, SessionError> {
+        let mut sessions = self.sessions.write().map_err(|_| SessionError::LockError)?;
+
+        // Check session limit
+        if sessions.len() >= self.config.max_sessions {
+            warn!(
+                "Session limit reached: {}/{}",
+                sessions.len(),
+                self.config.max_sessions
+            );
+            return Err(SessionError::MaxSessionsReached(self.config.max_sessions));
+        }
+
+        let session = Session::new_with_version(
+            self.config.default_ttl,
+            client_info,
+            protocol_version.to_string(),
+        );
+        let session_id = session.session_id;
+
+        sessions.insert(session_id, session);
+
+        debug!(
+            "Created new session: {} with protocol version {} (total: {})",
+            session_id,
+            protocol_version,
             sessions.len()
         );
         Ok(session_id)
@@ -277,6 +373,34 @@ impl SessionManager {
     pub fn session_count(&self) -> Result<usize, SessionError> {
         let sessions = self.sessions.read().map_err(|_| SessionError::LockError)?;
         Ok(sessions.len())
+    }
+
+    /// Validate protocol version for an existing session
+    ///
+    /// # Errors
+    ///
+    /// Returns `SessionError::SessionNotFound` if the session doesn't exist.
+    /// Returns `SessionError::SessionExpired` if the session has expired.
+    /// Returns `SessionError::ProtocolVersionMismatch` if the protocol version doesn't match.
+    /// Returns `SessionError::LockError` if the session storage cannot be accessed.
+    pub fn validate_session_protocol_version(
+        &self,
+        session_id: Uuid,
+        expected_version: &str,
+    ) -> Result<(), SessionError> {
+        let sessions = self.sessions.read().map_err(|_| SessionError::LockError)?;
+
+        if let Some(session) = sessions.get(&session_id) {
+            if session.is_expired() {
+                debug!("Session expired: {session_id}");
+                Err(SessionError::SessionExpired(session_id))
+            } else {
+                session.validate_protocol_version(expected_version)
+            }
+        } else {
+            debug!("Session not found: {session_id}");
+            Err(SessionError::SessionNotFound(session_id))
+        }
     }
 
     /// Get session statistics for monitoring

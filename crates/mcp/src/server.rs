@@ -1,6 +1,7 @@
 //! MCP server implementation
 
 use crate::handlers::McpHandler;
+use crate::health::{create_health_router, init_service_start_time};
 use crate::security::{validate_server_binding, SecurityConfig};
 use crate::session::{SessionConfig, SessionManager as ComprehensiveSessionManager};
 use crate::transport::{
@@ -41,6 +42,8 @@ impl McpServer {
     ///
     /// Returns an error if handler initialization fails.
     pub async fn new(db_pool: DatabasePool) -> Result<Self> {
+        // Initialize service start time for uptime tracking
+        init_service_start_time();
         let handler = Arc::new(McpHandler::new(db_pool.clone())?);
 
         // Initialize transport configuration
@@ -61,13 +64,16 @@ impl McpServer {
         initialize_transport(session_manager.clone()).await;
 
         let state = McpServerState {
-            db_pool,
+            db_pool: db_pool.clone(),
             handler,
             session_manager,
             comprehensive_session_manager,
             transport_config,
             security_config,
         };
+
+        // Start background monitoring for the database pool
+        db_pool.start_monitoring();
 
         Ok(Self { state })
     }
@@ -97,8 +103,8 @@ impl McpServer {
     /// Create the router with all endpoints
     pub fn create_router(&self) -> Router {
         Router::new()
-            // Health check endpoint
-            .route("/health", get(health_check))
+            // Enhanced health check endpoints
+            .merge(create_health_router())
             // Unified MCP endpoint using new Streamable HTTP transport
             // Supports POST (JSON-RPC) and GET (SSE) - MVP: POST only with 405 for GET
             .route("/mcp", any(unified_mcp_handler))
@@ -113,13 +119,5 @@ impl McpServer {
     }
 }
 
-/// Health check endpoint
-async fn health_check() -> Result<Json<Value>, StatusCode> {
-    Ok(Json(serde_json::json!({
-        "status": "healthy",
-        "service": "doc-server-mcp",
-        "version": env!("CARGO_PKG_VERSION")
-    })))
-}
-
+// Old basic health check removed - now using comprehensive health endpoints from health module
 // Old handlers removed - now using unified_mcp_handler from transport module
