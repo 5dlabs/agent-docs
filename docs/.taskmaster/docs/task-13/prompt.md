@@ -48,3 +48,15 @@ cd ../agent-docs-task-13
 git worktree list
 git worktree remove ../agent-docs-task-13
 ```
+
+### Cleanup after push (PVC)
+- After pushing and creating the PR, remove the worktree to free PVC storage:
+```bash
+git worktree remove ../agent-docs-task-13
+git worktree prune
+```
+- After merge, optionally delete the remote/local feature branch:
+```bash
+git push origin --delete feature/task-13-<short-name> || true
+git branch -D feature/task-13-<short-name> || true
+```
