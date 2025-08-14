@@ -3,6 +3,12 @@
 ## Mission (MVP)
 Align response behavior with MCP 2025-06-18 Streamable HTTP for JSON-only POST: ensure headers and JSON-RPC error handling with proper HTTP mapping. Streaming is out of scope for MVP.
 
+## Pre-flight Evaluation (Required)
+- Please evaluate the work that's been already completed before proceeding:
+  - Review existing transport, headers, and tests to avoid duplicate work
+  - Identify gaps vs. the latest spec and `architecture.md` transport policy (JSON-only, GET 405)
+  - Log a brief findings note in task artifacts before making changes
+
 ## Primary Objectives
 1. Ensure `/mcp` POST (JSON) behavior is correct; GET returns 405
 2. Include `Mcp-Session-Id` and `MCP-Protocol-Version` in responses
@@ -37,6 +43,13 @@ Align response behavior with MCP 2025-06-18 Streamable HTTP for JSON-only POST: 
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
   - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+
+## Pull Request Requirement (Automatic)
+- After all gates pass (fmt, clippy pedantic, tests) and deployment succeeds, automatically submit a pull request for this task.
+- The PR must include:
+  - Summary of changes and explicit statement that JSON-only Streamable HTTP is enforced, SSE disabled, GET 405
+  - Evidence of passing `cargo fmt --check`, `cargo clippy -D warnings -W clippy::pedantic`, and `cargo test`
+  - Link to CI run showing green status and successful deployment
 ## Worktree and Parallel Branching (Required for parallel tasks)
 
 - Use Git worktrees to isolate this task's working directory and feature branch to avoid conflicts with other tasks running in parallel.

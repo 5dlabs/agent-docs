@@ -6,12 +6,12 @@
 - [ ] Extend and validate the existing version-controlled migration system (no reinvention)
 - [ ] Forward migration execution
 - [ ] Rollback plan documented; prefer roll-forward remediation
-- [ ] Migration history tracking intact
+- [ ] Migration history tracking intact (history table present in live DB)
 - [ ] Atomic migration operations where feasible
 
 ### FR-2: Schema Optimization
 - [ ] Optimized indexes for current query paths (metadata filters, non-vector indexes)
-- [ ] Proper foreign key constraints
+- [ ] Proper foreign key constraints (e.g., `documents` → `document_sources`)
 - [ ] Optimized data types for storage efficiency
 - [ ] Partitioning strategy for large datasets
 - [ ] Archive strategy for old data
@@ -34,6 +34,11 @@
 **And**: No data loss occurs
 **And**: Post-migration verification passes (integrity, performance smoke tests)
 
+### TC-1b: Live DB Snapshot Validation (Read-only)
+**Given**: Connection to live `DATABASE_URL`
+**When**: Running read-only audit queries
+**Then**: Verify presence of history table; verify FK existence; verify indexes; verify no vector index on `embedding(3072)`; record row counts
+
 ### TC-2: Performance Validation
 **Given**: Optimized database configuration
 **When**: Query performance tested
@@ -43,6 +48,7 @@
 
 ## Deliverables
 - [ ] Validated extensions to the existing migration framework
+ - [ ] `k8s/migration-job.yaml` updated to point to the actual migration binary built by this repo
 ## Live Database Requirements
 - [ ] Use `DATABASE_URL` for the live (production) cluster
 - [ ] Backup taken and verified prior to migration

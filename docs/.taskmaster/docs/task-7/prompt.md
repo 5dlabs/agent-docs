@@ -10,6 +10,12 @@ Optimize PostgreSQL database schema and implement comprehensive migration system
 4. **Performance Tuning**: Optimize queries and database configuration
 5. **Monitoring Integration**: Add database health monitoring
 
+## Current State (reference)
+- A versioned migration manager exists but is not wired into startup; startup still uses `Migrations::run(...)`.
+- Non-vector indexes exist on common filters; FK/partitioning/archival are not implemented.
+- Pooling config exists; performance targets and measurements are not recorded.
+- Migration Job command does not match a produced binary; align it to the actual `migrate` target or add a dedicated binary.
+
 ## Implementation Steps
 1. Replace ad-hoc `Migrations::run` with `DatabaseMigrationManager` pipeline (register, validate, apply, record)
 2. Define migration IDs/checksums/dependencies; validate pending set; transactional apply; history recording

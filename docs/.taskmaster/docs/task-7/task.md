@@ -31,6 +31,19 @@ Optimize PostgreSQL database schema and implement migration system for productio
 - Current embeddings are 3072-dim (OpenAI text-embedding-3-large); vector index cannot be created
 - Queries must rely on metadata filters + full scan similarity; performance workarounds required
 
+## Current Status vs Outstanding (from gaps report)
+
+- [x] Versioned migration manager exists (`crates/database/src/migration_system.rs`)
+- [ ] Manager integrated at startup (replace `Migrations::run(..)` with manager pipeline)
+- [x] Non-vector indexes present for common filters (e.g., `doc_type`, `source_name`)
+- [ ] Foreign keys between `documents` and `document_sources`
+- [ ] Partitioning strategy (e.g., time-based on `created_at`)
+- [ ] Archival policy and DDL for aged data
+- [~] Pooling support exists; [ ] tune/validate perf (< 2s) with measurements
+- [ ] Live-DB safeguards: backup, staging dry-run, zero-downtime playbook, post-verification
+- [ ] Migration Job alignment: update `k8s/migration-job.yaml` to call the actual built binary
+- [ ] Observability: structured logs + simple status (endpoint or CLI)
+
 ## Success Metrics
 - Query performance improvements (< 2s response time)
 - Successful schema migrations without data loss
