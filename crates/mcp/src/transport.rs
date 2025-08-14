@@ -28,6 +28,7 @@ pub struct TransportConfig {
     pub protocol_version: String,
     pub session_timeout: Duration,
     pub heartbeat_interval: Duration,
+    pub max_json_body_bytes: usize,
 }
 
 impl Default for TransportConfig {
@@ -36,6 +37,7 @@ impl Default for TransportConfig {
             protocol_version: "2025-06-18".to_string(),
             session_timeout: Duration::from_secs(300), // 5 minutes
             heartbeat_interval: Duration::from_secs(30), // 30 seconds
+            max_json_body_bytes: 2 * 1024 * 1024, // 2 MiB default, matching Axum's default body limit
         }
     }
 }
@@ -216,6 +218,9 @@ pub enum TransportError {
     #[error("JSON parsing error: {0}")]
     JsonParseError(String),
 
+    #[error("Payload too large")]
+    PayloadTooLarge,
+
     #[error("Internal server error: {0}")]
     InternalError(String),
 }
@@ -239,6 +244,7 @@ impl IntoResponse for TransportError {
                 (StatusCode::BAD_REQUEST, "Invalid Content-Type")
             }
             TransportError::JsonParseError(_) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
+            TransportError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
             TransportError::InternalError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
             }
@@ -246,7 +252,6 @@ impl IntoResponse for TransportError {
 
         error!("Transport error: {}", self);
 
-        // Create JSON error response
         let error_response = json!({
             "error": {
                 "code": -32600,
@@ -330,10 +335,32 @@ async fn handle_json_rpc_request(
     // Get or create session using the session manager from server state
     let session_id = state.session_manager.get_or_create_session(&headers)?;
 
-    // Extract request body
-    let body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
+    // Enforce a maximum body size similar to Axum's Json extractor default
+    let max_body_bytes = state.transport_config.max_json_body_bytes;
+
+    // If Content-Length is present and exceeds the limit, reject early
+    if let Some(len_header) = headers.get("content-length") {
+        if let Ok(len_str) = len_header.to_str() {
+            if let Ok(len) = len_str.parse::<u64>() {
+                if len > max_body_bytes as u64 {
+                    return Err(TransportError::PayloadTooLarge);
+                }
+            }
+        }
+    }
+
+    // Extract request body with an explicit limit
+    let body_bytes = axum::body::to_bytes(request.into_body(), max_body_bytes)
         .await
-        .map_err(|e| TransportError::InternalError(format!("Failed to read body: {}", e)))?;
+        .map_err(|e| {
+            let msg = e.to_string();
+            let lower = msg.to_ascii_lowercase();
+            if lower.contains("length") && lower.contains("limit") || lower.contains("too large") {
+                TransportError::PayloadTooLarge
+            } else {
+                TransportError::InternalError(format!("Failed to read body: {}", msg))
+            }
+        })?;
 
     // Parse JSON-RPC request
     let json_request: Value = serde_json::from_slice(&body_bytes)
