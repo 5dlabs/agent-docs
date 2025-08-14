@@ -53,7 +53,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
         Ok(response.embedding)
     }
 
-    /// Generate embedding using OpenAI API
+    /// Generate embedding using `OpenAI` API
     async fn generate_embedding(&self, request: EmbeddingRequest) -> Result<EmbeddingResponse> {
         debug!(
             "Generating embedding for {} characters",
