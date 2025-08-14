@@ -48,19 +48,17 @@ impl DocumentQueries {
     /// Returns an error if the database query fails or the result rows cannot
     /// be deserialized into `Document` values.
     pub async fn find_by_type(pool: &PgPool, doc_type: DocType) -> Result<Vec<Document>> {
-        let type_str = match doc_type {
-            DocType::Rust => "rust",
-            DocType::Jupyter => "jupyter",
-            DocType::Birdeye => "birdeye",
-            DocType::Cilium => "cilium",
-            DocType::Talos => "talos",
-            DocType::Meteora => "meteora",
-            DocType::Raydium => "raydium",
-            DocType::Solana => "solana",
-            DocType::Ebpf => "ebpf",
-            DocType::RustBestPractices => "rust_best_practices",
-        };
+        // Delegate to string-based variant to avoid hardcoding mappings here
+        Self::find_by_type_str(pool, &doc_type.to_string()).await
+    }
 
+    /// Find documents by type (string-based, supports config-driven docType values)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails or the result rows cannot
+    /// be deserialized into `Document` values.
+    pub async fn find_by_type_str(pool: &PgPool, doc_type: &str) -> Result<Vec<Document>> {
         let rows = sqlx::query(
             r"
             SELECT 
@@ -78,7 +76,7 @@ impl DocumentQueries {
             ORDER BY created_at DESC
             ",
         )
-        .bind(type_str)
+        .bind(doc_type)
         .fetch_all(pool)
         .await?;
 
