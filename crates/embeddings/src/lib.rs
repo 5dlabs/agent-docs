@@ -7,6 +7,9 @@ pub mod batch;
 pub mod client;
 pub mod models;
 
+#[cfg(test)]
+mod integration_tests;
+
 pub use batch::BatchProcessor;
 pub use client::{EmbeddingClient, OpenAIEmbeddingClient};
 pub use models::*;
