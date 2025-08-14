@@ -17,8 +17,8 @@ spec:
       containers:
       - name: migration
         image: ghcr.io/5dlabs/agent-docs:latest
-        command: ["/usr/local/bin/doc-server-migrate"]
-        args: ["full", "--parallel", "8", "--batch-size", "100"]
+        command: ["/usr/local/bin/http_server"]
+        args: ["--migrate-only"]
         env:
         - name: DATABASE_URL
           valueFrom:

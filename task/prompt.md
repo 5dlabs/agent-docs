@@ -1,35 +1,51 @@
-# Autonomous Agent Prompt: Streamable HTTP Response Semantics, Keep-Alive, and Error Handling
+# Autonomous Agent Prompt: Database Migration and Schema Optimization
 
-## Mission (MVP)
-Align response behavior with MCP 2025-06-18 Streamable HTTP for JSON-only POST: ensure headers and JSON-RPC error handling with proper HTTP mapping. Streaming is out of scope for MVP.
+ 
+## Mission
+Optimize PostgreSQL database schema and implement comprehensive migration system for production deployment.
 
-## Pre-flight Evaluation (Required)
-- Please evaluate the work that's been already completed before proceeding:
-  - Review existing transport, headers, and tests to avoid duplicate work
-  - Identify gaps vs. the latest spec and `architecture.md` transport policy (JSON-only, GET 405)
-  - Log a brief findings note in task artifacts before making changes
-
+ 
 ## Primary Objectives
-1. Ensure `/mcp` POST (JSON) behavior is correct; GET returns 405
-2. Include `Mcp-Session-Id` and `MCP-Protocol-Version` in responses
-3. Map transport and application errors to correct HTTP status codes
-4. Add structured logging
+1. **Migration System**: Integrate a versioned migration manager at startup (register/validate/apply/record)
+2. **Schema Optimization**: Optimize tables and indexes for vector search
+3. **Connection Pooling**: Configure optimal connection management
+4. **Performance Tuning**: Optimize queries and database configuration
+5. **Monitoring Integration**: Add database health monitoring
 
+ 
+## Current State (reference)
+- A versioned migration manager exists but is not wired into startup; startup still uses `Migrations::run(...)`.
+- Non-vector indexes exist on common filters; FK/partitioning/archival are not implemented.
+- Pooling config exists; performance targets and measurements are not recorded.
+- Migration Job command does not match a produced binary; align it to the actual `migrate` target or add a dedicated binary.
+
+ 
+## Resume Instructions (verify and continue)
+- Before making changes, evaluate existing Task 7 work against "Implementation Steps" and "Success Criteria".
+- Re-run quality gates locally (`cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, `cargo test --all-features`).
+- If tests fail, fix only failures directly related to Task 7 scope; otherwise, log the issues and proceed with outstanding Task 7 items.
+- Continue only with items still outstanding; do not re-implement completed work.
+
+ 
 ## Implementation Steps
-1. Ensure headers are set on all responses (session id, protocol version)
-2. Implement JSON-RPC error formatting and HTTP mapping
-3. Add logs for request id/session id/version
+1. Replace ad-hoc `Migrations::run` with `DatabaseMigrationManager` pipeline (register, validate, apply, record)
+2. Define migration IDs/checksums/dependencies; validate pending set; transactional apply; history recording
+3. Live-DB safety: backup, staging dry-run, zero-downtime strategy, post-verification checklist
+4. Align K8s migration Job `command` with actual binary produced by this repo
+5. Schema: add non-vector indexes, FKs, evaluate partitioning; define archival policy and DDL
+6. Performance: measure p95 latencies (<2s) and tune pool/indexes with EXPLAIN
+7. Monitoring: structured logs + simple status endpoint/CLI
 
+ 
 ## Success Criteria
-- [ ] Correct headers present on all responses
-- [ ] Errors return correct HTTP status and JSON-RPC body
-- [ ] Logs capture request/session/version
+- [ ] Migration system with rollback capability
+- [ ] Query performance < 2 seconds
+- [ ] Optimized connection pooling
+- [ ] Database monitoring operational
+- [ ] Zero data loss during migrations
 
-## Deployment Validation (Mandatory 4-step)
-1. Push → CI build/tests
-2. Deploy via Helm
-3. Live test with MCP client (headers/errors)
-4. Record validation results in task artifacts## Quality Gates and CI/CD Process
+ 
+## Quality Gates and CI/CD Process
 
 - Run static analysis after every new function is written:
   - Command: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
@@ -42,11 +58,7 @@ Align response behavior with MCP 2025-06-18 Streamable HTTP for JSON-only POST: 
   - Do all work on a feature branch (e.g., `feature/<task-id>-<short-name>`).
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
-  - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+   - Only create the PR after the workflow is green and deployment has succeeded.
+   - If a PR already exists, resolve all formatting and linter errors locally, then push updates to the SAME PR branch; do not open a new PR.
 
-## Pull Request Requirement (Automatic)
-- After all gates pass (fmt, clippy pedantic, tests) and deployment succeeds, automatically submit a pull request for this task.
-- The PR must include:
-  - Summary of changes and explicit statement that JSON-only Streamable HTTP is enforced, SSE disabled, GET 405
-  - Evidence of passing `cargo fmt --check`, `cargo clippy -D warnings -W clippy::pedantic`, and `cargo test`
-  - Link to CI run showing green status and successful deployment
+ 
