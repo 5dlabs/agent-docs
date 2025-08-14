@@ -1,90 +1,35 @@
-# Autonomous Agent Prompt: Protocol Version Negotiation and Headers
+# Autonomous Agent Prompt: Streamable HTTP Response Semantics, Keep-Alive, and Error Handling
 
 ## Mission (MVP)
+Align response behavior with MCP 2025-06-18 Streamable HTTP for JSON-only POST: ensure headers and JSON-RPC error handling with proper HTTP mapping. Streaming is out of scope for MVP.
 
-Implement strict MCP protocol header handling for the single supported version `2025-06-18` and comprehensive header management. Drop negotiation/backward compatibility for MVP.
-
-## Context
-
-Building on the Streamable HTTP transport and session management from Tasks 2-3, support only protocol version `2025-06-18`. Reject other versions with HTTP 400.
+## Pre-flight Evaluation (Required)
+- Please evaluate the work that's been already completed before proceeding:
+  - Review existing transport, headers, and tests to avoid duplicate work
+  - Identify gaps vs. the latest spec and `architecture.md` transport policy (JSON-only, GET 405)
+  - Log a brief findings note in task artifacts before making changes
 
 ## Primary Objectives
+1. Ensure `/mcp` POST (JSON) behavior is correct; GET returns 405
+2. Include `Mcp-Session-Id` and `MCP-Protocol-Version` in responses
+3. Map transport and application errors to correct HTTP status codes
+4. Add structured logging
 
-1. **Protocol Header Utilities**: Create constants and simple validators for the fixed version
-2. **Header Management**: Implement comprehensive MCP and HTTP header handling
-3. **Initialize Handler**: Ensure the initialize response includes the fixed version
-4. **Session Integration**: Store protocol version in session state for consistency
-5. **Response Formatting**: Ensure version-specific response formatting and headers
-
-## Step-by-Step Implementation
-
-### Step 1: Create Protocol Header Utilities
-1. Create `crates/mcp/src/headers.rs` with constants/extractors
-2. Implement fixed-version validation (only `2025-06-18`)
-3. Provide helpers to inject headers into responses
-
-### Step 2: Header Extraction and Validation
-1. Create `crates/mcp/src/headers.rs` with Axum extractors
-2. Implement MCP-Protocol-Version header extraction (reject all but `2025-06-18` with HTTP 400)
-3. Add Accept header validation: if present and incompatible with route (e.g., POST requires `application/json`), return HTTP 406
-4. Validate Content-Type: POST requires `application/json` (415 if unsupported)
-5. Always set `MCP-Protocol-Version` on all responses; include `Mcp-Session-Id` where applicable
-6. Create header validation middleware/extractors with structured error bodies
-
-### Step 3: Initialize Handler
-1. Ensure `handle_initialize` sets `protocolVersion: "2025-06-18"` in the result
-2. Store fixed version in session state
-
-### Step 4: Session State Integration
-1. Update session management to store protocol version
-2. Create version-aware session validation
-3. Implement session consistency checks
-4. Add version tracking across requests
-
-### Step 5: Response Management
-1. Implement proper Content-Type header management
-2. Add MCP-specific headers to all responses
-3. Ensure CORS compatibility
-
-## Required Tools
-
-1. **read_file**: Examine existing handlers and transport code
-2. **write_file**: Create new protocol and header modules
-3. **edit_file**: Update existing handlers and session management
-4. **write_file**: Create comprehensive test suite
+## Implementation Steps
+1. Ensure headers are set on all responses (session id, protocol version)
+2. Implement JSON-RPC error formatting and HTTP mapping
+3. Add logs for request id/session id/version
 
 ## Success Criteria
+- [ ] Correct headers present on all responses
+- [ ] Errors return correct HTTP status and JSON-RPC body
+- [ ] Logs capture request/session/version
 
-### Functional Requirements
-- [ ] Fixed protocol version validation (2025-06-18)
-- [ ] Header extraction and validation (protocol, Accept, Content-Type)
-- [ ] Session state with protocol version tracking (fixed)
-- [ ] Response headers set consistently
-
-### Integration Requirements
-- [ ] Seamless integration with existing transport layer
-- [ ] Compatibility with session management from Task 3
-- [ ] Proper error handling for version mismatches
-- [ ] CORS header compatibility
-
-## Testing Strategy
-
-1. **Header Validation Tests**: Verify proper header parsing and validation
-2. **Session Integration Tests**: Test fixed version consistency across requests
-3. **Error Handling Tests**: Validate responses for unsupported versions
-4. **Accept/Content-Type Tests**: 406 on unacceptable Accept; 415/400 on bad/missing Content-Type for POST
-
-## SDK Usage Policy (Spec Compliance)
-- Prefer self-contained implementation over SDKs unless guarded by spec-compliance tests for MCP 2025-06-18.
-- Mirror prior practice from Talos MCP where protocol behavior was implemented directly against the spec.
-
-## Expected Deliverables
-
-1. **Protocol Version Module**: Complete version management implementation
-2. **Header Management Module**: Comprehensive header handling
-3. **Updated Initialize Handler**: Enhanced with version negotiation
-4. **Session Integration**: Protocol version tracking in sessions
-5. **Test Suite**: Complete coverage of version and header handling## Quality Gates and CI/CD Process
+## Deployment Validation (Mandatory 4-step)
+1. Push → CI build/tests
+2. Deploy via Helm
+3. Live test with MCP client (headers/errors)
+4. Record validation results in task artifacts## Quality Gates and CI/CD Process
 
 - Run static analysis after every new function is written:
   - Command: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
@@ -98,3 +43,25 @@ Building on the Streamable HTTP transport and session management from Tasks 2-3,
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
   - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+
+## Pull Request Requirement (Automatic)
+- After all gates pass (fmt, clippy pedantic, tests) and deployment succeeds, automatically submit a pull request for this task.
+- The PR must include:
+  - Summary of changes and explicit statement that JSON-only Streamable HTTP is enforced, SSE disabled, GET 405
+  - Evidence of passing `cargo fmt --check`, `cargo clippy -D warnings -W clippy::pedantic`, and `cargo test`
+  - Link to CI run showing green status and successful deployment
+## Worktree and Parallel Branching (Required for parallel tasks)
+
+- Use Git worktrees to isolate this task's working directory and feature branch to avoid conflicts with other tasks running in parallel.
+
+### Steps
+1. Create a dedicated worktree and feature branch for this task:
+
+2. Enter the worktree and do all work from there:
+
+3. Run your development session here (e.g., Claude Code) and follow the Quality Gates section (Clippy pedantic after each new function; fmt/clippy/tests before pushing).
+
+4. Push from this worktree and monitor GitHub Actions; create a PR only after CI is green and deployment succeeds.
+
+5. Manage worktrees when finished:
+/Users/jonathonfritz/code/work-projects/5dlabs/agent-docs  610a801 [main]

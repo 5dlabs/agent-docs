@@ -19,14 +19,14 @@ The Doc Server is a comprehensive documentation server that transforms from a si
 
 ### 🔄 Next Priority
 - Task 35: Project State Evaluation (for new implementation agent)
-- Task 17: SSE Keep-Alive Implementation (heartbeat mechanism)
+ - Task 17: Keep-alive/heartbeat without SSE (e.g., periodic ping); SSE intentionally disabled per security policy
 
 ## System Architecture
 
 ### Core Components
 
 1. **MCP Server** (`crates/mcp/`)
-   - Axum-based HTTP server with SSE transport
+   - Axum-based HTTP server using Streamable HTTP (JSON-only mode); SSE disabled by policy; GET /mcp returns 405
    - Tool registration and request handling
    - Connection management and health checks
 
@@ -162,12 +162,12 @@ Only Rust crates support dynamic management via MCP tools:
   - `/health` - Health check
   - `/mcp` - Tool requests and responses (POST only; GET returns 405)
 
-### Planned Streaming (Post-MVP)
+### Streaming policy
 
-- Heartbeat messages every 30 seconds (event-stream)
-- Idle timeout at 90 seconds
-- Client reconnection and message replay support
-- Connection state tracking and monitoring
+- Transport: Streamable HTTP per MCP 2025-06-18, JSON-only responses for all requests
+- `/mcp` GET: 405 Method Not Allowed (no SSE endpoint exposed)
+- Accept header: clients may advertise `text/event-stream`, but server returns `application/json`
+- Rationale: SSE disabled due to security posture (DNS rebinding surface) and current project scope
 
 ### Toolman Integration
 

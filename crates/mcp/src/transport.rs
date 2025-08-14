@@ -16,13 +16,14 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use thiserror::Error;
 use tokio::sync::broadcast;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn, Instrument};
 use uuid::Uuid;
 
 use crate::headers::{
     set_json_response_headers, set_standard_headers, validate_protocol_version, MCP_SESSION_ID,
     SUPPORTED_PROTOCOL_VERSION,
 };
+use crate::metrics::metrics;
 use crate::security::{add_security_headers, validate_dns_rebinding, validate_origin};
 use crate::server::McpServerState;
 use crate::session::ClientInfo;
@@ -339,14 +340,53 @@ pub async fn unified_mcp_handler(
     headers: HeaderMap,
     request: Request<Body>,
 ) -> Result<Response, TransportError> {
-    debug!(
-        "Received MCP request: {:?} {}",
-        request.method(),
-        request.uri()
+    // Generate unique request ID for tracing
+    let request_id = Uuid::new_v4();
+
+    // Extract protocol version for logging (clone to avoid borrow issues)
+    let protocol_version = headers
+        .get("MCP-Protocol-Version")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("missing")
+        .to_string();
+
+    let method = request.method().clone();
+    let uri = request.uri().clone();
+
+    // Create a span for structured logging with request context
+    let span = tracing::info_span!(
+        "mcp_request",
+        request_id = %request_id,
+        method = %method,
+        uri = %uri,
+        protocol_version = %protocol_version
     );
 
+    async move {
+        // Increment total request counter
+        metrics().increment_requests();
+
+        info!(
+            "Processing MCP request: {} {} (protocol: {})",
+            method, uri, protocol_version
+        );
+
+        unified_mcp_handler_impl(state, headers, request, request_id).await
+    }
+    .instrument(span)
+    .await
+}
+
+/// Internal implementation of the MCP handler with request ID context
+async fn unified_mcp_handler_impl(
+    state: McpServerState,
+    headers: HeaderMap,
+    request: Request<Body>,
+    request_id: Uuid,
+) -> Result<Response, TransportError> {
     // Validate protocol version first
     if let Err(status) = validate_protocol_version(&headers) {
+        metrics().increment_protocol_version_errors();
         return match status {
             StatusCode::BAD_REQUEST => Err(TransportError::UnsupportedProtocolVersion(
                 headers
@@ -366,15 +406,17 @@ pub async fn unified_mcp_handler(
     validate_accept_header(&headers, request.method())?;
 
     match *request.method() {
-        Method::POST => handle_json_rpc_request(state, headers, request).await,
-        Method::DELETE => handle_delete_session_request(&state, &headers),
+        Method::POST => handle_json_rpc_request(state, headers, request, request_id).await,
+        Method::DELETE => handle_delete_session_request(&state, &headers, request_id),
         Method::GET => {
             // JSON-only policy: SSE disabled. Always return 405 regardless of Accept header.
-            warn!("GET request to /mcp endpoint - returning 405 Method Not Allowed");
+            metrics().increment_method_not_allowed();
+            warn!(request_id = %request_id, "GET request to /mcp endpoint - returning 405 Method Not Allowed");
             Err(TransportError::MethodNotAllowed)
         }
         _ => {
-            warn!("Unsupported HTTP method: {}", request.method());
+            metrics().increment_method_not_allowed();
+            warn!(request_id = %request_id, method = %request.method(), "Unsupported HTTP method");
             Err(TransportError::MethodNotAllowed)
         }
     }
@@ -484,7 +526,8 @@ fn get_or_create_comprehensive_session(
         .create_session(client_info)
         .map_err(|e| TransportError::InternalError(format!("Session creation failed: {e}")))?;
 
-    debug!("Created new comprehensive session: {}", session_id);
+    metrics().increment_sessions_created();
+    debug!(session_id = %session_id, "Created new comprehensive session");
     Ok(session_id)
 }
 
@@ -492,17 +535,18 @@ fn get_or_create_comprehensive_session(
 fn handle_delete_session_request(
     state: &McpServerState,
     headers: &HeaderMap,
+    request_id: Uuid,
 ) -> Result<Response, TransportError> {
-    debug!("Processing DELETE session request");
+    debug!(request_id = %request_id, "Processing DELETE session request");
 
     // Security validation first
     if let Err(e) = validate_origin(headers, &state.security_config) {
-        error!("Origin validation failed for DELETE: {}", e);
+        error!(request_id = %request_id, "Origin validation failed for DELETE: {}", e);
         return Err(TransportError::SecurityValidationFailed(e.to_string()));
     }
 
     if let Err(e) = validate_dns_rebinding(headers, &state.security_config) {
-        error!("DNS rebinding validation failed for DELETE: {}", e);
+        error!(request_id = %request_id, "DNS rebinding validation failed for DELETE: {}", e);
         return Err(TransportError::SecurityValidationFailed(e.to_string()));
     }
 
@@ -516,7 +560,8 @@ fn handle_delete_session_request(
                     .delete_session(session_id)
                     .is_ok()
                 {
-                    debug!("Successfully deleted session: {}", session_id);
+                    metrics().increment_sessions_deleted();
+                    debug!(request_id = %request_id, session_id = %session_id, "Successfully deleted session");
 
                     // Create response with proper headers
                     let mut response_headers = HeaderMap::new();
@@ -525,7 +570,7 @@ fn handle_delete_session_request(
 
                     Ok((StatusCode::NO_CONTENT, response_headers, "").into_response())
                 } else {
-                    debug!("Session not found for deletion: {}", session_id);
+                    debug!(request_id = %request_id, session_id = %session_id, "Session not found for deletion");
 
                     // Return 404 for non-existent sessions
                     let mut response_headers = HeaderMap::new();
@@ -560,17 +605,20 @@ async fn handle_json_rpc_request(
     state: McpServerState,
     headers: HeaderMap,
     request: Request<Body>,
+    request_id: Uuid,
 ) -> Result<Response, TransportError> {
-    debug!("Processing JSON-RPC request");
+    debug!(request_id = %request_id, "Processing JSON-RPC request");
 
     // Security validation first
     if let Err(e) = validate_origin(&headers, &state.security_config) {
-        error!("Origin validation failed: {}", e);
+        metrics().increment_security_validation_errors();
+        error!(request_id = %request_id, "Origin validation failed: {}", e);
         return Err(TransportError::SecurityValidationFailed(e.to_string()));
     }
 
     if let Err(e) = validate_dns_rebinding(&headers, &state.security_config) {
-        error!("DNS rebinding validation failed: {}", e);
+        metrics().increment_security_validation_errors();
+        error!(request_id = %request_id, "DNS rebinding validation failed: {}", e);
         return Err(TransportError::SecurityValidationFailed(e.to_string()));
     }
 
@@ -590,6 +638,9 @@ async fn handle_json_rpc_request(
 
     // Get or create session using the comprehensive session manager
     let session_id = get_or_create_comprehensive_session(&state, &headers, Some(client_info))?;
+    // Note: Session creation metrics are tracked inside get_or_create_comprehensive_session
+
+    debug!(request_id = %request_id, session_id = %session_id, "Session associated with request");
 
     // Enforce a maximum body size similar to Axum's Json extractor default
     let max_body_bytes = state.transport_config.max_json_body_bytes;
@@ -619,15 +670,18 @@ async fn handle_json_rpc_request(
         })?;
 
     // Parse JSON-RPC request
-    let json_request: Value = serde_json::from_slice(&body_bytes)
-        .map_err(|e| TransportError::JsonParseError(e.to_string()))?;
+    let json_request: Value = serde_json::from_slice(&body_bytes).map_err(|e| {
+        metrics().increment_json_parse_errors();
+        TransportError::JsonParseError(e.to_string())
+    })?;
 
-    debug!("Parsed JSON-RPC request: {}", json_request);
+    debug!(request_id = %request_id, session_id = %session_id, "Parsed JSON-RPC request: {}", json_request);
 
     // Process through existing MCP handler
     match state.handler.handle_request(json_request).await {
         Ok(response) => {
-            debug!("MCP handler response: {}", response);
+            metrics().increment_post_success();
+            debug!(request_id = %request_id, session_id = %session_id, "MCP handler response: {}", response);
 
             // Update session activity using comprehensive session manager
             let _ = state
@@ -642,7 +696,8 @@ async fn handle_json_rpc_request(
             Ok((StatusCode::OK, response_headers, Json(response)).into_response())
         }
         Err(e) => {
-            error!("MCP handler failed: {}", e);
+            metrics().increment_internal_errors();
+            error!(request_id = %request_id, session_id = %session_id, "MCP handler failed: {}", e);
             Err(TransportError::InternalError(format!("Handler error: {e}")))
         }
     }
