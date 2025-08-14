@@ -1,16 +1,16 @@
-# Toolman Guide: Error Handling and Status Codes
+# Toolman Guide: Database Migration and Schema Optimization
 
 ## Tool Selection Rationale
-Filesystem tools for creating error handling modules, updating existing code with proper error responses, and establishing comprehensive error testing.
+Filesystem tools for creating migration scripts, updating database configuration, and optimizing schema definitions.
 
 ## Implementation Approach
-1. **read_file**: Examine existing error handling patterns
-2. **write_file**: Create comprehensive error handling module
-3. **edit_file**: Update handlers with proper error responses  
-4. **search_files**: Find all error handling locations
+1. **read_file**: Examine current schema and database code
+2. **write_file**: Create migration framework and scripts
+3. **edit_file**: Update database configuration and connections
+4. **search_files**: Find all database query locations for optimization
 
 ## Key Focus Areas
-- **Error Consistency**: Standardized error responses across all endpoints
-- **Status Code Accuracy**: Proper HTTP status codes for all conditions
-- **Security**: No sensitive information in error messages
-- **Monitoring**: Structured error logging for debugging
+- **Migration Safety**: Ensure atomic operations and rollback capability
+- **Performance**: Optimize indexes and queries for speed
+- **Monitoring**: Add comprehensive database health checks
+- **Scalability**: Configure for production load requirements
