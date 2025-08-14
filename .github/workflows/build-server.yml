@@ -130,9 +130,9 @@ jobs:
           kubectl get nodes
       - name: Deploy with Helm
         run: |
-          kubectl create namespace doc-server --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace mcp --dry-run=client -o yaml | kubectl apply -f -
           helm upgrade --install doc-server ./helm/agent-docs-server \
-            --namespace doc-server \
+            --namespace mcp \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/server \
             --set image.tag=${{ needs.version.outputs.version }} \
             --set image.pullPolicy=Always \
