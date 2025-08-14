@@ -1,58 +1,146 @@
-# Acceptance Criteria: OpenAI Embedding Client with Batch Processing
+# Acceptance Criteria: Task 9 - Config-Driven Documentation Query Tools
 
 ## Functional Requirements
 
-### FR-1: Batch API Integration
-- [ ] JSONL format batch file generation
-- [ ] Batch submission to OpenAI Batch API
-- [ ] Batch status monitoring and completion handling
-- [ ] Result retrieval and processing
-- [ ] Support for 20,000 line chunks
+### 1. Dynamic Tool Implementation
+- [ ] JSON config defined and validated (tools: name, docType, title, description, enabled)
+- [ ] Tools dynamically registered at startup from config
+- [ ] Unified query handler used by all dynamic tools
+- [ ] Semantic search using pgvector similarity (<=> operator)
+- [ ] Result ranking with relevance scores implemented
 
-### FR-2: Rate Limiting Implementation
-- [ ] Token bucket algorithm for 3000 RPM limit
-- [ ] Token consumption based on request content
-- [ ] 1M TPM (tokens per minute) tracking
-- [ ] Async wait mechanism when limits exceeded
-- [ ] Burst capacity handling
+### 2. Database Integration  
+- [ ] Filters documents by `docType` from tool config
+- [ ] Vector similarity search functional
+- [ ] Metadata JSONB fields parsed when present
+- [ ] Query performance < 2 seconds
 
-### FR-3: Cost Tracking and Optimization
-- [ ] Cost calculation for batch vs individual requests
-- [ ] ~70% cost reduction validation (baseline vs batched)
-- [ ] Usage reporting and analytics
-- [ ] Cost threshold alerts
-- [ ] Detailed cost breakdown by batch
+### 3. MCP Registration
+- [ ] Tools registered dynamically during server startup
+- [ ] Appear in tools/list response with names from config
+- [ ] JSON-RPC invocation working for each dynamic tool
+- [ ] Parameter validation for query and limit
+- [ ] Error handling for invalid requests
+
+### 4. Response Formatting
+- [ ] Source attribution and relevance scores displayed
+- [ ] Category-appropriate fields included when present (e.g., API endpoint/method)
+
+## Non-Functional Requirements
+
+### 1. Performance
+- [ ] Query response time < 2 seconds
+- [ ] Concurrent query handling supported
+- [ ] Database connection pooling utilized
+
+### 2. Data Quality
+- [ ] All configured docTypes searchable
+- [ ] Metadata accurately extracted when available
+- [ ] No duplicate results in responses
+- [ ] Relevance ranking accurate
+
+### 3. Error Handling
+- [ ] Graceful handling of missing embeddings
+- [ ] Database connection failures handled
+- [ ] Invalid query parameters rejected
+- [ ] Meaningful error messages returned
+- [ ] Fallback for unavailable cache
 
 ## Test Cases
 
-### TC-1: Batch Processing
-**Given**: Large dataset for embedding generation
-**When**: Batch processing initiated
-**Then**: Data chunked into 20,000 line batches
-**And**: JSONL files generated correctly
-**And**: Batches submitted to OpenAI API (live)
-**And**: Processing completes within time limits
+### Test Case 1: Basic Query (docType)
+**Given**: Configured tool `birdeye_query` with docType `birdeye`
+**When**: Query "defi price" submitted via that tool
+**Then**: Results include price-related endpoints
+**And**: Response time < 2 seconds
+**And**: Metadata includes endpoint and method
 
-### TC-2: Cost Reduction Validation
-**Given**: Batch processing vs individual requests
-**When**: Cost analysis performed
-**Then**: ~70% cost reduction achieved
-**And**: Cost tracking accurate
-**And**: Savings properly calculated and reported
+### Test Case 2: Metadata Filtering
+**Given**: Multiple API versions present
+**When**: Query specifies api_version="v1"
+**Then**:
+- Only v1 endpoints returned
+- Filtering correctly applied
+- No v2 endpoints in results
 
-### TC-3: Live Environment Validation
-**Given**: Live `DATABASE_URL` and `OPENAI_API_KEY`
-**When**: Running end-to-end batch embedding
-**Then**: No mocks or stubs used; real batch/job IDs recorded; results persisted and metrics captured
+### Test Case 3: Registration from Config
+**Given**: Server starts with a config listing `birdeye_query` and `solana_query`
+**When**: Server lists tools
+**Then**: Both tools appear in `tools/list` and invoke the same unified handler with different docType
+
+### Test Case 4: Parameter Validation
+**Given**: Tool invoked via MCP
+**When**: Invalid limit (e.g., 100) provided
+**Then**:
+- Error returned with validation message
+- No database query executed
+- 400 status code returned
+
+### Test Case 5: Response Formatting
+**Given**: Query returns multiple results
+**When**: Results formatted for output
+**Then**:
+- Each result has endpoint URL
+- HTTP method specified
+- Parameters documented
+- Example curl command included
 
 ## Deliverables
-- [ ] Complete OpenAI Batch API client
-- [ ] Rate limiting implementation
-- [ ] Batch queue management system
-- [ ] Cost tracking and reporting
-- [ ] Comprehensive test suite
 
-### NFR-0: Code Quality and Automation
+### Code Artifacts
+- [ ] JSON config and loader/validation
+- [ ] Unified query implementation and db queries
+- [ ] Dynamic tool registration code
+- [ ] Integration tests in tests/
+- [ ] Documentation comments in code
+
+### Documentation
+- [ ] Tool usage examples
+- [ ] API endpoint coverage report
+- [ ] Performance benchmarks
+- [ ] Cache configuration guide
+- [ ] Troubleshooting guide
+
+## Validation Criteria
+
+### Automated Tests
+```bash
+# Unit tests for tool implementation
+cargo test birdeye_query
+
+# Integration tests with database
+cargo test --test integration birdeye
+
+# Performance benchmarks
+cargo bench birdeye_query
+```
+
+### Manual Validation
+1. Query various BirdEye endpoints
+2. Verify metadata extraction accuracy
+3. Test cache effectiveness
+4. Validate response formatting
+5. Check MCP integration
+
+## Definition of Done
+
+Task 8 is complete when:
+
+1. **Tool fully implemented**: All code components working
+2. **Database integrated**: Vector search functional
+3. **MCP registered**: Tool accessible via server
+4. **Cache operational**: Frequently accessed data cached
+5. **Tests passing**: All unit and integration tests pass
+6. **Performance met**: < 2 second response time
+7. **Documentation complete**: Usage guide and examples provided
+
+## Success Metrics
+
+- 100% of BirdEye endpoints searchable
+- Query response time consistently < 2 seconds
+- Cache hit rate > 60% in production
+- Zero critical bugs in implementation
+- Tool usage in production environment### NFR-0: Code Quality and Automation
 - [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
 - [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
 - [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
