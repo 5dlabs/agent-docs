@@ -2,15 +2,15 @@
 
 ## Functional Requirements
 
-### FR-1: Migration System
-- [ ] Version-controlled database migrations
-- [ ] Forward migration execution  
-- [ ] Rollback capability for failed migrations
-- [ ] Migration history tracking
-- [ ] Atomic migration operations
+### FR-1: Migration System (Extend Existing)
+- [ ] Extend and validate the existing version-controlled migration system (no reinvention)
+- [ ] Forward migration execution
+- [ ] Rollback plan documented; prefer roll-forward remediation
+- [ ] Migration history tracking intact
+- [ ] Atomic migration operations where feasible
 
 ### FR-2: Schema Optimization
-- [ ] Optimized indexes for vector search
+- [ ] Optimized indexes for current query paths (metadata filters, non-vector indexes)
 - [ ] Proper foreign key constraints
 - [ ] Optimized data types for storage efficiency
 - [ ] Partitioning strategy for large datasets
@@ -25,12 +25,14 @@
 
 ## Test Cases
 
-### TC-1: Migration Execution
+### TC-1: Migration Execution (Live DB with Safeguards)
 **Given**: New migration available
-**When**: Migration executed
+**And**: Pre-migration backup and staging dry-run complete
+**When**: Migration executed against live DB using zero-downtime strategy
 **Then**: Schema updated successfully
 **And**: Migration recorded in history
 **And**: No data loss occurs
+**And**: Post-migration verification passes (integrity, performance smoke tests)
 
 ### TC-2: Performance Validation
 **Given**: Optimized database configuration
@@ -40,7 +42,13 @@
 **And**: Resource usage within limits
 
 ## Deliverables
-- [ ] Complete migration framework
+- [ ] Validated extensions to the existing migration framework
+## Live Database Requirements
+- [ ] Use `DATABASE_URL` for the live (production) cluster
+- [ ] Backup taken and verified prior to migration
+- [ ] Staging dry-run completed using fresh prod snapshot
+- [ ] Zero-downtime plan documented and followed
+- [ ] Post-migration verification checklist completed
 - [ ] Optimized database schema
 - [ ] Performance tuning configuration
 - [ ] Monitoring integration

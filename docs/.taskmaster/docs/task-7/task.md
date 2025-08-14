@@ -1,15 +1,24 @@
-# Task 7: Database Migration and Schema Optimization
+# Task 7: Database Migration and Schema Optimization (Extend Existing, Run on Live DB Safely)
 
 ## Overview
 Optimize PostgreSQL database schema and implement migration system for production deployment with performance improvements.
 
 ## Implementation Guide
-- Create database migration system with version tracking
-- Optimize schema for vector search performance  
-- Add proper indexing strategies for document retrieval
+- Extend and validate the existing migration system with version tracking (do not recreate)
+- Optimize schema for real-world query paths (metadata filters and non-vector indexes given pgvector dimension limits)
+- Add appropriate indexing strategies for document retrieval
 - Implement connection pooling optimization
 - Add database health monitoring and metrics
 - Document pgvector 2000-dimension index limitation; plan for either dimension reduction or future pgvector upgrade to enable vector index
+
+## Live DB Execution Policy (Required)
+- Use the live database via `DATABASE_URL` (production cluster) with the following safeguards:
+  - Pre-migration backup: take and verify a restorable snapshot
+  - Dry-run: validate migrations in staging against a fresh copy of production schema/data
+  - Zero-downtime strategy: use online migration patterns (additive changes, backfill, dual-write if needed)
+  - Maintenance window: schedule any potentially blocking operations
+  - Roll-forward first: prefer forward fixes over rollbacks; keep rollback plans documented for emergencies
+  - Post-migration verification: integrity checks, performance smoke tests, and monitoring
 
 ## Technical Requirements
 - PostgreSQL with pgvector extension

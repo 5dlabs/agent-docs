@@ -1,11 +1,20 @@
 # Task ID: 6
-# Title: Enhanced Database Connection and Migration Validation
+# Title: Enhanced Database Connection and Migration Validation (Extend Existing, Live DB Safe)
 # Status: pending
 # Dependencies: 1
 # Priority: high
 # Description: Establish production database connectivity, validate schema migration, and implement connection pooling with proper health checks.
 # Details:
 Configure SQLx connection pool with production PostgreSQL cluster credentials. Validate pgvector extension (3072 dimensions) availability. Verify documents and document_sources tables with proper constraints. Implement connection retry logic with exponential backoff. Add database health checks for Kubernetes probes. Configure pool size based on expected load (min: 5, max: 100). Use dotenvy for environment configuration. Implement proper connection timeout handling (30s default).
+
+# Live DB Execution Policy:
+- Operate against the live DB via `DATABASE_URL` with safeguards:
+- Pre-migration backup and verified restore
+- Staging dry-run using a fresh snapshot of production schema/data
+- Zero-downtime migration strategy (additive changes, backfill)
+- Maintenance window for any blocking steps
+- Prefer roll-forward; document rollback only for emergencies
+- Post-migration verification (integrity + performance smoke tests)
 
 # Test Strategy:
 Test connection establishment with production cluster, validate vector operations with 3072-dimension arrays, stress test connection pool under load, verify automatic reconnection after database restart, and validate migration state with schema comparisons.
