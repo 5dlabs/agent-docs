@@ -187,13 +187,17 @@ impl ProgressTracker {
         let processed = self.processed.load(Ordering::Relaxed);
         let total = self.total.load(Ordering::Relaxed);
         let progress_percent = if total > 0 {
-            (processed as f64 / total as f64) * 100.0
+            #[allow(clippy::cast_precision_loss)]
+            {
+                (processed as f64 / total as f64) * 100.0
+            }
         } else {
             0.0
         };
 
         let eta = if processed > 0 && total > processed {
             let elapsed = Utc::now().signed_duration_since(self.start_time);
+            #[allow(clippy::cast_precision_loss)]
             let time_per_doc = elapsed.num_milliseconds() as f64 / processed as f64;
             let remaining_docs = total - processed;
             let remaining_ms = remaining_docs as f64 * time_per_doc;
@@ -285,7 +289,10 @@ impl MigrationPipeline {
         // Calculate performance metrics
         let (processed, _total, _, _) = self.progress_tracker.get_progress();
         let throughput = if duration.num_minutes() > 0 {
-            processed as f64 / duration.num_minutes() as f64
+            #[allow(clippy::cast_precision_loss)]
+            {
+                processed as f64 / duration.num_minutes() as f64
+            }
         } else {
             0.0
         };
@@ -295,7 +302,10 @@ impl MigrationPipeline {
             end_time: Some(end_time),
             documents_per_minute: throughput,
             avg_processing_time_ms: if processed > 0 {
-                duration.num_milliseconds() as f64 / processed as f64
+                #[allow(clippy::cast_precision_loss)]
+                {
+                    duration.num_milliseconds() as f64 / processed as f64
+                }
             } else {
                 0.0
             },
@@ -374,12 +384,14 @@ impl MigrationPipeline {
 
             // Progress reporting
             let (processed, total, progress, eta) = self.progress_tracker.get_progress();
+            #[allow(clippy::cast_precision_loss)]
+            let eta_str = eta.map_or_else(|| "unknown".to_string(), |d| format!("{:.1} minutes", d.num_minutes() as f64));
             info!(
                 "Progress: {}/{} ({:.1}%) - ETA: {}",
                 processed,
                 total,
                 progress,
-                eta.map_or_else(|| "unknown".to_string(), |d| format!("{:.1} minutes", d.num_minutes() as f64))
+                eta_str
             );
         }
 
@@ -551,7 +563,10 @@ impl MigrationPipeline {
             .fetch_one(self.db_pool.as_ref())
             .await?;
 
-        report.total_documents = total_documents.unwrap_or(0) as usize;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        {
+            report.total_documents = total_documents.unwrap_or(0) as usize;
+        }
         report.validated_documents = report.total_documents; // Assume all are validated for now
 
         // TODO: Implement actual validation logic
@@ -600,7 +615,7 @@ mod tests {
         let tracker = ProgressTracker::new(100);
         tracker.increment(10);
 
-        let (processed, total, progress, _) = tracker.get_progress().await;
+        let (processed, total, progress, _) = tracker.get_progress();
         assert_eq!(processed, 10);
         assert_eq!(total, 100);
         assert_eq!(progress, 10.0);

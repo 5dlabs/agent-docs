@@ -6,6 +6,7 @@ use doc_server_database::{queries::DocumentQueries, DatabasePool};
 use doc_server_embeddings::OpenAIEmbeddingClient;
 use serde_json::{json, Value};
 use tracing::debug;
+use std::fmt::Write as _;
 
 /// Base trait for MCP tools
 #[async_trait]
@@ -74,7 +75,6 @@ impl RustQueryTool {
                 .and_then(|c| c.as_str())
                 .unwrap_or("unknown");
 
-            use std::fmt::Write as _;
             let _ = write!(
                 &mut response,
                 "{}. **{}** (from `{}`)\n{}...\n\n",

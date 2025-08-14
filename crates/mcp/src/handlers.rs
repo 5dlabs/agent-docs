@@ -43,9 +43,9 @@ impl McpHandler {
             .ok_or_else(|| anyhow!("Missing method in request"))?;
 
         match method {
-            "tools/list" => self.handle_tools_list(),
+            "tools/list" => Ok(self.handle_tools_list()),
             "tools/call" => self.handle_tool_call(&request).await,
-            "initialize" => self.handle_initialize(&request),
+            "initialize" => Ok(McpHandler::handle_initialize(&request)),
             _ => Err(anyhow!("Unsupported method: {}", method)),
         }
     }
