@@ -61,6 +61,42 @@ jobs:
       - name: Test suite
         run: cargo test --all-features
 
+  embeddings-live:
+    if: ${{ secrets.OPENAI_API_KEY != '' && secrets.DATABASE_URL != '' }}
+    needs: [test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: docs_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d docs_test" \
+          --health-interval 10s --health-timeout 5s --health-retries 12
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # Prefer provided secret; fallback to CI postgres service
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/docs_test' }}
+      RUST_LOG: info
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust (stable)
+        run: |
+          rustup default stable
+          rustup update stable
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+      - name: Run embeddings live tests only
+        run: |
+          cargo test -p doc-server-embeddings --test integration_tests -- --nocapture
+
   # Build step removed - using optimized Dockerfile with cargo-chef
   # that builds the binary internally for better caching and optimization
 
