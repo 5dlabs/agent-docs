@@ -197,11 +197,15 @@ impl EmbeddingBatch {
         }
 
         self.requests.push(request);
-        
+
         // Check if we should mark as ready
         if self.is_ready_for_processing() && self.status == BatchQueueStatus::Accepting {
             self.status = BatchQueueStatus::Ready;
-            debug!("Batch {} marked as ready with {} requests", self.id, self.requests.len());
+            debug!(
+                "Batch {} marked as ready with {} requests",
+                self.id,
+                self.requests.len()
+            );
         }
 
         Ok(())
@@ -241,7 +245,7 @@ impl EmbeddingBatch {
 
         for result_line in results {
             let request_id = result_line.custom_id;
-            
+
             match result_line.error {
                 Some(error) => {
                     // Handle error case
@@ -280,7 +284,9 @@ impl EmbeddingBatch {
         // Calculate cost information
         if total_tokens > 0 {
             self.cost_info = Some(CostInfo::calculate(
-                self.openai_batch_id.clone().unwrap_or_else(|| self.id.clone()),
+                self.openai_batch_id
+                    .clone()
+                    .unwrap_or_else(|| self.id.clone()),
                 total_tokens,
             ));
         }
@@ -323,9 +329,10 @@ impl EmbeddingBatch {
             failed_results,
             total_tokens,
             cost_info: self.cost_info.clone(),
-            processing_time: self
-                .completed_at
-                .and_then(|completed| self.submitted_at.map(|submitted| completed.duration_since(submitted))),
+            processing_time: self.completed_at.and_then(|completed| {
+                self.submitted_at
+                    .map(|submitted| completed.duration_since(submitted))
+            }),
         }
     }
 }
@@ -384,7 +391,13 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
 
         // Get or create current batch
         let batch_id = match current_batch_id.as_ref() {
-            Some(id) if batches.get(id).is_some_and(EmbeddingBatch::can_accept_requests) => id.clone(),
+            Some(id)
+                if batches
+                    .get(id)
+                    .is_some_and(EmbeddingBatch::can_accept_requests) =>
+            {
+                id.clone()
+            }
             _ => {
                 // Create new batch
                 let mut counter = self.batch_counter.lock().await;
@@ -399,11 +412,18 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
         // Add request to batch
         if let Some(batch) = batches.get_mut(&batch_id) {
             batch.add_request(request)?;
-            debug!("Added request to batch {}, size: {}", batch_id, batch.requests.len());
+            debug!(
+                "Added request to batch {}, size: {}",
+                batch_id,
+                batch.requests.len()
+            );
         }
 
         // Check if batch is ready and should be submitted
-        if batches.get(&batch_id).is_some_and(EmbeddingBatch::is_ready_for_processing) {
+        if batches
+            .get(&batch_id)
+            .is_some_and(EmbeddingBatch::is_ready_for_processing)
+        {
             *current_batch_id = None; // Force new batch for next request
         }
 
@@ -427,14 +447,20 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
 
         for batch_id in ready_batch_ids {
             if let Some(batch) = batches.get_mut(&batch_id) {
-                if batch.status == BatchQueueStatus::Ready || batch.status == BatchQueueStatus::Accepting {
+                if batch.status == BatchQueueStatus::Ready
+                    || batch.status == BatchQueueStatus::Accepting
+                {
                     batch.status = BatchQueueStatus::Ready;
-                    
+
                     // Generate JSONL content and submit
                     let jsonl_content = batch.generate_jsonl_content();
                     let filename = format!("{batch_id}.jsonl");
 
-                    match self.client.upload_batch_file(&jsonl_content, &filename).await {
+                    match self
+                        .client
+                        .upload_batch_file(&jsonl_content, &filename)
+                        .await
+                    {
                         Ok(upload_response) => {
                             match self.client.create_batch(&upload_response.id).await {
                                 Ok(batch_response) => {
@@ -472,8 +498,13 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
         let active_batches: Vec<(String, String)> = batches
             .values()
             .filter_map(|b| {
-                if matches!(b.status, BatchQueueStatus::Submitted | BatchQueueStatus::Processing) {
-                    b.openai_batch_id.as_ref().map(|oid| (b.id.clone(), oid.clone()))
+                if matches!(
+                    b.status,
+                    BatchQueueStatus::Submitted | BatchQueueStatus::Processing
+                ) {
+                    b.openai_batch_id
+                        .as_ref()
+                        .map(|oid| (b.id.clone(), oid.clone()))
                 } else {
                     None
                 }
@@ -488,7 +519,10 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
                         batch.update_from_openai_response(&response);
 
                         if batch.status != old_status {
-                            debug!("Batch {} status changed: {:?} -> {:?}", batch_id, old_status, batch.status);
+                            debug!(
+                                "Batch {} status changed: {:?} -> {:?}",
+                                batch_id, old_status, batch.status
+                            );
                         }
 
                         // Download results if completed
@@ -503,7 +537,9 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
                                         }
                                     }
                                     Err(e) => {
-                                        error!("Failed to download results for batch {batch_id}: {e}");
+                                        error!(
+                                            "Failed to download results for batch {batch_id}: {e}"
+                                        );
                                     }
                                 }
                             }
@@ -526,7 +562,12 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
 
     /// Get all batch statistics
     pub async fn get_all_stats(&self) -> Vec<BatchStats> {
-        self.batches.lock().await.values().map(EmbeddingBatch::get_stats).collect()
+        self.batches
+            .lock()
+            .await
+            .values()
+            .map(EmbeddingBatch::get_stats)
+            .collect()
     }
 
     /// Clean up old completed batches
@@ -537,13 +578,15 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
     pub async fn cleanup_old_batches(&self, max_age: Duration) -> Result<usize> {
         let mut batches = self.batches.lock().await;
         let cutoff_time = Instant::now() - max_age;
-        
+
         let old_batch_ids: Vec<String> = batches
             .values()
             .filter(|b| {
                 matches!(
                     b.status,
-                    BatchQueueStatus::Completed | BatchQueueStatus::Failed | BatchQueueStatus::Cancelled
+                    BatchQueueStatus::Completed
+                        | BatchQueueStatus::Failed
+                        | BatchQueueStatus::Cancelled
                 ) && b.created_at < cutoff_time
             })
             .map(|b| b.id.clone())
@@ -572,7 +615,7 @@ impl<T: EmbeddingClient + Send + Sync> BatchProcessor<T> {
                     batch.status = BatchQueueStatus::Ready;
                     drop(batches);
                     drop(current_batch_id);
-                    
+
                     self.submit_ready_batches().await?;
                     return Ok(Some(batch_id));
                 }
