@@ -85,6 +85,11 @@ pub struct SessionState {
 - CI gate: Push to the feature branch and monitor GitHub Actions until all jobs are green and deployment completes successfully.
 - PR creation: Only open the pull request after CI is green and the deployment stage has succeeded.
 
+### Non-Negotiable Quality Gates (Blocking)
+- Formatting must pass: `cargo fmt --all -- --check` must succeed locally and in CI. If formatting fails, fix formatting and re-run; no PRs may be opened/merged until this passes.
+- Clippy must pass: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` must succeed locally and in CI. Do not add new `#[allow(...)]` without explicit review/approval.
+- CI must gate deployment on both gates; any failure blocks deployment and PR creation.
+
 ## Detailed Requirements to Meet Acceptance Criteria
 
 1) Protocol Version Enforcement
