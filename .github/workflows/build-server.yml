@@ -95,7 +95,7 @@ jobs:
 
   build-and-push-image:
     needs: [version, build-binary]
-    runs-on: ubuntu-latest
+    runs-on: k8s-runner
     permissions:
       contents: read
       packages: write
