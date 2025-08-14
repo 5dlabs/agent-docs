@@ -6,6 +6,7 @@
 pub mod handlers;
 pub mod headers;
 pub mod health;
+pub mod metrics;
 pub mod protocol_version;
 pub mod security;
 pub mod server;

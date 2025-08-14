@@ -1,43 +1,83 @@
-# Task ID: 5
-# Title: Protocol Version (Fixed 2025-06-18) and Headers
+# Task ID: 6
+# Title: Streamable HTTP Response Enhancement (JSON-only MVP)
 # Status: pending
-# Dependencies: 2
+# Dependencies: 3
 # Priority: medium
-# Description: Implement strict MCP protocol header handling for single supported version 2025-06-18 and header compliance. Drop negotiation and legacy support for MVP.
+# Description: Implement enhancements to the MCP 2025-06-18 Streamable HTTP transport focusing on JSON-only POST responses for MVP. Ensure correct headers, error mapping, and logging. Streaming (SSE) is out of scope.
 # Details:
-Add MCP-Protocol-Version header parsing and validation. Support only protocol version 2025-06-18. Return HTTP 400 for unsupported protocol versions. Implement proper Content-Type headers in responses. Store fixed protocol version in session state for subsequent requests.
+1. Unified Endpoint Behavior
+   • Ensure `/mcp` POST returns JSON body with required headers.
+   • Ensure non-POST (e.g., GET) returns 405 Method Not Allowed.
+
+2. Headers
+   • Include `MCP-Protocol-Version: 2025-06-18` and `Mcp-Session-Id` in responses.
+
+3. Error Model
+   • Map transport-layer failures to HTTP codes (400, 401, 403, 404, 405, 413, 429, 500).
+   • JSON-RPC 2.0 compliant error objects for application errors.
+
+4. Logging
+   • Structured logs include request id, session id, protocol version.
+
+5. Configuration Surface (MVP)
+   • None required beyond existing server configuration.
+
+6. Tracing & Metrics
+   • Basic counters for requests and errors.
+
+NOTE: Do not re-implement routing or generic JSON-RPC parsing—build on the foundation delivered in Task 2. Streaming is out of scope for MVP.
 
 # Test Strategy:
-Validate header presence and format, verify proper error responses for invalid versions, and ensure fixed version echoed consistently.
+1. Functional
+   • Issue POST requests with Accept: application/json and verify the server returns a normal JSON body with required headers.
+   • Issue GET to `/mcp` and verify 405.
+
+2. Headers
+   • Verify required headers present in responses.
+
+3. Error Handling
+   • Validate correct HTTP status codes and JSON-RPC error objects.
+
+4. Compatibility
+   • Confirm behaviour remains stable for clients that advertise only application/json.
+
+5. Concurrency & Isolation
+   • Mix various POST requests; ensure no cross-talk between sessions.
 
 # Subtasks:
-## 1. Create Protocol Header Utilities [pending]
+## 1. Ensure POST-only handling and response headers [pending]
 ### Dependencies: None
-### Description: Implement constants and simple validators for MCP protocol version (fixed 2025-06-18).
+### Description: 
 ### Details:
-Create a new module protocol_version.rs in crates/mcp/src/. Define a ProtocolVersion enum with variants for each supported version (V2025_06_18, V2025_03_26, V2024_11_05). Implement FromStr trait for parsing version strings from headers. Add version comparison methods for determining compatibility. Create a ProtocolRegistry struct to manage supported versions with methods for checking if a version is supported, finding the best matching version, and determining fallback versions. Include constants for current, fallback, and legacy protocol versions. Add comprehensive error types for version-related failures.
 
-## 2. Implement HTTP Header Extraction and Validation [pending]
-### Dependencies: 4.1
-### Description: Create header extraction middleware for parsing and validating MCP-Protocol-Version and Accept headers from incoming HTTP requests using Axum extractors.
-### Details:
-Create headers.rs module with custom Axum extractors. Implement McpProtocolVersionHeader extractor using TypedHeader or custom FromRequestParts implementation validating only `2025-06-18`. Create ContentTypeValidator to ensure proper Content-Type headers in responses. Implement header validation logic that returns HTTP 400 Bad Request for invalid or missing required headers. Add header constants and helper functions for header manipulation. Integrate with tracing for logging header processing.
 
-## 3. Set Fixed Version in Initialize Handler [pending]
-### Dependencies: 4.1, 4.2
-### Description: Ensure initialize handler includes fixed `protocolVersion: "2025-06-18"` and stores it in session state.
+## 2. Implement header helpers and error mapping [pending]
+### Dependencies: None
+### Description: 
 ### Details:
-Modify handle_initialize to set fixed protocol version in response and session state. Validate header if provided and return 400 if not `2025-06-18`.
 
-## 4. Implement Session State Management with Protocol Version [pending]
-### Dependencies: 4.3
-### Description: Create session state management that stores fixed protocol version and enforces version consistency across subsequent requests.
-### Details:
-Create session.rs module with SessionState struct containing negotiated_version field and session metadata. Implement SessionStore using Arc<RwLock<HashMap>> for thread-safe session storage keyed by session ID. Add session creation during initialization with generated UUID session ID. Implement session retrieval and validation for subsequent requests. Add session expiry mechanism with configurable TTL. Create middleware to extract session ID from Mcp-Session-Id header and attach session state to request context. Ensure all handlers have access to session state for version-aware processing.
 
-## 5. Add Response Header Management [pending]
-### Dependencies: 4.2, 4.4
-### Description: Implement response header management to ensure proper Content-Type headers and required MCP headers (fixed protocol version).
+## 3. Add basic logging for request/session/version [pending]
+### Dependencies: None
+### Description: 
 ### Details:
-Create response.rs module with ResponseBuilder that adds appropriate headers based on request context. Implement Content-Type header setting for application/json responses. Add Mcp-Session-Id header to responses during initialization. Implement middleware to automatically add required headers to all responses. Ensure CORS headers are properly maintained alongside MCP-specific headers.
+
+
+## 4. Add tests for 405 on GET and header presence [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 5. Add simple counters for requests/errors [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
+
+## 6. Write integration tests for POST-only and error paths [pending]
+### Dependencies: None
+### Description: 
+### Details:
+
 
