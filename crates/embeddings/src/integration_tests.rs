@@ -224,10 +224,11 @@ mod tests {
         Ok(())
     }
 
+    use crate::models::CostInfo;
+
     #[tokio::test]
     async fn test_cost_calculation_accuracy() -> Result<()> {
         init_tracing();
-        use crate::models::CostInfo;
 
         // Test cost calculation logic
         let batch_id = "test-batch-001".to_string();
