@@ -4,18 +4,20 @@
 Optimize PostgreSQL database schema and implement comprehensive migration system for production deployment.
 
 ## Primary Objectives
-1. **Migration System**: Create versioned database migration framework
+1. **Migration System**: Integrate a versioned migration manager at startup (register/validate/apply/record)
 2. **Schema Optimization**: Optimize tables and indexes for vector search
 3. **Connection Pooling**: Configure optimal connection management
 4. **Performance Tuning**: Optimize queries and database configuration
 5. **Monitoring Integration**: Add database health monitoring
 
 ## Implementation Steps
-1. Create migration framework with version control
-2. Analyze and optimize existing schema
-3. Add performance indexes and constraints  
-4. Configure connection pooling
-5. Implement database monitoring
+1. Replace ad-hoc `Migrations::run` with `DatabaseMigrationManager` pipeline (register, validate, apply, record)
+2. Define migration IDs/checksums/dependencies; validate pending set; transactional apply; history recording
+3. Live-DB safety: backup, staging dry-run, zero-downtime strategy, post-verification checklist
+4. Align K8s migration Job `command` with actual binary produced by this repo
+5. Schema: add non-vector indexes, FKs, evaluate partitioning; define archival policy and DDL
+6. Performance: measure p95 latencies (<2s) and tune pool/indexes with EXPLAIN
+7. Monitoring: structured logs + simple status endpoint/CLI
 
 ## Success Criteria
 - [ ] Migration system with rollback capability

@@ -54,6 +54,13 @@ Transform the existing Dockerfile to achieve production-ready container images w
 - Add scanning to CI/CD pipeline with failure conditions
 - Document security scanning process and remediation procedures
 
+### Step 6: CI/CD Workflow (Build → Scan → Deploy)
+- Jobs:
+  - `lint-test`: run fmt/clippy/tests with pedantic gating
+  - `build-image`: build with `Dockerfile.optimized` and cargo-chef; push to GHCR
+  - `scan-image`: run Trivy via `scripts/scan_image.sh` (publish SARIF + SBOM); gate on zero HIGH/CRITICAL
+  - `helm-deploy`: upgrade/install using Task 13 chart with environment values; wait for rollout
+
 ## Required Outputs
 
 Generate these optimization artifacts:
@@ -71,6 +78,7 @@ Generate these optimization artifacts:
 3. **Performance**: Startup time < 5 seconds
 4. **Reliability**: Graceful shutdown within 30 seconds
 5. **Compliance**: SBOM generation and vulnerability tracking
+6. **CI Evidence**: Record image size and build timings; demonstrate cargo-chef cache benefit (80%+ on code-only changes)
 
 ## Dockerfile Structure Requirements
 

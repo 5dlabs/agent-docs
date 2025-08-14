@@ -34,3 +34,38 @@ Create and optimize Helm charts for production Kubernetes deployment with proper
 - Branching: Implement on a feature branch (e.g., `feature/<task-id>-<short-name>`).
 - CI gate: Push to the feature branch and monitor GitHub Actions until all jobs are green and deployment completes successfully.
 - PR creation: Only open the pull request after CI is green and the deployment stage has succeeded.
+
+## Detailed Requirements to Meet Acceptance Criteria
+
+1) Chart Structure
+- Required files:
+  - `Chart.yaml`, `values.yaml`
+  - `templates/deployment.yaml`, `templates/service.yaml`, `templates/ingress.yaml`
+  - `templates/configmap.yaml`, `templates/secret.yaml` (or ExternalSecret if applicable)
+  - `templates/pdb.yaml`, `templates/hpa.yaml`, `templates/serviceaccount.yaml`, `templates/networkpolicy.yaml` (optional but recommended)
+
+2) values.yaml Contents
+- Image repo/tag, pullPolicy; resources (requests/limits) within guidelines.
+- Environment:
+  - `DATABASE_URL`, `VECTOR_DATABASE_URL` (if used), `OPENAI_API_KEY` (Secret), `DOC_SERVER_CONFIG_PATH`, `PORT`, `RUST_LOG`.
+- Probes: http GET `/_/health` or equivalent; readiness/liveness with appropriate thresholds.
+- SecurityContext: runAsNonRoot, readOnlyRootFilesystem, fsGroup if needed (for non-distroless variants).
+- HPA policy: target CPU/Memory utilization, min/max replicas.
+- PDB minAvailable or maxUnavailable to ensure HA.
+
+3) Deployment Manifests
+- Use non-root user, readOnlyRootFilesystem when possible; mount config as `ConfigMap` and secrets via `Secret` or External Secrets.
+- Set probes to match server health endpoint and port.
+- Enable topology spread or anti-affinity for HA.
+
+4) Network and Security
+- `NetworkPolicy` limiting ingress to expected namespaces/selectors.
+- Optional `PodSecurity`/`PSa` alignment per cluster policy.
+
+5) Documentation
+- `README` with installation, required values, and example overrides.
+- Example `values.override.yaml` for production and staging.
+
+6) CI/CD Hooks
+- Workflow steps to package/chart-lint (e.g., `helm lint`), render templates (`helm template`), and deploy with selected context/environment.
+

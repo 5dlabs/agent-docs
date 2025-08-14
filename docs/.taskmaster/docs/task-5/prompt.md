@@ -25,9 +25,11 @@ Building on the Streamable HTTP transport and session management from Tasks 2-3,
 
 ### Step 2: Header Extraction and Validation
 1. Create `crates/mcp/src/headers.rs` with Axum extractors
-2. Implement MCP-Protocol-Version header extraction
-3. Add Accept header validation for content types
-4. Create header validation middleware
+2. Implement MCP-Protocol-Version header extraction (reject all but `2025-06-18` with HTTP 400)
+3. Add Accept header validation: if present and incompatible with route (e.g., POST requires `application/json`), return HTTP 406
+4. Validate Content-Type: POST requires `application/json` (415 if unsupported)
+5. Always set `MCP-Protocol-Version` on all responses; include `Mcp-Session-Id` where applicable
+6. Create header validation middleware/extractors with structured error bodies
 
 ### Step 3: Initialize Handler
 1. Ensure `handle_initialize` sets `protocolVersion: "2025-06-18"` in the result
@@ -55,7 +57,7 @@ Building on the Streamable HTTP transport and session management from Tasks 2-3,
 
 ### Functional Requirements
 - [ ] Fixed protocol version validation (2025-06-18)
-- [ ] Header extraction and validation
+- [ ] Header extraction and validation (protocol, Accept, Content-Type)
 - [ ] Session state with protocol version tracking (fixed)
 - [ ] Response headers set consistently
 
@@ -70,6 +72,11 @@ Building on the Streamable HTTP transport and session management from Tasks 2-3,
 1. **Header Validation Tests**: Verify proper header parsing and validation
 2. **Session Integration Tests**: Test fixed version consistency across requests
 3. **Error Handling Tests**: Validate responses for unsupported versions
+4. **Accept/Content-Type Tests**: 406 on unacceptable Accept; 415/400 on bad/missing Content-Type for POST
+
+## SDK Usage Policy (Spec Compliance)
+- Prefer self-contained implementation over SDKs unless guarded by spec-compliance tests for MCP 2025-06-18.
+- Mirror prior practice from Talos MCP where protocol behavior was implemented directly against the spec.
 
 ## Expected Deliverables
 

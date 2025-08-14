@@ -84,3 +84,43 @@ pub struct SessionState {
 - Branching: Implement on a feature branch (e.g., `feature/<task-id>-<short-name>`).
 - CI gate: Push to the feature branch and monitor GitHub Actions until all jobs are green and deployment completes successfully.
 - PR creation: Only open the pull request after CI is green and the deployment stage has succeeded.
+
+## Detailed Requirements to Meet Acceptance Criteria
+
+1) Protocol Version Enforcement
+- Reject all requests lacking `MCP-Protocol-Version` or with any value other than `2025-06-18` with HTTP 400 and a structured JSON error body.
+- Echo `MCP-Protocol-Version: 2025-06-18` on every response (success and error).
+
+2) Header Validation (Requests)
+- Content negotiation:
+  - Validate `Content-Type` is either `application/json` (POST JSON-RPC) or `text/event-stream` (SSE, reserved for future). Return 415 for unsupported types.
+  - Validate `Accept` header when present: must include at least one of `application/json` (POST) or `text/event-stream` (SSE). Return 406 for unacceptable `Accept` values. For MVP, enforce `application/json` on POST.
+- Provide dedicated extractor/types for protocol version, `Content-Type`, and `Accept` with clear error variants and IntoResponse implementations.
+
+3) Initialize Response and Session
+- `initialize` response must include `protocolVersion: "2025-06-18"`.
+- Create a session on first valid request and return `Mcp-Session-Id` (UUID v4) in the response headers.
+- Require `Mcp-Session-Id` on subsequent requests and maintain version consistency in the stored session record.
+- Session TTL: default 30 minutes with background cleanup; refreshing on activity.
+
+4) Response Header Management (All Responses)
+- Always include `MCP-Protocol-Version`.
+- Include `Mcp-Session-Id` when a session was created/found.
+- Set `Content-Type` appropriately (`application/json` for JSON responses).
+- Preserve CORS compatibility via `CorsLayer`.
+
+5) Security Hooks
+- Before business logic, run Origin and DNS-rebinding validations for DELETE/POST paths as implemented in security module.
+
+6) Tests (Unit + Integration)
+- Unit tests for header extractors (valid/invalid/missing) and error response formatting.
+- Integration tests verifying:
+  - 400 on missing or wrong `MCP-Protocol-Version`.
+  - 415 on wrong `Content-Type` and 400 on missing `Content-Type` for POST.
+  - 406 when `Accept` is present but incompatible (add at least one test case).
+  - 200 for valid POST with required headers; response contains both `MCP-Protocol-Version` and `Mcp-Session-Id`.
+  - 405 for GET `/mcp` (MVP: SSE not yet implemented).
+
+7) SDK/Crate Usage Policy (Spec Compliance)
+- Do not rely on external MCP SDK crates for protocol semantics unless covered by tests verifying the 2025-06-18 spec. Current implementation should remain self-contained (extractors, transport, handler) to avoid drift.
+- If external crates are used transitively, guard with integration tests that assert the wire behavior matches the spec (headers, error codes, fields).

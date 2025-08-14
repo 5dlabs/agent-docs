@@ -43,3 +43,36 @@ Optimize PostgreSQL database schema and implement migration system for productio
 - Branching: Implement on a feature branch (e.g., `feature/<task-id>-<short-name>`).
 - CI gate: Push to the feature branch and monitor GitHub Actions until all jobs are green and deployment completes successfully.
 - PR creation: Only open the pull request after CI is green and the deployment stage has succeeded.
+
+## Detailed Requirements to Meet Acceptance Criteria
+
+1) Versioned Migration Manager Integration
+- Replace ad-hoc startup call `Migrations::run` with `DatabaseMigrationManager` pipeline:
+  - Register migrations with IDs, checksums, dependencies.
+  - On startup: validate schema state, compute pending set, apply with transactions, record history.
+  - Expose status and history endpoints or CLI to view progress.
+
+2) Safety Playbook (Live DB)
+- Pre-flight tasks: snapshot/backup, staging dry-run from fresh prod snapshot; document commands and storage locations.
+- Execution strategy: additive schema changes, backfill tables/columns in batches, optional dual-write if needed; clear rollback plan (prefer roll-forward).
+- Post-flight: integrity checks, query smoke tests, and performance validation; roll-forward remediation guide.
+
+3) Schema Optimization
+- Non-vector indexes: confirm/selectivity-driven indexes on `documents(doc_type, source_name)`, and filters used by hottest queries; add partial indexes as needed.
+- Foreign keys: define FK from `documents.source_name` to `document_sources.source_name` (or surrogate IDs) where applicable.
+- Partitioning: evaluate time-based partitioning on `documents.created_at` for large datasets; document strategy and implement DDL if warranted.
+- Archival: define archival policy for old `documents`; create archival table and migration for moving aged data.
+
+4) Performance Objectives
+- Measure/record key query latencies and pool utilization before/after migration; target < 2s for read paths.
+- Tune pool (`min/max`, lifetime, idle), statement timeouts, and add missing indexes informed by `EXPLAIN ANALYZE`.
+
+5) Tooling Alignment
+- Update `k8s/migration-job.yaml` to invoke the correct migration binary:
+  - If using `crates/doc-loader/src/bin/migrate.rs`, build/publish image with `migrate` binary path and change the Job `command` accordingly.
+  - Or add a dedicated `doc-server-migrate` binary target and ensure the Job points to it.
+
+6) Observability
+- Emit structured logs during each migration step; summarize applied count, timing, and failures.
+- Optionally add a simple `migration_status` HTTP endpoint or CLI subcommand to query migration state/history.
+
