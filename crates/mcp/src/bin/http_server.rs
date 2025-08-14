@@ -417,7 +417,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
             DROP TABLE documents;
             ALTER TABLE documents_temp RENAME TO documents;
         "
-                .to_string(),
+            .to_string(),
         ),
         dependencies: vec!["006_foreign_keys".to_string()],
         checksum: calculate_checksum(partitioning_sql),

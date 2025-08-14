@@ -296,7 +296,8 @@ impl QueryPerformanceMonitor {
                 let row_count = value.row_count();
                 let metrics = QueryPerformanceMetrics {
                     query_name: query_name.to_string(),
-                    execution_time_ms: u64::try_from(execution_time.as_millis()).unwrap_or(u64::MAX),
+                    execution_time_ms: u64::try_from(execution_time.as_millis())
+                        .unwrap_or(u64::MAX),
                     rows_returned: row_count,
                     timestamp: chrono::Utc::now(),
                 };
@@ -319,7 +320,8 @@ impl QueryPerformanceMonitor {
             Err(e) => {
                 let metrics = QueryPerformanceMetrics {
                     query_name: query_name.to_string(),
-                    execution_time_ms: u64::try_from(execution_time.as_millis()).unwrap_or(u64::MAX),
+                    execution_time_ms: u64::try_from(execution_time.as_millis())
+                        .unwrap_or(u64::MAX),
                     rows_returned: 0, // No rows returned on error
                     timestamp: chrono::Utc::now(),
                 };
