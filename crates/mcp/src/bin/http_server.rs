@@ -1,6 +1,6 @@
 //! HTTP server binary for the Doc Server
 //!
-//! This binary provides the main HTTP/SSE endpoint for MCP communication.
+//! This binary provides the main HTTP endpoint for MCP communication (JSON-only; SSE disabled).
 
 use anyhow::Result;
 use doc_server_database::{
@@ -48,10 +48,12 @@ async fn main() -> Result<()> {
 
     // Get configuration from environment
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    // Prefer PORT, then MCP_PORT, default to 3001 to align with container defaults
     let port = env::var("PORT")
-        .unwrap_or_else(|_| "3000".to_string())
+        .or_else(|_| env::var("MCP_PORT"))
+        .unwrap_or_else(|_| "3001".to_string())
         .parse::<u16>()
-        .expect("PORT must be a valid number");
+        .expect("PORT/MCP_PORT must be a valid number");
 
     // Initialize database
     let db_pool = DatabasePool::new(&database_url).await?;
@@ -123,7 +125,9 @@ async fn main() -> Result<()> {
     let mcp_server = McpServer::new(db_pool).await?;
 
     // Start HTTP server with graceful shutdown
-    let addr = format!("0.0.0.0:{port}");
+    // Allow host override via MCP_HOST; default to all interfaces
+    let host = env::var("MCP_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let addr = format!("{host}:{port}");
     info!("Doc Server listening on {}", addr);
 
     run_server_with_graceful_shutdown(mcp_server, &addr).await?;

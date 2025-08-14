@@ -1,6 +1,6 @@
-//! Integration tests for OpenAI Batch API
+//! Integration tests for `OpenAI` Batch API
 //!
-//! These tests require live OpenAI API keys and database connections.
+//! These tests require live `OpenAI` API keys and database connections.
 //! They are designed to test the full end-to-end batch processing workflow
 //! with real API calls and actual cost savings validation.
 
@@ -77,7 +77,7 @@ mod tests {
         // Add requests to batch processor
         for (i, text) in test_texts.iter().enumerate() {
             let request =
-                EmbeddingBatchRequest::new(format!("test-request-{}", i), text.to_string());
+                EmbeddingBatchRequest::new(format!("test-request-{i}"), (*text).to_string());
             let batch_id = processor.add_request(request).await?;
             batch_ids.push(batch_id);
         }
@@ -175,7 +175,7 @@ mod tests {
         for i in 0..5 {
             let client_clone = OpenAIEmbeddingClient::new()?;
             let handle = tokio::spawn(async move {
-                let text = format!("Rate limiting test request number {}", i);
+                let text = format!("Rate limiting test request number {i}");
                 client_clone.embed(&text).await
             });
             handles.push(handle);
@@ -227,7 +227,6 @@ mod tests {
     #[tokio::test]
     async fn test_cost_calculation_accuracy() -> Result<()> {
         init_tracing();
-
         use crate::models::CostInfo;
 
         // Test cost calculation logic
@@ -258,7 +257,7 @@ mod tests {
         assert!((cost_info.savings_percentage - expected_savings_percentage).abs() < 1e-10);
 
         // Verify 50% savings
-        assert_eq!(cost_info.savings_percentage, 50.0);
+        assert!((cost_info.savings_percentage - 50.0).abs() < f64::EPSILON);
 
         Ok(())
     }
@@ -313,8 +312,8 @@ mod tests {
         // Add many requests quickly (simulate load)
         for i in 0..1000 {
             let request = EmbeddingBatchRequest::new(
-                format!("perf-test-{}", i),
-                format!("Performance test request number {}", i),
+                format!("perf-test-{i}"),
+                format!("Performance test request number {i}"),
             );
             processor.add_request(request).await?;
         }
