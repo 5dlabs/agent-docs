@@ -1,0 +1,48 @@
+# Task ID: 3
+# Title: Session Management and Security Implementation
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Implement robust session management with Mcp-Session-Id headers and basic security measures suitable for MVP (local-only), including optional Origin header validation and localhost binding.
+# Details:
+Generate cryptographically secure session IDs using UUID v4 with proper entropy. Implement Mcp-Session-Id header handling in both requests and responses. Add session storage using in-memory HashMap with TTL support (consider Redis for production scaling). Ensure localhost binding (127.0.0.1) for local deployments. Optionally validate Origin headers. Implement session expiry with HTTP 404 responses. Add DELETE endpoint support for explicit session termination. Use chrono for timestamp management and uuid crate for ID generation.
+
+# Test Strategy:
+Test session creation during initialization, header propagation across requests, session expiry and cleanup, localhost binding, concurrent session handling (~20 sessions), and proper error responses for invalid sessions. Ensure code quality gates pass: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features`.
+
+# Subtasks:
+## 1. Create Session Module and Data Structures [pending]
+### Dependencies: None
+### Description: Implement a dedicated session management module with secure UUID v4 generation and session data structures including TTL support
+### Details:
+Create a new `session.rs` module in `/crates/mcp/src/` that defines the Session struct with fields for session_id (UUID v4), created_at (DateTime<Utc>), last_accessed (DateTime<Utc>), ttl (Duration), and associated client data. Implement session ID generation using the uuid crate with proper v4 entropy. Create a SessionManager struct that wraps a thread-safe HashMap (Arc<RwLock<HashMap<String, Session>>>) for in-memory storage. Add methods for create_session(), get_session(), update_last_accessed(), and cleanup_expired_sessions(). Include a comment noting Redis as a future production scaling option.
+
+## 2. Implement Basic Security Validation Layer [pending]
+### Dependencies: None
+### Description: Add localhost binding enforcement for local deployments; optionally validate Origin header
+### Details:
+Create a `security.rs` module in `/crates/mcp/src/` implementing middleware for optional Origin header validation. Define allowed origins configuration (defaulting to localhost variants). Add localhost binding validation in http_server.rs to ensure server binds to 127.0.0.1 instead of 0.0.0.0 for local deployments. Create security configuration struct with options to enable/disable origin checks.
+
+## 3. Add Mcp-Session-Id Header Handling [pending]
+### Dependencies: 3.1, 3.2
+### Description: Implement bidirectional Mcp-Session-Id header processing in HTTP requests and responses following MCP specification
+### Details:
+Modify transport and request handlers to extract Mcp-Session-Id from request headers and validate session existence. Update mcp handler to check for session headers and attach to response. Implement session propagation through the request lifecycle using Axum's State and Extension mechanisms. Add header injection in all HTTP responses. Handle missing session scenarios by creating new sessions during initialization. Ensure proper header casing (Mcp-Session-Id) per MCP spec.
+
+## 4. Implement Session Lifecycle Management [pending]
+### Dependencies: 3.1, 3.3
+### Description: Add session expiry handling with HTTP 404 responses and DELETE endpoint for explicit session termination
+### Details:
+Implement background task using tokio::spawn for periodic session cleanup based on TTL. Add session expiry check middleware that returns HTTP 404 for expired sessions before processing requests. Create DELETE /session/{id} endpoint in server.rs for explicit session termination. Implement graceful cleanup of associated resources when sessions expire or are deleted. Add session renewal logic on valid requests to update last_accessed timestamp. Configure default TTL (30 minutes) with environment variable override option.
+
+## 5. Integration Testing [pending]
+### Dependencies: 3.1, 3.2, 3.3, 3.4
+### Description: Integration testing of session management with basic security
+### Details:
+Create integration tests in `/crates/mcp/tests/session_integration_tests.rs` covering full session lifecycle from creation to expiry. Test localhost binding and optional Origin validation. Benchmark concurrent session handling with ~20 simultaneous sessions. Validate proper error responses and status codes for edge cases. Include CI enforcement: run on feature branch push, require GitHub Actions to be green and deployment to succeed before creating a PR.
+
+# CI/CD and Quality Gates:
+# - After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings
+# - Before pushing, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass
+# - Work on a feature branch (e.g., feature/task-4-session-security) and push; monitor GitHub Actions until green and deployment successful; only then open a PR
+

@@ -20,7 +20,9 @@ use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 use crate::headers::{set_standard_headers, validate_protocol_version, MCP_SESSION_ID};
+use crate::security::{add_security_headers, validate_dns_rebinding, validate_origin};
 use crate::server::McpServerState;
+use crate::session::ClientInfo;
 
 /// Transport configuration
 #[derive(Clone, Debug)]
@@ -256,6 +258,9 @@ pub enum TransportError {
 
     #[error("Internal server error: {0}")]
     InternalError(String),
+
+    #[error("Security validation failed: {0}")]
+    SecurityValidationFailed(String),
 }
 
 impl IntoResponse for TransportError {
@@ -280,6 +285,9 @@ impl IntoResponse for TransportError {
             TransportError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
             TransportError::InternalError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
+            }
+            TransportError::SecurityValidationFailed(_) => {
+                (StatusCode::FORBIDDEN, "Security Validation Failed")
             }
         };
 
@@ -340,6 +348,7 @@ pub async fn unified_mcp_handler(
 
     match *request.method() {
         Method::POST => handle_json_rpc_request(state, headers, request).await,
+        Method::DELETE => handle_delete_session_request(&state, &headers),
         Method::GET => {
             // MVP: Return 405 for GET requests (SSE not implemented yet)
             warn!("GET request to /mcp endpoint - returning 405 Method Not Allowed");
@@ -352,6 +361,127 @@ pub async fn unified_mcp_handler(
     }
 }
 
+/// Extract client information from request headers
+fn extract_client_info(headers: &HeaderMap) -> ClientInfo {
+    ClientInfo {
+        user_agent: headers
+            .get("user-agent")
+            .and_then(|v| v.to_str().ok())
+            .map(String::from),
+        origin: headers
+            .get("origin")
+            .and_then(|v| v.to_str().ok())
+            .map(String::from),
+        ip_address: None, // IP address would come from connection info if needed
+    }
+}
+
+/// Get or create session using the comprehensive session manager
+///
+/// # Errors
+///
+/// Returns `TransportError` if session operations fail.
+fn get_or_create_comprehensive_session(
+    state: &McpServerState,
+    headers: &HeaderMap,
+    client_info: Option<ClientInfo>,
+) -> Result<Uuid, TransportError> {
+    // Try to extract session ID from headers
+    if let Some(session_header) = headers.get(MCP_SESSION_ID) {
+        if let Ok(session_str) = session_header.to_str() {
+            if let Ok(session_id) = Uuid::parse_str(session_str) {
+                // Check if session exists in comprehensive session manager
+                if let Ok(session) = state.comprehensive_session_manager.get_session(session_id) {
+                    if session.is_expired() {
+                        debug!("Comprehensive session expired: {}", session_id);
+                    } else {
+                        // Update session activity
+                        let _ = state
+                            .comprehensive_session_manager
+                            .update_last_accessed(session_id);
+                        debug!("Using existing comprehensive session: {}", session_id);
+                        return Ok(session_id);
+                    }
+                }
+            }
+        }
+    }
+
+    // Create new session if none found or existing is invalid
+    let session_id = state
+        .comprehensive_session_manager
+        .create_session(client_info)
+        .map_err(|e| TransportError::InternalError(format!("Session creation failed: {e}")))?;
+
+    debug!("Created new comprehensive session: {}", session_id);
+    Ok(session_id)
+}
+
+/// Handle DELETE requests for explicit session termination
+fn handle_delete_session_request(
+    state: &McpServerState,
+    headers: &HeaderMap,
+) -> Result<Response, TransportError> {
+    debug!("Processing DELETE session request");
+
+    // Security validation first
+    if let Err(e) = validate_origin(headers, &state.security_config) {
+        error!("Origin validation failed for DELETE: {}", e);
+        return Err(TransportError::SecurityValidationFailed(e.to_string()));
+    }
+
+    if let Err(e) = validate_dns_rebinding(headers, &state.security_config) {
+        error!("DNS rebinding validation failed for DELETE: {}", e);
+        return Err(TransportError::SecurityValidationFailed(e.to_string()));
+    }
+
+    // Extract session ID from headers
+    if let Some(session_header) = headers.get(MCP_SESSION_ID) {
+        if let Ok(session_str) = session_header.to_str() {
+            if let Ok(session_id) = Uuid::parse_str(session_str) {
+                // Attempt to delete the session
+                if state
+                    .comprehensive_session_manager
+                    .delete_session(session_id)
+                    .is_ok()
+                {
+                    debug!("Successfully deleted session: {}", session_id);
+
+                    // Create response with proper headers
+                    let mut response_headers = HeaderMap::new();
+                    add_security_headers(&mut response_headers);
+
+                    Ok((StatusCode::NO_CONTENT, response_headers, "").into_response())
+                } else {
+                    debug!("Session not found for deletion: {}", session_id);
+
+                    // Return 404 for non-existent sessions
+                    let mut response_headers = HeaderMap::new();
+                    add_security_headers(&mut response_headers);
+
+                    Ok((StatusCode::NOT_FOUND, response_headers, "").into_response())
+                }
+            } else {
+                warn!(
+                    "Invalid session ID format in DELETE request: {}",
+                    session_str
+                );
+                Err(TransportError::InvalidSessionId(session_str.to_string()))
+            }
+        } else {
+            warn!("Invalid session header value in DELETE request");
+            Err(TransportError::InvalidSessionId(
+                "invalid header value".to_string(),
+            ))
+        }
+    } else {
+        warn!("Missing session ID in DELETE request");
+        Err(TransportError::InvalidSessionId(
+            "missing session header".to_string(),
+        ))
+    }
+}
+
 /// Handle JSON-RPC requests over HTTP POST
 async fn handle_json_rpc_request(
     state: McpServerState,
@@ -359,6 +489,17 @@ async fn handle_json_rpc_request(
     request: Request<Body>,
 ) -> Result<Response, TransportError> {
     debug!("Processing JSON-RPC request");
+
+    // Security validation first
+    if let Err(e) = validate_origin(&headers, &state.security_config) {
+        error!("Origin validation failed: {}", e);
+        return Err(TransportError::SecurityValidationFailed(e.to_string()));
+    }
+
+    if let Err(e) = validate_dns_rebinding(&headers, &state.security_config) {
+        error!("DNS rebinding validation failed: {}", e);
+        return Err(TransportError::SecurityValidationFailed(e.to_string()));
+    }
 
     // Validate Content-Type
     let content_type = headers
@@ -371,8 +512,11 @@ async fn handle_json_rpc_request(
         return Err(TransportError::InvalidContentType(content_type.to_string()));
     }
 
-    // Get or create session using the session manager from server state
-    let session_id = state.session_manager.get_or_create_session(&headers)?;
+    // Extract client information for session management
+    let client_info = extract_client_info(&headers);
+
+    // Get or create session using the comprehensive session manager
+    let session_id = get_or_create_comprehensive_session(&state, &headers, Some(client_info))?;
 
     // Enforce a maximum body size similar to Axum's Json extractor default
     let max_body_bytes = state.transport_config.max_json_body_bytes;
@@ -412,12 +556,15 @@ async fn handle_json_rpc_request(
         Ok(response) => {
             debug!("MCP handler response: {}", response);
 
-            // Update session activity
-            let _ = state.session_manager.update_session_activity(session_id);
+            // Update session activity using comprehensive session manager
+            let _ = state
+                .comprehensive_session_manager
+                .update_last_accessed(session_id);
 
             // Create response with proper headers
             let mut response_headers = HeaderMap::new();
             set_standard_headers(&mut response_headers, Some(session_id));
+            add_security_headers(&mut response_headers);
             response_headers.insert("content-type", "application/json".parse().unwrap());
 
             Ok((StatusCode::OK, response_headers, Json(response)).into_response())

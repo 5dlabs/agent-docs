@@ -1,6 +1,8 @@
 //! MCP server implementation
 
 use crate::handlers::McpHandler;
+use crate::security::{validate_server_binding, SecurityConfig};
+use crate::session::{SessionConfig, SessionManager as ComprehensiveSessionManager};
 use crate::transport::{
     initialize_transport, unified_mcp_handler, SessionManager, TransportConfig,
 };
@@ -14,15 +16,17 @@ use doc_server_database::DatabasePool;
 use serde_json::Value;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::info;
+use tracing::{error, info};
 
 /// MCP server state
 #[derive(Clone)]
 pub struct McpServerState {
     pub db_pool: DatabasePool,
     pub handler: Arc<McpHandler>,
-    pub session_manager: SessionManager,
+    pub session_manager: SessionManager, // Legacy session manager for compatibility
+    pub comprehensive_session_manager: ComprehensiveSessionManager, // New comprehensive session manager
     pub transport_config: TransportConfig,
+    pub security_config: SecurityConfig,
 }
 
 /// MCP server
@@ -43,14 +47,26 @@ impl McpServer {
         let transport_config = TransportConfig::default();
         let session_manager = SessionManager::new(transport_config.clone());
 
-        // Initialize the transport with session cleanup
+        // Initialize comprehensive session manager
+        let session_config = SessionConfig::default();
+        let comprehensive_session_manager = ComprehensiveSessionManager::new(session_config);
+
+        // Start background cleanup task for comprehensive session manager
+        comprehensive_session_manager.start_cleanup_task();
+
+        // Initialize security configuration
+        let security_config = SecurityConfig::default();
+
+        // Initialize the transport with legacy session cleanup (for backward compatibility)
         initialize_transport(session_manager.clone()).await;
 
         let state = McpServerState {
             db_pool,
             handler,
             session_manager,
+            comprehensive_session_manager,
             transport_config,
+            security_config,
         };
 
         Ok(Self { state })
@@ -60,12 +76,18 @@ impl McpServer {
     ///
     /// # Errors
     ///
-    /// Returns an error if binding or serving the listener fails.
+    /// Returns an error if binding or serving the listener fails, or if security validation fails.
     pub async fn serve(&self, addr: &str) -> Result<()> {
+        // Validate server binding for security
+        if let Err(e) = validate_server_binding(addr, &self.state.security_config) {
+            error!("Server binding security validation failed: {}", e);
+            return Err(anyhow::anyhow!("Security validation failed: {}", e));
+        }
+
         let app = self.create_router();
 
         let listener = tokio::net::TcpListener::bind(addr).await?;
-        info!("MCP server listening on {}", addr);
+        info!("MCP server listening on {} (security validated)", addr);
 
         axum::serve(listener, app).await?;
 
@@ -84,7 +106,7 @@ impl McpServer {
             .layer(
                 CorsLayer::new()
                     .allow_origin(Any)
-                    .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                    .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::OPTIONS])
                     .allow_headers(Any),
             )
             .with_state(self.state.clone())
