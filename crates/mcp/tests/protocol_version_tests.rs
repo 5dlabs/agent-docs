@@ -11,14 +11,12 @@ use chrono::Duration;
 use doc_server_mcp::{
     headers::{
         extract_session_id, set_json_response_headers, set_standard_headers,
-        validate_protocol_version, AcceptHeaderValidator, ContentTypeError,
-        ContentTypeValidator, McpProtocolVersionHeader, ProtocolVersionError, CONTENT_TYPE_JSON,
-        MCP_PROTOCOL_VERSION, MCP_SESSION_ID, SUPPORTED_PROTOCOL_VERSION,
+        validate_protocol_version, AcceptHeaderValidator, ContentTypeError, ContentTypeValidator,
+        McpProtocolVersionHeader, ProtocolVersionError, CONTENT_TYPE_JSON, MCP_PROTOCOL_VERSION,
+        MCP_SESSION_ID, SUPPORTED_PROTOCOL_VERSION,
     },
-    session::{
-        ClientInfo, Session, SessionConfig, SessionError, SessionManager,
-        SUPPORTED_PROTOCOL_VERSION as SESSION_SUPPORTED_VERSION,
-    },
+    protocol_version::SUPPORTED_PROTOCOL_VERSION as PROTOCOL_SUPPORTED_VERSION,
+    session::{ClientInfo, Session, SessionConfig, SessionError, SessionManager},
 };
 use uuid::Uuid;
 
@@ -26,8 +24,8 @@ use uuid::Uuid;
 #[test]
 fn test_protocol_version_constants_consistency() {
     assert_eq!(SUPPORTED_PROTOCOL_VERSION, "2025-06-18");
-    assert_eq!(SESSION_SUPPORTED_VERSION, "2025-06-18");
-    assert_eq!(SUPPORTED_PROTOCOL_VERSION, SESSION_SUPPORTED_VERSION);
+    assert_eq!(PROTOCOL_SUPPORTED_VERSION, "2025-06-18");
+    assert_eq!(SUPPORTED_PROTOCOL_VERSION, PROTOCOL_SUPPORTED_VERSION);
 }
 
 /// Test basic protocol version validation with valid version

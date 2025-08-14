@@ -15,6 +15,8 @@ use thiserror::Error;
 use tracing::{debug, warn};
 use uuid::Uuid;
 
+use crate::protocol_version::ProtocolRegistry;
+
 /// MCP protocol version header name
 pub const MCP_PROTOCOL_VERSION: &str = "MCP-Protocol-Version";
 /// MCP session ID header name  
@@ -91,6 +93,7 @@ where
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
         let headers = &parts.headers;
+        let registry = ProtocolRegistry::new();
 
         debug!("Validating MCP protocol version header");
 
@@ -101,7 +104,8 @@ where
 
             debug!("Found protocol version header: {version_str}");
 
-            if version_str == SUPPORTED_PROTOCOL_VERSION {
+            // Use protocol registry for validation
+            if registry.validate_version_string(version_str).is_ok() {
                 Ok(McpProtocolVersionHeader {
                     version: version_str.to_string(),
                 })
@@ -109,7 +113,7 @@ where
                 warn!("Unsupported protocol version requested: {version_str}");
                 Err(ProtocolVersionError::UnsupportedVersion(
                     version_str.to_string(),
-                    SUPPORTED_PROTOCOL_VERSION.to_string(),
+                    registry.current_version_string().to_string(),
                 ))
             }
         } else {
@@ -316,21 +320,31 @@ where
 
 /// Validate that incoming request headers include the supported MCP protocol version.
 ///
+/// This function validates the MCP-Protocol-Version header using the protocol registry
+/// to ensure only the supported version (2025-06-18) is accepted.
+///
 /// # Errors
 ///
 /// Returns `Err(StatusCode::BAD_REQUEST)` if the header is missing or has an
 /// unsupported value.
 pub fn validate_protocol_version(headers: &HeaderMap) -> Result<(), StatusCode> {
-    match headers.get(MCP_PROTOCOL_VERSION) {
-        Some(value) => {
-            if let Ok(v) = value.to_str() {
-                if v == SUPPORTED_PROTOCOL_VERSION {
-                    return Ok(());
-                }
+    let registry = ProtocolRegistry::new();
+
+    if let Some(value) = headers.get(MCP_PROTOCOL_VERSION) {
+        if let Ok(version_str) = value.to_str() {
+            if registry.is_version_string_supported(version_str) {
+                Ok(())
+            } else {
+                debug!("Unsupported protocol version: {}", version_str);
+                Err(StatusCode::BAD_REQUEST)
             }
+        } else {
+            warn!("Invalid protocol version header value");
             Err(StatusCode::BAD_REQUEST)
         }
-        None => Err(StatusCode::BAD_REQUEST),
+    } else {
+        warn!("Missing MCP-Protocol-Version header");
+        Err(StatusCode::BAD_REQUEST)
     }
 }
 
