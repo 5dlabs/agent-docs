@@ -12,7 +12,7 @@ Align response behavior with MCP 2025-06-18 Streamable HTTP for JSON-only POST: 
 ## Primary Objectives
 1. Ensure `/mcp` POST (JSON) behavior is correct; GET returns 405
 2. Include `Mcp-Session-Id` and `MCP-Protocol-Version` in responses
-3. Map transport and application errors to correct HTTP status codes
+3. Map transport and application errors to correct HTTP status codes (400, 403, 404, 405, 413, 500); authentication/rate-limiting out of scope
 4. Add structured logging
 
 ## Implementation Steps

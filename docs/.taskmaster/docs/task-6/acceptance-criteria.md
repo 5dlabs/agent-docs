@@ -8,16 +8,16 @@
 
 ### FR-2: MCP Header Compliance
 - [ ] `MCP-Protocol-Version: 2025-06-18` included in all responses
-- [ ] `Mcp-Session-Id: <uuid>` included in all responses
+- [ ] `Mcp-Session-Id: <uuid>` included when a session exists (e.g., initialize response and subsequent requests)
 
 ### FR-3: Error Handling
-- [ ] HTTP status mapping for common conditions (400, 401, 403, 404, 405, 413, 429, 500)
+- [ ] HTTP status mapping for common conditions (400, 403, 404, 405, 413, 500)
 - [ ] JSON-RPC 2.0 compliant error objects (code, message, optional data)
 - [ ] No sensitive data in error bodies; include stable error codes and correlation id
 
 ### FR-4: Observability
-- [ ] Structured logs include request id, session id, and negotiated protocol version
-- [ ] Metrics counters for streams opened/closed, heartbeats sent, timeouts
+- [ ] Structured logs include JSON-RPC `id` (when present), session id (when present), and protocol version
+- [ ] Metrics counters for `mcp_requests_total` and `mcp_errors_total` (JSON-only mode; streaming counters out of scope)
 
 ## Test Cases
 
@@ -30,7 +30,7 @@
 **Then**: 400 with JSON-RPC error object; no sensitive data
 
 ### TC-3: Header Compliance
-**Then**: All responses include `Mcp-Session-Id` and `MCP-Protocol-Version`
+**Then**: All responses include `MCP-Protocol-Version`; responses include `Mcp-Session-Id` when a session exists
 
 ### TC-4: Logging
 **Then**: Logs include request id, session id, and version
