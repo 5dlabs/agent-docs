@@ -7,20 +7,22 @@ use axum::{
     http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
     response::IntoResponse,
 };
+use chrono::Duration;
 use doc_server_mcp::{
     headers::{
         extract_session_id, set_json_response_headers, set_standard_headers,
-        validate_protocol_version, ContentTypeError, ContentTypeValidator, McpProtocolVersionHeader, ProtocolVersionError, 
-        CONTENT_TYPE_JSON, MCP_PROTOCOL_VERSION, MCP_SESSION_ID, SUPPORTED_PROTOCOL_VERSION,
+        validate_protocol_version, ContentTypeError, ContentTypeValidator,
+        McpProtocolVersionHeader, ProtocolVersionError, CONTENT_TYPE_JSON, MCP_PROTOCOL_VERSION,
+        MCP_SESSION_ID, SUPPORTED_PROTOCOL_VERSION,
     },
-    session::{ClientInfo, Session, SessionConfig, SessionError, SessionManager, SUPPORTED_PROTOCOL_VERSION as SESSION_SUPPORTED_VERSION},
+    session::{
+        ClientInfo, Session, SessionConfig, SessionError, SessionManager,
+        SUPPORTED_PROTOCOL_VERSION as SESSION_SUPPORTED_VERSION,
+    },
 };
-use chrono::Duration;
-use serde_json::json;
-use std::str::FromStr;
 use uuid::Uuid;
 
-/// Test protocol version constants are consistent across modules
+/// Test `SUPPORTED_PROTOCOL_VERSION` constants are consistent across modules
 #[test]
 fn test_protocol_version_constants_consistency() {
     assert_eq!(SUPPORTED_PROTOCOL_VERSION, "2025-06-18");
@@ -33,7 +35,7 @@ fn test_protocol_version_constants_consistency() {
 fn test_validate_protocol_version_valid() {
     let mut headers = HeaderMap::new();
     headers.insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static("2025-06-18"));
-    
+
     let result = validate_protocol_version(&headers);
     assert!(result.is_ok());
 }
@@ -43,7 +45,7 @@ fn test_validate_protocol_version_valid() {
 fn test_validate_protocol_version_invalid() {
     let mut headers = HeaderMap::new();
     headers.insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static("2024-11-05"));
-    
+
     let result = validate_protocol_version(&headers);
     assert_eq!(result, Err(StatusCode::BAD_REQUEST));
 }
@@ -52,7 +54,7 @@ fn test_validate_protocol_version_invalid() {
 #[test]
 fn test_validate_protocol_version_missing() {
     let headers = HeaderMap::new();
-    
+
     let result = validate_protocol_version(&headers);
     assert_eq!(result, Err(StatusCode::BAD_REQUEST));
 }
@@ -61,13 +63,16 @@ fn test_validate_protocol_version_missing() {
 #[test]
 fn test_validate_protocol_version_malformed() {
     let mut headers = HeaderMap::new();
-    headers.insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static("invalid-version"));
-    
+    headers.insert(
+        MCP_PROTOCOL_VERSION,
+        HeaderValue::from_static("invalid-version"),
+    );
+
     let result = validate_protocol_version(&headers);
     assert_eq!(result, Err(StatusCode::BAD_REQUEST));
 }
 
-/// Test ProtocolVersionError variants
+/// Test `ProtocolVersionError` variants
 #[test]
 fn test_protocol_version_error_variants() {
     let missing_error = ProtocolVersionError::MissingHeader;
@@ -76,8 +81,11 @@ fn test_protocol_version_error_variants() {
         "2024-11-05".to_string(),
         "2025-06-18".to_string(),
     );
-    
-    assert_eq!(missing_error.to_string(), "Missing MCP-Protocol-Version header");
+
+    assert_eq!(
+        missing_error.to_string(),
+        "Missing MCP-Protocol-Version header"
+    );
     assert_eq!(invalid_error.to_string(), "Invalid header value: test");
     assert_eq!(
         unsupported_error.to_string(),
@@ -85,17 +93,17 @@ fn test_protocol_version_error_variants() {
     );
 }
 
-/// Test ProtocolVersionError HTTP response conversion
+/// Test `ProtocolVersionError` HTTP response conversion
 #[test]
 fn test_protocol_version_error_into_response() {
     let error = ProtocolVersionError::UnsupportedVersion(
         "2024-11-05".to_string(),
         "2025-06-18".to_string(),
     );
-    
+
     let response = error.into_response();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-    
+
     // Check that proper headers are set
     let headers = response.headers();
     assert!(headers.contains_key(MCP_PROTOCOL_VERSION));
@@ -105,33 +113,43 @@ fn test_protocol_version_error_into_response() {
     );
 }
 
-/// Test McpProtocolVersionHeader extractor with valid header
+/// Test `McpProtocolVersionHeader` extractor with valid header
 #[tokio::test]
 async fn test_mcp_protocol_version_header_extractor_valid() {
     use axum::extract::FromRequestParts;
-    
-    let mut parts = axum::http::request::Parts::default();
-    parts.headers.insert(
-        MCP_PROTOCOL_VERSION,
-        HeaderValue::from_static("2025-06-18"),
-    );
-    
+    use axum::http::Request;
+
+    let (mut parts, ()): (axum::http::request::Parts, ()) = Request::builder()
+        .method("GET")
+        .uri("/")
+        .body(())
+        .unwrap()
+        .into_parts();
+    parts
+        .headers
+        .insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static("2025-06-18"));
+
     let result = McpProtocolVersionHeader::from_request_parts(&mut parts, &()).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap().version, "2025-06-18");
 }
 
-/// Test McpProtocolVersionHeader extractor with invalid header
+/// Test `McpProtocolVersionHeader` extractor with invalid header
 #[tokio::test]
 async fn test_mcp_protocol_version_header_extractor_invalid() {
     use axum::extract::FromRequestParts;
-    
-    let mut parts = axum::http::request::Parts::default();
-    parts.headers.insert(
-        MCP_PROTOCOL_VERSION,
-        HeaderValue::from_static("2024-11-05"),
-    );
-    
+    use axum::http::Request;
+
+    let (mut parts, ()): (axum::http::request::Parts, ()) = Request::builder()
+        .method("GET")
+        .uri("/")
+        .body(())
+        .unwrap()
+        .into_parts();
+    parts
+        .headers
+        .insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static("2024-11-05"));
+
     let result = McpProtocolVersionHeader::from_request_parts(&mut parts, &()).await;
     assert!(result.is_err());
     assert!(matches!(
@@ -140,13 +158,19 @@ async fn test_mcp_protocol_version_header_extractor_invalid() {
     ));
 }
 
-/// Test McpProtocolVersionHeader extractor with missing header
+/// Test `McpProtocolVersionHeader` extractor with missing header
 #[tokio::test]
 async fn test_mcp_protocol_version_header_extractor_missing() {
     use axum::extract::FromRequestParts;
-    
-    let mut parts = axum::http::request::Parts::default();
-    
+    use axum::http::Request;
+
+    let (mut parts, ()): (axum::http::request::Parts, ()) = Request::builder()
+        .method("GET")
+        .uri("/")
+        .body(())
+        .unwrap()
+        .into_parts();
+
     let result = McpProtocolVersionHeader::from_request_parts(&mut parts, &()).await;
     assert!(result.is_err());
     assert!(matches!(
@@ -155,49 +179,67 @@ async fn test_mcp_protocol_version_header_extractor_missing() {
     ));
 }
 
-/// Test ContentTypeValidator with valid JSON content type
+/// Test `ContentTypeValidator` with valid JSON content type
 #[tokio::test]
 async fn test_content_type_validator_json() {
     use axum::extract::FromRequestParts;
-    
-    let mut parts = axum::http::request::Parts::default();
+    use axum::http::Request;
+
+    let (mut parts, ()): (axum::http::request::Parts, ()) = Request::builder()
+        .method("GET")
+        .uri("/")
+        .body(())
+        .unwrap()
+        .into_parts();
     parts.headers.insert(
         HeaderName::from_static("content-type"),
         HeaderValue::from_static("application/json"),
     );
-    
+
     let result = ContentTypeValidator::from_request_parts(&mut parts, &()).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap().content_type, "application/json");
 }
 
-/// Test ContentTypeValidator with valid SSE content type
+/// Test `ContentTypeValidator` with valid SSE content type
 #[tokio::test]
 async fn test_content_type_validator_sse() {
     use axum::extract::FromRequestParts;
-    
-    let mut parts = axum::http::request::Parts::default();
+    use axum::http::Request;
+
+    let (mut parts, ()): (axum::http::request::Parts, ()) = Request::builder()
+        .method("GET")
+        .uri("/")
+        .body(())
+        .unwrap()
+        .into_parts();
     parts.headers.insert(
         HeaderName::from_static("content-type"),
         HeaderValue::from_static("text/event-stream"),
     );
-    
+
     let result = ContentTypeValidator::from_request_parts(&mut parts, &()).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap().content_type, "text/event-stream");
 }
 
-/// Test ContentTypeValidator with invalid content type
+/// Test `ContentTypeValidator` with invalid content type
 #[tokio::test]
 async fn test_content_type_validator_invalid() {
     use axum::extract::FromRequestParts;
-    
-    let mut parts = axum::http::request::Parts::default();
+    use axum::http::Request;
+
+    let (mut parts, ()): (axum::http::request::Parts, ()) = Request::builder()
+        .method("GET")
+        .uri("/")
+        .body(())
+        .unwrap()
+        .into_parts();
     parts.headers.insert(
         HeaderName::from_static("content-type"),
         HeaderValue::from_static("text/plain"),
     );
-    
+
     let result = ContentTypeValidator::from_request_parts(&mut parts, &()).await;
     assert!(result.is_err());
     assert!(matches!(
@@ -206,13 +248,19 @@ async fn test_content_type_validator_invalid() {
     ));
 }
 
-/// Test ContentTypeValidator with missing content type
+/// Test `ContentTypeValidator` with missing content type
 #[tokio::test]
 async fn test_content_type_validator_missing() {
     use axum::extract::FromRequestParts;
-    
-    let mut parts = axum::http::request::Parts::default();
-    
+    use axum::http::Request;
+
+    let (mut parts, ()): (axum::http::request::Parts, ()) = Request::builder()
+        .method("GET")
+        .uri("/")
+        .body(())
+        .unwrap()
+        .into_parts();
+
     let result = ContentTypeValidator::from_request_parts(&mut parts, &()).await;
     assert!(result.is_err());
     assert!(matches!(
@@ -226,7 +274,7 @@ async fn test_content_type_validator_missing() {
 fn test_session_creation_with_default_protocol_version() {
     let ttl = Duration::minutes(30);
     let session = Session::new(ttl, None);
-    
+
     assert_eq!(session.protocol_version, "2025-06-18");
     assert!(session.is_protocol_version_supported());
 }
@@ -236,7 +284,7 @@ fn test_session_creation_with_default_protocol_version() {
 fn test_session_creation_with_explicit_protocol_version() {
     let ttl = Duration::minutes(30);
     let session = Session::new_with_version(ttl, None, "2025-06-18".to_string());
-    
+
     assert_eq!(session.protocol_version, "2025-06-18");
     assert!(session.is_protocol_version_supported());
 }
@@ -246,7 +294,7 @@ fn test_session_creation_with_explicit_protocol_version() {
 fn test_session_creation_with_unsupported_protocol_version() {
     let ttl = Duration::minutes(30);
     let session = Session::new_with_version(ttl, None, "2024-11-05".to_string());
-    
+
     assert_eq!(session.protocol_version, "2024-11-05");
     assert!(!session.is_protocol_version_supported());
 }
@@ -256,11 +304,11 @@ fn test_session_creation_with_unsupported_protocol_version() {
 fn test_session_protocol_version_validation() {
     let ttl = Duration::minutes(30);
     let session = Session::new(ttl, None);
-    
+
     // Valid version
     let result = session.validate_protocol_version("2025-06-18");
     assert!(result.is_ok());
-    
+
     // Invalid version
     let result = session.validate_protocol_version("2024-11-05");
     assert!(result.is_err());
@@ -275,10 +323,10 @@ fn test_session_protocol_version_validation() {
 fn test_session_manager_creates_sessions_with_protocol_version() {
     let config = SessionConfig::default();
     let manager = SessionManager::new(config);
-    
+
     let session_id = manager.create_session(None).unwrap();
     let session = manager.get_session(session_id).unwrap();
-    
+
     assert_eq!(session.protocol_version, "2025-06-18");
     assert!(session.is_protocol_version_supported());
 }
@@ -288,10 +336,12 @@ fn test_session_manager_creates_sessions_with_protocol_version() {
 fn test_session_manager_creates_sessions_with_explicit_version() {
     let config = SessionConfig::default();
     let manager = SessionManager::new(config);
-    
-    let session_id = manager.create_session_with_version(None, "2025-06-18").unwrap();
+
+    let session_id = manager
+        .create_session_with_version(None, "2025-06-18")
+        .unwrap();
     let session = manager.get_session(session_id).unwrap();
-    
+
     assert_eq!(session.protocol_version, "2025-06-18");
     assert!(session.is_protocol_version_supported());
 }
@@ -301,13 +351,13 @@ fn test_session_manager_creates_sessions_with_explicit_version() {
 fn test_session_manager_protocol_version_validation() {
     let config = SessionConfig::default();
     let manager = SessionManager::new(config);
-    
+
     let session_id = manager.create_session(None).unwrap();
-    
+
     // Valid version validation
     let result = manager.validate_session_protocol_version(session_id, "2025-06-18");
     assert!(result.is_ok());
-    
+
     // Invalid version validation
     let result = manager.validate_session_protocol_version(session_id, "2024-11-05");
     assert!(result.is_err());
@@ -322,10 +372,10 @@ fn test_session_manager_protocol_version_validation() {
 fn test_session_manager_validation_nonexistent_session() {
     let config = SessionConfig::default();
     let manager = SessionManager::new(config);
-    
+
     let random_uuid = Uuid::new_v4();
     let result = manager.validate_session_protocol_version(random_uuid, "2025-06-18");
-    
+
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
@@ -338,9 +388,9 @@ fn test_session_manager_validation_nonexistent_session() {
 fn test_set_standard_headers() {
     let mut headers = HeaderMap::new();
     let session_id = Uuid::new_v4();
-    
+
     set_standard_headers(&mut headers, Some(session_id));
-    
+
     assert_eq!(
         headers.get(MCP_PROTOCOL_VERSION).unwrap(),
         HeaderValue::from_static("2025-06-18")
@@ -356,9 +406,9 @@ fn test_set_standard_headers() {
 fn test_set_json_response_headers() {
     let mut headers = HeaderMap::new();
     let session_id = Uuid::new_v4();
-    
+
     set_json_response_headers(&mut headers, Some(session_id));
-    
+
     assert_eq!(
         headers.get(MCP_PROTOCOL_VERSION).unwrap(),
         HeaderValue::from_static("2025-06-18")
@@ -382,7 +432,7 @@ fn test_extract_session_id_valid() {
         MCP_SESSION_ID,
         HeaderValue::from_str(&session_id.to_string()).unwrap(),
     );
-    
+
     let result = extract_session_id(&headers).unwrap();
     assert_eq!(result, Some(session_id));
 }
@@ -391,7 +441,7 @@ fn test_extract_session_id_valid() {
 #[test]
 fn test_extract_session_id_missing() {
     let headers = HeaderMap::new();
-    
+
     let result = extract_session_id(&headers).unwrap();
     assert_eq!(result, None);
 }
@@ -400,11 +450,8 @@ fn test_extract_session_id_missing() {
 #[test]
 fn test_extract_session_id_invalid() {
     let mut headers = HeaderMap::new();
-    headers.insert(
-        MCP_SESSION_ID,
-        HeaderValue::from_static("not-a-uuid"),
-    );
-    
+    headers.insert(MCP_SESSION_ID, HeaderValue::from_static("not-a-uuid"));
+
     let result = extract_session_id(&headers);
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Invalid session ID format"));
@@ -417,7 +464,7 @@ fn test_protocol_version_mismatch_error_formatting() {
         session_version: "2024-11-05".to_string(),
         expected_version: "2025-06-18".to_string(),
     };
-    
+
     let error_string = error.to_string();
     assert!(error_string.contains("2024-11-05"));
     assert!(error_string.contains("2025-06-18"));
@@ -429,9 +476,9 @@ fn test_protocol_version_mismatch_error_formatting() {
 async fn test_concurrent_session_protocol_version_consistency() {
     let config = SessionConfig::default();
     let manager = std::sync::Arc::new(SessionManager::new(config));
-    
+
     let mut handles = Vec::new();
-    
+
     for i in 0..20 {
         let manager_clone = manager.clone();
         let handle = tokio::spawn(async move {
@@ -440,26 +487,26 @@ async fn test_concurrent_session_protocol_version_consistency() {
                 origin: Some("http://localhost:3001".to_string()),
                 ip_address: Some("127.0.0.1".to_string()),
             };
-            
+
             let session_id = manager_clone.create_session(Some(client_info)).unwrap();
             let session = manager_clone.get_session(session_id).unwrap();
-            
+
             (session_id, session.protocol_version)
         });
         handles.push(handle);
     }
-    
+
     let results: Vec<(Uuid, String)> = futures::future::join_all(handles)
         .await
         .into_iter()
         .map(|r| r.unwrap())
         .collect();
-    
+
     // All sessions should have the same protocol version
     for (_, version) in &results {
         assert_eq!(version, "2025-06-18");
     }
-    
+
     // All session IDs should be unique
     let session_ids: std::collections::HashSet<_> = results.iter().map(|(id, _)| id).collect();
     assert_eq!(session_ids.len(), 20);
@@ -470,7 +517,7 @@ async fn test_concurrent_session_protocol_version_consistency() {
 fn test_session_client_info_protocol_version_consistency() {
     let config = SessionConfig::default();
     let manager = SessionManager::new(config);
-    
+
     let client_infos = vec![
         Some(ClientInfo {
             user_agent: Some("Chrome/120.0".to_string()),
@@ -484,11 +531,11 @@ fn test_session_client_info_protocol_version_consistency() {
         }),
         None,
     ];
-    
+
     for client_info in client_infos {
         let session_id = manager.create_session(client_info).unwrap();
         let session = manager.get_session(session_id).unwrap();
-        
+
         assert_eq!(session.protocol_version, "2025-06-18");
         assert!(session.is_protocol_version_supported());
     }
@@ -500,18 +547,27 @@ fn test_header_edge_cases() {
     // Empty protocol version
     let mut headers = HeaderMap::new();
     headers.insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static(""));
-    assert_eq!(validate_protocol_version(&headers), Err(StatusCode::BAD_REQUEST));
-    
+    assert_eq!(
+        validate_protocol_version(&headers),
+        Err(StatusCode::BAD_REQUEST)
+    );
+
     // Protocol version with extra whitespace should fail
     let mut headers = HeaderMap::new();
-    headers.insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static(" 2025-06-18 "));
-    assert_eq!(validate_protocol_version(&headers), Err(StatusCode::BAD_REQUEST));
-    
+    headers.insert(
+        MCP_PROTOCOL_VERSION,
+        HeaderValue::from_static(" 2025-06-18 "),
+    );
+    assert_eq!(
+        validate_protocol_version(&headers),
+        Err(StatusCode::BAD_REQUEST)
+    );
+
     // Case sensitivity test
     let mut headers = HeaderMap::new();
     headers.insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static("2025-06-18"));
     assert!(validate_protocol_version(&headers).is_ok());
-    
+
     let mut headers = HeaderMap::new();
     headers.insert(MCP_PROTOCOL_VERSION, HeaderValue::from_static("2025-06-18"));
     assert!(validate_protocol_version(&headers).is_ok());
@@ -522,27 +578,27 @@ fn test_header_edge_cases() {
 fn test_protocol_version_integration_workflow() {
     let config = SessionConfig::default();
     let manager = SessionManager::new(config);
-    
+
     // 1. Create session with default protocol version
     let session_id = manager.create_session(None).unwrap();
-    
+
     // 2. Validate the session has correct protocol version
     let session = manager.get_session(session_id).unwrap();
     assert_eq!(session.protocol_version, "2025-06-18");
     assert!(session.is_protocol_version_supported());
-    
+
     // 3. Validate protocol version consistency
     let validation_result = manager.validate_session_protocol_version(session_id, "2025-06-18");
     assert!(validation_result.is_ok());
-    
+
     // 4. Test rejection of wrong version
     let wrong_validation = manager.validate_session_protocol_version(session_id, "2024-11-05");
     assert!(wrong_validation.is_err());
-    
+
     // 5. Create response headers and verify protocol version is included
     let mut response_headers = HeaderMap::new();
     set_json_response_headers(&mut response_headers, Some(session_id));
-    
+
     assert_eq!(
         response_headers.get(MCP_PROTOCOL_VERSION).unwrap(),
         HeaderValue::from_static("2025-06-18")

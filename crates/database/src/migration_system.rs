@@ -143,7 +143,10 @@ impl DatabaseMigrationManager {
 
     /// Register a migration for execution
     pub fn register_migration(&mut self, migration: MigrationInfo) {
-        info!("Registering migration: {} ({})", migration.id, migration.version);
+        info!(
+            "Registering migration: {} ({})",
+            migration.id, migration.version
+        );
         self.migrations.insert(migration.id.clone(), migration);
     }
 
@@ -231,19 +234,25 @@ impl DatabaseMigrationManager {
         let mut applied = Vec::new();
 
         for migration in pending {
-            info!("Applying migration: {} ({})", migration.id, migration.version);
+            info!(
+                "Applying migration: {} ({})",
+                migration.id, migration.version
+            );
 
             match self.apply_single_migration(&migration).await {
                 Ok(history) => {
-                    info!("Successfully applied migration: {} in {}ms",
-                          migration.id, history.execution_time_ms);
+                    info!(
+                        "Successfully applied migration: {} in {}ms",
+                        migration.id, history.execution_time_ms
+                    );
                     applied.push(history);
                 }
                 Err(e) => {
                     error!("Failed to apply migration {}: {}", migration.id, e);
 
                     // Record the failure
-                    self.record_migration_failure(&migration, &e.to_string()).await?;
+                    self.record_migration_failure(&migration, &e.to_string())
+                        .await?;
 
                     // Stop applying further migrations on failure
                     return Err(anyhow!("Migration {} failed: {}", migration.id, e));
@@ -271,7 +280,8 @@ impl DatabaseMigrationManager {
             .await
         {
             Ok(_) => {
-                let execution_time = i64::try_from(start_time.elapsed().as_millis()).unwrap_or(i64::MAX);
+                let execution_time =
+                    i64::try_from(start_time.elapsed().as_millis()).unwrap_or(i64::MAX);
 
                 // Update migration as completed
                 let history = self
@@ -425,7 +435,7 @@ impl DatabaseMigrationManager {
 
         for ext_name in required_extensions {
             let row = sqlx::query(
-                "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = $1) as installed"
+                "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = $1) as installed",
             )
             .bind(ext_name)
             .fetch_one(&self.pool)
@@ -436,7 +446,9 @@ impl DatabaseMigrationManager {
 
             if !installed {
                 report.is_valid = false;
-                report.issues.push(format!("Required extension '{ext_name}' is not installed"));
+                report
+                    .issues
+                    .push(format!("Required extension '{ext_name}' is not installed"));
             }
         }
 
@@ -454,7 +466,7 @@ impl DatabaseMigrationManager {
                     SELECT 1 FROM information_schema.tables
                     WHERE table_schema = 'public' AND table_name = $1
                 ) as exists
-                "
+                ",
             )
             .bind(table_name)
             .fetch_one(&self.pool)
@@ -465,7 +477,9 @@ impl DatabaseMigrationManager {
 
             if !exists {
                 report.is_valid = false;
-                report.issues.push(format!("Required table '{table_name}' does not exist"));
+                report
+                    .issues
+                    .push(format!("Required table '{table_name}' does not exist"));
             }
         }
 
@@ -482,7 +496,7 @@ impl DatabaseMigrationManager {
 
         for index_name in required_indexes {
             let row = sqlx::query(
-                "SELECT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname = $1) as exists"
+                "SELECT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname = $1) as exists",
             )
             .bind(index_name)
             .fetch_one(&self.pool)
@@ -493,7 +507,9 @@ impl DatabaseMigrationManager {
 
             if !exists {
                 report.is_valid = false;
-                report.issues.push(format!("Required index '{index_name}' does not exist"));
+                report
+                    .issues
+                    .push(format!("Required index '{index_name}' does not exist"));
             }
         }
 
@@ -501,14 +517,19 @@ impl DatabaseMigrationManager {
     }
 
     /// Validate pgvector extension supports 3072 dimensions
-    async fn validate_pgvector_dimensions(&self, report: &mut SchemaValidationReport) -> Result<()> {
+    async fn validate_pgvector_dimensions(
+        &self,
+        report: &mut SchemaValidationReport,
+    ) -> Result<()> {
         // Check if we can create a 3072-dimensional vector (OpenAI text-embedding-3-large)
         match sqlx::query("SELECT '[1,2,3]'::vector(3072) as test_vector")
             .fetch_one(&self.pool)
             .await
         {
             Ok(_) => {
-                info!("pgvector supports 3072 dimensions (OpenAI text-embedding-3-large compatible)");
+                info!(
+                    "pgvector supports 3072 dimensions (OpenAI text-embedding-3-large compatible)"
+                );
             }
             Err(_) => {
                 // This is expected - current pgvector has 2000 dimension limit
@@ -530,8 +551,14 @@ impl DatabaseMigrationManager {
         let applied = self.get_applied_migrations().await?;
         let pending = self.get_pending_migrations().await?;
 
-        let completed_count = applied.iter().filter(|m| matches!(m.status, MigrationStatus::Completed)).count();
-        let failed_count = applied.iter().filter(|m| matches!(m.status, MigrationStatus::Failed)).count();
+        let completed_count = applied
+            .iter()
+            .filter(|m| matches!(m.status, MigrationStatus::Completed))
+            .count();
+        let failed_count = applied
+            .iter()
+            .filter(|m| matches!(m.status, MigrationStatus::Failed))
+            .count();
 
         Ok(MigrationStatusSummary {
             total_registered: self.migrations.len(),

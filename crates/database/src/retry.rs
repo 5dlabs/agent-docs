@@ -14,16 +14,16 @@ use tracing::{error, info, warn};
 pub struct RetryConfig {
     /// Maximum number of retry attempts
     pub max_retries: usize,
-    
+
     /// Initial delay between retries
     pub initial_delay: Duration,
-    
+
     /// Maximum delay between retries
     pub max_delay: Duration,
-    
+
     /// Multiplier for exponential backoff
     pub multiplier: f64,
-    
+
     /// Jitter to add randomness to retry delays
     pub jitter: bool,
 }
@@ -92,7 +92,9 @@ impl RetryConfig {
         }
 
         if self.max_delay < self.initial_delay {
-            return Err(anyhow!("max_delay must be greater than or equal to initial_delay"));
+            return Err(anyhow!(
+                "max_delay must be greater than or equal to initial_delay"
+            ));
         }
 
         if self.multiplier <= 1.0 {
@@ -113,7 +115,11 @@ impl RetryConfig {
         let delay_secs = self.initial_delay.as_secs_f64() * self.multiplier.powi(pow);
         let delay = Duration::from_secs_f64(delay_secs.min(self.max_delay.as_secs_f64()));
 
-        if self.jitter { Self::add_jitter(delay) } else { delay }
+        if self.jitter {
+            Self::add_jitter(delay)
+        } else {
+            delay
+        }
     }
 
     /// Add jitter to delay to avoid thundering herd
@@ -147,8 +153,12 @@ impl DatabaseError {
     #[must_use]
     pub fn is_retryable(&self) -> bool {
         match self {
-            DatabaseError::AuthenticationFailed(_) | DatabaseError::DatabaseNotFound(_) | DatabaseError::Other(_) => false,
-            DatabaseError::TemporarilyUnavailable(_) | DatabaseError::TooManyConnections(_) | DatabaseError::ConnectionFailed(_) => true,
+            DatabaseError::AuthenticationFailed(_)
+            | DatabaseError::DatabaseNotFound(_)
+            | DatabaseError::Other(_) => false,
+            DatabaseError::TemporarilyUnavailable(_)
+            | DatabaseError::TooManyConnections(_)
+            | DatabaseError::ConnectionFailed(_) => true,
         }
     }
 
@@ -156,17 +166,21 @@ impl DatabaseError {
     #[must_use]
     pub fn from_sqlx_error(error: &sqlx::Error) -> Self {
         match error {
-            sqlx::Error::Tls(_) | sqlx::Error::Io(_) => DatabaseError::ConnectionFailed(error.to_string()),
+            sqlx::Error::Tls(_) | sqlx::Error::Io(_) => {
+                DatabaseError::ConnectionFailed(error.to_string())
+            }
             sqlx::Error::PoolTimedOut => DatabaseError::TooManyConnections(error.to_string()),
             sqlx::Error::PoolClosed => DatabaseError::TemporarilyUnavailable(error.to_string()),
-            sqlx::Error::Database(db_error) => {
-                match db_error.code() {
-                    Some(code) if code == "3D000" => DatabaseError::DatabaseNotFound(error.to_string()),
-                    Some(code) if code == "28P01" => DatabaseError::AuthenticationFailed(error.to_string()),
-                    Some(code) if code == "53300" => DatabaseError::TooManyConnections(error.to_string()),
-                    _ => DatabaseError::Other(error.to_string()),
+            sqlx::Error::Database(db_error) => match db_error.code() {
+                Some(code) if code == "3D000" => DatabaseError::DatabaseNotFound(error.to_string()),
+                Some(code) if code == "28P01" => {
+                    DatabaseError::AuthenticationFailed(error.to_string())
                 }
-            }
+                Some(code) if code == "53300" => {
+                    DatabaseError::TooManyConnections(error.to_string())
+                }
+                _ => DatabaseError::Other(error.to_string()),
+            },
             _ => DatabaseError::Other(error.to_string()),
         }
     }
@@ -208,7 +222,11 @@ impl RetryExecutor {
         let mut last_error = None;
 
         for attempt in 0..=self.config.max_retries {
-            info!("Database operation attempt {} of {}", attempt + 1, self.config.max_retries + 1);
+            info!(
+                "Database operation attempt {} of {}",
+                attempt + 1,
+                self.config.max_retries + 1
+            );
 
             match operation().await {
                 Ok(result) => {
@@ -219,16 +237,24 @@ impl RetryExecutor {
                 }
                 Err(error) => {
                     last_error = Some(error.clone());
-                    
+
                     if attempt == self.config.max_retries {
-                        error!("Database operation failed after {} attempts: {}", self.config.max_retries + 1, error);
+                        error!(
+                            "Database operation failed after {} attempts: {}",
+                            self.config.max_retries + 1,
+                            error
+                        );
                         break;
                     }
 
                     let delay = self.config.calculate_delay(attempt);
-                    warn!("Database operation failed (attempt {}), retrying in {:?}: {}", 
-                          attempt + 1, delay, error);
-                    
+                    warn!(
+                        "Database operation failed (attempt {}), retrying in {:?}: {}",
+                        attempt + 1,
+                        delay,
+                        error
+                    );
+
                     sleep(delay).await;
                 }
             }
@@ -253,7 +279,11 @@ impl RetryExecutor {
         let mut operation = operation;
 
         for attempt in 0..=self.config.max_retries {
-            info!("Database operation attempt {} of {}", attempt + 1, self.config.max_retries + 1);
+            info!(
+                "Database operation attempt {} of {}",
+                attempt + 1,
+                self.config.max_retries + 1
+            );
 
             match operation().await {
                 Ok(result) => {
@@ -265,30 +295,43 @@ impl RetryExecutor {
                 Err(error) => {
                     let db_error = DatabaseError::from_sqlx_error(&error);
                     last_error = Some(error);
-                    
+
                     // Check if this error should be retried
                     if !db_error.is_retryable() {
                         error!("Non-retryable database error: {}", db_error.to_string());
-                        return Err(anyhow!("Non-retryable database error: {}", db_error.to_string()));
+                        return Err(anyhow!(
+                            "Non-retryable database error: {}",
+                            db_error.to_string()
+                        ));
                     }
-                    
+
                     if attempt == self.config.max_retries {
-                        error!("Database operation failed after {} attempts: {}", self.config.max_retries + 1, db_error.to_string());
+                        error!(
+                            "Database operation failed after {} attempts: {}",
+                            self.config.max_retries + 1,
+                            db_error.to_string()
+                        );
                         break;
                     }
 
                     let delay = self.config.calculate_delay(attempt);
-                    warn!("Retryable database error (attempt {}), retrying in {:?}: {}", 
-                          attempt + 1, delay, db_error.to_string());
-                    
+                    warn!(
+                        "Retryable database error (attempt {}), retrying in {:?}: {}",
+                        attempt + 1,
+                        delay,
+                        db_error.to_string()
+                    );
+
                     sleep(delay).await;
                 }
             }
         }
 
-        Err(anyhow!("Database operation failed after {} attempts: {}", 
-                   self.config.max_retries + 1, 
-                   last_error.unwrap()))
+        Err(anyhow!(
+            "Database operation failed after {} attempts: {}",
+            self.config.max_retries + 1,
+            last_error.unwrap()
+        ))
     }
 }
 
@@ -303,7 +346,9 @@ impl std::fmt::Display for DatabaseError {
         match self {
             DatabaseError::ConnectionFailed(msg) => write!(f, "Connection failed: {msg}"),
             DatabaseError::AuthenticationFailed(msg) => write!(f, "Authentication failed: {msg}"),
-            DatabaseError::TemporarilyUnavailable(msg) => write!(f, "Database temporarily unavailable: {msg}"),
+            DatabaseError::TemporarilyUnavailable(msg) => {
+                write!(f, "Database temporarily unavailable: {msg}")
+            }
             DatabaseError::TooManyConnections(msg) => write!(f, "Too many connections: {msg}"),
             DatabaseError::DatabaseNotFound(msg) => write!(f, "Database not found: {msg}"),
             DatabaseError::Other(msg) => write!(f, "Database error: {msg}"),
