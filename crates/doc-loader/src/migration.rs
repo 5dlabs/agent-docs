@@ -273,7 +273,9 @@ impl MigrationPipeline {
         let result = match migration_type {
             MigrationType::Full => self.execute_full_migration().await,
             MigrationType::ValidateOnly => self.execute_validation_only().await,
-            MigrationType::Resume { checkpoint_id } => self.execute_resume_migration(checkpoint_id),
+            MigrationType::Resume { checkpoint_id } => {
+                Self::execute_resume_migration(checkpoint_id)
+            }
         };
 
         let end_time = Utc::now();
@@ -343,7 +345,7 @@ impl MigrationPipeline {
         let semaphore = Arc::new(Semaphore::new(self.config.parallel_workers));
 
         // Collect all documents to process
-        let documents = self.collect_documents();
+        let documents = Self::collect_documents();
         let total_documents = documents.len();
 
         info!("Found {} documents to process", total_documents);
@@ -389,13 +391,13 @@ impl MigrationPipeline {
             // Progress reporting
             let (processed, total, progress, eta) = self.progress_tracker.get_progress();
             #[allow(clippy::cast_precision_loss)]
-            let eta_str = eta.map_or_else(|| "unknown".to_string(), |d| format!("{:.1} minutes", d.num_minutes() as f64));
+            let eta_str = eta.map_or_else(
+                || "unknown".to_string(),
+                |d| format!("{:.1} minutes", d.num_minutes() as f64),
+            );
             info!(
                 "Progress: {}/{} ({:.1}%) - ETA: {}",
-                processed,
-                total,
-                progress,
-                eta_str
+                processed, total, progress, eta_str
             );
         }
 
@@ -420,13 +422,13 @@ impl MigrationPipeline {
     }
 
     /// Execute resume migration from checkpoint
-    fn execute_resume_migration(&self, _checkpoint_id: Uuid) -> Result<ValidationReport> {
+    fn execute_resume_migration(_checkpoint_id: Uuid) -> Result<ValidationReport> {
         warn!("Resume migration not yet implemented");
         Err(anyhow::anyhow!("Resume migration not yet implemented"))
     }
 
     /// Collect all documents to be processed
-    fn collect_documents(&self) -> Vec<MockDocument> {
+    fn collect_documents() -> Vec<MockDocument> {
         // For now, return mock documents for testing
         // In a real implementation, this would scan the source paths
         let mock_docs = vec![
@@ -591,7 +593,7 @@ impl MigrationPipeline {
     /// # Errors
     ///
     /// Returns an error if rollback operations fail (not yet implemented).
-    pub async fn rollback_batch(&self, batch_id: Uuid) -> Result<()> {
+    pub fn rollback_batch(&self, batch_id: Uuid) -> Result<()> {
         warn!("Rollback batch {} - not yet implemented", batch_id);
         // TODO: Implement batch rollback logic
         Ok(())

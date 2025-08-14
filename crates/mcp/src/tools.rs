@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use doc_server_database::{queries::DocumentQueries, DatabasePool};
 use doc_server_embeddings::OpenAIEmbeddingClient;
 use serde_json::{json, Value};
-use tracing::debug;
 use std::fmt::Write as _;
+use tracing::debug;
 
 /// Base trait for MCP tools
 #[async_trait]

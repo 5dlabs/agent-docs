@@ -14,67 +14,66 @@ async fn test_initialize_protocol_version_2025_06_18() {
     // For this test, we'll skip actual database setup and just test the handler logic
     // In a real scenario, you'd set up a test database
     if let Ok(db_pool) = DatabasePool::new(&database_url).await {
-        let handler = McpHandler::new(db_pool)
-            .expect("Failed to create handler");
+        let handler = McpHandler::new(db_pool).expect("Failed to create handler");
 
-            let request = json!({
-                "method": "initialize",
-                "params": {}
-            });
+        let request = json!({
+            "method": "initialize",
+            "params": {}
+        });
 
-            let response = handler
-                .handle_request(request)
-                .await
-                .expect("Initialize should succeed");
+        let response = handler
+            .handle_request(request)
+            .await
+            .expect("Initialize should succeed");
 
-            // Verify the protocol version is 2025-06-18
-            assert_eq!(
-                response.get("protocolVersion").and_then(|v| v.as_str()),
-                Some("2025-06-18"),
-                "Protocol version should be 2025-06-18"
-            );
+        // Verify the protocol version is 2025-06-18
+        assert_eq!(
+            response.get("protocolVersion").and_then(|v| v.as_str()),
+            Some("2025-06-18"),
+            "Protocol version should be 2025-06-18"
+        );
 
-            // Verify SSE capability is not advertised
-            let capabilities = response
-                .get("capabilities")
-                .expect("Should have capabilities");
-            assert!(
-                !capabilities.as_object().unwrap().contains_key("sse"),
-                "SSE capability should not be present"
-            );
+        // Verify SSE capability is not advertised
+        let capabilities = response
+            .get("capabilities")
+            .expect("Should have capabilities");
+        assert!(
+            !capabilities.as_object().unwrap().contains_key("sse"),
+            "SSE capability should not be present"
+        );
 
-            // Verify tools capability is present (but empty for now)
-            assert!(
-                capabilities.get("tools").is_some(),
-                "Tools capability should be present"
-            );
+        // Verify tools capability is present (but empty for now)
+        assert!(
+            capabilities.get("tools").is_some(),
+            "Tools capability should be present"
+        );
     } else {
-            // If we can't connect to a test database, skip this test
-            eprintln!("Skipping initialize test - no test database available");
+        // If we can't connect to a test database, skip this test
+        eprintln!("Skipping initialize test - no test database available");
 
-            // Instead, we'll test the JSON structure manually
-            let expected_response = json!({
-                "protocolVersion": "2025-06-18",
-                "capabilities": {
-                    "tools": {}
-                },
-                "serverInfo": {
-                    "name": "doc-server-mcp",
-                    "version": env!("CARGO_PKG_VERSION")
-                }
-            });
+        // Instead, we'll test the JSON structure manually
+        let expected_response = json!({
+            "protocolVersion": "2025-06-18",
+            "capabilities": {
+                "tools": {}
+            },
+            "serverInfo": {
+                "name": "doc-server-mcp",
+                "version": env!("CARGO_PKG_VERSION")
+            }
+        });
 
-            // Verify the structure matches what we expect
-            assert_eq!(
-                expected_response
-                    .get("protocolVersion")
-                    .and_then(|v| v.as_str()),
-                Some("2025-06-18")
-            );
+        // Verify the structure matches what we expect
+        assert_eq!(
+            expected_response
+                .get("protocolVersion")
+                .and_then(|v| v.as_str()),
+            Some("2025-06-18")
+        );
 
-            let capabilities = expected_response.get("capabilities").unwrap();
-            assert!(!capabilities.as_object().unwrap().contains_key("sse"));
-            assert!(capabilities.get("tools").is_some());
+        let capabilities = expected_response.get("capabilities").unwrap();
+        assert!(!capabilities.as_object().unwrap().contains_key("sse"));
+        assert!(capabilities.get("tools").is_some());
     }
 }
 

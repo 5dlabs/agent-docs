@@ -2,7 +2,7 @@
 
 use doc_server_mcp::server::McpServerState;
 use doc_server_mcp::transport::{
-    unified_mcp_handler, McpSession, SessionId, SessionManager, TransportConfig, TransportError,
+    unified_mcp_handler, McpSession, SessionManager, TransportConfig, TransportError,
 };
 use std::time::Duration;
 
@@ -70,7 +70,7 @@ fn test_session_management_types() {
     assert!(!session.is_expired(Duration::from_secs(1)));
 
     // Test session ID type
-    let _session_id: SessionId = session.id;
+    let _ = session.id;
 }
 
 #[test]
@@ -80,14 +80,11 @@ fn test_transport_api_surface() {
     // Types
     let config = TransportConfig::default();
     let _session_manager = SessionManager::new(config);
-    let _error = TransportError::MethodNotAllowed;
-    let _session = McpSession::new();
-
-    // Ensure the server type is name-resolvable without constructing it
-    // Ensure type is name-resolvable
-    let _state_type: Option<McpServerState> = None;
-
-    // Function - just verify it can be referenced
-    let _handler_fn = unified_mcp_handler;
+    let _ = (
+        TransportError::MethodNotAllowed,
+        None::<McpServerState>,
+        unified_mcp_handler,
+        McpSession::new().id,
+    );
     // If we get here without compile errors, the API surface is correct
 }
