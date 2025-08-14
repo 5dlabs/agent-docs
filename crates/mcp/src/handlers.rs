@@ -1,12 +1,13 @@
 //! MCP request handlers
 
+use crate::config::ConfigLoader;
 use crate::protocol_version::ProtocolRegistry;
-use crate::tools::{RustQueryTool, Tool};
+use crate::tools::{DynamicQueryTool, RustQueryTool, Tool};
 use anyhow::{anyhow, Result};
 use doc_server_database::DatabasePool;
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use tracing::{debug, error};
+use tracing::{debug, error, info, warn};
 
 /// MCP request handler
 pub struct McpHandler {
@@ -19,14 +20,88 @@ impl McpHandler {
     /// # Errors
     ///
     /// Returns an error if any tool initialization fails.
-    pub fn new(db_pool: DatabasePool) -> Result<Self> {
+    pub fn new(db_pool: &DatabasePool) -> Result<Self> {
         let mut tools: HashMap<String, Box<dyn Tool + Send + Sync>> = HashMap::new();
 
-        // Register the rust_query tool
-        let rust_query_tool = RustQueryTool::new(db_pool)?;
+        // Always register the rust_query tool as hardcoded (legacy)
+        let rust_query_tool = RustQueryTool::new(db_pool.clone())?;
         tools.insert("rust_query".to_string(), Box::new(rust_query_tool));
+        debug!("Registered hardcoded rust_query tool");
 
+        // Load and register dynamic tools from configuration
+        match Self::register_dynamic_tools(&mut tools, db_pool) {
+            Ok(count) => {
+                info!(
+                    "Successfully registered {} dynamic tools from configuration",
+                    count
+                );
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to load dynamic tools: {}. Continuing with hardcoded tools only.",
+                    e
+                );
+            }
+        }
+
+        info!("MCP handler initialized with {} total tools", tools.len());
         Ok(Self { tools })
+    }
+
+    /// Register dynamic tools from configuration
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if configuration loading or tool creation fails.
+    fn register_dynamic_tools(
+        tools: &mut HashMap<String, Box<dyn Tool + Send + Sync>>,
+        db_pool: &DatabasePool,
+    ) -> Result<usize> {
+        // First try to load from config file, fall back to embedded config
+        let config = if let Ok(path) = std::env::var("TOOLS_CONFIG_PATH") {
+            info!("Loading tools configuration from: {path}");
+            ConfigLoader::load_from_file(path)?
+        } else {
+            debug!("No TOOLS_CONFIG_PATH specified, using embedded configuration");
+            ConfigLoader::load_default()?
+        };
+
+        let enabled_tools = ConfigLoader::filter_enabled_tools(&config);
+        let mut registered_count = 0;
+
+        for tool_config in enabled_tools {
+            // Skip rust_query if it appears in config since we register it hardcoded
+            if tool_config.name == "rust_query" {
+                debug!("Skipping rust_query from config - already registered as hardcoded");
+                continue;
+            }
+
+            // Check if tool name already exists
+            if tools.contains_key(&tool_config.name) {
+                warn!("Tool '{}' already registered, skipping", tool_config.name);
+                continue;
+            }
+
+            // Create and register the dynamic tool
+            match DynamicQueryTool::new(tool_config.clone(), db_pool.clone()) {
+                Ok(dynamic_tool) => {
+                    debug!(
+                        "Created dynamic tool '{}' for doc_type '{}'",
+                        tool_config.name, tool_config.doc_type
+                    );
+                    tools.insert(tool_config.name.clone(), Box::new(dynamic_tool));
+                    registered_count += 1;
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to create tool '{}': {}. Skipping.",
+                        tool_config.name, e
+                    );
+                }
+            }
+        }
+
+        Ok(registered_count)
     }
 
     /// Handle an MCP request

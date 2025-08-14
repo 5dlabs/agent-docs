@@ -14,7 +14,7 @@ async fn test_initialize_protocol_version_2025_06_18() {
     // For this test, we'll skip actual database setup and just test the handler logic
     // In a real scenario, you'd set up a test database
     if let Ok(db_pool) = DatabasePool::new(&database_url).await {
-        let handler = McpHandler::new(db_pool).expect("Failed to create handler");
+        let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
         let request = json!({
             "method": "initialize",

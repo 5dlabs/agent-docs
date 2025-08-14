@@ -1,32 +1,27 @@
-# Autonomous Agent Prompt: OpenAI Embedding Client with Batch Processing
+# Autonomous Agent Prompt: Config-Driven Documentation Query Tools (Dynamic Registration)
 
 ## Mission
-Implement optimized OpenAI embedding generation with batch processing to achieve approximately 70% cost reduction while maintaining performance.
-
-## Live Environment Requirement (Mandatory)
-- Test end-to-end against the live database (`DATABASE_URL`) and the real OpenAI Batch API using `OPENAI_API_KEY`.
-- Do not use mocks or stubs for API calls or database operations; collect real batch/job IDs and timings.
+Implement dynamic tool registration from a JSON config. Each configured tool maps to a `docType` and shares one unified query method. Keep Rust docs tools hardcoded; all other categories (e.g., birdeye, solana, cilium) are defined in config.
 
 ## Primary Objectives
-1. **Batch API Integration**: Implement OpenAI Batch API with JSONL format
-2. **Rate Limiting**: Token bucket algorithm for API compliance
-3. **Queue Management**: Batch processing system for large datasets
-4. **Error Handling**: Retry logic with exponential backoff
-5. **Cost Optimization**: Track and validate 50% cost reduction
+1. **Config Loader**: Read and validate JSON config (tools: name, docType, title, description, enabled)
+2. **Dynamic Registration**: Create tools at startup for each enabled config entry
+3. **Unified Query**: Route all tool calls to a shared handler filtering by `docType`
+4. **Response Formatting**: Include source attribution and relevance
+5. **Performance**: Ensure < 2 second query response time
 
 ## Implementation Steps
-1. Create OpenAI Batch API models and data structures
-2. Implement rate limiting with token bucket algorithm
-3. Build batch processing queue system
-4. Add comprehensive retry logic and error handling
-5. Implement cost tracking and reporting
+1. Define config schema and place example config file
+2. Implement config reader and validation
+3. Register tools dynamically in MCP server startup
+4. Implement unified query handler that accepts `docType`
+5. Add tests for registration and query routing
 
 ## Success Criteria
-- [ ] Batch API integration with JSONL format
-- [ ] Rate limiting compliance (3000 RPM / 1M TPM)
-- [ ] ~70% cost reduction achieved and validated
-- [ ] Processing time < 20 minutes for 20k embeddings
-- [ ] Robust error handling and retry mechanisms## Quality Gates and CI/CD Process
+- [ ] Tools loaded from config and listed in `tools/list`
+- [ ] Unified query returns results filtered by `docType`
+- [ ] Response time < 2 seconds
+- [ ] Source attribution in responses## Quality Gates and CI/CD Process
 
 - Run static analysis after every new function is written:
   - Command: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`

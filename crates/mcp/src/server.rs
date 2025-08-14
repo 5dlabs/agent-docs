@@ -39,7 +39,7 @@ impl McpServer {
     pub async fn new(db_pool: DatabasePool) -> Result<Self> {
         // Initialize service start time for uptime tracking
         init_service_start_time();
-        let handler = Arc::new(McpHandler::new(db_pool.clone())?);
+        let handler = Arc::new(McpHandler::new(&db_pool)?);
 
         // Initialize transport configuration
         let transport_config = TransportConfig::default();
