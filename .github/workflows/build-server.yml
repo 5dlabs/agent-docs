@@ -38,8 +38,31 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust (stable)
+        run: |
+          rustup default stable
+          rustup update stable
+          rustup component add clippy rustfmt
+          rustc --version
+          cargo --version
+          cargo fmt --version || true
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+      - name: Format check
+        run: cargo fmt --all -- --check
+      - name: Clippy (warnings + pedantic)
+        run: cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic
+      - name: Test suite
+        run: cargo test --all-features
+
   build-binary:
-    needs: [version]
+    needs: [version, test]
     runs-on: [k8s-runner]
     steps:
       - uses: actions/checkout@v4
