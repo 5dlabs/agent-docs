@@ -2,7 +2,8 @@
 # and distroless runtime for minimal attack surface
 
 # Chef stage for cargo-chef installation and dependency management
-FROM lukemathwalker/cargo-chef:latest-rust-1.70 AS chef
+# Use a recent Rust toolchain that supports edition 2024
+FROM lukemathwalker/cargo-chef:latest AS chef
 WORKDIR /app
 
 # Planner stage - generates recipe.json with dependency information
