@@ -40,9 +40,17 @@ pub enum ProtocolVersionError {
 impl IntoResponse for ProtocolVersionError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
-            ProtocolVersionError::MissingHeader => (StatusCode::BAD_REQUEST, "Missing MCP-Protocol-Version header"),
-            ProtocolVersionError::InvalidHeaderValue(_) => (StatusCode::BAD_REQUEST, "Invalid MCP-Protocol-Version header value"),
-            ProtocolVersionError::UnsupportedVersion(_, _) => (StatusCode::BAD_REQUEST, "Unsupported protocol version"),
+            ProtocolVersionError::MissingHeader => (
+                StatusCode::BAD_REQUEST,
+                "Missing MCP-Protocol-Version header",
+            ),
+            ProtocolVersionError::InvalidHeaderValue(_) => (
+                StatusCode::BAD_REQUEST,
+                "Invalid MCP-Protocol-Version header value",
+            ),
+            ProtocolVersionError::UnsupportedVersion(_, _) => {
+                (StatusCode::BAD_REQUEST, "Unsupported protocol version")
+            }
         };
 
         let error_response = json!({
@@ -83,14 +91,14 @@ where
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
         let headers = &parts.headers;
-        
+
         debug!("Validating MCP protocol version header");
 
         if let Some(value) = headers.get(MCP_PROTOCOL_VERSION) {
-            let version_str = value
-                .to_str()
-                .map_err(|_| ProtocolVersionError::InvalidHeaderValue("non-UTF8 value".to_string()))?;
-            
+            let version_str = value.to_str().map_err(|_| {
+                ProtocolVersionError::InvalidHeaderValue("non-UTF8 value".to_string())
+            })?;
+
             debug!("Found protocol version header: {version_str}");
 
             if version_str == SUPPORTED_PROTOCOL_VERSION {
@@ -125,9 +133,16 @@ pub enum ContentTypeError {
 impl IntoResponse for ContentTypeError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
-            ContentTypeError::MissingHeader => (StatusCode::BAD_REQUEST, "Missing Content-Type header"),
-            ContentTypeError::InvalidHeaderValue => (StatusCode::BAD_REQUEST, "Invalid Content-Type header value"),
-            ContentTypeError::UnsupportedContentType(_) => (StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported Content-Type"),
+            ContentTypeError::MissingHeader => {
+                (StatusCode::BAD_REQUEST, "Missing Content-Type header")
+            }
+            ContentTypeError::InvalidHeaderValue => {
+                (StatusCode::BAD_REQUEST, "Invalid Content-Type header value")
+            }
+            ContentTypeError::UnsupportedContentType(_) => (
+                StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                "Unsupported Content-Type",
+            ),
         };
 
         let error_response = json!({
@@ -167,24 +182,28 @@ where
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
         let headers = &parts.headers;
-        
+
         debug!("Validating Content-Type header");
 
         if let Some(value) = headers.get(CONTENT_TYPE) {
             let content_type = value
                 .to_str()
                 .map_err(|_| ContentTypeError::InvalidHeaderValue)?;
-            
+
             debug!("Found Content-Type header: {content_type}");
 
             // Accept application/json and text/event-stream
-            if content_type.starts_with("application/json") || content_type.starts_with("text/event-stream") {
+            if content_type.starts_with("application/json")
+                || content_type.starts_with("text/event-stream")
+            {
                 Ok(ContentTypeValidator {
                     content_type: content_type.to_string(),
                 })
             } else {
                 warn!("Unsupported Content-Type: {content_type}");
-                Err(ContentTypeError::UnsupportedContentType(content_type.to_string()))
+                Err(ContentTypeError::UnsupportedContentType(
+                    content_type.to_string(),
+                ))
             }
         } else {
             warn!("Missing Content-Type header");

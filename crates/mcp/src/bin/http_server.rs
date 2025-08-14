@@ -68,7 +68,10 @@ async fn run_server_with_graceful_shutdown(mcp_server: McpServer, addr: &str) ->
     // Create router and bind listener
     let app = mcp_server.create_router();
     let listener = TcpListener::bind(addr).await?;
-    info!("Server listening on {} with graceful shutdown enabled", addr);
+    info!(
+        "Server listening on {} with graceful shutdown enabled",
+        addr
+    );
 
     // Run server with graceful shutdown
     axum::serve(listener, app)

@@ -59,7 +59,11 @@ impl Session {
 
     /// Create a new session with explicit protocol version
     #[must_use]
-    pub fn new_with_version(ttl: Duration, client_info: Option<ClientInfo>, protocol_version: String) -> Self {
+    pub fn new_with_version(
+        ttl: Duration,
+        client_info: Option<ClientInfo>,
+        protocol_version: String,
+    ) -> Self {
         let now = Utc::now();
         Self {
             session_id: Uuid::new_v4(),
@@ -159,7 +163,9 @@ pub enum SessionError {
     #[error("Invalid session ID format: {0}")]
     InvalidSessionId(String),
 
-    #[error("Protocol version mismatch: session has {session_version}, expected {expected_version}")]
+    #[error(
+        "Protocol version mismatch: session has {session_version}, expected {expected_version}"
+    )]
     ProtocolVersionMismatch {
         session_version: String,
         expected_version: String,
@@ -227,7 +233,7 @@ impl SessionManager {
     pub fn create_session_with_version(
         &self,
         client_info: Option<ClientInfo>,
-        protocol_version: String,
+        protocol_version: &str,
     ) -> Result<Uuid, SessionError> {
         let mut sessions = self.sessions.write().map_err(|_| SessionError::LockError)?;
 
@@ -241,7 +247,11 @@ impl SessionManager {
             return Err(SessionError::MaxSessionsReached(self.config.max_sessions));
         }
 
-        let session = Session::new_with_version(self.config.default_ttl, client_info, protocol_version.clone());
+        let session = Session::new_with_version(
+            self.config.default_ttl,
+            client_info,
+            protocol_version.to_string(),
+        );
         let session_id = session.session_id;
 
         sessions.insert(session_id, session);
