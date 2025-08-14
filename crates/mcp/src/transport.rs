@@ -64,6 +64,7 @@ pub struct McpSession {
 
 impl McpSession {
     /// Create a new session
+    #[must_use]
     pub fn new() -> Self {
         let (sender, _) = broadcast::channel(100);
         let now = Instant::now();
@@ -83,12 +84,19 @@ impl McpSession {
     }
 
     /// Check if session has expired
+    #[must_use]
     pub fn is_expired(&self, timeout: Duration) -> bool {
         if let Ok(last_activity) = self.last_activity.read() {
             last_activity.elapsed() > timeout
         } else {
             false
         }
+    }
+}
+
+impl Default for McpSession {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -101,6 +109,7 @@ pub struct SessionManager {
 
 impl SessionManager {
     /// Create a new session manager
+    #[must_use]
     pub fn new(config: TransportConfig) -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
@@ -109,6 +118,10 @@ impl SessionManager {
     }
 
     /// Create a new session
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the internal session map cannot be locked for writing.
     pub fn create_session(&self) -> Result<SessionId, TransportError> {
         let session = McpSession::new();
         let session_id = session.id;
@@ -124,6 +137,11 @@ impl SessionManager {
     }
 
     /// Get or create session from headers
+    /// Get an existing session from headers or create a new one.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the internal session map cannot be accessed.
     pub fn get_or_create_session(&self, headers: &HeaderMap) -> Result<SessionId, TransportError> {
         // Try to extract session ID from headers
         if let Some(session_header) = headers.get(MCP_SESSION_ID) {
@@ -132,12 +150,12 @@ impl SessionManager {
                     // Check if session exists and is valid
                     if let Ok(sessions) = self.sessions.read() {
                         if let Some(session) = sessions.get(&session_id) {
-                            if !session.is_expired(self.config.session_timeout) {
+                            if session.is_expired(self.config.session_timeout) {
+                                debug!("Session expired: {}", session_id);
+                            } else {
                                 session.update_activity();
                                 debug!("Using existing session: {}", session_id);
                                 return Ok(session_id);
-                            } else {
-                                debug!("Session expired: {}", session_id);
                             }
                         }
                     }
@@ -150,6 +168,11 @@ impl SessionManager {
     }
 
     /// Update session activity
+    /// Update session activity timestamp.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the session does not exist or the map cannot be read.
     pub fn update_session_activity(&self, session_id: SessionId) -> Result<(), TransportError> {
         let sessions = self
             .sessions
@@ -164,6 +187,11 @@ impl SessionManager {
     }
 
     /// Clean up expired sessions
+    /// Cleanup expired sessions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the session map cannot be locked for writing.
     pub fn cleanup_expired_sessions(&self) -> Result<usize, TransportError> {
         let mut sessions = self
             .sessions
@@ -182,6 +210,11 @@ impl SessionManager {
     }
 
     /// Get session count for monitoring
+    /// Get current number of sessions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the session map cannot be accessed.
     pub fn session_count(&self) -> Result<usize, TransportError> {
         let sessions = self
             .sessions
@@ -272,6 +305,12 @@ impl IntoResponse for TransportError {
 /// This handler processes all MCP requests according to the 2025-06-18 specification:
 /// - POST requests with application/json -> JSON-RPC processing
 /// - GET requests -> 405 Method Not Allowed (MVP does not support SSE)
+/// Unified MCP endpoint handler.
+///
+/// # Errors
+///
+/// Returns a `TransportError` when protocol validation fails, when the request
+/// uses an unsupported method, or when JSON parsing/processing fails.
 pub async fn unified_mcp_handler(
     State(state): State<McpServerState>,
     headers: HeaderMap,
@@ -299,9 +338,9 @@ pub async fn unified_mcp_handler(
         };
     }
 
-    match request.method() {
-        &Method::POST => handle_json_rpc_request(state, headers, request).await,
-        &Method::GET => {
+    match *request.method() {
+        Method::POST => handle_json_rpc_request(state, headers, request).await,
+        Method::GET => {
             // MVP: Return 405 for GET requests (SSE not implemented yet)
             warn!("GET request to /mcp endpoint - returning 405 Method Not Allowed");
             Err(TransportError::MethodNotAllowed)
@@ -358,7 +397,7 @@ async fn handle_json_rpc_request(
             if lower.contains("length") && lower.contains("limit") || lower.contains("too large") {
                 TransportError::PayloadTooLarge
             } else {
-                TransportError::InternalError(format!("Failed to read body: {}", msg))
+                TransportError::InternalError(format!("Failed to read body: {msg}"))
             }
         })?;
 
@@ -385,10 +424,7 @@ async fn handle_json_rpc_request(
         }
         Err(e) => {
             error!("MCP handler failed: {}", e);
-            Err(TransportError::InternalError(format!(
-                "Handler error: {}",
-                e
-            )))
+            Err(TransportError::InternalError(format!("Handler error: {e}")))
         }
     }
 }

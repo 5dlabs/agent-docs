@@ -26,6 +26,11 @@ pub struct RustQueryTool {
 
 impl RustQueryTool {
     /// Create a new Rust query tool
+    /// Create a new Rust query tool.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the embedding client fails to initialize.
     pub async fn new(db_pool: DatabasePool) -> Result<Self> {
         let embedding_client = OpenAIEmbeddingClient::new()?;
 
@@ -68,13 +73,15 @@ impl RustQueryTool {
                 .and_then(|c| c.as_str())
                 .unwrap_or("unknown");
 
-            response.push_str(&format!(
-                "{}. **{}** (from `{}`)\n{}\n\n",
+            use std::fmt::Write as _;
+            let _ = write!(
+                &mut response,
+                "{}. **{}** (from `{}`)\n{}...\n\n",
                 i + 1,
                 doc.doc_path,
                 metadata,
-                doc.content.chars().take(300).collect::<String>() + "..."
-            ));
+                doc.content.chars().take(300).collect::<String>()
+            );
         }
 
         Ok(response)
@@ -112,7 +119,7 @@ impl Tool for RustQueryTool {
             .and_then(|q| q.as_str())
             .ok_or_else(|| anyhow!("Missing required 'query' parameter"))?;
 
-        let limit = arguments.get("limit").and_then(|l| l.as_i64());
+        let limit = arguments.get("limit").and_then(Value::as_i64);
 
         // Validate limit
         if let Some(l) = limit {

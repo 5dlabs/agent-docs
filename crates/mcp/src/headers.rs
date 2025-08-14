@@ -8,7 +8,11 @@ pub const MCP_SESSION_ID: &str = "Mcp-Session-Id";
 pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
 
 /// Validate that incoming request headers include the supported MCP protocol version.
-/// Returns 400 Bad Request if the header is missing or has an unsupported value.
+///
+/// # Errors
+///
+/// Returns `Err(StatusCode::BAD_REQUEST)` if the header is missing or has an
+/// unsupported value.
 pub fn validate_protocol_version(headers: &HeaderMap) -> Result<(), StatusCode> {
     match headers.get(MCP_PROTOCOL_VERSION) {
         Some(value) => {

@@ -6,6 +6,7 @@ pub struct RustLoader;
 
 impl RustLoader {
     /// Create a new Rust loader
+    #[must_use]
     pub fn new() -> Self {
         Self
     }

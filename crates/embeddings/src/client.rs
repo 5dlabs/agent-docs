@@ -94,6 +94,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
             .and_then(|emb| emb.as_array())
             .ok_or_else(|| anyhow!("Invalid response format from OpenAI API"))?;
 
+        #[allow(clippy::cast_possible_truncation)]
         let embedding_vec: Result<Vec<f32>, _> = embedding
             .iter()
             .map(|v| {

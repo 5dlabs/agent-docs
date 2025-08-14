@@ -168,6 +168,7 @@ pub struct ProgressTracker {
 }
 
 impl ProgressTracker {
+    #[must_use]
     pub fn new(total: usize) -> Self {
         let now = Utc::now();
         Self {
@@ -182,7 +183,7 @@ impl ProgressTracker {
         self.processed.fetch_add(count, Ordering::Relaxed);
     }
 
-    pub async fn get_progress(&self) -> (usize, usize, f64, Option<Duration>) {
+    pub fn get_progress(&self) -> (usize, usize, f64, Option<Duration>) {
         let processed = self.processed.load(Ordering::Relaxed);
         let total = self.total.load(Ordering::Relaxed);
         let progress_percent = if total > 0 {
@@ -196,6 +197,7 @@ impl ProgressTracker {
             let time_per_doc = elapsed.num_milliseconds() as f64 / processed as f64;
             let remaining_docs = total - processed;
             let remaining_ms = remaining_docs as f64 * time_per_doc;
+            #[allow(clippy::cast_possible_truncation)]
             Some(Duration::milliseconds(remaining_ms as i64))
         } else {
             None
@@ -281,7 +283,7 @@ impl MigrationPipeline {
         }
 
         // Calculate performance metrics
-        let (processed, _total, _, _) = self.progress_tracker.get_progress().await;
+        let (processed, _total, _, _) = self.progress_tracker.get_progress();
         let throughput = if duration.num_minutes() > 0 {
             processed as f64 / duration.num_minutes() as f64
         } else {
@@ -340,11 +342,18 @@ impl MigrationPipeline {
         // Process documents in batches
         let batches: Vec<Vec<_>> = documents
             .chunks(self.config.batch_size)
-            .map(|chunk| chunk.to_vec())
+            .map(<[MockDocument]>::to_vec)
             .collect();
 
         for (batch_idx, batch) in batches.into_iter().enumerate() {
-            if !self.config.dry_run {
+            if self.config.dry_run {
+                info!(
+                    "DRY RUN: Would process batch {} with {} documents",
+                    batch_idx,
+                    batch.len()
+                );
+                self.progress_tracker.increment(batch.len());
+            } else {
                 self.process_batch(batch_idx, batch, semaphore.clone())
                     .await?;
 
@@ -354,13 +363,6 @@ impl MigrationPipeline {
                 {
                     self.create_checkpoint(batch_idx).await?;
                 }
-            } else {
-                info!(
-                    "DRY RUN: Would process batch {} with {} documents",
-                    batch_idx,
-                    batch.len()
-                );
-                self.progress_tracker.increment(batch.len());
             }
 
             // Update state
@@ -371,14 +373,13 @@ impl MigrationPipeline {
             }
 
             // Progress reporting
-            let (processed, total, progress, eta) = self.progress_tracker.get_progress().await;
+            let (processed, total, progress, eta) = self.progress_tracker.get_progress();
             info!(
                 "Progress: {}/{} ({:.1}%) - ETA: {}",
                 processed,
                 total,
                 progress,
-                eta.map(|d| format!("{:.1} minutes", d.num_minutes() as f64))
-                    .unwrap_or_else(|| "unknown".to_string())
+                eta.map_or_else(|| "unknown".to_string(), |d| format!("{:.1} minutes", d.num_minutes() as f64))
             );
         }
 
@@ -491,7 +492,7 @@ impl MigrationPipeline {
     /// Store document in database
     async fn store_document(&self, document: &Document) -> Result<()> {
         sqlx::query(
-            r#"
+            r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, embedding, token_count, created_at, updated_at)
             VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (doc_type, source_name, doc_path) DO UPDATE SET
@@ -500,7 +501,7 @@ impl MigrationPipeline {
                 embedding = EXCLUDED.embedding,
                 token_count = EXCLUDED.token_count,
                 updated_at = EXCLUDED.updated_at
-            "#,
+            ",
         )
         .bind(document.id)
         .bind(&document.doc_type)

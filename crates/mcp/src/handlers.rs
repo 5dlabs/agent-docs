@@ -14,6 +14,10 @@ pub struct McpHandler {
 
 impl McpHandler {
     /// Create a new MCP handler
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any tool initialization fails.
     pub async fn new(db_pool: DatabasePool) -> Result<Self> {
         let mut tools: HashMap<String, Box<dyn Tool + Send + Sync>> = HashMap::new();
 
@@ -25,6 +29,10 @@ impl McpHandler {
     }
 
     /// Handle an MCP request
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the request is malformed or tool execution fails.
     pub async fn handle_request(&self, request: Value) -> Result<Value> {
         debug!("Processing MCP request");
 
@@ -35,15 +43,15 @@ impl McpHandler {
             .ok_or_else(|| anyhow!("Missing method in request"))?;
 
         match method {
-            "tools/list" => self.handle_tools_list().await,
+            "tools/list" => self.handle_tools_list(),
             "tools/call" => self.handle_tool_call(&request).await,
-            "initialize" => self.handle_initialize(&request).await,
+            "initialize" => self.handle_initialize(&request),
             _ => Err(anyhow!("Unsupported method: {}", method)),
         }
     }
 
     /// Handle tools/list request
-    async fn handle_tools_list(&self) -> Result<Value> {
+    fn handle_tools_list(&self) -> Result<Value> {
         let tools: Vec<Value> = self.tools.values().map(|tool| tool.definition()).collect();
 
         Ok(json!({
@@ -97,7 +105,7 @@ impl McpHandler {
     }
 
     /// Handle initialize request
-    async fn handle_initialize(&self, _request: &Value) -> Result<Value> {
+    fn handle_initialize(&self, _request: &Value) -> Result<Value> {
         Ok(json!({
             "protocolVersion": "2025-06-18",
             "capabilities": {

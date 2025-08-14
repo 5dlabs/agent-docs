@@ -32,6 +32,10 @@ pub struct McpServer {
 
 impl McpServer {
     /// Create a new MCP server
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if handler initialization fails.
     pub async fn new(db_pool: DatabasePool) -> Result<Self> {
         let handler = Arc::new(McpHandler::new(db_pool.clone()).await?);
 
@@ -53,6 +57,10 @@ impl McpServer {
     }
 
     /// Start serving on the given address
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if binding or serving the listener fails.
     pub async fn serve(&self, addr: &str) -> Result<()> {
         let app = self.create_router();
 
