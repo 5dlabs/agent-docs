@@ -200,7 +200,8 @@ impl CostInfo {
     /// Calculate cost information for a batch
     #[must_use]
     pub fn calculate(batch_id: String, tokens_used: u32) -> Self {
-        let individual_cost = (f64::from(tokens_used) * EMBEDDING_COST_PER_MILLION_TOKENS) / 1_000_000.0;
+        let individual_cost =
+            (f64::from(tokens_used) * EMBEDDING_COST_PER_MILLION_TOKENS) / 1_000_000.0;
         let batch_cost = individual_cost * BATCH_DISCOUNT_FACTOR;
         let savings = individual_cost - batch_cost;
         let savings_percentage = (savings / individual_cost) * 100.0;

@@ -50,10 +50,10 @@ impl RetryPolicy {
         }
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        let exponential_delay = self.base_delay.as_secs_f64() 
-            * self.backoff_multiplier.powi((attempt - 1) as i32);
+        let exponential_delay =
+            self.base_delay.as_secs_f64() * self.backoff_multiplier.powi((attempt - 1) as i32);
         let clamped_delay = exponential_delay.min(self.max_delay.as_secs_f64());
-        
+
         // Add jitter
         let jitter_range = clamped_delay * self.jitter_factor;
         let jitter = (rand::random::<f64>() - 0.5) * 2.0 * jitter_range;
@@ -66,7 +66,7 @@ impl RetryPolicy {
     #[must_use]
     pub fn is_retryable_error(error: &anyhow::Error) -> bool {
         let error_string = error.to_string().to_lowercase();
-        
+
         // Check for temporary network/server errors
         error_string.contains("timeout") ||
         error_string.contains("connection") ||
@@ -76,7 +76,7 @@ impl RetryPolicy {
         error_string.contains("502") ||  // Bad Gateway
         error_string.contains("504") ||  // Gateway Timeout
         error_string.contains("429") ||  // Too Many Requests
-        error_string.contains("500")     // Internal Server Error
+        error_string.contains("500") // Internal Server Error
     }
 }
 
@@ -161,7 +161,10 @@ impl CircuitBreaker {
 
         if self.failure_count >= self.failure_threshold {
             self.state = CircuitBreakerState::Open;
-            warn!("Circuit breaker opened after {} failures", self.failure_count);
+            warn!(
+                "Circuit breaker opened after {} failures",
+                self.failure_count
+            );
         }
     }
 }
@@ -203,7 +206,7 @@ impl TokenBucket {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_refill).as_secs_f64();
         let tokens_to_add = elapsed * self.refill_rate;
-        
+
         self.tokens = (self.tokens + tokens_to_add).min(self.capacity);
         self.last_refill = now;
     }
@@ -269,14 +272,17 @@ impl RateLimiter {
     /// Returns an error if rate limiting fails (should not happen in normal operation).
     pub async fn wait_for_capacity(&self, estimated_tokens: u32) -> Result<()> {
         let tokens = f64::from(estimated_tokens);
-        
+
         loop {
             let mut request_bucket = self.request_bucket.lock().await;
             let mut token_bucket = self.token_bucket.lock().await;
 
             // Check if we can consume both a request and the required tokens
             if request_bucket.try_consume(1.0) && token_bucket.try_consume(tokens) {
-                debug!("Rate limit check passed: 1 request, {} tokens", estimated_tokens);
+                debug!(
+                    "Rate limit check passed: 1 request, {} tokens",
+                    estimated_tokens
+                );
                 break;
             }
 
@@ -296,7 +302,7 @@ impl RateLimiter {
                 tokio::time::sleep(Duration::from_millis(10)).await;
             }
         }
-        
+
         Ok(())
     }
 
@@ -304,7 +310,11 @@ impl RateLimiter {
     #[must_use]
     pub fn estimate_tokens(text: &str) -> u32 {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
         let estimated = (text.len() as f64 * AVERAGE_TOKENS_PER_CHAR).ceil() as u32;
         estimated.max(1) // At least 1 token
     }
@@ -362,8 +372,8 @@ impl OpenAIEmbeddingClient {
 
         let client = Client::new();
 
-        Ok(Self { 
-            client, 
+        Ok(Self {
+            client,
             api_key,
             rate_limiter: RateLimiter::new(),
             retry_policy: RetryPolicy::new(),
@@ -381,7 +391,9 @@ impl OpenAIEmbeddingClient {
         {
             let mut circuit_breaker = self.circuit_breaker.lock().await;
             if !circuit_breaker.can_proceed() {
-                return Err(anyhow!("Circuit breaker is open - too many recent failures"));
+                return Err(anyhow!(
+                    "Circuit breaker is open - too many recent failures"
+                ));
             }
         }
 
@@ -399,7 +411,7 @@ impl OpenAIEmbeddingClient {
                 }
                 Err(error) => {
                     last_error = Some(error);
-                    
+
                     // Check if this is the last attempt
                     if attempt == self.retry_policy.max_retries {
                         break;
@@ -415,10 +427,17 @@ impl OpenAIEmbeddingClient {
 
                     // Calculate delay and wait
                     let delay = self.retry_policy.calculate_delay(attempt + 1);
-                    warn!("Request failed (attempt {}/{}), retrying after {:?}: {}", 
-                          attempt + 1, self.retry_policy.max_retries + 1, delay, 
-                          last_error.as_ref().map_or("Unknown error".to_string(), std::string::ToString::to_string));
-                    
+                    warn!(
+                        "Request failed (attempt {}/{}), retrying after {:?}: {}",
+                        attempt + 1,
+                        self.retry_policy.max_retries + 1,
+                        delay,
+                        last_error.as_ref().map_or(
+                            "Unknown error".to_string(),
+                            std::string::ToString::to_string
+                        )
+                    );
+
                     if delay > Duration::ZERO {
                         tokio::time::sleep(delay).await;
                     }
@@ -458,7 +477,9 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
         // Apply rate limiting
         let estimated_tokens = RateLimiter::estimate_tokens(&request.input);
-        self.rate_limiter.wait_for_capacity(estimated_tokens).await?;
+        self.rate_limiter
+            .wait_for_capacity(estimated_tokens)
+            .await?;
 
         let payload = json!({
             "input": request.input,
@@ -518,20 +539,22 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
     /// Upload a `JSONL` file for batch processing
     async fn upload_batch_file(&self, content: &str, filename: &str) -> Result<FileUploadResponse> {
-        debug!("Uploading batch file: {} ({} bytes)", filename, content.len());
-        
+        debug!(
+            "Uploading batch file: {} ({} bytes)",
+            filename,
+            content.len()
+        );
+
         let content = content.to_string();
         let filename = filename.to_string();
-        
+
         self.execute_with_retry(|| async {
-            let form = multipart::Form::new()
-                .text("purpose", "batch")
-                .part(
-                    "file", 
-                    multipart::Part::text(content.clone())
-                        .file_name(filename.clone())
-                        .mime_str("application/jsonl")?
-                );
+            let form = multipart::Form::new().text("purpose", "batch").part(
+                "file",
+                multipart::Part::text(content.clone())
+                    .file_name(filename.clone())
+                    .mime_str("application/jsonl")?,
+            );
 
             let response = self
                 .client
@@ -553,15 +576,16 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
             let upload_response: FileUploadResponse = response.json().await?;
             info!("Successfully uploaded file: {}", upload_response.id);
             Ok(upload_response)
-        }).await
+        })
+        .await
     }
 
     /// Create a batch job
     async fn create_batch(&self, input_file_id: &str) -> Result<BatchResponse> {
         debug!("Creating batch with input file: {}", input_file_id);
-        
+
         let input_file_id = input_file_id.to_string();
-        
+
         self.execute_with_retry(|| async {
             let request = BatchRequest {
                 input_file_id: input_file_id.clone(),
@@ -591,7 +615,8 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
             let batch_response: BatchResponse = response.json().await?;
             info!("Successfully created batch: {}", batch_response.id);
             Ok(batch_response)
-        }).await
+        })
+        .await
     }
 
     /// Get batch status
@@ -663,7 +688,9 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
         let response = self
             .client
-            .post(format!("https://api.openai.com/v1/batches/{batch_id}/cancel"))
+            .post(format!(
+                "https://api.openai.com/v1/batches/{batch_id}/cancel"
+            ))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
             .send()
