@@ -14,13 +14,6 @@ RUN cargo chef prepare --recipe-path recipe.json
 # Builder stage - builds dependencies first (cached layer), then application
 FROM chef AS builder
 
-# Install additional tools for binary optimization
-RUN apt-get update && apt-get install -y \
-    upx-ucl \
-    binutils \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy and build dependencies (this layer will be cached)
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
@@ -29,8 +22,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin http_server
 
-# Additional binary optimization (strip is already configured in Cargo.toml)
-RUN upx --best target/release/http_server
+# Additional binary optimization is handled by Cargo.toml (strip) for reproducibility
 
 # Runtime stage using distroless for minimal attack surface
 FROM gcr.io/distroless/cc-debian12 AS runtime
