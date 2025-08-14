@@ -200,6 +200,7 @@ impl ProgressTracker {
             #[allow(clippy::cast_precision_loss)]
             let time_per_doc = elapsed.num_milliseconds() as f64 / processed as f64;
             let remaining_docs = total - processed;
+            #[allow(clippy::cast_precision_loss)]
             let remaining_ms = remaining_docs as f64 * time_per_doc;
             #[allow(clippy::cast_possible_truncation)]
             Some(Duration::milliseconds(remaining_ms as i64))

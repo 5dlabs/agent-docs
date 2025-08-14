@@ -18,7 +18,7 @@ impl McpHandler {
     /// # Errors
     ///
     /// Returns an error if any tool initialization fails.
-    pub async fn new(db_pool: DatabasePool) -> Result<Self> {
+    pub fn new(db_pool: DatabasePool) -> Result<Self> {
         let mut tools: HashMap<String, Box<dyn Tool + Send + Sync>> = HashMap::new();
 
         // Register the rust_query tool
