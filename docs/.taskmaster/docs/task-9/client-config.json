@@ -1,7 +1,4 @@
 {
-  "remoteTools": [
-    "birdeye_query"
-  ],
   "localServers": {
     "filesystem": {
       "command": "npx",
