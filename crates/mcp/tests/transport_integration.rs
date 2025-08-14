@@ -24,6 +24,7 @@ async fn create_test_server() -> Router {
     match doc_server_database::DatabasePool::new(&database_url).await {
         Ok(db_pool) => {
             let server = McpServer::new(db_pool)
+                .await
                 .expect("Failed to create server");
             server.create_router()
         }
@@ -140,7 +141,6 @@ fn create_mock_router() -> Router {
 
                 Ok((StatusCode::OK, response_headers, axum::Json(mock_response)).into_response())
             }
-            Method::GET => Err(TransportError::MethodNotAllowed),
             _ => Err(TransportError::MethodNotAllowed),
         }
     }

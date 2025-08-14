@@ -13,10 +13,9 @@ async fn test_initialize_protocol_version_2025_06_18() {
 
     // For this test, we'll skip actual database setup and just test the handler logic
     // In a real scenario, you'd set up a test database
-    match DatabasePool::new(&database_url).await {
-        Ok(db_pool) => {
-            let handler = McpHandler::new(db_pool)
-                .expect("Failed to create handler");
+    if let Ok(db_pool) = DatabasePool::new(&database_url).await {
+        let handler = McpHandler::new(db_pool)
+            .expect("Failed to create handler");
 
             let request = json!({
                 "method": "initialize",
@@ -49,8 +48,7 @@ async fn test_initialize_protocol_version_2025_06_18() {
                 capabilities.get("tools").is_some(),
                 "Tools capability should be present"
             );
-        }
-        Err(_) => {
+    } else {
             // If we can't connect to a test database, skip this test
             eprintln!("Skipping initialize test - no test database available");
 
@@ -77,7 +75,6 @@ async fn test_initialize_protocol_version_2025_06_18() {
             let capabilities = expected_response.get("capabilities").unwrap();
             assert!(!capabilities.as_object().unwrap().contains_key("sse"));
             assert!(capabilities.get("tools").is_some());
-        }
     }
 }
 

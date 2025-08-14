@@ -426,7 +426,7 @@ impl MigrationPipeline {
     }
 
     /// Collect all documents to be processed
-    fn collect_documents(&self) -> Result<Vec<MockDocument>> {
+    fn collect_documents(&self) -> Vec<MockDocument> {
         // For now, return mock documents for testing
         // In a real implementation, this would scan the source paths
         let mock_docs = vec![
@@ -442,7 +442,7 @@ impl MigrationPipeline {
             },
         ];
 
-        Ok(mock_docs)
+        mock_docs
     }
 
     /// Process a batch of documents
