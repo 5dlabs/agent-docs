@@ -8,10 +8,16 @@
 
 use axum::{
     body::Body,
-    http::{Method, Request, StatusCode},
-    Router,
+    http::{HeaderMap, Method, Request, StatusCode},
+    response::IntoResponse,
+    routing::{any, get},
+    Json, Router,
 };
-use doc_server_mcp::{headers::SUPPORTED_PROTOCOL_VERSION, metrics::metrics, McpServer};
+use doc_server_mcp::{
+    headers::{set_json_response_headers, set_standard_headers, SUPPORTED_PROTOCOL_VERSION},
+    metrics::metrics,
+    McpServer,
+};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
@@ -34,44 +40,108 @@ async fn create_test_server() -> Router {
 
 /// Create a mock router for testing when database is not available
 fn create_mock_router() -> Router {
-    use axum::{
-        http::HeaderMap,
-        response::IntoResponse,
-        routing::{any, get},
-        Json,
-    };
-    use doc_server_mcp::headers::{set_json_response_headers, set_standard_headers};
+    async fn mock_mcp_handler(request: Request<Body>) -> impl IntoResponse {
+        let method = request.method().clone();
+        let headers = request.headers().clone();
 
-    fn mock_mcp_handler(method: &Method, _headers: HeaderMap) -> impl IntoResponse {
-        if *method == Method::POST {
-            let mut headers = HeaderMap::new();
-            set_json_response_headers(&mut headers, None);
-            (
-                StatusCode::OK,
-                headers,
-                Json(json!({
-                    "jsonrpc": "2.0",
-                    "result": {"status": "ok"},
-                    "id": 1
-                })),
-            )
-                .into_response()
-        } else {
-            // Handle GET and all other methods with 405
-            let mut headers = HeaderMap::new();
-            set_standard_headers(&mut headers, None);
-            (
+        // Count every incoming request to emulate server metrics
+        metrics().increment_requests();
+
+        if method != Method::POST {
+            let mut h = HeaderMap::new();
+            set_standard_headers(&mut h, None);
+            metrics().increment_method_not_allowed();
+            return (
                 StatusCode::METHOD_NOT_ALLOWED,
-                headers,
+                h,
                 Json(json!({
-                    "error": {
-                        "code": -32600,
-                        "message": "Method Not Allowed"
-                    }
+                    "error": {"code": -32600, "message": "Method Not Allowed"}
                 })),
             )
-                .into_response()
+                .into_response();
         }
+
+        // POST behavior: emulate server-side validations used by tests
+        // Accept header
+        if let Some(accept) = headers.get("accept").and_then(|v| v.to_str().ok()) {
+            if !(accept.contains("application/json")
+                || accept.contains("application/*")
+                || accept.contains("*/*"))
+            {
+                let mut h = HeaderMap::new();
+                set_json_response_headers(&mut h, None);
+                return (
+                    StatusCode::NOT_ACCEPTABLE,
+                    h,
+                    Json(json!({ "error": {"code": -32600, "message": "Not Acceptable"}})),
+                )
+                    .into_response();
+            }
+        }
+
+        // Protocol version header
+        if headers.get("MCP-Protocol-Version").is_none() {
+            let mut h = HeaderMap::new();
+            set_json_response_headers(&mut h, None);
+            metrics().increment_protocol_version_errors();
+            return (
+                StatusCode::BAD_REQUEST,
+                h,
+                Json(
+                    json!({ "error": {"code": -32600, "message": "Unsupported Protocol Version"}}),
+                ),
+            )
+                .into_response();
+        }
+
+        // Content-Type header
+        if !headers
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|ct| ct.starts_with("application/json"))
+        {
+            let mut h = HeaderMap::new();
+            set_json_response_headers(&mut h, None);
+            return (
+                StatusCode::BAD_REQUEST,
+                h,
+                Json(
+                    json!({ "error": {"code": -32600, "message": "Missing/Invalid Content-Type"}}),
+                ),
+            )
+                .into_response();
+        }
+
+        // Read body and ensure valid JSON
+        let bytes = axum::body::to_bytes(request.into_body(), 1024)
+            .await
+            .unwrap_or_default();
+        if serde_json::from_slice::<serde_json::Value>(&bytes).is_err() {
+            let mut h = HeaderMap::new();
+            set_json_response_headers(&mut h, None);
+            metrics().increment_json_parse_errors();
+            return (
+                StatusCode::BAD_REQUEST,
+                h,
+                Json(json!({ "error": {"code": -32600, "message": "Invalid JSON"}})),
+            )
+                .into_response();
+        }
+
+        // Success
+        let mut h = HeaderMap::new();
+        set_json_response_headers(&mut h, None);
+        metrics().increment_post_success();
+        (
+            StatusCode::OK,
+            h,
+            Json(json!({
+                "jsonrpc": "2.0",
+                "result": {"status": "ok"},
+                "id": 1
+            })),
+        )
+            .into_response()
     }
 
     async fn mock_health_handler() -> impl IntoResponse {
@@ -83,10 +153,7 @@ fn create_mock_router() -> Router {
     }
 
     Router::new()
-        .route(
-            "/mcp",
-            any(|method: Method, headers: HeaderMap| async move { mock_mcp_handler(&method, headers) }),
-        )
+        .route("/mcp", any(mock_mcp_handler))
         .route("/health", get(mock_health_handler))
 }
 

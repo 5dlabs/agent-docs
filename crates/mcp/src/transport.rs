@@ -289,7 +289,7 @@ impl IntoResponse for TransportError {
             }
             TransportError::MissingContentType => (StatusCode::BAD_REQUEST, "Missing Content-Type"),
             TransportError::InvalidContentType(_) => {
-                (StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported Media Type")
+                (StatusCode::BAD_REQUEST, "Unsupported Media Type")
             }
             TransportError::JsonParseError(_) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
             TransportError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
@@ -363,7 +363,7 @@ pub async fn unified_mcp_handler(
     );
 
     async move {
-        // Increment total request counter
+        // Increment total request counter (count every incoming request)
         metrics().increment_requests();
 
         info!(
@@ -675,7 +675,18 @@ async fn handle_json_rpc_request(
         TransportError::JsonParseError(e.to_string())
     })?;
 
-    debug!(request_id = %request_id, session_id = %session_id, "Parsed JSON-RPC request: {}", json_request);
+    // Extract JSON-RPC id (if present) for observability
+    let jsonrpc_id_str = json_request
+        .get("id")
+        .map_or_else(|| "-".to_string(), ToString::to_string);
+
+    debug!(
+        request_id = %request_id,
+        session_id = %session_id,
+        jsonrpc_id = %jsonrpc_id_str,
+        "Parsed JSON-RPC request: {}",
+        json_request
+    );
 
     // Process through existing MCP handler
     match state.handler.handle_request(json_request).await {

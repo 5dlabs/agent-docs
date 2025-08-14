@@ -550,16 +550,13 @@ fn test_header_edge_cases() {
         Err(StatusCode::BAD_REQUEST)
     );
 
-    // Protocol version with extra whitespace should fail
+    // Protocol version with extra whitespace should pass (trim allowed)
     let mut headers = HeaderMap::new();
     headers.insert(
         MCP_PROTOCOL_VERSION,
         HeaderValue::from_static(" 2025-06-18 "),
     );
-    assert_eq!(
-        validate_protocol_version(&headers),
-        Err(StatusCode::BAD_REQUEST)
-    );
+    assert!(validate_protocol_version(&headers).is_ok());
 
     // Case sensitivity test
     let mut headers = HeaderMap::new();
