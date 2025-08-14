@@ -60,6 +60,12 @@
 
 ## Non-Functional Requirements
 
+### NFR-0: Code Quality and Automation
+- [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
+- [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
+- [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
+- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact
+
 ### NFR-1: Performance
 - [ ] Session creation time < 10ms (95th percentile)
 - [ ] Session lookup time < 1ms (95th percentile)
