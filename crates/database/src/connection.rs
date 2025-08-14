@@ -4,7 +4,7 @@
 //! retry logic, monitoring, health checks, and production-optimized configuration.
 
 use crate::pool_config::PoolConfig;
-use crate::retry::{RetryExecutor, RetryConfig};
+use crate::retry::{RetryConfig, RetryExecutor};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -88,10 +88,8 @@ impl DatabasePool {
     /// Returns an error if a connection to the database cannot be established
     /// within the configured timeout or the connection URL is invalid.
     pub async fn new(database_url: &str) -> Result<Self> {
-        let config = PoolConfig::builder()
-            .database_url(database_url)
-            .build()?;
-        
+        let config = PoolConfig::builder().database_url(database_url).build()?;
+
         Self::with_config(config).await
     }
 
@@ -114,12 +112,12 @@ impl DatabasePool {
     pub async fn with_config(config: PoolConfig) -> Result<Self> {
         config.validate()?;
         config.log_summary();
-        
+
         info!("Establishing database connection with retry logic...");
 
         let retry_config = RetryConfig::from_env();
         let retry_executor = RetryExecutor::with_config(retry_config);
-        
+
         // Build connection string with application name
         let connection_url = if config.database_url.contains("application_name=") {
             config.database_url.clone()
@@ -127,7 +125,11 @@ impl DatabasePool {
             format!(
                 "{}{}application_name={}",
                 config.database_url,
-                if config.database_url.contains('?') { "&" } else { "?" },
+                if config.database_url.contains('?') {
+                    "&"
+                } else {
+                    "?"
+                },
                 config.application_name
             )
         };
@@ -175,7 +177,7 @@ impl DatabasePool {
 
         // Perform initial health check
         let _ = database_pool.health_check().await;
-        
+
         info!("Database connection pool established successfully");
         Ok(database_pool)
     }
@@ -199,7 +201,7 @@ impl DatabasePool {
     /// Returns an error if the connectivity check query fails.
     pub async fn ping(&self) -> Result<()> {
         self.metrics.total_queries.fetch_add(1, Ordering::Relaxed);
-        
+
         match sqlx::query("SELECT 1").execute(&self.pool).await {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -239,7 +241,7 @@ impl DatabasePool {
             Ok(()) => {
                 let elapsed_ms = start.elapsed().as_millis();
                 result.response_time_ms = u64::try_from(elapsed_ms).unwrap_or(u64::MAX);
-                
+
                 // Get connection pool status
                 let pool_size = self.get_pool_size();
                 result.active_connections = pool_size.0;
@@ -276,7 +278,7 @@ impl DatabasePool {
     pub async fn get_status(&self) -> Result<PoolStatus> {
         let health = self.health_check().await?;
         let metrics = self.get_metrics_snapshot();
-        
+
         let pool_utilization = if self.config.max_connections > 0 {
             (f64::from(health.active_connections) / f64::from(self.config.max_connections)) * 100.0
         } else {
@@ -325,7 +327,10 @@ impl DatabasePool {
         };
 
         PoolMetricsSnapshot {
-            total_connections_created: self.metrics.total_connections_created.load(Ordering::Relaxed),
+            total_connections_created: self
+                .metrics
+                .total_connections_created
+                .load(Ordering::Relaxed),
             total_acquisitions,
             acquisition_failures,
             total_queries,
@@ -340,10 +345,10 @@ impl DatabasePool {
         let pool = self.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(60));
-            
+
             loop {
                 interval.tick().await;
-                
+
                 match pool.get_status().await {
                     Ok(status) => {
                         if status.pool_utilization_percent > 80.0 {
@@ -354,7 +359,7 @@ impl DatabasePool {
                                 status.config.max_connections
                             );
                         }
-                        
+
                         if status.metrics.success_rate_percent < 95.0 {
                             warn!(
                                 "Low query success rate: {:.1}% ({} failures / {} queries)",
@@ -363,7 +368,7 @@ impl DatabasePool {
                                 status.metrics.total_queries
                             );
                         }
-                        
+
                         info!(
                             "Pool status: {:.0}% utilization, {:.1}% success rate, {}ms avg response",
                             status.pool_utilization_percent,
@@ -388,12 +393,16 @@ impl DatabasePool {
         F: FnOnce(&PgPool) -> Fut,
         Fut: std::future::Future<Output = Result<T>>,
     {
-        self.metrics.total_acquisitions.fetch_add(1, Ordering::Relaxed);
-        
+        self.metrics
+            .total_acquisitions
+            .fetch_add(1, Ordering::Relaxed);
+
         match operation(&self.pool).await {
             Ok(result) => Ok(result),
             Err(e) => {
-                self.metrics.acquisition_failures.fetch_add(1, Ordering::Relaxed);
+                self.metrics
+                    .acquisition_failures
+                    .fetch_add(1, Ordering::Relaxed);
                 Err(e)
             }
         }

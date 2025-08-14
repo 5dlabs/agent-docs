@@ -13,25 +13,25 @@ use tracing::{info, warn};
 pub struct PoolConfig {
     /// Minimum number of connections to maintain
     pub min_connections: u32,
-    
+
     /// Maximum number of connections allowed
     pub max_connections: u32,
-    
+
     /// Timeout for acquiring a connection from the pool
     pub acquire_timeout_seconds: u64,
-    
+
     /// Maximum connection lifetime before recycling
     pub max_lifetime_seconds: Option<u64>,
-    
+
     /// Idle timeout before connection is closed
     pub idle_timeout_seconds: Option<u64>,
-    
+
     /// Connection string for the database
     pub database_url: String,
-    
+
     /// Application name for connection identification
     pub application_name: String,
-    
+
     /// Test connections on acquisition
     pub test_before_acquire: bool,
 }
@@ -84,8 +84,8 @@ impl PoolConfig {
             .ok()
             .and_then(|s| s.parse::<u64>().ok());
 
-        let application_name = std::env::var("APP_NAME")
-            .unwrap_or_else(|_| Self::default().application_name);
+        let application_name =
+            std::env::var("APP_NAME").unwrap_or_else(|_| Self::default().application_name);
 
         let config = PoolConfig {
             min_connections,
@@ -135,8 +135,12 @@ impl PoolConfig {
         }
 
         // Validate database URL format
-        if !self.database_url.starts_with("postgresql://") && !self.database_url.starts_with("postgres://") {
-            return Err(anyhow!("database_url must be a valid PostgreSQL connection string"));
+        if !self.database_url.starts_with("postgresql://")
+            && !self.database_url.starts_with("postgres://")
+        {
+            return Err(anyhow!(
+                "database_url must be a valid PostgreSQL connection string"
+            ));
         }
 
         Ok(())
@@ -180,11 +184,17 @@ impl PoolConfig {
 
         // Validate pool size recommendations
         if self.max_connections > 200 {
-            warn!("Very high max_connections ({}). Consider if this is necessary.", self.max_connections);
+            warn!(
+                "Very high max_connections ({}). Consider if this is necessary.",
+                self.max_connections
+            );
         }
 
         if self.min_connections < 2 {
-            warn!("Very low min_connections ({}). May cause connection delays.", self.min_connections);
+            warn!(
+                "Very low min_connections ({}). May cause connection delays.",
+                self.min_connections
+            );
         }
     }
 }
@@ -318,9 +328,9 @@ impl PoolConfig {
             min_connections: 1,
             max_connections: 5,
             acquire_timeout_seconds: 5,
-            max_lifetime_seconds: Some(300),  // 5 minutes
-            idle_timeout_seconds: Some(60),   // 1 minute
-            test_before_acquire: false, // Faster for tests
+            max_lifetime_seconds: Some(300), // 5 minutes
+            idle_timeout_seconds: Some(60),  // 1 minute
+            test_before_acquire: false,      // Faster for tests
             ..Default::default()
         }
     }
@@ -361,7 +371,10 @@ mod tests {
 
         assert_eq!(config.min_connections, 3);
         assert_eq!(config.max_connections, 15);
-        assert_eq!(config.database_url, "postgresql://user:pass@localhost:5432/test");
+        assert_eq!(
+            config.database_url,
+            "postgresql://user:pass@localhost:5432/test"
+        );
     }
 
     #[test]

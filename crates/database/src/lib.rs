@@ -17,11 +17,14 @@ pub mod pool_config;
 pub mod queries;
 pub mod retry;
 
-pub use connection::{DatabasePool, HealthCheckResult, PoolStatus, PoolMetricsSnapshot};
-pub use migration_system::{DatabaseMigrationManager, MigrationInfo, MigrationStatus, MigrationHistory, SchemaValidationReport, MigrationStatusSummary};
+pub use connection::{DatabasePool, HealthCheckResult, PoolMetricsSnapshot, PoolStatus};
+pub use migration_system::{
+    DatabaseMigrationManager, MigrationHistory, MigrationInfo, MigrationStatus,
+    MigrationStatusSummary, SchemaValidationReport,
+};
 pub use models::*;
 pub use pool_config::{PoolConfig, PoolConfigBuilder};
-pub use retry::{RetryConfig, RetryExecutor, DatabaseError};
+pub use retry::{DatabaseError, RetryConfig, RetryExecutor};
 
 /// Re-export commonly used types
 pub use sqlx::{PgPool, Row};
