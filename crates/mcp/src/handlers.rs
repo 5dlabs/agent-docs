@@ -1,5 +1,6 @@
 //! MCP request handlers
 
+use crate::protocol_version::ProtocolRegistry;
 use crate::tools::{RustQueryTool, Tool};
 use anyhow::{anyhow, Result};
 use doc_server_database::DatabasePool;
@@ -105,9 +106,19 @@ impl McpHandler {
     }
 
     /// Handle initialize request
+    ///
+    /// Returns the initialization result with the fixed protocol version
+    /// and server capabilities.
     fn handle_initialize(_request: &Value) -> Value {
+        let registry = ProtocolRegistry::new();
+
+        debug!(
+            "Handling initialize request with protocol version: {}",
+            registry.current_version_string()
+        );
+
         json!({
-            "protocolVersion": "2025-06-18",
+            "protocolVersion": registry.current_version_string(),
             "capabilities": {
                 "tools": {}
             },

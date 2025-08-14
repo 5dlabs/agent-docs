@@ -264,6 +264,12 @@ pub enum TransportError {
 
     #[error("Security validation failed: {0}")]
     SecurityValidationFailed(String),
+
+    #[error("Invalid Accept header: {0}")]
+    InvalidAcceptHeader(String),
+
+    #[error("Unacceptable Accept header: {0}")]
+    UnacceptableAcceptHeader(String),
 }
 
 impl IntoResponse for TransportError {
@@ -282,7 +288,7 @@ impl IntoResponse for TransportError {
             }
             TransportError::MissingContentType => (StatusCode::BAD_REQUEST, "Missing Content-Type"),
             TransportError::InvalidContentType(_) => {
-                (StatusCode::BAD_REQUEST, "Invalid Content-Type")
+                (StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported Media Type")
             }
             TransportError::JsonParseError(_) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
             TransportError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
@@ -291,6 +297,12 @@ impl IntoResponse for TransportError {
             }
             TransportError::SecurityValidationFailed(_) => {
                 (StatusCode::FORBIDDEN, "Security Validation Failed")
+            }
+            TransportError::InvalidAcceptHeader(_) => {
+                (StatusCode::BAD_REQUEST, "Invalid Accept Header")
+            }
+            TransportError::UnacceptableAcceptHeader(_) => {
+                (StatusCode::NOT_ACCEPTABLE, "Not Acceptable")
             }
         };
 
@@ -349,6 +361,9 @@ pub async fn unified_mcp_handler(
         };
     }
 
+    // Validate Accept header for method compatibility
+    validate_accept_header(&headers, request.method())?;
+
     match *request.method() {
         Method::POST => handle_json_rpc_request(state, headers, request).await,
         Method::DELETE => handle_delete_session_request(&state, &headers),
@@ -361,6 +376,60 @@ pub async fn unified_mcp_handler(
             warn!("Unsupported HTTP method: {}", request.method());
             Err(TransportError::MethodNotAllowed)
         }
+    }
+}
+
+/// Validate Accept header for the given request method and headers
+///
+/// # Errors
+///
+/// Returns `TransportError` if the Accept header is unacceptable for the request method.
+fn validate_accept_header(headers: &HeaderMap, method: &Method) -> Result<(), TransportError> {
+    if let Some(value) = headers.get("accept") {
+        if let Ok(accept_header) = value.to_str() {
+            debug!("Validating Accept header: {accept_header}");
+
+            // For POST (JSON-RPC) requests, Accept should be compatible with application/json
+            match *method {
+                Method::POST => {
+                    if accept_header.contains("application/json")
+                        || accept_header.contains("application/*")
+                        || accept_header.contains("*/*")
+                    {
+                        Ok(())
+                    } else {
+                        warn!("Unacceptable Accept header for POST: {accept_header}");
+                        Err(TransportError::UnacceptableAcceptHeader(
+                            accept_header.to_string(),
+                        ))
+                    }
+                }
+                Method::GET => {
+                    // Future SSE support would validate text/event-stream here
+                    if accept_header.contains("text/event-stream")
+                        || accept_header.contains("text/*")
+                        || accept_header.contains("*/*")
+                    {
+                        Ok(())
+                    } else {
+                        warn!("Unacceptable Accept header for GET: {accept_header}");
+                        Err(TransportError::UnacceptableAcceptHeader(
+                            accept_header.to_string(),
+                        ))
+                    }
+                }
+                _ => Ok(()), // Other methods don't have specific Accept requirements
+            }
+        } else {
+            warn!("Invalid Accept header value");
+            Err(TransportError::InvalidAcceptHeader(
+                "invalid header value".to_string(),
+            ))
+        }
+    } else {
+        // Missing Accept header is acceptable (defaults based on method)
+        debug!("No Accept header provided - defaulting based on method");
+        Ok(())
     }
 }
 

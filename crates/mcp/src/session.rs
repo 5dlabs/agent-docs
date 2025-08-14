@@ -11,8 +11,7 @@ use thiserror::Error;
 use tracing::{debug, error, warn};
 use uuid::Uuid;
 
-/// The supported MCP protocol version (fixed for MVP)
-pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
+use crate::protocol_version::{ProtocolRegistry, SUPPORTED_PROTOCOL_VERSION};
 
 /// Client information extracted from request headers for security and audit purposes
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -47,13 +46,15 @@ impl Session {
     #[must_use]
     pub fn new(ttl: Duration, client_info: Option<ClientInfo>) -> Self {
         let now = Utc::now();
+        let registry = ProtocolRegistry::new();
+
         Self {
             session_id: Uuid::new_v4(),
             created_at: now,
             last_accessed: now,
             ttl,
             client_info: client_info.unwrap_or_default(),
-            protocol_version: "2025-06-18".to_string(), // Fixed protocol version for MVP
+            protocol_version: registry.current_version_string().to_string(),
         }
     }
 
@@ -215,10 +216,11 @@ impl SessionManager {
 
         sessions.insert(session_id, session);
 
+        let registry = ProtocolRegistry::new();
         debug!(
             "Created new session: {} with protocol version {} (total: {})",
             session_id,
-            SUPPORTED_PROTOCOL_VERSION,
+            registry.current_version_string(),
             sessions.len()
         );
         Ok(session_id)

@@ -15,6 +15,8 @@ use thiserror::Error;
 use tracing::{debug, warn};
 use uuid::Uuid;
 
+use crate::protocol_version::ProtocolRegistry;
+
 /// MCP protocol version header name
 pub const MCP_PROTOCOL_VERSION: &str = "MCP-Protocol-Version";
 /// MCP session ID header name  
@@ -91,6 +93,7 @@ where
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
         let headers = &parts.headers;
+        let registry = ProtocolRegistry::new();
 
         debug!("Validating MCP protocol version header");
 
@@ -101,7 +104,8 @@ where
 
             debug!("Found protocol version header: {version_str}");
 
-            if version_str == SUPPORTED_PROTOCOL_VERSION {
+            // Use protocol registry for validation
+            if registry.validate_version_string(version_str).is_ok() {
                 Ok(McpProtocolVersionHeader {
                     version: version_str.to_string(),
                 })
@@ -109,7 +113,7 @@ where
                 warn!("Unsupported protocol version requested: {version_str}");
                 Err(ProtocolVersionError::UnsupportedVersion(
                     version_str.to_string(),
-                    SUPPORTED_PROTOCOL_VERSION.to_string(),
+                    registry.current_version_string().to_string(),
                 ))
             }
         } else {
@@ -130,6 +134,15 @@ pub enum ContentTypeError {
     UnsupportedContentType(String),
 }
 
+/// Accept header validation errors
+#[derive(Debug, Error)]
+pub enum AcceptHeaderError {
+    #[error("Invalid Accept header value")]
+    InvalidHeaderValue,
+    #[error("Unacceptable media type: {0}")]
+    UnacceptableMediaType(String),
+}
+
 impl IntoResponse for ContentTypeError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
@@ -143,6 +156,33 @@ impl IntoResponse for ContentTypeError {
                 StatusCode::UNSUPPORTED_MEDIA_TYPE,
                 "Unsupported Content-Type",
             ),
+        };
+
+        let error_response = json!({
+            "error": {
+                "code": -32600,
+                "message": message,
+                "data": self.to_string()
+            }
+        });
+
+        let mut headers = HeaderMap::new();
+        set_standard_headers(&mut headers, None);
+        headers.insert(CONTENT_TYPE, HeaderValue::from_static(CONTENT_TYPE_JSON));
+
+        (status, headers, axum::Json(error_response)).into_response()
+    }
+}
+
+impl IntoResponse for AcceptHeaderError {
+    fn into_response(self) -> Response {
+        let (status, message) = match &self {
+            AcceptHeaderError::InvalidHeaderValue => {
+                (StatusCode::BAD_REQUEST, "Invalid Accept header value")
+            }
+            AcceptHeaderError::UnacceptableMediaType(_) => {
+                (StatusCode::NOT_ACCEPTABLE, "Not Acceptable")
+            }
         };
 
         let error_response = json!({
@@ -212,23 +252,99 @@ where
     }
 }
 
+/// Axum extractor for Accept header validation
+///
+/// Validates that the request accepts compatible content types for MCP responses.
+#[derive(Debug, Clone)]
+pub struct AcceptHeaderValidator {
+    /// The acceptable content types
+    pub accept_types: Vec<String>,
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for AcceptHeaderValidator
+where
+    S: Send + Sync,
+{
+    type Rejection = AcceptHeaderError;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let headers = &parts.headers;
+
+        debug!("Validating Accept header");
+
+        if let Some(value) = headers.get("accept") {
+            let accept_header = value
+                .to_str()
+                .map_err(|_| AcceptHeaderError::InvalidHeaderValue)?;
+
+            debug!("Found Accept header: {accept_header}");
+
+            // Parse Accept header to check for compatible media types
+            // Accept application/json, application/*, or */*
+            let acceptable_types = vec![
+                "application/json".to_string(),
+                "application/*".to_string(),
+                "*/*".to_string(),
+                "text/event-stream".to_string(), // For future SSE support
+            ];
+
+            // Check if any of our supported types match the Accept header
+            for acceptable_type in &acceptable_types {
+                if accept_header.contains(acceptable_type)
+                    || accept_header.contains("application/*")
+                    || accept_header.contains("*/*")
+                {
+                    return Ok(AcceptHeaderValidator {
+                        accept_types: vec![accept_header.to_string()],
+                    });
+                }
+            }
+
+            warn!("Unacceptable Accept header: {accept_header}");
+            Err(AcceptHeaderError::UnacceptableMediaType(
+                accept_header.to_string(),
+            ))
+        } else {
+            // Missing Accept header is acceptable (defaults to accepting anything)
+            debug!("No Accept header provided - defaulting to JSON");
+            Ok(AcceptHeaderValidator {
+                accept_types: vec!["application/json".to_string()],
+            })
+        }
+    }
+}
+
 /// Validate that incoming request headers include the supported MCP protocol version.
+///
+/// This function validates the MCP-Protocol-Version header using the protocol registry
+/// to ensure only the supported version (2025-06-18) is accepted.
 ///
 /// # Errors
 ///
 /// Returns `Err(StatusCode::BAD_REQUEST)` if the header is missing or has an
 /// unsupported value.
 pub fn validate_protocol_version(headers: &HeaderMap) -> Result<(), StatusCode> {
-    match headers.get(MCP_PROTOCOL_VERSION) {
-        Some(value) => {
-            if let Ok(v) = value.to_str() {
-                if v == SUPPORTED_PROTOCOL_VERSION {
-                    return Ok(());
-                }
+    let registry = ProtocolRegistry::new();
+
+    if let Some(value) = headers.get(MCP_PROTOCOL_VERSION) {
+        if let Ok(version_str) = value.to_str() {
+            if registry.is_version_string_supported(version_str) {
+                Ok(())
+            } else {
+                debug!("Unsupported protocol version: {}", version_str);
+                Err(StatusCode::BAD_REQUEST)
             }
+        } else {
+            warn!("Invalid protocol version header value");
             Err(StatusCode::BAD_REQUEST)
         }
-        None => Err(StatusCode::BAD_REQUEST),
+    } else {
+        warn!("Missing MCP-Protocol-Version header");
+        Err(StatusCode::BAD_REQUEST)
     }
 }
 
