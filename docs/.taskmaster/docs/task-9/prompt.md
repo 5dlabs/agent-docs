@@ -1,9 +1,11 @@
 # Autonomous Agent Prompt: Config-Driven Documentation Query Tools (Dynamic Registration)
 
 ## Mission
-Implement dynamic tool registration from a JSON config. Each configured tool maps to a `docType` and shares one unified query method. Keep Rust docs tools hardcoded; all other categories (e.g., birdeye, solana, cilium) are defined in config.
+
+Implement dynamic tool registration from a JSON config. Each configured tool maps to a `docType` and shares one unified query method. Keep Rust docs tools hardcoded; all other categories (e.g., API, solana, cilium) are defined in config.
 
 ## Primary Objectives
+
 1. **Config Loader**: Read and validate JSON config (tools: name, docType, title, description, enabled)
 2. **Dynamic Registration**: Create tools at startup for each enabled config entry
 3. **Unified Query**: Route all tool calls to a shared handler filtering by `docType`
@@ -11,17 +13,30 @@ Implement dynamic tool registration from a JSON config. Each configured tool map
 5. **Performance**: Ensure < 2 second query response time
 
 ## Implementation Steps
+
 1. Define config schema and place example config file
 2. Implement config reader and validation
 3. Register tools dynamically in MCP server startup
 4. Implement unified query handler that accepts `docType`
 5. Add tests for registration and query routing
 
+## Transport & Error Policy
+
+- Streamable HTTP (MCP 2025-06-18), JSON-only; GET /mcp returns 405; SSE out of scope
+- Use JSON-RPC 2.0 error objects for invalid requests
+- Parameter constraints:
+  - `query`: non-empty UTF-8, 1–512 chars after trim
+  - `limit`: integer 1–20 (default 10)
+  - Violations: return JSON-RPC error code -32602 with clear message
+
 ## Success Criteria
+
 - [ ] Tools loaded from config and listed in `tools/list`
 - [ ] Unified query returns results filtered by `docType`
 - [ ] Response time < 2 seconds
-- [ ] Source attribution in responses## Quality Gates and CI/CD Process
+- [ ] Source attribution in responses
+
+## Quality Gates and CI/CD Process
 
 - Run static analysis after every new function is written:
   - Command: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
@@ -34,4 +49,4 @@ Implement dynamic tool registration from a JSON config. Each configured tool map
   - Do all work on a feature branch (e.g., `feature/<task-id>-<short-name>`).
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
-  - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+  - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run. If a PR already exists, push updates to the same PR branch (do not create a new PR).

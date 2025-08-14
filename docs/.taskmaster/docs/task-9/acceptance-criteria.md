@@ -1,89 +1,96 @@
 # Acceptance Criteria: Task 9 - Config-Driven Documentation Query Tools
 
 ## Functional Requirements
-
 ### 1. Dynamic Tool Implementation
 - [ ] JSON config defined and validated (tools: name, docType, title, description, enabled)
-- [ ] Tools dynamically registered at startup from config
+- [ ] Tools dynamically registered at startup from config (Rust docs tools remain hardcoded; all others are config-driven)
 - [ ] Unified query handler used by all dynamic tools
 - [ ] Semantic search using pgvector similarity (<=> operator)
 - [ ] Result ranking with relevance scores implemented
 
-### 2. Database Integration  
+### 2. Database Integration
 - [ ] Filters documents by `docType` from tool config
 - [ ] Vector similarity search functional
 - [ ] Metadata JSONB fields parsed when present
-- [ ] Query performance < 2 seconds
+- [ ] Query performance < 2 seconds (typical inputs)
 
-### 3. MCP Registration
+### 3. MCP Registration & Transport
+
 - [ ] Tools registered dynamically during server startup
 - [ ] Appear in tools/list response with names from config
-- [ ] JSON-RPC invocation working for each dynamic tool
-- [ ] Parameter validation for query and limit
-- [ ] Error handling for invalid requests
+- [ ] JSON-RPC 2.0 invocation working for each dynamic tool via JSON-only Streamable HTTP (MCP 2025-06-18)
+- [ ] Parameter validation for `query` and `limit` (see constraints below)
+- [ ] Invalid parameters return JSON-RPC error objects (e.g., code -32602 Invalid params) within an `application/json` response, not HTTP 400
 
 ### 4. Response Formatting
+
 - [ ] Source attribution and relevance scores displayed
-- [ ] Category-appropriate fields included when present (e.g., API endpoint/method)
+- [ ] Category-appropriate fields included when present based on stored metadata (e.g., API endpoint/method for API docs)
+
+### 5. Parameter Constraints (Explicit)
+
+- [ ] `query`: non-empty UTF-8 string, trimmed length 1–512 chars
+- [ ] `limit`: integer 1–20 (default 10); values outside range produce JSON-RPC error code -32602 with a clear message
 
 ## Non-Functional Requirements
 
 ### 1. Performance
+
 - [ ] Query response time < 2 seconds
 - [ ] Concurrent query handling supported
 - [ ] Database connection pooling utilized
 
 ### 2. Data Quality
-- [ ] All configured docTypes searchable
+
+- [ ] All configured `docType`s are searchable
 - [ ] Metadata accurately extracted when available
 - [ ] No duplicate results in responses
 - [ ] Relevance ranking accurate
 
 ### 3. Error Handling
+
 - [ ] Graceful handling of missing embeddings
 - [ ] Database connection failures handled
-- [ ] Invalid query parameters rejected
+- [ ] Invalid query parameters rejected with JSON-RPC error objects (e.g., -32602)
 - [ ] Meaningful error messages returned
-- [ ] Fallback for unavailable cache
 
 ## Test Cases
-
 ### Test Case 1: Basic Query (docType)
-**Given**: Configured tool `birdeye_query` with docType `birdeye`
-**When**: Query "defi price" submitted via that tool
-**Then**: Results include price-related endpoints
+
+**Given**: A configured tool `docs_api_query` with `docType` "api"
+**When**: A query "get price" is submitted via that tool
+**Then**: Results match the `docType` and include category-appropriate fields
 **And**: Response time < 2 seconds
-**And**: Metadata includes endpoint and method
 
 ### Test Case 2: Metadata Filtering
-**Given**: Multiple API versions present
-**When**: Query specifies api_version="v1"
+
+**Given**: Multiple versions present in metadata (e.g., api_version)
+**When**: Query specifies a metadata filter (e.g., api_version="v1")
 **Then**:
-- Only v1 endpoints returned
+- Only matching-version results are returned
 - Filtering correctly applied
-- No v2 endpoints in results
+- No mismatched versions in results
 
 ### Test Case 3: Registration from Config
-**Given**: Server starts with a config listing `birdeye_query` and `solana_query`
-**When**: Server lists tools
-**Then**: Both tools appear in `tools/list` and invoke the same unified handler with different docType
+
+**Given**: Server starts with a config listing `docs_api_query` and `docs_solana_query`
+**When**: The MCP client calls `tools/list`
+**Then**: Both tools appear and invoke the same unified handler with their respective `docType`
 
 ### Test Case 4: Parameter Validation
 **Given**: Tool invoked via MCP
-**When**: Invalid limit (e.g., 100) provided
+**When**: Invalid `limit` (e.g., 100) provided
 **Then**:
-- Error returned with validation message
-- No database query executed
-- 400 status code returned
+- A JSON-RPC error response is returned with code -32602 and a clear message
+- No database query is executed
+- HTTP status remains 200 with an `application/json` JSON-RPC error object (per JSON-only transport)
 
 ### Test Case 5: Response Formatting
 **Given**: Query returns multiple results
-**When**: Results formatted for output
+**When**: Results are formatted for output
 **Then**:
-- Each result has endpoint URL
-- HTTP method specified
-- Parameters documented
-- Example curl command included
+- Each result includes source attribution and relevance score
+- Category-appropriate fields included when present (e.g., endpoint URL, method, parameters for API docs)
 
 ## Deliverables
 
@@ -95,53 +102,49 @@
 - [ ] Documentation comments in code
 
 ### Documentation
-- [ ] Tool usage examples
-- [ ] API endpoint coverage report
-- [ ] Performance benchmarks
-- [ ] Cache configuration guide
+- [ ] Tool usage examples (MCP JSON-RPC request/response)
+- [ ] Performance notes (< 2s target)
 - [ ] Troubleshooting guide
 
 ## Validation Criteria
 
 ### Automated Tests
+
 ```bash
-# Unit tests for tool implementation
-cargo test birdeye_query
+# Integration tests for dynamic registration and unified handler
+cargo test --package doc-server-mcp --test dynamic_tools
 
-# Integration tests with database
-cargo test --test integration birdeye
-
-# Performance benchmarks
-cargo bench birdeye_query
+# Database-backed query tests (requires test DB)
+cargo test --package doc-server-mcp --test query_routing
 ```
 
 ### Manual Validation
-1. Query various BirdEye endpoints
+
+1. Query multiple configured `docType`s via their tools
 2. Verify metadata extraction accuracy
-3. Test cache effectiveness
-4. Validate response formatting
-5. Check MCP integration
+3. Validate response formatting and relevance
+4. Check MCP `tools/list` includes all enabled tools
 
 ## Definition of Done
 
-Task 8 is complete when:
+Task 9 is complete when:
 
-1. **Tool fully implemented**: All code components working
+1. **Tools implemented**: Config loader, dynamic registration, unified handler operational
 2. **Database integrated**: Vector search functional
-3. **MCP registered**: Tool accessible via server
-4. **Cache operational**: Frequently accessed data cached
-5. **Tests passing**: All unit and integration tests pass
-6. **Performance met**: < 2 second response time
-7. **Documentation complete**: Usage guide and examples provided
+3. **MCP registered**: Tools accessible via `tools/list` and invocable
+4. **Tests passing**: All integration tests pass
+5. **Performance met**: < 2 second response time
+6. **Documentation complete**: Usage guide and examples provided
 
 ## Success Metrics
 
-- 100% of BirdEye endpoints searchable
+- 100% of configured `docType`s queryable end-to-end
 - Query response time consistently < 2 seconds
-- Cache hit rate > 60% in production
 - Zero critical bugs in implementation
-- Tool usage in production environment### NFR-0: Code Quality and Automation
+- Tool usage in production environment
+
+### NFR-0: Code Quality and Automation
 - [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
 - [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
 - [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
-- [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact
+- [ ] If a PR already exists, push updates to the same PR branch rather than creating a new one
