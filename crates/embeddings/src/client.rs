@@ -1,4 +1,4 @@
-//! OpenAI embedding client
+//! `OpenAI` embedding client
 
 use crate::models::{EmbeddingRequest, EmbeddingResponse};
 use anyhow::{anyhow, Result};
@@ -18,7 +18,7 @@ pub trait EmbeddingClient {
     async fn generate_embedding(&self, request: EmbeddingRequest) -> Result<EmbeddingResponse>;
 }
 
-/// OpenAI embedding client implementation
+/// `OpenAI` embedding client implementation
 pub struct OpenAIEmbeddingClient {
     client: Client,
     api_key: String,
@@ -26,6 +26,11 @@ pub struct OpenAIEmbeddingClient {
 
 impl OpenAIEmbeddingClient {
     /// Create a new embedding client
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if required environment variables or HTTP client
+    /// initialization fails.
     pub fn new() -> Result<Self> {
         let api_key = env::var("OPENAI_API_KEY").unwrap_or_else(|_| "dummy-key".to_string()); // Allow dummy key for testing
 

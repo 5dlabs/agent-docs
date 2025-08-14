@@ -13,6 +13,11 @@ pub struct DatabasePool {
 
 impl DatabasePool {
     /// Create a new database pool from connection URL
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a connection to the database cannot be established
+    /// within the configured timeout or the connection URL is invalid.
     pub async fn new(database_url: &str) -> Result<Self> {
         info!("Connecting to database...");
 
@@ -28,11 +33,16 @@ impl DatabasePool {
     }
 
     /// Get a reference to the underlying pool
+    #[must_use]
     pub fn pool(&self) -> &PgPool {
         &self.pool
     }
 
     /// Test the database connection
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the connectivity check query fails.
     pub async fn ping(&self) -> Result<()> {
         sqlx::query("SELECT 1").execute(&self.pool).await?;
         Ok(())

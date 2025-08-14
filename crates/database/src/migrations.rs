@@ -9,6 +9,11 @@ pub struct Migrations;
 
 impl Migrations {
     /// Run all pending migrations
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if executing any migration SQL statement fails or the
+    /// database connection encounters an error during execution.
     pub async fn run(pool: &PgPool) -> Result<()> {
         info!("Running database migrations...");
 
@@ -23,7 +28,7 @@ impl Migrations {
 
         // Create enum types
         sqlx::query(
-            r#"
+            r"
             DO $$ BEGIN
                 CREATE TYPE doc_type AS ENUM (
                     'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
@@ -32,14 +37,14 @@ impl Migrations {
             EXCEPTION
                 WHEN duplicate_object THEN null;
             END $$;
-        "#,
+        ",
         )
         .execute(pool)
         .await?;
 
         // Create documents table
         sqlx::query(
-            r#"
+            r"
             CREATE TABLE IF NOT EXISTS documents (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 doc_type doc_type NOT NULL,
@@ -53,14 +58,14 @@ impl Migrations {
                 updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(doc_type, source_name, doc_path)
             )
-        "#,
+        ",
         )
         .execute(pool)
         .await?;
 
         // Create document_sources table
         sqlx::query(
-            r#"
+            r"
             CREATE TABLE IF NOT EXISTS document_sources (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 doc_type doc_type NOT NULL,
@@ -71,7 +76,7 @@ impl Migrations {
                 updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(doc_type, source_name)
             )
-        "#,
+        ",
         )
         .execute(pool)
         .await?;

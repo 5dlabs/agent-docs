@@ -10,6 +10,11 @@ pub struct DocumentQueries;
 
 impl DocumentQueries {
     /// Find documents by type
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails or the result rows cannot
+    /// be deserialized into `Document` values.
     pub async fn find_by_type(pool: &PgPool, doc_type: DocType) -> Result<Vec<Document>> {
         let type_str = match doc_type {
             DocType::Rust => "rust",
@@ -25,7 +30,7 @@ impl DocumentQueries {
         };
 
         let rows = sqlx::query(
-            r#"
+            r"
             SELECT 
                 id,
                 doc_type::text as doc_type,
@@ -39,7 +44,7 @@ impl DocumentQueries {
             FROM documents 
             WHERE doc_type::text = $1
             ORDER BY created_at DESC
-            "#,
+            ",
         )
         .bind(type_str)
         .fetch_all(pool)
@@ -67,9 +72,14 @@ impl DocumentQueries {
     }
 
     /// Find documents by source name
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails or the results cannot be
+    /// mapped into `Document` values.
     pub async fn find_by_source(pool: &PgPool, source_name: &str) -> Result<Vec<Document>> {
         let rows = sqlx::query(
-            r#"
+            r"
             SELECT 
                 id,
                 doc_type::text as doc_type,
@@ -83,7 +93,7 @@ impl DocumentQueries {
             FROM documents 
             WHERE source_name = $1
             ORDER BY created_at DESC
-            "#,
+            ",
         )
         .bind(source_name)
         .fetch_all(pool)
@@ -111,6 +121,10 @@ impl DocumentQueries {
     }
 
     /// Perform vector similarity search
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     pub async fn vector_search(
         pool: &PgPool,
         _embedding: &[f32],
@@ -118,7 +132,7 @@ impl DocumentQueries {
     ) -> Result<Vec<Document>> {
         // For now, return a basic text search as fallback
         let rows = sqlx::query(
-            r#"
+            r"
             SELECT 
                 id,
                 doc_type::text as doc_type,
@@ -133,7 +147,7 @@ impl DocumentQueries {
             WHERE content IS NOT NULL
             ORDER BY created_at DESC
             LIMIT $1
-            "#,
+            ",
         )
         .bind(limit)
         .fetch_all(pool)
@@ -161,6 +175,10 @@ impl DocumentQueries {
     }
 
     /// Perform vector similarity search for Rust documents only
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     pub async fn rust_vector_search(
         pool: &PgPool,
         _embedding: &[f32],
@@ -168,7 +186,7 @@ impl DocumentQueries {
     ) -> Result<Vec<Document>> {
         // For now, return Rust documents ordered by relevance
         let rows = sqlx::query(
-            r#"
+            r"
             SELECT 
                 id,
                 doc_type::text as doc_type,
@@ -183,7 +201,7 @@ impl DocumentQueries {
             WHERE doc_type = 'rust'
             ORDER BY created_at DESC
             LIMIT $1
-            "#,
+            ",
         )
         .bind(limit)
         .fetch_all(pool)

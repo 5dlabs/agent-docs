@@ -15,7 +15,7 @@ pub struct EmbeddingResponse {
     pub embedding: Vec<f32>,
 }
 
-/// OpenAI API embedding response
+/// `OpenAI` API embedding response
 #[derive(Debug, Deserialize)]
 pub struct OpenAIEmbeddingResponse {
     pub data: Vec<EmbeddingData>,

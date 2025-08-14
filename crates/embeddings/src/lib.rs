@@ -1,6 +1,6 @@
 //! Embedding generation and processing
 //!
-//! This crate handles OpenAI API integration for generating embeddings,
+//! This crate handles `OpenAI` API integration for generating embeddings,
 //! batch processing for cost optimization, and vector operations.
 
 pub mod batch;
