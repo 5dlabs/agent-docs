@@ -18,6 +18,7 @@ pub mod queries;
 pub mod retry;
 
 pub use connection::{DatabasePool, HealthCheckResult, PoolMetricsSnapshot, PoolStatus};
+pub use queries::{DocumentQueries, QueryPerformanceMetrics, QueryPerformanceMonitor};
 pub use migration_system::{
     DatabaseMigrationManager, MigrationHistory, MigrationInfo, MigrationStatus,
     MigrationStatusSummary, SchemaValidationReport,
