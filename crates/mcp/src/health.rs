@@ -245,9 +245,7 @@ async fn detailed_health_check(
     (status_code, Json(health_status))
 }
 
-async fn build_database_health(
-    state: &McpServerState,
-) -> (String, ComponentHealth, HealthStatus) {
+async fn build_database_health(state: &McpServerState) -> (String, ComponentHealth, HealthStatus) {
     let start = std::time::Instant::now();
     match state.db_pool.health_check().await {
         Ok(health) => {
@@ -260,7 +258,8 @@ async fn build_database_health(
                 "database".to_string(),
                 ComponentHealth {
                     status: component_status,
-                    response_time_ms: u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX),
+                    response_time_ms: u64::try_from(start.elapsed().as_millis())
+                        .unwrap_or(u64::MAX),
                     details: serde_json::json!({
                         "active_connections": health.active_connections,
                         "idle_connections": health.idle_connections,
@@ -284,9 +283,7 @@ async fn build_database_health(
     }
 }
 
-async fn build_pool_health(
-    state: &McpServerState,
-) -> (String, ComponentHealth, HealthStatus) {
+async fn build_pool_health(state: &McpServerState) -> (String, ComponentHealth, HealthStatus) {
     let start = std::time::Instant::now();
     match state.db_pool.get_status().await {
         Ok(pool_status) => {
@@ -295,7 +292,8 @@ async fn build_pool_health(
                 "connection_pool".to_string(),
                 ComponentHealth {
                     status: pool_health_status,
-                    response_time_ms: u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX),
+                    response_time_ms: u64::try_from(start.elapsed().as_millis())
+                        .unwrap_or(u64::MAX),
                     details: serde_json::json!({
                         "utilization_percent": pool_status.pool_utilization_percent,
                         "success_rate_percent": pool_status.metrics.success_rate_percent,
