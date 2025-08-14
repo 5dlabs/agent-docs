@@ -37,7 +37,7 @@ impl McpServer {
     ///
     /// Returns an error if handler initialization fails.
     pub async fn new(db_pool: DatabasePool) -> Result<Self> {
-        let handler = Arc::new(McpHandler::new(db_pool.clone()).await?);
+        let handler = Arc::new(McpHandler::new(db_pool.clone())?);
 
         // Initialize transport configuration
         let transport_config = TransportConfig::default();

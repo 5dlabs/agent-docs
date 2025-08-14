@@ -252,6 +252,11 @@ impl MigrationPipeline {
     }
 
     /// Execute migration based on type
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any phase of the migration pipeline fails (collection,
+    /// processing, validation, or persistence).
     pub async fn execute_migration(
         &self,
         migration_type: MigrationType,
@@ -417,13 +422,13 @@ impl MigrationPipeline {
     }
 
     /// Execute resume migration from checkpoint
-    async fn execute_resume_migration(&self, _checkpoint_id: Uuid) -> Result<ValidationReport> {
+    fn execute_resume_migration(&self, _checkpoint_id: Uuid) -> Result<ValidationReport> {
         warn!("Resume migration not yet implemented");
         Err(anyhow::anyhow!("Resume migration not yet implemented"))
     }
 
     /// Collect all documents to be processed
-    async fn collect_documents(&self) -> Result<Vec<MockDocument>> {
+    fn collect_documents(&self) -> Result<Vec<MockDocument>> {
         // For now, return mock documents for testing
         // In a real implementation, this would scan the source paths
         let mock_docs = vec![
@@ -584,6 +589,10 @@ impl MigrationPipeline {
     }
 
     /// Rollback a specific batch
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if rollback operations fail (not yet implemented).
     pub async fn rollback_batch(&self, batch_id: Uuid) -> Result<()> {
         warn!("Rollback batch {} - not yet implemented", batch_id);
         // TODO: Implement batch rollback logic
@@ -591,6 +600,10 @@ impl MigrationPipeline {
     }
 
     /// Get migration history
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if reading migration state fails (not expected for in-memory state).
     pub async fn get_migration_history(&self) -> Result<Vec<MigrationState>> {
         // For now, return current state only
         let state = self.state.read().await.clone();
@@ -619,6 +632,7 @@ mod tests {
         let (processed, total, progress, _) = tracker.get_progress();
         assert_eq!(processed, 10);
         assert_eq!(total, 100);
+        #[allow(clippy::float_cmp)]
         assert_eq!(progress, 10.0);
     }
 
