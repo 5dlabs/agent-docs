@@ -1,10 +1,10 @@
-# Autonomous Agent Prompt: Rust Crate Management Tools Implementation
+# Autonomous Agent Prompt: Rust Crate Management with Background Ingestion
 
 You are tasked with implementing dynamic Rust crate management tools (add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status) for comprehensive MCP-based crate administration with docs.rs integration.
 
 ## Your Mission
 
-Create a complete Rust crate management system with automatic documentation fetching, atomic operations, health monitoring, and dependency analysis capabilities.
+Create a complete Rust crate management system with automatic documentation fetching, atomic operations, health monitoring, and dependency analysis capabilities. The `add_rust_crate` tool must enqueue a background job and immediately return 202 + job id; the ingestion runs asynchronously.
 
 ## Execution Steps
 
@@ -18,8 +18,8 @@ Create a complete Rust crate management system with automatic documentation fetc
 - Create CrateInfo and CrateStatus models in `crates/database/src/models.rs`
 - Implement transaction helper methods for atomic operations
 
-### Step 2: Implement add_rust_crate Tool with docs.rs Integration
-- Build AddRustCrateTool following Tool trait pattern
+### Step 2: Implement add_rust_crate Tool with docs.rs Integration (Async)
+- Build AddRustCrateTool following Tool trait pattern that enqueues a background job and returns 202 Accepted
 - Add docs.rs API client in `crates/doc-loader/src/loaders.rs`
 - Implement rate limiting (max 10 requests/minute) using tokio::time::interval
 - Parse HTML documentation with scraper crate:
@@ -89,6 +89,8 @@ Generate these implementation artifacts:
 
 Your implementation is complete when:
 - All four management tools are implemented and registered
+- add_rust_crate enqueues a background job and returns 202 + job id
+- check_rust_status reports real-time job status and final counts
 - docs.rs integration works with proper rate limiting
 - Database operations are atomic with proper error handling
 - Cascade deletion prevents data orphaning

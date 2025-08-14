@@ -1,28 +1,25 @@
-# Task 11: Additional Query Tools Implementation
+# Task 11: Rust Crate Management (MCP add/remove/list/status with Background Ingestion)
 
 ## Overview
-Implement remaining query tools for comprehensive documentation coverage: `cilium_query`, `talos_query`, `meteora_query`, `raydium_query`, `ebpf_query`, `rust_best_practices_query`, and `jupyter_query`.
+Implement Rust crate management via MCP tools with non-blocking ingestion: `add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`. Calling `add_rust_crate` MUST enqueue a background job that fetches from docs.rs, parses, chunks, embeds, and stores docs. The request returns 202 Accepted with a job ID; progress is available via `check_rust_status`.
 
 ## Implementation Guide
-- Create standardized query tool architecture
-- Implement type-specific metadata filtering for each documentation type
-- Add specialized response formatting per tool category
-- Ensure consistent MCP integration pattern
-- Optimize performance across all query tools
+- Create crate management tools (MCP) and background ingestion pipeline
+- `add_rust_crate` enqueues job; returns 202 + job id; job performs fetch→parse→chunk→embed→store
+- `check_rust_status` reports job states (queued, running, failed, complete) and counts
+- `remove_rust_crate` supports cascade delete (docs + embeddings) with soft-delete option
+- `list_rust_crates` paginates with stats (doc/embedding counts, last updated)
 
 ## Technical Requirements
-- Standardized QueryTool trait implementation
-- Type-specific metadata schemas
-- Consistent error handling patterns
-- Unified response formatting
-- Performance parity across all tools
+- Background job runner (tokio task/queue) with retry and rate limiting (docs.rs)
+- Atomic DB operations with transactions for writes/deletes
+- Consistent error handling and audit logs
+- Performance limits (end-to-end ingestion within reasonable time)
 
 ## Success Metrics
-- All remaining query tools functional with < 2s response time
-- Consistent user experience across tools
-- Type-specific optimization for each documentation category
-- Complete MCP tool registration
-- Comprehensive test coverage for all tools## CI/CD and Code Quality Requirements
+- `add_rust_crate` returns 202 + job id and does not block
+- `check_rust_status` reports real-time progress and final counts
+- Ingestion produces documents + embeddings linked to crate metadata## CI/CD and Code Quality Requirements
 
 - Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
 - Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.

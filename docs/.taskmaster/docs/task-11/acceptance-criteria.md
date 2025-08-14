@@ -1,30 +1,23 @@
-# Acceptance Criteria: Task 11 - Additional Query Tools Implementation
+# Acceptance Criteria: Task 11 - Rust Crate Management with Background Ingestion
 
 ## Functional Requirements
 
-### 1. Shared Utility Module
-- [ ] `crates/mcp/src/query_utils.rs` with reusable helpers:
-  - [ ] `parse_metadata_field()` safe JSONB extraction
-  - [ ] `format_document_response()` standardized formatting
-  - [ ] `calculate_relevance_score()` ranking
-  - [ ] `create_performance_monitor()` timing
-  - [ ] `validate_query_params()` validation
+### 1. Tools and Job Queue
+- [ ] `add_rust_crate` enqueues background ingestion and returns 202 + job id
+- [ ] `check_rust_status` reports job state (queued, running, failed, complete) and counts
+- [ ] `remove_rust_crate` performs cascade delete with soft-delete option
+- [ ] `list_rust_crates` paginates with stats (doc/embedding counts, last updated)
 
-### 2. Implement Remaining Query Tools
-- [ ] `jupyter_query` with notebook metadata and cell formatting
-- [ ] `cilium_query` with network policy metadata
-- [ ] `talos_query` with Kubernetes/Talos specifics
-- [ ] `meteora_query` with DeFi pool params
-- [ ] `raydium_query` with AMM details
-- [ ] `ebpf_query` with kernel/BPF metadata
-- [ ] `rust_best_practices_query` with pattern/anti-patterns
-- [ ] Database query methods for each tool type
-- [ ] MCP tool registrations with full JSON schema
+### 2. Database and Storage
+- [ ] New `crates` table present; atomic transactions used
+- [ ] Documents and embeddings written with crate metadata
+- [ ] Deletions remove related docs/embeddings without orphans
+- [ ] Audit logs for add/remove/status
 
-### 3. Consistency and Performance
-- [ ] Consistent formatting across all tools
-- [ ] Response time < 2 seconds per tool query
-- [ ] Proper error handling and parameter validation
+### 3. Performance and Reliability
+- [ ] Ingestion completes within reasonable time bounds
+- [ ] Rate limits respected for docs.rs (10 req/min) with retries
+- [ ] Proper error handling and idempotency for repeated requests
 
 ## Non-Functional Requirements
 - [ ] Shared utilities used across implementations
@@ -38,24 +31,24 @@
 - [ ] Performance under light concurrency (5–6 agents) within target
 
 ## Deliverables
-- [ ] Seven query tools implemented and registered
-- [ ] Utility module with tests
-- [ ] Database query methods with tests
-- [ ] Integration tests covering all tools
+- [ ] Four management tools implemented and registered
+- [ ] Job queue/runner code with tests
+- [ ] Database schema and queries for crate ops
+- [ ] Integration tests for add/remove/list/status
 
 ## Validation
 ### Automated
 ```bash
-cargo test --package mcp query_tools
-cargo test --package mcp --test query_tools_integration
+cargo test --package mcp --test crate_management
+cargo test --package database --test crate_operations
 cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
 ### Manual
-1. Tools visible via MCP tools list
-2. End-to-end queries in dev environment
-3. Formatting and metadata verified for sample queries
+1. Tools visible via MCP tools list (add/remove/list/check)
+2. Add crate returns 202 and job id; status shows progress; docs appear on completion
+3. Remove crate deletes docs/embeddings; list reflects changes
 
 ## Deployment Validation (4-step)
 1. Push to GitHub → CI build/tests
