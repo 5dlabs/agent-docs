@@ -202,3 +202,24 @@ Begin optimization focusing on security, performance, and operational excellence
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
   - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+
+## Worktree and Parallel Branching (Required for parallel tasks)
+
+- Use a dedicated Git worktree and feature branch for this task to avoid conflicts with other parallel tasks.
+
+### Steps
+1. Create a worktree and feature branch for this task:
+```bash
+git worktree add ../agent-docs-task-14 -b feature/task-14-<short-name>
+```
+2. Enter the worktree and do all work from there:
+```bash
+cd ../agent-docs-task-14
+```
+3. Develop in this isolated directory, follow Quality Gates (run clippy pedantic after each new function; fmt/clippy/tests before pushing).
+4. Push and monitor GitHub Actions; only create the PR after CI is green and deployment succeeds.
+5. When finished:
+```bash
+git worktree list
+git worktree remove ../agent-docs-task-14
+```
