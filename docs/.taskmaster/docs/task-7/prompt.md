@@ -16,6 +16,12 @@ Optimize PostgreSQL database schema and implement comprehensive migration system
 - Pooling config exists; performance targets and measurements are not recorded.
 - Migration Job command does not match a produced binary; align it to the actual `migrate` target or add a dedicated binary.
 
+## Resume Instructions (verify and continue)
+- Before making changes, evaluate existing Task 7 work against "Implementation Steps" and "Success Criteria".
+- Re-run quality gates locally (`cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, `cargo test --all-features`).
+- If tests fail, fix only failures directly related to Task 7 scope; otherwise, log the issues and proceed with outstanding Task 7 items.
+- Continue only with items still outstanding; do not re-implement completed work.
+
 ## Implementation Steps
 1. Replace ad-hoc `Migrations::run` with `DatabaseMigrationManager` pipeline (register, validate, apply, record)
 2. Define migration IDs/checksums/dependencies; validate pending set; transactional apply; history recording
@@ -30,7 +36,9 @@ Optimize PostgreSQL database schema and implement comprehensive migration system
 - [ ] Query performance < 2 seconds
 - [ ] Optimized connection pooling
 - [ ] Database monitoring operational
-- [ ] Zero data loss during migrations## Quality Gates and CI/CD Process
+- [ ] Zero data loss during migrations
+
+## Quality Gates and CI/CD Process
 
 - Run static analysis after every new function is written:
   - Command: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
