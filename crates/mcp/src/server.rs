@@ -1,29 +1,28 @@
 //! MCP server implementation
 
 use crate::handlers::McpHandler;
-use crate::headers::set_standard_headers;
+use crate::transport::{
+    initialize_transport, unified_mcp_handler, SessionManager, TransportConfig,
+};
 use anyhow::Result;
-use doc_server_database::DatabasePool;
-// use crate::sse::sse_handler; // TODO: implement SSE handler
-// Headers utilities are used in subsequent tasks; unused for MVP POST handler
-// use crate::headers::{MCP_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSION};
 use axum::{
-    extract::State,
-    http::{HeaderMap, Method, StatusCode},
-    response::IntoResponse,
-    routing::{get, post},
+    http::{Method, StatusCode},
+    routing::{any, get},
     Json, Router,
 };
+use doc_server_database::DatabasePool;
 use serde_json::Value;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::{debug, error, info};
+use tracing::info;
 
 /// MCP server state
 #[derive(Clone)]
 pub struct McpServerState {
     pub db_pool: DatabasePool,
     pub handler: Arc<McpHandler>,
+    pub session_manager: SessionManager,
+    pub transport_config: TransportConfig,
 }
 
 /// MCP server
@@ -35,7 +34,20 @@ impl McpServer {
     /// Create a new MCP server
     pub async fn new(db_pool: DatabasePool) -> Result<Self> {
         let handler = Arc::new(McpHandler::new(db_pool.clone()).await?);
-        let state = McpServerState { db_pool, handler };
+
+        // Initialize transport configuration
+        let transport_config = TransportConfig::default();
+        let session_manager = SessionManager::new(transport_config.clone());
+
+        // Initialize the transport with session cleanup
+        initialize_transport(session_manager.clone()).await;
+
+        let state = McpServerState {
+            db_pool,
+            handler,
+            session_manager,
+            transport_config,
+        };
 
         Ok(Self { state })
     }
@@ -57,11 +69,9 @@ impl McpServer {
         Router::new()
             // Health check endpoint
             .route("/health", get(health_check))
-            // TODO: MCP SSE endpoint for real-time communication
-            // .route("/sse", get(sse_handler))
-            // MCP JSON-RPC endpoint for tool calls
-            .route("/mcp", post(mcp_handler).get(mcp_get_handler))
-            // GET /mcp returns 405 Method Not Allowed
+            // Unified MCP endpoint using new Streamable HTTP transport
+            // Supports POST (JSON-RPC) and GET (SSE) - MVP: POST only with 405 for GET
+            .route("/mcp", any(unified_mcp_handler))
             // Add CORS for Toolman compatibility
             .layer(
                 CorsLayer::new()
@@ -82,37 +92,4 @@ async fn health_check() -> Result<Json<Value>, StatusCode> {
     })))
 }
 
-/// GET handler for /mcp - returns 405 Method Not Allowed  
-async fn mcp_get_handler() -> impl IntoResponse {
-    (StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed")
-}
-
-/// MCP JSON-RPC handler for tool calls
-async fn mcp_handler(
-    State(state): State<McpServerState>,
-    Json(payload): Json<Value>,
-) -> impl IntoResponse {
-    debug!("Received MCP request: {}", payload);
-
-    // Create headers with the required MCP protocol version
-    let mut headers = HeaderMap::new();
-    set_standard_headers(&mut headers, None);
-
-    match state.handler.handle_request(payload).await {
-        Ok(response) => {
-            debug!("MCP response: {}", response);
-            (headers, Json(response)).into_response()
-        }
-        Err(e) => {
-            error!("MCP request failed: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                headers,
-                "Internal Server Error",
-            )
-                .into_response()
-        }
-    }
-}
-
-// legacy helper name removed; using `mcp_get_handler` above
+// Old handlers removed - now using unified_mcp_handler from transport module
