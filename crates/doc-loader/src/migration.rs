@@ -273,9 +273,7 @@ impl MigrationPipeline {
         let result = match migration_type {
             MigrationType::Full => self.execute_full_migration().await,
             MigrationType::ValidateOnly => self.execute_validation_only().await,
-            MigrationType::Resume { checkpoint_id } => {
-                self.execute_resume_migration(checkpoint_id).await
-            }
+            MigrationType::Resume { checkpoint_id } => self.execute_resume_migration(checkpoint_id),
         };
 
         let end_time = Utc::now();
