@@ -20,7 +20,8 @@ async fn create_test_server() -> Router {
         return create_mock_router();
     }
 
-    let database_url = std::env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set or use mock");
+    let database_url =
+        std::env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set or use mock");
     match doc_server_database::DatabasePool::new(&database_url).await {
         Ok(db_pool) => {
             let server = McpServer::new(db_pool)
