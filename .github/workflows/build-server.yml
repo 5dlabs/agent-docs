@@ -134,7 +134,8 @@ jobs:
         run: |
           # Fallback to CI postgres service if DATABASE_URL secret isn't set
           if [ -z "$DATABASE_URL" ]; then export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/docs_test; fi
-          export EMBEDDINGS_TEST_MAX_WAIT_SECS=${EMBEDDINGS_TEST_MAX_WAIT_SECS:-120}
+          # Allow override via workflow/repo env; default to 15 minutes to accommodate OpenAI batch latency
+          export EMBEDDINGS_TEST_MAX_WAIT_SECS=${EMBEDDINGS_TEST_MAX_WAIT_SECS:-900}
           export EMBEDDINGS_TEST_POLL_SECS=${EMBEDDINGS_TEST_POLL_SECS:-5}
           cargo test -p doc-server-embeddings -- --nocapture
 
