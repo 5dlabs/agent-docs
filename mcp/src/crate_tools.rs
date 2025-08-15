@@ -306,6 +306,10 @@ impl Tool for RemoveRustCrateTool {
                         "type": "string",
                         "description": "The name of the Rust crate to remove"
                     },
+                    "crate_name": {
+                        "type": "string",
+                        "description": "Alias for 'name' (accepted for backward compatibility)"
+                    },
                     "soft_delete": {
                         "type": "boolean",
                         "description": "If true, mark as inactive instead of hard delete (default: false)"
@@ -320,6 +324,7 @@ impl Tool for RemoveRustCrateTool {
         let crate_name = arguments
             .get("name")
             .and_then(|n| n.as_str())
+            .or_else(|| arguments.get("crate_name").and_then(|n| n.as_str()))
             .ok_or_else(|| anyhow!("Missing required 'name' parameter"))?;
 
         let soft_delete = arguments
