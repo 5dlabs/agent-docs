@@ -16,7 +16,7 @@
    - Drop FKs added in `006_foreign_keys` only if necessary
    - Revert partitioning objects from `007_partitioning`
    - Move data back from `archived_documents` if created in current window
-3. Validate schema invariants with `sql/audit.sql`.
+3. Validate schema invariants with `db/sql/audit.sql`.
 4. Re-enable traffic; monitor errors and performance.
 
 ## Data Safety Notes
