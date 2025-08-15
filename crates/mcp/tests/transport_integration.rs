@@ -26,8 +26,14 @@ async fn create_test_server() -> Router {
         return create_mock_router();
     }
 
-    let database_url = std::env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set or use mock");
-    match tokio::time::timeout(std::time::Duration::from_secs(2), doc_server_database::DatabasePool::new(&database_url)).await {
+    let database_url =
+        std::env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set or use mock");
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        doc_server_database::DatabasePool::new(&database_url),
+    )
+    .await
+    {
         Ok(Ok(db_pool)) => {
             let server = McpServer::new(db_pool)
                 .await

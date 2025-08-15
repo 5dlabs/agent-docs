@@ -16,7 +16,12 @@ async fn test_initialize_protocol_version_2025_06_18() {
     if database_url == "mock" {
         // If we can't connect to a test database, skip this test
         eprintln!("Skipping initialize test - no test database available");
-    } else if let Ok(Ok(db_pool)) = tokio::time::timeout(std::time::Duration::from_secs(2), DatabasePool::new(&database_url)).await {
+    } else if let Ok(Ok(db_pool)) = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        DatabasePool::new(&database_url),
+    )
+    .await
+    {
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
         let request = json!({
