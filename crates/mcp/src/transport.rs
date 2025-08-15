@@ -94,7 +94,7 @@ impl McpSession {
     pub fn is_expired(&self, timeout: Duration) -> bool {
         self.last_activity
             .read()
-            .map_or(false, |last_activity| last_activity.elapsed() > timeout)
+            .is_ok_and(|last_activity| last_activity.elapsed() > timeout)
     }
 }
 

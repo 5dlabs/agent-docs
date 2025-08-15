@@ -238,7 +238,7 @@ impl DynamicQueryTool {
             .and_then(|f| f.as_str());
 
         match format {
-            Some("bob") | Some("msc") => {
+            Some("bob" | "msc") => {
                 // Preserve ASCII art structure for diagrams
                 format!(
                     "```\n{}\n```\n\n*Diagram Content ({})*",
