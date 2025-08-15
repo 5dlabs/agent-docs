@@ -39,7 +39,7 @@ jobs:
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: k8s-runner
     steps:
       - uses: actions/checkout@v4
       - name: Setup Rust (stable)
@@ -54,6 +54,13 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: . -> target
+      - name: Set test DB env (self-hosted runner)
+        run: |
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then echo "TEST_DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV; fi
+          echo "APP_NAME=doc-server-ci" >> $GITHUB_ENV
+          echo "POOL_MIN_CONNECTIONS=1" >> $GITHUB_ENV
+          echo "POOL_MAX_CONNECTIONS=5" >> $GITHUB_ENV
+          echo "POOL_ACQUIRE_TIMEOUT=10" >> $GITHUB_ENV
       - name: Format check
         run: cargo fmt --all -- --check
       - name: Clippy (warnings + pedantic)
