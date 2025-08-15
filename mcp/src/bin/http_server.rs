@@ -3,11 +3,9 @@
 //! This binary provides the main HTTP endpoint for MCP communication (JSON-only; SSE disabled).
 
 use anyhow::Result;
-use db::{
-    DatabaseMigrationManager, DatabasePool, MigrationInfo, QueryPerformanceMonitor,
-};
-use mcp::McpServer;
+use db::{DatabaseMigrationManager, DatabasePool, MigrationInfo, QueryPerformanceMonitor};
 use dotenvy::dotenv;
+use mcp::McpServer;
 use std::env;
 use tokio::signal;
 use tracing::{error, info, warn};

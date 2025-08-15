@@ -4,10 +4,8 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use db::models::DocType;
-use loader::migration::{
-    MigrationConfig, MigrationPipeline, MigrationType, ValidationLevel,
-};
 use embed::{EmbeddingClient, OpenAIEmbeddingClient};
+use loader::migration::{MigrationConfig, MigrationPipeline, MigrationType, ValidationLevel};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::path::PathBuf;

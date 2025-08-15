@@ -110,7 +110,7 @@ fn test_initialize_response_structure() {
 
     // Verify server info structure
     assert!(initialize_response["serverInfo"].is_object());
-            assert_eq!(initialize_response["serverInfo"]["name"], "mcp");
+    assert_eq!(initialize_response["serverInfo"]["name"], "mcp");
 
     // Verify capabilities structure
     assert!(initialize_response["capabilities"].is_object());
