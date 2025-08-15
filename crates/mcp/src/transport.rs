@@ -92,7 +92,9 @@ impl McpSession {
     /// Check if session has expired
     #[must_use]
     pub fn is_expired(&self, timeout: Duration) -> bool {
-        self.last_activity.read().map_or(false, |last_activity| last_activity.elapsed() > timeout)
+        self.last_activity
+            .read()
+            .map_or(false, |last_activity| last_activity.elapsed() > timeout)
     }
 }
 
@@ -128,10 +130,10 @@ impl SessionManager {
         let session = McpSession::new();
         let session_id = session.id;
 
-        self
-            .sessions
+        self.sessions
             .write()
-            .map_err(|_| TransportError::SessionLockError)?.insert(session_id, session);
+            .map_err(|_| TransportError::SessionLockError)?
+            .insert(session_id, session);
 
         debug!("Created new session: {}", session_id);
         Ok(session_id)
@@ -179,10 +181,13 @@ impl SessionManager {
             .sessions
             .read()
             .map_err(|_| TransportError::SessionLockError)?;
-        sessions.get(&session_id).map_or(Err(TransportError::SessionNotFound(session_id)), |session| {
-            session.update_activity();
-            Ok(())
-        })
+        sessions.get(&session_id).map_or(
+            Err(TransportError::SessionNotFound(session_id)),
+            |session| {
+                session.update_activity();
+                Ok(())
+            },
+        )
     }
 
     /// Clean up expired sessions
@@ -270,35 +275,23 @@ pub enum TransportError {
 impl IntoResponse for TransportError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            Self::MethodNotAllowed => {
-                (StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed")
-            }
+            Self::MethodNotAllowed => (StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed"),
             Self::UnsupportedProtocolVersion(_) => {
                 (StatusCode::BAD_REQUEST, "Unsupported Protocol Version")
             }
             Self::SessionNotFound(_) => (StatusCode::BAD_REQUEST, "Session Not Found"),
             Self::InvalidSessionId(_) => (StatusCode::BAD_REQUEST, "Invalid Session ID"),
-            Self::SessionLockError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Session Lock Error")
-            }
+            Self::SessionLockError => (StatusCode::INTERNAL_SERVER_ERROR, "Session Lock Error"),
             Self::MissingContentType => (StatusCode::BAD_REQUEST, "Missing Content-Type"),
-            Self::InvalidContentType(_) => {
-                (StatusCode::BAD_REQUEST, "Unsupported Media Type")
-            }
+            Self::InvalidContentType(_) => (StatusCode::BAD_REQUEST, "Unsupported Media Type"),
             Self::JsonParseError(_) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
             Self::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
-            Self::InternalError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
-            }
+            Self::InternalError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
             Self::SecurityValidationFailed(_) => {
                 (StatusCode::FORBIDDEN, "Security Validation Failed")
             }
-            Self::InvalidAcceptHeader(_) => {
-                (StatusCode::BAD_REQUEST, "Invalid Accept Header")
-            }
-            Self::UnacceptableAcceptHeader(_) => {
-                (StatusCode::NOT_ACCEPTABLE, "Not Acceptable")
-            }
+            Self::InvalidAcceptHeader(_) => (StatusCode::BAD_REQUEST, "Invalid Accept Header"),
+            Self::UnacceptableAcceptHeader(_) => (StatusCode::NOT_ACCEPTABLE, "Not Acceptable"),
         };
 
         error!("Transport error: {}", self);

@@ -331,15 +331,20 @@ pub fn validate_protocol_version(headers: &HeaderMap) -> Result<(), StatusCode> 
     let registry = ProtocolRegistry::new();
 
     if let Some(value) = headers.get(MCP_PROTOCOL_VERSION) {
-        value.to_str().map_or_else(|_| {
-            warn!("Invalid protocol version header value");
-            Err(StatusCode::BAD_REQUEST)
-        }, |version_str| if registry.is_version_string_supported(version_str) {
-                Ok(())
-            } else {
-                debug!("Unsupported protocol version: {}", version_str);
+        value.to_str().map_or_else(
+            |_| {
+                warn!("Invalid protocol version header value");
                 Err(StatusCode::BAD_REQUEST)
-            })
+            },
+            |version_str| {
+                if registry.is_version_string_supported(version_str) {
+                    Ok(())
+                } else {
+                    debug!("Unsupported protocol version: {}", version_str);
+                    Err(StatusCode::BAD_REQUEST)
+                }
+            },
+        )
     } else {
         warn!("Missing MCP-Protocol-Version header");
         Err(StatusCode::BAD_REQUEST)

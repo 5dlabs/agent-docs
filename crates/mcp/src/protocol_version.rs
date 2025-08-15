@@ -97,7 +97,8 @@ impl ProtocolRegistry {
     /// Check if a protocol version string is supported
     #[must_use]
     pub fn is_version_string_supported(&self, version_str: &str) -> bool {
-        ProtocolVersion::from_str(version_str).map_or(false, |version| self.is_version_supported(version))
+        ProtocolVersion::from_str(version_str)
+            .map_or(false, |version| self.is_version_supported(version))
     }
 
     /// Get the current supported version

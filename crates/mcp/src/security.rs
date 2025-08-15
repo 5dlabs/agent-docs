@@ -121,18 +121,12 @@ impl IntoResponse for SecurityError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             Self::OriginNotAllowed(_) => (StatusCode::FORBIDDEN, "Origin not allowed"),
-            Self::MissingOriginHeader => {
-                (StatusCode::BAD_REQUEST, "Missing Origin header")
-            }
+            Self::MissingOriginHeader => (StatusCode::BAD_REQUEST, "Missing Origin header"),
             Self::DnsRebindingDetected { .. } => {
                 (StatusCode::FORBIDDEN, "DNS rebinding attack detected")
             }
-            Self::InvalidOriginFormat(_) => {
-                (StatusCode::BAD_REQUEST, "Invalid origin format")
-            }
-            Self::LocalhostBindingRequired => {
-                (StatusCode::FORBIDDEN, "Localhost binding required")
-            }
+            Self::InvalidOriginFormat(_) => (StatusCode::BAD_REQUEST, "Invalid origin format"),
+            Self::LocalhostBindingRequired => (StatusCode::FORBIDDEN, "Localhost binding required"),
             Self::InvalidHostHeader(_) => (StatusCode::BAD_REQUEST, "Invalid Host header"),
         };
 
@@ -211,9 +205,12 @@ pub fn validate_dns_rebinding(
     // If both headers are present, validate they match for security
     if let (Some(host_value), Some(origin_value)) = (host, origin) {
         // Parse origin to extract host part
-        let origin_host = url::Url::parse(&origin_value).map_or(None, |url| url.host_str().map(|h| {
-                url.port().map_or_else(|| h.to_string(), |port| format!("{h}:{port}"))
-            }));
+        let origin_host = url::Url::parse(&origin_value).map_or(None, |url| {
+            url.host_str().map(|h| {
+                url.port()
+                    .map_or_else(|| h.to_string(), |port| format!("{h}:{port}"))
+            })
+        });
 
         // Check for DNS rebinding attack
         if let Some(origin_host_value) = origin_host {
@@ -311,15 +308,20 @@ pub fn validate_server_binding(
         }
         _ => {
             // Try to parse as IP address
-            addr_str.parse::<IpAddr>().map_or_else(|_| {
-                error!("Invalid server bind address: {}", bind_addr);
-                Err(SecurityError::LocalhostBindingRequired)
-            }, |ip| if ip.is_loopback() {
-                    Ok(())
-                } else {
-                    error!("Server binding to {} is not localhost", bind_addr);
+            addr_str.parse::<IpAddr>().map_or_else(
+                |_| {
+                    error!("Invalid server bind address: {}", bind_addr);
                     Err(SecurityError::LocalhostBindingRequired)
-                })
+                },
+                |ip| {
+                    if ip.is_loopback() {
+                        Ok(())
+                    } else {
+                        error!("Server binding to {} is not localhost", bind_addr);
+                        Err(SecurityError::LocalhostBindingRequired)
+                    }
+                },
+            )
         }
     }
 }
