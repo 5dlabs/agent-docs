@@ -16,8 +16,8 @@ use mcp::crate_tools::{
 };
 use mcp::tools::Tool;
 use serde_json::{json, Value};
-use std::sync::Arc;
 use sqlx::PgPool;
+use std::sync::Arc;
 use uuid::Uuid;
 
 /// Test fixture for crate management tests
@@ -102,7 +102,10 @@ async fn test_add_rust_crate_tool() -> Result<()> {
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Test adding a new crate
-    let tool = AddRustCrateTool::new(DatabasePool::from_pool(fixture.pool.clone()), Arc::new(OpenAIEmbeddingClient::new()?));
+    let tool = AddRustCrateTool::new(
+        DatabasePool::from_pool(fixture.pool.clone()),
+        Arc::new(OpenAIEmbeddingClient::new()?),
+    );
     let arguments = json!({
         "name": fixture.test_crate_name,
         "version": "1.0.0"
@@ -143,7 +146,10 @@ async fn test_add_rust_crate_tool() -> Result<()> {
 async fn test_add_rust_crate_invalid_input() -> Result<()> {
     let fixture = CrateManagementTestFixture::new().await?;
 
-    let tool = AddRustCrateTool::new(DatabasePool::from_pool(fixture.pool.clone()), Arc::new(OpenAIEmbeddingClient::new()?));
+    let tool = AddRustCrateTool::new(
+        DatabasePool::from_pool(fixture.pool.clone()),
+        Arc::new(OpenAIEmbeddingClient::new()?),
+    );
 
     // Test with missing crate_name
     let arguments = json!({});
@@ -462,14 +468,26 @@ async fn test_tool_metadata() -> Result<()> {
 
     // Verify tool definitions expose metadata
     let add_def = add_tool.definition();
-    assert_eq!(add_def.get("name").unwrap().as_str().unwrap(), "add_rust_crate");
+    assert_eq!(
+        add_def.get("name").unwrap().as_str().unwrap(),
+        "add_rust_crate"
+    );
     assert!(add_def.get("description").is_some());
     let remove_def = remove_tool.definition();
-    assert_eq!(remove_def.get("name").unwrap().as_str().unwrap(), "remove_rust_crate");
+    assert_eq!(
+        remove_def.get("name").unwrap().as_str().unwrap(),
+        "remove_rust_crate"
+    );
     let list_def = list_tool.definition();
-    assert_eq!(list_def.get("name").unwrap().as_str().unwrap(), "list_rust_crates");
+    assert_eq!(
+        list_def.get("name").unwrap().as_str().unwrap(),
+        "list_rust_crates"
+    );
     let status_def = status_tool.definition();
-    assert_eq!(status_def.get("name").unwrap().as_str().unwrap(), "check_rust_status");
+    assert_eq!(
+        status_def.get("name").unwrap().as_str().unwrap(),
+        "check_rust_status"
+    );
 
     Ok(())
 }
@@ -480,7 +498,10 @@ async fn test_complete_crate_lifecycle() -> Result<()> {
     let fixture = CrateManagementTestFixture::new().await?;
 
     // 1. Add a crate
-    let add_tool = AddRustCrateTool::new(DatabasePool::from_pool(fixture.pool.clone()), Arc::new(OpenAIEmbeddingClient::new()?));
+    let add_tool = AddRustCrateTool::new(
+        DatabasePool::from_pool(fixture.pool.clone()),
+        Arc::new(OpenAIEmbeddingClient::new()?),
+    );
     let add_arguments = json!({
         "name": fixture.test_crate_name,
         "version": "1.0.0"
