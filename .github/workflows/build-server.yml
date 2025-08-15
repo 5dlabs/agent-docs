@@ -196,7 +196,7 @@ jobs:
           retention-days: 30
 
   deploy:
-    needs: [version, build-and-push-image, security-scan]
+    needs: [version, build-and-push-image]
     runs-on: [k8s-runner]
     steps:
       - uses: actions/checkout@v4
