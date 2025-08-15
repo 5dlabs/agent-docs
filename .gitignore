@@ -77,3 +77,5 @@ test-results/
 
 # Local development overrides
 docker-compose.override.yml
+.cursor
+.docs
