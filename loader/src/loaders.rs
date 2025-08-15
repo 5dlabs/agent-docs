@@ -157,27 +157,25 @@ impl RustLoader {
 
     /// Create stub documentation for MVP testing
     fn create_stub_documentation(&self, crate_name: &str, version: &str) -> Result<Vec<DocPage>> {
-        let base_url = format!("https://docs.rs/{}/{}", crate_name, version);
+        let base_url = format!("https://docs.rs/{crate_name}/{version}");
 
         let stub_pages = vec![
             DocPage {
                 url: base_url.clone(),
                 content: format!(
-                    "# {} v{}\n\nThis is stub documentation for the {} crate version {}.\n\nIn a full implementation, this would contain:\n- API documentation\n- Examples\n- Module descriptions\n- Function signatures\n\nThis stub allows testing the crate management infrastructure without scraping complexity.",
-                    crate_name, version, crate_name, version
+                    "# {crate_name} v{version}\n\nThis is stub documentation for the {crate_name} crate version {version}.\n\nIn a full implementation, this would contain:\n- API documentation\n- Examples\n- Module descriptions\n- Function signatures\n\nThis stub allows testing the crate management infrastructure without scraping complexity."
                 ),
                 item_type: "crate".to_string(),
                 module_path: crate_name.to_string(),
                 extracted_at: Utc::now(),
             },
             DocPage {
-                url: format!("{}/struct.Example.html", base_url),
+                url: format!("{base_url}/struct.Example.html"),
                 content: format!(
-                    "# Example Struct\n\nA stub documentation page for an example struct in {}.\n\nThis demonstrates how individual API items would be stored as separate documents for better search granularity.",
-                    crate_name
+                    "# Example Struct\n\nA stub documentation page for an example struct in {crate_name}.\n\nThis demonstrates how individual API items would be stored as separate documents for better search granularity."
                 ),
                 item_type: "struct".to_string(),
-                module_path: format!("{}::Example", crate_name),
+                module_path: format!("{crate_name}::Example"),
                 extracted_at: Utc::now(),
             }
         ];
@@ -187,7 +185,7 @@ impl RustLoader {
 
     /// Fetch crate metadata from crates.io API
     async fn fetch_crate_metadata(&mut self, crate_name: &str) -> Result<CrateMetadata> {
-        let url = format!("https://crates.io/api/v1/crates/{}", crate_name);
+        let url = format!("https://crates.io/api/v1/crates/{crate_name}");
         let response = self.rate_limiter.get(&url).await?;
         let text = response.text().await?;
 
@@ -228,7 +226,7 @@ impl RustLoader {
         version: &str,
     ) -> Result<Vec<DocPage>> {
         let mut doc_pages = Vec::new();
-        let base_url = format!("https://docs.rs/{}/{}", crate_name, version);
+        let base_url = format!("https://docs.rs/{crate_name}/{version}");
 
         // Start with the main crate page
         let main_page = self

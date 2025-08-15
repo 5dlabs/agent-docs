@@ -98,7 +98,7 @@ impl DatabaseMigrationManager {
         .execute(&self.pool)
         .await?;
 
-        // Create migration history table
+        // Create migration history table (idempotent)
         sqlx::query(
             r"
             CREATE TABLE IF NOT EXISTS migration_history (
@@ -114,6 +114,44 @@ impl DatabaseMigrationManager {
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         ",
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Self-heal existing tables that may be missing new columns from earlier versions
+        // Add columns if they do not exist
+        sqlx::query(
+            r"
+            DO $$ BEGIN
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS migration_id VARCHAR(255);
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS version VARCHAR(50);
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS status migration_status DEFAULT 'completed';
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS execution_time_ms BIGINT DEFAULT 0;
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS error_message TEXT;
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS applied_by VARCHAR(255) DEFAULT 'system';
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS checksum VARCHAR(64) DEFAULT '';
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+                BEGIN
+                    ALTER TABLE migration_history ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+                EXCEPTION WHEN duplicate_column THEN NULL; END;
+            END $$;
+            ",
         )
         .execute(&self.pool)
         .await?;

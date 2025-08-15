@@ -8,7 +8,7 @@
 use anyhow::Result;
 use chrono::Utc;
 use db::models::{JobStatus, PaginationParams};
-use db::{CrateJobQueries, CrateQueries, DatabasePool};
+use db::{CrateJobQueries, CrateQueries, DatabasePool, Row};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -24,7 +24,7 @@ impl DatabaseTestFixture {
         let database_url = std::env::var("TEST_DATABASE_URL")
             .unwrap_or_else(|_| "postgresql://test:test@localhost:5433/test_docs".to_string());
 
-        let pool = DatabasePool::connect(&database_url).await?.pool;
+        let pool = DatabasePool::new(&database_url).await?.pool().clone();
         let test_crate_name = format!("db-test-crate-{}", Uuid::new_v4());
 
         Ok(Self {
@@ -68,8 +68,8 @@ impl DatabaseTestFixture {
             )
             .bind(doc_id)
             .bind(&self.test_crate_name)
-            .bind(format!("doc/{}", i))
-            .bind(format!("Test content {}", i))
+            .bind(format!("doc/{i}"))
+            .bind(format!("Test content {i}"))
             .bind(metadata)
             .bind(50 + i) // token count
             .bind(Utc::now())
@@ -417,22 +417,13 @@ async fn test_concurrent_database_operations() -> Result<()> {
     let fixture = DatabaseTestFixture::new().await?;
 
     // Test concurrent job creation
+    let name1 = format!("{}-1", fixture.test_crate_name);
+    let name2 = format!("{}-2", fixture.test_crate_name);
+    let name3 = format!("{}-3", fixture.test_crate_name);
     let (job1, job2, job3) = tokio::join!(
-        CrateJobQueries::create_job(
-            &fixture.pool,
-            &format!("{}-1", fixture.test_crate_name),
-            "add_crate"
-        ),
-        CrateJobQueries::create_job(
-            &fixture.pool,
-            &format!("{}-2", fixture.test_crate_name),
-            "remove_crate"
-        ),
-        CrateJobQueries::create_job(
-            &fixture.pool,
-            &format!("{}-3", fixture.test_crate_name),
-            "add_crate"
-        )
+        CrateJobQueries::create_job(&fixture.pool, &name1, "add_crate"),
+        CrateJobQueries::create_job(&fixture.pool, &name2, "remove_crate"),
+        CrateJobQueries::create_job(&fixture.pool, &name3, "add_crate")
     );
 
     // All should succeed
@@ -452,7 +443,7 @@ async fn test_concurrent_database_operations() -> Result<()> {
 
     // Clean up additional test data
     sqlx::query("DELETE FROM crate_jobs WHERE crate_name LIKE $1")
-        .bind(&format!("{}-_", fixture.test_crate_name))
+        .bind(format!("{}-_", fixture.test_crate_name))
         .execute(&fixture.pool)
         .await?;
 
