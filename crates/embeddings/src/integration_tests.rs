@@ -88,8 +88,16 @@ mod tests {
         if let Some(submitted_batch_id) = processor.flush_current_batch().await? {
             info!("Successfully submitted batch: {}", submitted_batch_id);
 
-            // Monitor batch status (with timeout)
-            let max_wait_time = Duration::from_secs(600); // 10 minutes max
+            // Monitor batch status (with timeout). Allow env overrides for CI speed.
+            let max_wait_secs: u64 = env::var("EMBEDDINGS_TEST_MAX_WAIT_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(120);
+            let poll_secs: u64 = env::var("EMBEDDINGS_TEST_POLL_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(5);
+            let max_wait_time = Duration::from_secs(max_wait_secs);
             let start_time = std::time::Instant::now();
 
             loop {
@@ -105,8 +113,8 @@ mod tests {
                     break;
                 }
 
-                info!("Waiting for batch to complete...");
-                sleep(Duration::from_secs(30)).await; // Check every 30 seconds
+                info!("Waiting for batch to complete (poll={}s)...", poll_secs);
+                sleep(Duration::from_secs(poll_secs)).await;
             }
 
             // Get batch statistics
