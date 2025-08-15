@@ -12,11 +12,15 @@ use tower::ServiceExt;
 
 // Mock database pool for testing
 async fn create_test_server() -> Router {
-    // For this test, we'll mock the database connection
-    // In a real scenario, you'd set up a test database
-    let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://test:test@localhost:5432/test".to_string());
+    // Default to mock for speed; only use real DB if explicitly requested
+    if std::env::var("TEST_DATABASE_URL")
+        .map(|v| v.trim().is_empty() || v.trim().eq_ignore_ascii_case("mock"))
+        .unwrap_or(true)
+    {
+        return create_mock_router();
+    }
 
+    let database_url = std::env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set or use mock");
     match doc_server_database::DatabasePool::new(&database_url).await {
         Ok(db_pool) => {
             let server = McpServer::new(db_pool)
@@ -24,10 +28,7 @@ async fn create_test_server() -> Router {
                 .expect("Failed to create server");
             server.create_router()
         }
-        Err(_) => {
-            // If we can't connect to database, create a mock router just for routing tests
-            create_mock_router()
-        }
+        Err(_) => create_mock_router(),
     }
 }
 
