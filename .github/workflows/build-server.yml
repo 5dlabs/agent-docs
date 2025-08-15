@@ -225,6 +225,7 @@ jobs:
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/server \
             --set image.tag=${{ needs.version.outputs.version }} \
             --set image.pullPolicy=Always \
+            --set env.DATABASE_URL=${{ secrets.DATABASE_URL }} \
             --wait \
             --timeout=300s
 
