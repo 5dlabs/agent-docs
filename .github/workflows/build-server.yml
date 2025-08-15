@@ -58,8 +58,8 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy (warnings + pedantic)
         run: cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic
-      - name: Test suite
-        run: cargo test --all-features
+      - name: Test suite (exclude live embeddings)
+        run: cargo test --workspace --all-features --exclude doc-server-embeddings
 
   embeddings-live:
     needs: [test]
