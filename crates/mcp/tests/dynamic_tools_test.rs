@@ -7,11 +7,12 @@ use serde_json::json;
 #[tokio::test]
 async fn test_dynamic_tools_registration() {
     // Create a mock database pool
-    let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://test:test@localhost:5432/test".to_string());
+    // Fast path for CI/unit tests: skip DB unless explicitly requested
+    let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
 
-    // Test with mock database pool if available, otherwise test configuration structure
-    if let Ok(db_pool) = DatabasePool::new(&database_url).await {
+    // Test with real database only if explicitly set
+    if database_url != "mock" && DatabasePool::new(&database_url).await.is_ok() {
+        let db_pool = DatabasePool::new(&database_url).await.expect("db");
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
         // Test tools/list request to see what tools are registered
@@ -127,10 +128,10 @@ async fn test_dynamic_tools_registration() {
 
 #[tokio::test]
 async fn test_dynamic_tool_invocation() {
-    let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://test:test@localhost:5432/test".to_string());
+    let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
 
-    if let Ok(db_pool) = DatabasePool::new(&database_url).await {
+    if database_url != "mock" && DatabasePool::new(&database_url).await.is_ok() {
+        let db_pool = DatabasePool::new(&database_url).await.expect("db");
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
         // Test calling a dynamic tool (birdeye_query)
@@ -176,10 +177,10 @@ async fn test_dynamic_tool_invocation() {
 
 #[tokio::test]
 async fn test_parameter_validation_dynamic_tools() {
-    let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://test:test@localhost:5432/test".to_string());
+    let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
 
-    if let Ok(db_pool) = DatabasePool::new(&database_url).await {
+    if database_url != "mock" && DatabasePool::new(&database_url).await.is_ok() {
+        let db_pool = DatabasePool::new(&database_url).await.expect("db");
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
         // Test with missing query parameter
