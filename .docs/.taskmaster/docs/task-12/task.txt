@@ -5,7 +5,7 @@
 # Priority: low
 # Description: Create the remaining query tools for jupyter, cilium, talos, meteora, raydium, ebpf, and rust_best_practices documentation types.
 # Details:
-Follow established QueryTool pattern for each documentation type. Implement type-specific metadata parsing and filtering. Add specialized response formatting per documentation type. Ensure consistent error handling and validation. Register all tools in MCP server with proper definitions. Implement tool-specific caching strategies. Add performance monitoring per tool. Create shared utility functions for common operations.
+Follow established QueryTool pattern for each documentation type. Implement type-specific metadata parsing and filtering. Add specialized response formatting per documentation type. Ensure consistent error handling and validation. Register all tools dynamically via `tools.json` (no hardcoded registration). Implement tool-specific caching strategies. Add performance monitoring per tool. Create shared utility functions for common operations.
 
 # Test Strategy:
 Test each tool with type-specific queries, validate metadata extraction and filtering, verify response formatting consistency, test error handling for edge cases, and benchmark individual tool performance.

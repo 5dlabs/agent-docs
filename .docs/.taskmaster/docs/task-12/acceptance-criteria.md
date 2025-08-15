@@ -11,6 +11,7 @@
 
 ### 2. Robustness and Integration
 
+- [ ] Tools are discovered and registered dynamically from `tools.json` (no hardcoded registration in handlers)
 - [ ] Atomic DB transactions with proper error handling
 - [ ] Rate limiting for external calls (docs.rs)
 - [ ] Integration with embedding batch processing (Task 7)
@@ -53,6 +54,7 @@
 
 - [ ] Updated tools with docs and tests
 - [ ] Database helpers and migrations if needed
+- [ ] Updated `tools.json` entries for all seven tools with correct `docType`, descriptions, and enabled flags
 
 ### Testing Suite
 
@@ -79,6 +81,11 @@ cargo test --package database crate_operations
 cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
+
+### Dynamic Registration Validation
+
+- [ ] Toggling a tool's `enabled` flag in `tools.json` adds/removes it from the server's advertised tools without code changes
+- [ ] Adding a new tool entry in `tools.json` (with valid `name` and `docType`) exposes the tool via MCP after restart/reload
 
 ## Definition of Done
 

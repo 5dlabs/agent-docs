@@ -2,7 +2,7 @@
 
 ## Overview
 
-Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`) with improved functionality and integration.
+Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`) with improved functionality and integration. Tools must be dynamically discovered from the root `tools.json` config (no hardcoded registration in handlers).
 
 ## Implementation Guide
 
@@ -19,6 +19,7 @@ Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_cra
 - Progress tracking for long-running operations
 - Comprehensive status reporting
 - Integration with batch embedding processing (Task 7)
+- Dynamic tools discovery from `tools.json`; toggling `enabled` controls exposure
 
 ## Success Metrics
 
@@ -26,7 +27,15 @@ Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_cra
 - Enhanced user experience with progress feedback
 - Comprehensive error handling and recovery
 - Integration with new embedding batch processing (Task 7)
-- Improved performance for crate management operations## CI/CD and Code Quality Requirements
+- Improved performance for crate management operations
+
+## Dynamic Tools Configuration
+
+- Ensure entries for the enhanced tools exist in `tools.json` at repo root
+- Each entry should include `name`, `docType`, `title`, `description`, `enabled`
+- Server should read config on startup to register tools
+
+## CI/CD and Code Quality Requirements
 
 - Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
 - Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.

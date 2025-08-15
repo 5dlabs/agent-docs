@@ -1,14 +1,4 @@
 {
-  "remoteTools": [
-    "rust_query",
-    "jupyter_query",
-    "cilium_query",
-    "talos_query",
-    "meteora_query",
-    "raydium_query",
-    "ebpf_query",
-    "rust_best_practices_query"
-  ],
   "localServers": {
     "filesystem": {
       "command": "npx",

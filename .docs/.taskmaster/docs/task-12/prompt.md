@@ -4,13 +4,13 @@ You are tasked with implementing the remaining query tools for jupyter, cilium, 
 
 ## Your Mission
 
-Create seven specialized query tools with type-specific metadata parsing, consistent response formatting, shared utility functions, and comprehensive caching strategies for optimal performance.
+Create seven specialized query tools with type-specific metadata parsing, consistent response formatting, shared utility functions, and comprehensive caching strategies for optimal performance. Tools must be dynamically loaded from `tools.json` (no hardcoded registration).
 
 ## Execution Steps
 
 ### Step 1: Create Shared Utility Module
 
-- Create `crates/mcp/src/query_utils.rs` module
+- Create `mcp/src/query_utils.rs` module
 - Implement shared utility functions:
   - `parse_metadata_field()`: Generic JSONB field extraction with type conversion
   - `format_document_response()`: Consistent markdown formatting across all tools
@@ -21,7 +21,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
 
 ### Step 2: Implement Jupyter and Cilium Query Tools
 
-- Create `JupyterQueryTool` in `crates/mcp/src/tools.rs`:
+- Create `JupyterQueryTool` in `mcp/src/tools.rs`:
   - Handle notebook-specific metadata (kernel, language, cell_types)
   - Parse cell execution results and outputs
   - Format notebook content with proper code highlighting
@@ -29,7 +29,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
   - Process network policy metadata (policy_type, namespace, endpoints)
   - Handle Kubernetes networking configuration
   - Format policy rules and security contexts
-- Add `jupyter_vector_search` and `cilium_vector_search` methods to `crates/database/src/queries.rs`
+- Add `jupyter_vector_search` and `cilium_vector_search` methods to `db/src/queries.rs`
 - Register both tools in McpHandler with comprehensive tool definitions
 
 ### Step 3: Implement Talos and Meteora Query Tools
@@ -42,7 +42,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
   - Process DeFi protocol metadata (pool_type, liquidity_params, reward_structure)
   - Handle liquidity pool configurations and AMM parameters
   - Format financial calculations and yield strategies
-- Add corresponding database vector search methods
+- Add corresponding database vector search methods in `db/src/queries.rs`
 - Implement custom response formatting for technical specifications
 
 ### Step 4: Implement Raydium and eBPF Query Tools
@@ -64,7 +64,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
   - Handle pattern/anti-pattern metadata (practice_category, rust_version, complexity_level)
   - Parse best practice recommendations and code patterns
   - Format examples with before/after code comparisons
-- Add `rust_best_practices_vector_search` to queries.rs
+- Add `rust_best_practices_vector_search` to `db/src/queries.rs`
 - Create comprehensive integration tests in `crates/mcp/tests/`:
   - Test query accuracy for all seven tools
   - Validate metadata filtering functionality
@@ -153,6 +153,13 @@ Your implementation is complete when:
 - All tools are registered and available through MCP
 - Comprehensive test suite validates all functionality
 - Performance targets are consistently met
+
+## Dynamic Tools Configuration
+
+- Tools must be declared in `tools.json` at repo root
+- The server reads `tools.json` on startup to discover and enable tools
+- Each tool entry includes: `name`, `docType`, `title`, `description`, `enabled`, optional `metadataHints`
+- Tests should verify that changing `enabled` toggles availability without code changes
 
 ## Important Implementation Notes
 
