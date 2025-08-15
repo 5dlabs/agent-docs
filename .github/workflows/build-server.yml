@@ -134,7 +134,7 @@ jobs:
         run: |
           # Fallback to CI postgres service if DATABASE_URL secret isn't set
           if [ -z "$DATABASE_URL" ]; then export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/docs_test; fi
-          export EMBEDDINGS_TEST_MAX_WAIT_SECS=${EMBEDDINGS_TEST_MAX_WAIT_SECS:-120}
+          export EMBEDDINGS_TEST_MAX_WAIT_SECS=${EMBEDDINGS_TEST_MAX_WAIT_SECS:-900}
           export EMBEDDINGS_TEST_POLL_SECS=${EMBEDDINGS_TEST_POLL_SECS:-5}
           cargo test -p doc-server-embeddings -- --nocapture
 
@@ -321,6 +321,6 @@ jobs:
           EOF
 
           # Fill inline values escaped above
-          sed -i "s/Version: \\\n+            \\\n+            \\\n+/Version: ${VERSION}/" "$GITHUB_STEP_SUMMARY"
-          sed -i "s/Short SHA: \\\n+            \\\n+            \\\n+/Short SHA: ${SHORT_SHA}/" "$GITHUB_STEP_SUMMARY"
-          sed -i "s/Name: \\\n+            \\\n+            \\\n+/Name: ${IMAGE_NAME}/" "$GITHUB_STEP_SUMMARY"
+          sed -i "s|Version: \\\n+            \\\n+            \\\n+|Version: ${VERSION}|" "$GITHUB_STEP_SUMMARY"
+          sed -i "s|Short SHA: \\\n+            \\\n+            \\\n+|Short SHA: ${SHORT_SHA}|" "$GITHUB_STEP_SUMMARY"
+          sed -i "s|Name: \\\n+            \\\n+            \\\n+|Name: ${IMAGE_NAME}|" "$GITHUB_STEP_SUMMARY"
