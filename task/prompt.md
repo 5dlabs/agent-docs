@@ -48,6 +48,7 @@ Generalize and extend the config-driven tool system from Task 9. Do not create h
   - `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
   - `cargo test --all-features`
 - Branch & CI: Work on a feature branch, push, and require a green GitHub Actions workflow (including deployment) before opening a PR.
+- Pre-push: Run `cargo fmt --all` locally (or ensure the pre-push hook is installed and active) BEFORE pushing any commits.
 
 ## Implementation Notes
 

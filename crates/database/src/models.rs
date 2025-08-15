@@ -84,16 +84,16 @@ pub struct ToolConfig {
 /// Metadata hints for tool configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolMetadataHints {
-    /// Supported formats for filtering (e.g., ["markdown", "pdf", "bob", "msc"])
+    /// Supported formats for filtering (e.g., `["markdown", "pdf", "bob", "msc"]`)
     #[serde(default)]
     pub supported_formats: Vec<String>,
-    /// Supported complexity levels (e.g., ["beginner", "intermediate", "advanced"])
+    /// Supported complexity levels (e.g., `["beginner", "intermediate", "advanced"]`)
     #[serde(default)]
     pub supported_complexity_levels: Vec<String>,
-    /// Supported categories (e.g., ["architecture", "api", "guides"])
+    /// Supported categories (e.g., `["architecture", "api", "guides"]`)
     #[serde(default)]
     pub supported_categories: Vec<String>,
-    /// Supported topics (e.g., ["consensus", "networking", "validators"])
+    /// Supported topics (e.g., `["consensus", "networking", "validators"]`)
     #[serde(default)]
     pub supported_topics: Vec<String>,
     /// Whether API version filtering is supported
