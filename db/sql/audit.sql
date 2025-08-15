@@ -1,5 +1,5 @@
 -- Read-only audit for Task 7 TC-1b
--- Usage: psql "$DATABASE_URL" -f sql/audit.sql -v ON_ERROR_STOP=1
+-- Usage: psql "$DATABASE_URL" -f db/sql/audit.sql -v ON_ERROR_STOP=1
 
 \echo '=== Audit: Migration History Table ==='
 SELECT to_regclass('public.migration_history') AS migration_history_table;
