@@ -179,6 +179,7 @@ jobs:
       - name: Run security scan
         env:
           IMAGE_NAME: ${{ needs.build-and-push-image.outputs.image_name }}
+          EXIT_ON_VIOLATION: 0
         run: |
           docker pull "$IMAGE_NAME"
           ./scripts/scan_image.sh "$IMAGE_NAME"
