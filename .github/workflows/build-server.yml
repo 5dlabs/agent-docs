@@ -62,7 +62,6 @@ jobs:
         run: cargo test --all-features
 
   embeddings-live:
-    if: ${{ secrets.OPENAI_API_KEY != '' && secrets.DATABASE_URL != '' }}
     needs: [test]
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -80,21 +79,31 @@ jobs:
           --health-interval 10s --health-timeout 5s --health-retries 12
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      # Prefer provided secret; fallback to CI postgres service
-      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/docs_test' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
       RUST_LOG: info
     steps:
+      - name: Skip (no secrets)
+        if: env.OPENAI_API_KEY == ''
+        run: |
+          echo "Skipping embeddings-live: OPENAI_API_KEY secret not set"
+
       - uses: actions/checkout@v4
+        if: env.OPENAI_API_KEY != ''
       - name: Setup Rust (stable)
+        if: env.OPENAI_API_KEY != ''
         run: |
           rustup default stable
           rustup update stable
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
+        if: env.OPENAI_API_KEY != ''
         with:
           workspaces: . -> target
       - name: Run embeddings live tests only
+        if: env.OPENAI_API_KEY != ''
         run: |
+          # Fallback to CI postgres service if DATABASE_URL secret isn't set
+          if [ -z "$DATABASE_URL" ]; then export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/docs_test; fi
           cargo test -p doc-server-embeddings --test integration_tests -- --nocapture
 
   # Build step removed - using optimized Dockerfile with cargo-chef
