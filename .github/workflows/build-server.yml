@@ -245,3 +245,82 @@ jobs:
           name: security-reports-${{ needs.version.outputs.short_sha }}
           path: security-reports/
           retention-days: 30
+
+  summary:
+    name: Run Summary
+    needs: [version, test, embeddings-live, build-and-push-image, security-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download security artifacts (if available)
+        uses: actions/download-artifact@v4
+        with:
+          name: security-reports-${{ needs.version.outputs.short_sha }}
+          path: security-reports
+        continue-on-error: true
+
+      - name: Install jq (for summarizing)
+        run: sudo apt-get update && sudo apt-get install -y jq
+        continue-on-error: true
+
+      - name: Generate Markdown Summary
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          SHORT_SHA="${{ needs.version.outputs.short_sha }}"
+          IMAGE_NAME="${{ needs.build-and-push-image.outputs.image_name }}"
+          TEST_STATUS="${{ needs.test.result }}"
+          EMB_STATUS="${{ needs.embeddings-live.result }}"
+          BUILD_STATUS="${{ needs.build-and-push-image.result }}"
+          SEC_STATUS="${{ needs.security-scan.result }}"
+          DEPLOY_STATUS="${{ needs.deploy.result }}"
+
+          # Security counts (best effort)
+          if [ -f security-reports/vulnerability-report.json ]; then
+            TOTAL=$(jq '[.Results[]? | .Vulnerabilities[]?] | length' security-reports/vulnerability-report.json 2>/dev/null || echo 0)
+            CRIT=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' security-reports/vulnerability-report.json 2>/dev/null || echo 0)
+            HIGH=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity=="HIGH")] | length' security-reports/vulnerability-report.json 2>/dev/null || echo 0)
+            SEC_SUMMARY="${TOTAL} total (CRITICAL: ${CRIT}, HIGH: ${HIGH})"
+          else
+            SEC_SUMMARY="(artifact not available)"
+          fi
+
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          # ✅ Doc Server CI Summary
+
+          EOF
+
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          **Commit**: \
+          
+          - Version: \
+            \
+            \
+          - Short SHA: \
+            \
+            \
+          
+          **Container Image**: \
+          
+          - Name: \
+            \
+            \
+          
+          **Job Status**:
+          
+          | Stage | Status |
+          |---|---|
+          | Format + Clippy + Tests | ${TEST_STATUS} |
+          | Embeddings (live) | ${EMB_STATUS} |
+          | Build & Push Image | ${BUILD_STATUS} |
+          | Security Scan | ${SEC_STATUS} |
+          | Deploy (Helm) | ${DEPLOY_STATUS} |
+          
+          **Security Summary**: ${SEC_SUMMARY}
+          
+          - Artifacts: security-reports-${SHORT_SHA}
+          
+          EOF
+
+          # Fill inline values escaped above
+          sed -i "s/Version: \\\n+            \\\n+            \\\n+/Version: ${VERSION}/" "$GITHUB_STEP_SUMMARY"
+          sed -i "s/Short SHA: \\\n+            \\\n+            \\\n+/Short SHA: ${SHORT_SHA}/" "$GITHUB_STEP_SUMMARY"
+          sed -i "s/Name: \\\n+            \\\n+            \\\n+/Name: ${IMAGE_NAME}/" "$GITHUB_STEP_SUMMARY"
