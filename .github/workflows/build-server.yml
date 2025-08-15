@@ -27,6 +27,8 @@ jobs:
       short_sha: ${{ steps.version.outputs.short_sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - id: version
         run: |
           if [ -n "${{ inputs.tag }}" ]; then
@@ -34,7 +36,8 @@ jobs:
           else
             VERSION="latest"
           fi
-          SHORT_SHA=$(git rev-parse --short HEAD)
+          # Avoid relying on git; derive from GITHUB_SHA
+          SHORT_SHA=${GITHUB_SHA::7}
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
 
@@ -43,7 +46,14 @@ jobs:
     env:
       KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
     steps:
+      - name: Install git (self-hosted runner)
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y git
+          fi
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Configure kubeconfig (if provided)
         run: |
           if [ -n "${KUBECONFIG_CONTENT:-}" ]; then
@@ -107,6 +117,8 @@ jobs:
           echo "Skipping embeddings-live: OPENAI_API_KEY secret not set"
 
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
         if: env.OPENAI_API_KEY != ''
       - name: Configure kubeconfig (if provided)
         if: env.OPENAI_API_KEY != ''
@@ -154,7 +166,14 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Install git (self-hosted runner)
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y git
+          fi
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Configure kubeconfig (if provided)
         run: |
           if [ -n "${KUBECONFIG_CONTENT:-}" ]; then
@@ -201,7 +220,14 @@ jobs:
     env:
       KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
     steps:
+      - name: Install git (self-hosted runner)
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y git
+          fi
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Configure kubeconfig (if provided)
         run: |
           if [ -n "${KUBECONFIG_CONTENT:-}" ]; then
@@ -272,7 +298,6 @@ jobs:
           EMB_STATUS="${{ needs.embeddings-live.result }}"
           BUILD_STATUS="${{ needs.build-and-push-image.result }}"
           SEC_STATUS="${{ needs.security-scan.result }}"
-          DEPLOY_STATUS="${{ needs.deploy.result }}"
 
           # Security counts (best effort)
           if [ -f security-reports/vulnerability-report.json ]; then
@@ -313,7 +338,6 @@ jobs:
           | Embeddings (live) | ${EMB_STATUS} |
           | Build & Push Image | ${BUILD_STATUS} |
           | Security Scan | ${SEC_STATUS} |
-          | Deploy (Helm) | ${DEPLOY_STATUS} |
           
           **Security Summary**: ${SEC_SUMMARY}
           
