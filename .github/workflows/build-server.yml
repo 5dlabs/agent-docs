@@ -105,12 +105,14 @@ jobs:
         if: env.OPENAI_API_KEY != ''
         with:
           workspaces: . -> target
-      - name: Run embeddings live tests only
+      - name: Run embeddings live tests (unit tests inside crate)
         if: env.OPENAI_API_KEY != ''
         run: |
           # Fallback to CI postgres service if DATABASE_URL secret isn't set
           if [ -z "$DATABASE_URL" ]; then export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/docs_test; fi
-          cargo test -p doc-server-embeddings --test integration_tests -- --nocapture
+          export EMBEDDINGS_TEST_MAX_WAIT_SECS=${EMBEDDINGS_TEST_MAX_WAIT_SECS:-120}
+          export EMBEDDINGS_TEST_POLL_SECS=${EMBEDDINGS_TEST_POLL_SECS:-5}
+          cargo test -p doc-server-embeddings -- --nocapture
 
   # Build step removed - using optimized Dockerfile with cargo-chef
   # that builds the binary internally for better caching and optimization
