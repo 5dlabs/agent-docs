@@ -8,12 +8,13 @@ use serde_json::json;
 #[tokio::test]
 async fn test_initialize_protocol_version_2025_06_18() {
     // Create a mock database pool
-    let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://test:test@localhost:5432/test".to_string());
+    // Fast path for CI/unit tests: skip DB unless explicitly requested
+    let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
 
     // For this test, we'll skip actual database setup and just test the handler logic
     // In a real scenario, you'd set up a test database
-    if let Ok(db_pool) = DatabasePool::new(&database_url).await {
+    if database_url != "mock" && DatabasePool::new(&database_url).await.is_ok() {
+        let db_pool = DatabasePool::new(&database_url).await.expect("db");
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
         let request = json!({

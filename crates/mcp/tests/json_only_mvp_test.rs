@@ -23,9 +23,17 @@ use tower::ServiceExt;
 
 /// Create a test server or mock router for testing
 async fn create_test_server() -> Router {
-    // Try to create real server first, fall back to mock if database not available
+    // Fast path for CI/unit tests: use mock unless explicitly requested
+    if std::env::var("TEST_DATABASE_URL")
+        .map(|v| v.trim().is_empty() || v.trim().eq_ignore_ascii_case("mock"))
+        .unwrap_or(true)
+    {
+        return create_mock_router();
+    }
+
+    // Try to create real server; if it fails, fall back to mock
     let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://test:test@localhost:5432/test".to_string());
+        .expect("TEST_DATABASE_URL should be set when using real DB");
 
     match doc_server_database::DatabasePool::new(&database_url).await {
         Ok(db_pool) => {
