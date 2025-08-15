@@ -81,6 +81,45 @@ pub struct PoolMetricsSnapshot {
 }
 
 impl DatabasePool {
+    /// Backward-compatible constructor alias (connect)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a connection cannot be established.
+    pub async fn connect(database_url: &str) -> Result<Self> {
+        Self::new(database_url).await
+    }
+
+    /// Construct a `DatabasePool` wrapper from an existing `PgPool`.
+    ///
+    /// This is primarily intended for tests or integration points that
+    /// already manage their own connection pool. Uses testing defaults
+    /// for pool configuration and initializes internal metrics/cache.
+    #[must_use]
+    pub fn from_pool(pool: PgPool) -> Self {
+        let config = crate::pool_config::PoolConfig::testing();
+
+        let metrics = std::sync::Arc::new(PoolMetrics::default());
+        let health_cache = std::sync::Arc::new(tokio::sync::RwLock::new(HealthCheckCache {
+            result: HealthCheckResult {
+                is_healthy: false,
+                response_time_ms: 0,
+                active_connections: 0,
+                idle_connections: 0,
+                error_message: None,
+                checked_at: chrono::Utc::now(),
+            },
+            cached_at: std::time::Instant::now(),
+            ttl: std::time::Duration::from_secs(5),
+        }));
+
+        Self {
+            pool,
+            config,
+            metrics,
+            health_cache,
+        }
+    }
     /// Create a new database pool with default configuration
     ///
     /// # Errors
