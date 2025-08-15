@@ -193,6 +193,7 @@ jobs:
     needs: [version, build-and-push-image]
     runs-on: k8s-runner
     permissions:
+      actions: read
       contents: read
       packages: read
       security-events: write
