@@ -163,3 +163,32 @@ Begin implementation with focus on data integrity, performance, and comprehensiv
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
   - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+
+## Final Deliverable: Pull Request Submission
+
+**CRITICAL REQUIREMENT**: At the end of this task, you MUST submit a pull request to merge your feature branch into the main branch. This is a mandatory final step.
+
+### Pull Request Requirements:
+1. **Create the PR** after all CI/CD checks pass successfully
+2. **Use descriptive title** following the pattern: `feat: Implement Rust Crate Management Tools (Task #11)`
+3. **Write comprehensive description** including:
+   - Summary of implemented features
+   - List of all four management tools added
+   - Database schema changes made
+   - Testing coverage summary
+   - Any breaking changes or migration notes
+4. **Link to task** by mentioning "Closes #11" or "Implements Task #11"
+5. **Request review** from appropriate team members
+6. **Ensure all CI checks pass** before requesting review
+
+### Success Criteria Update:
+Your implementation is complete when:
+- All four management tools are implemented and registered
+- add_rust_crate enqueues a background job and returns 202 + job id
+- check_rust_status reports real-time job status and final counts
+- docs.rs integration works with proper rate limiting
+- Database operations are atomic with proper error handling
+- Cascade deletion prevents data orphaning
+- Health monitoring provides comprehensive system status
+- All tests pass and performance targets are met
+- **A pull request is successfully submitted and ready for review**
