@@ -1,10 +1,10 @@
 //! Comprehensive integration tests for crate management tools
 //!
 //! This module tests all four crate management tools:
-//! - add_rust_crate: Enqueues background ingestion and returns job ID
-//! - remove_rust_crate: Cascade deletion with soft-delete option  
-//! - list_rust_crates: Pagination with stats and filtering
-//! - check_rust_status: Health monitoring and statistics
+//! - `add_rust_crate`: Enqueues background ingestion and returns job ID
+//! - `remove_rust_crate`: Cascade deletion with soft-delete option  
+//! - `list_rust_crates`: Pagination with stats and filtering
+//! - `check_rust_status`: Health monitoring and statistics
 
 use anyhow::Result;
 use chrono::Utc;

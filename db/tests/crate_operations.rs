@@ -1,8 +1,8 @@
 //! Database tests for crate operations
 //!
 //! This module tests the database layer functionality for crate management:
-//! - CrateJobQueries: Job lifecycle management
-//! - CrateQueries: Crate information retrieval from document metadata
+//! - `CrateJobQueries`: Job lifecycle management
+//! - `CrateQueries`: Crate information retrieval from document metadata
 //! - Document operations with crate metadata
 
 use anyhow::Result;
