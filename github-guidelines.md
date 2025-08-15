@@ -1,4 +1,3 @@
-
 # GitHub Workflow Guidelines
 
 ## �� **MANDATORY BRANCH AND PR REQUIREMENTS** 🚨
@@ -15,7 +14,8 @@
 ## Git Workflow
 
 ### Your Current Context
-- **Repository**: 
+
+- **Repository**:
 - **Feature Branch**: feature/task--implementation
 - **Target Branch**: main (never push directly to this)
 - **Authentication**: GitHub App (5DLabs-Rex - pre-configured)
@@ -30,6 +30,7 @@ git push origin feature/task--implementation
 ```
 
 ### **When to Commit & Push:**
+
 - ✅ After implementing a significant feature or fix
 - ✅ After completing a subtask or milestone
 - ✅ When you've made meaningful progress (ideally every turn)
@@ -37,6 +38,7 @@ git push origin feature/task--implementation
 - ✅ When switching between different areas of the codebase
 
 ### **Commit Message Format:**
+
 ```
 <type>: <brief description of what was implemented>
 
@@ -50,7 +52,9 @@ test: add unit tests for payment processing
 ## 🔄 **Merge Conflict Prevention & Resolution**
 
 ### **Prevention (Automated in Container Script):**
+
 The container automatically syncs with main before you start work:
+
 ```bash
 # This happens automatically for you:
 git fetch origin main
@@ -62,12 +66,14 @@ git merge origin/main --no-edit  # Auto-merge if possible
 **If you see merge conflict warnings during startup or at any time:**
 
 1. **Check conflict status:**
+
    ```bash
    git status
    # Look for "Unmerged paths" or files marked with "UU", "AA", or "DD"
    ```
 
 2. **Identify conflicted files:**
+
    ```bash
    # Files with merge conflicts will show:
    # - <<<<<<< HEAD (your changes)
@@ -89,12 +95,14 @@ git merge origin/main --no-edit  # Auto-merge if possible
    ```
 
 ### **Best Practices:**
+
 - ✅ **Always resolve conflicts immediately** - Don't ignore them
 - ✅ **Test after resolving** - Ensure your changes still work
 - ✅ **Ask for clarification** if unsure which changes to keep
 - ✅ **Sync frequently** - Smaller conflicts are easier to resolve
 
 ### **If Stuck on Conflicts:**
+
 Comment in your PR: "Need help resolving merge conflicts in [file names]" and describe what you're unsure about.
 
 ## **🚨 PULL REQUEST SUBMISSION - MANDATORY FOR TASK COMPLETION 🚨**
@@ -104,6 +112,7 @@ Comment in your PR: "Need help resolving merge conflicts in [file names]" and de
 When you have completed implementation and met all acceptance criteria, and ONLY after all pre-PR quality gates are green locally:
 
 ### ✅ Pre-PR Quality Gates (must pass locally)
+
 ```bash
 # Formatting
 cargo fmt --all -- --check
@@ -118,6 +127,7 @@ cargo llvm-cov --workspace --all-features --fail-under-lines 95 || \
 ```
 
 ### **✅ MANDATORY: Submit a Pull Request Using GitHub CLI:**
+
 ```bash
 # This command is REQUIRED - the task is not done without it
 gh pr create --title "feat: [brief summary of implementation]" \
@@ -140,12 +150,14 @@ gh pr create --title "feat: [brief summary of implementation]" \
 ```
 
 ### **✅ PR Requirements:**
+
 - Create PR from your feature branch (feature/task--implementation) to main
 - Use descriptive title starting with feat:, fix:, etc.
 - Include comprehensive PR description with all sections above
 - **CRITICAL**: You MUST run the `gh pr create` command - just pushing is not enough
 
 ### **❌ NEVER Push to Main:**
+
 - ❌ **DO NOT** push directly to main branch
 - ❌ **DO NOT** merge your own PR
 - ✅ **ONLY** work on feature branch feature/task--implementation
@@ -153,12 +165,14 @@ gh pr create --title "feat: [brief summary of implementation]" \
 ## Authentication
 
 ### GitHub App Configuration
+
 - GitHub App authentication is pre-configured in the container
 - All git operations use GitHub App tokens automatically
 - Repository access: ``
 - GitHub App: `5DLabs-Rex`
 
 ### Git Commands (GitHub App-based)
+
 ```bash
 # Check current status
 git status
@@ -180,6 +194,7 @@ git log --oneline -10
 ```
 
 ### **Gitignore Requirements**
+
 - ⭐ **ALWAYS add hooks to .gitignore** - Never commit hook files
 - Add these patterns to your .gitignore:
   ```
@@ -211,23 +226,28 @@ git log --oneline -10
 **WITHOUT STEP 4, THE TASK IS INCOMPLETE - NO EXCEPTIONS**
 
 ### **PR Description Template:**
+
 ```markdown
 ## Implementation Summary
+
 Brief description of what was implemented and why.
 
 ## Changes Made
+
 - List of significant changes
 - New features added
 - Bug fixes implemented
 - Refactoring completed
 
 ## Testing Performed
+
 - Unit tests written/updated
 - Integration testing completed
 - Manual testing performed
 - Edge cases verified
 
 ## Implementation Notes
+
 - Any important technical decisions
 - Performance considerations
 - Security implications

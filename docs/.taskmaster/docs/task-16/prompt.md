@@ -9,6 +9,7 @@ Create a comprehensive load testing suite, identify performance bottlenecks, imp
 ## Execution Steps
 
 ### Step 1: Create Load Testing Suite
+
 - Examine existing `scripts/load_test_sse.js` as baseline
 - Implement comprehensive k6 test scenarios:
   - Gradual ramp-up from 1 to 100+ concurrent users
@@ -19,6 +20,7 @@ Create a comprehensive load testing suite, identify performance bottlenecks, imp
 - Configure test data and scenarios for different load patterns
 
 ### Step 2: Database Query Optimization
+
 - Identify slow queries using EXPLAIN ANALYZE
 - Optimize vector similarity search with approximation techniques:
   - Implement HNSW (Hierarchical Navigable Small World) indexes
@@ -28,6 +30,7 @@ Create a comprehensive load testing suite, identify performance bottlenecks, imp
 - Optimize database connection pooling parameters
 
 ### Step 3: Application Performance Optimization
+
 - Implement request coalescing for duplicate queries:
   - Cache identical queries in-flight
   - Deduplicate embedding generation requests
@@ -37,6 +40,7 @@ Create a comprehensive load testing suite, identify performance bottlenecks, imp
 - Add streaming optimizations for large result sets
 
 ### Step 4: Memory and CPU Profiling Under Load
+
 - Profile application during load testing using pprof
 - Identify memory leaks and excessive allocations
 - Analyze CPU hotspots and optimization opportunities
@@ -44,6 +48,7 @@ Create a comprehensive load testing suite, identify performance bottlenecks, imp
 - Add garbage collection tuning for consistent performance
 
 ### Step 5: Performance Monitoring and SLA Validation
+
 - Measure and document p50/p95/p99 latencies
 - Test connection limit handling (1000+ concurrent connections)
 - Verify memory stability during extended load testing
@@ -72,15 +77,15 @@ Create a comprehensive load testing suite, identify performance bottlenecks, imp
 // k6 load testing configuration
 export let options = {
   stages: [
-    { duration: '2m', target: 10 },   // Ramp up
-    { duration: '5m', target: 50 },   // Stay at 50 users
-    { duration: '2m', target: 100 },  // Ramp up to 100
-    { duration: '10m', target: 100 }, // Sustained load
-    { duration: '2m', target: 0 },    // Ramp down
+    { duration: "2m", target: 10 }, // Ramp up
+    { duration: "5m", target: 50 }, // Stay at 50 users
+    { duration: "2m", target: 100 }, // Ramp up to 100
+    { duration: "10m", target: 100 }, // Sustained load
+    { duration: "2m", target: 0 }, // Ramp down
   ],
   thresholds: {
-    http_req_duration: ['p(95)<2000', 'p(99)<5000'],
-    http_req_failed: ['rate<0.1'],
+    http_req_duration: ["p(95)<2000", "p(99)<5000"],
+    http_req_failed: ["rate<0.1"],
   },
 };
 ```
@@ -95,6 +100,7 @@ export let options = {
 ## Success Criteria
 
 Your optimization is complete when:
+
 - Load testing suite validates system performance under stress
 - Database queries optimized for sub-second response times
 - Caching system reduces database load by 70%+

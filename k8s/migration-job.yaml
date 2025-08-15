@@ -15,53 +15,53 @@ spec:
     spec:
       restartPolicy: Never
       containers:
-      - name: migration
-        image: ghcr.io/5dlabs/agent-docs:latest
-        command: ["/usr/local/bin/http_server"]
-        args: ["--migrate-only"]
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: postgresql-secret
-              key: database-url
-        - name: OPENAI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: openai-secret
-              key: api-key
-        - name: MIGRATION_BATCH_SIZE
-          valueFrom:
-            configMapKeyRef:
-              name: migration-config
-              key: batch-size
-              optional: true
-        - name: MIGRATION_PARALLEL_WORKERS
-          valueFrom:
-            configMapKeyRef:
-              name: migration-config
-              key: parallel-workers
-              optional: true
-        - name: RUST_LOG
-          value: "info,doc_server=debug"
-        resources:
-          requests:
-            memory: "1Gi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
-        volumeMounts:
-        - name: migration-data
-          mountPath: /data
-          readOnly: true
+        - name: migration
+          image: ghcr.io/5dlabs/agent-docs:latest
+          command: ["/usr/local/bin/http_server"]
+          args: ["--migrate-only"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: database-url
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-secret
+                  key: api-key
+            - name: MIGRATION_BATCH_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: migration-config
+                  key: batch-size
+                  optional: true
+            - name: MIGRATION_PARALLEL_WORKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: migration-config
+                  key: parallel-workers
+                  optional: true
+            - name: RUST_LOG
+              value: "info,doc_server=debug"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: migration-data
+              mountPath: /data
+              readOnly: true
       volumes:
-      - name: migration-data
-        configMap:
-          name: migration-data
-          optional: true
+        - name: migration-data
+          configMap:
+            name: migration-data
+            optional: true
   backoffLimit: 3
-  activeDeadlineSeconds: 7200  # 2 hours timeout
+  activeDeadlineSeconds: 7200 # 2 hours timeout
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -74,5 +74,5 @@ metadata:
 data:
   batch-size: "100"
   parallel-workers: "8"
-  max-documents: "0"  # 0 = unlimited
+  max-documents: "0" # 0 = unlimited
   validation-level: "full"

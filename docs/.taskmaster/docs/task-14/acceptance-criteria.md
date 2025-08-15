@@ -3,6 +3,7 @@
 ## Functional Requirements
 
 ### 1. cargo-chef Dependency Caching Implementation
+
 - [ ] cargo-chef installed and configured in builder stage
 - [ ] Chef stage created with `cargo chef prepare` generating recipe.json
 - [ ] Dependencies stage implemented with `cargo chef cook` for cached builds
@@ -12,6 +13,7 @@
 - [ ] Recipe.json properly captures all workspace dependencies
 
 ### 2. Distroless Runtime Migration
+
 - [ ] Runtime base image changed to gcr.io/distroless/cc-debian12
 - [ ] All apt-get installations removed from runtime stage
 - [ ] Required shared libraries (libssl, libpq) available or statically linked
@@ -21,6 +23,7 @@
 - [ ] Attack surface reduced by removing shell and package managers
 
 ### 3. Binary Optimization and Compression
+
 - [ ] Cargo.toml configured with size optimization settings:
   - [ ] opt-level = "z" for maximum size optimization
   - [ ] lto = true for link-time optimization
@@ -33,6 +36,7 @@
 - [ ] Performance impact minimal (< 5% startup time increase)
 
 ### 4. Graceful Shutdown and Signal Handling
+
 - [ ] Signal handlers implemented in `crates/mcp/src/http_server.rs`:
   - [ ] SIGTERM handler for orchestration compatibility
   - [ ] SIGINT handler for development convenience
@@ -46,6 +50,7 @@
 - [ ] Kubernetes termination handling verified
 
 ### 5. Security Scanning Pipeline Integration
+
 - [ ] `scripts/scan_image.sh` created with Trivy integration:
   - [ ] Vulnerability scanning with severity thresholds
   - [ ] CRITICAL and HIGH vulnerabilities must be zero
@@ -61,6 +66,7 @@
 ## Non-Functional Requirements
 
 ### 1. Performance Requirements
+
 - [ ] Final container image size < 100MB
 - [ ] Container startup time < 5 seconds
 - [ ] First request response time < 2 seconds after startup
@@ -69,6 +75,7 @@
 - [ ] Cold build time (no cache) < 10 minutes
 
 ### 2. Security Requirements
+
 - [ ] Zero CRITICAL vulnerabilities in final image
 - [ ] Zero HIGH vulnerabilities in final image
 - [ ] MEDIUM and LOW vulnerabilities documented and accepted
@@ -78,6 +85,7 @@
 - [ ] Container runs as non-root user
 
 ### 3. Operational Requirements
+
 - [ ] Graceful shutdown completes within 30 seconds
 - [ ] Health check endpoint responds correctly
 - [ ] Container restarts cleanly without data loss
@@ -88,18 +96,22 @@
 ## Test Cases
 
 ### Test Case 1: cargo-chef Build Optimization
+
 **Given**: Clean Docker build environment
 **When**: Build performed twice (first cold, second with code change only)
 **Then**:
+
 - First build completes successfully
 - Second build reuses dependency layer from cache
 - Build time reduction > 80% for code-only changes
 - Final binary identical in both builds
 
 ### Test Case 2: Distroless Security and Functionality
+
 **Given**: Container built with distroless base image
 **When**: Container started and tested
 **Then**:
+
 - Container starts successfully as nonroot user
 - Health check endpoint returns 200 OK
 - API endpoints respond correctly
@@ -107,9 +119,11 @@
 - Required shared libraries present and functional
 
 ### Test Case 3: Binary Optimization Results
+
 **Given**: Binary optimization settings applied
 **When**: Binary size measured and functionality tested
 **Then**:
+
 - Binary size reduced by 60-70% from original
 - UPX compression applied successfully
 - Application startup time < 5 seconds
@@ -117,9 +131,11 @@
 - Memory usage remains optimal
 
 ### Test Case 4: Graceful Shutdown Handling
+
 **Given**: Running container with active connections
 **When**: SIGTERM signal sent to container
 **Then**:
+
 - Shutdown signal received and logged
 - In-flight requests completed or timed out
 - Database connections closed cleanly
@@ -127,9 +143,11 @@
 - Shutdown completes within 30 seconds
 
 ### Test Case 5: Security Scanning Integration
+
 **Given**: Container image built with potential vulnerabilities
 **When**: Security scanning executed
 **Then**:
+
 - Trivy scan completes successfully
 - CRITICAL and HIGH vulnerabilities fail the build
 - SARIF and SBOM outputs generated
@@ -137,9 +155,11 @@
 - Build process stops on security failures
 
 ### Test Case 6: Kubernetes Deployment Compatibility
+
 **Given**: Optimized container deployed in Kubernetes
 **When**: Pod lifecycle events occur (start, stop, restart)
 **Then**:
+
 - Pod starts successfully with readiness checks
 - Graceful shutdown works with terminationGracePeriodSeconds
 - Health checks pass consistently
@@ -149,24 +169,28 @@
 ## Deliverables Checklist
 
 ### Container Optimization
+
 - [ ] Enhanced Dockerfile with multi-stage cargo-chef build
 - [ ] Distroless runtime configuration
 - [ ] Binary optimization and compression settings
 - [ ] Size and security optimized final image
 
 ### Application Changes
+
 - [ ] Graceful shutdown implementation in http_server.rs
 - [ ] Signal handling for SIGTERM and SIGINT
 - [ ] Health check endpoint for container orchestration
 - [ ] Logging enhancements for operational visibility
 
 ### Security and Operations
+
 - [ ] Security scanning scripts and CI/CD integration
 - [ ] SBOM generation for compliance
 - [ ] Vulnerability remediation documentation
 - [ ] Operational runbook for container management
 
 ### Testing and Validation
+
 - [ ] Container functionality tests
 - [ ] Performance benchmark results
 - [ ] Security scan reports and approval
@@ -175,6 +199,7 @@
 ## Validation Criteria
 
 ### Automated Testing
+
 ```bash
 # Build and size validation
 docker build -t doc-server:optimized .
@@ -191,6 +216,7 @@ docker stop test-container  # Test graceful shutdown
 ```
 
 ### Manual Validation
+
 1. **Performance Testing**: Measure startup time and memory usage
 2. **Security Review**: Review scan results and SBOM contents
 3. **Operational Testing**: Test in Kubernetes environment

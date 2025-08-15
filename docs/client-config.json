@@ -9,12 +9,22 @@
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file"],
+      "tools": [
+        "read_file",
+        "write_file",
+        "list_directory",
+        "create_directory",
+        "edit_file"
+      ],
       "workingDirectory": "project_root"
     },
     "database": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "${DATABASE_URL}"
+      ],
       "tools": ["query", "execute", "schema"],
       "workingDirectory": "project_root"
     }

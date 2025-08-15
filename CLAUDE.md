@@ -1,7 +1,7 @@
-
 # Claude Code Project Memory
 
 ## Project Information
+
 - **Repository**: 5dlabs/agent-docs
 - **Source Branch**: main
 - **GitHub App**: 5DLabs-Rex
@@ -20,6 +20,7 @@ See @github-guidelines.md for git workflow and commit message standards
 ## Current Task Documentation
 
 **Your current task (1) documentation:**
+
 - See @task/task.md for requirements and description
 - See @task/acceptance-criteria.md for success criteria
 - See @task/architecture.md for technical approach and guidance
@@ -28,10 +29,10 @@ See @github-guidelines.md for git workflow and commit message standards
 
 See @.taskmaster/docs/architecture.md for system design patterns and architectural decisions
 
-
 ## Implementation Workflow
 
 ### Current Task Process
+
 1. **Understand**: Read @task/task.md for requirements
 2. **Plan**: Review @task/architecture.md for technical approach
 3. **Validate**: Check @task/acceptance-criteria.md for success criteria
@@ -40,6 +41,7 @@ See @.taskmaster/docs/architecture.md for system design patterns and architectur
 6. **Test**: Verify all acceptance criteria are met
 
 ### Task Context
+
 - **Task ID**: 1
 - **Repository**: 5dlabs/agent-docs
 - **Branch**: main
@@ -48,6 +50,7 @@ See @.taskmaster/docs/architecture.md for system design patterns and architectur
 ## Quick Command Reference
 
 ### Testing & Quality
+
 ```bash
 # Run tests (check package.json/Cargo.toml for project-specific commands)
 npm test || cargo test
@@ -61,6 +64,7 @@ npm run build || cargo build
 ```
 
 ### Git Workflow
+
 ```bash
 # Commit with task-specific message (see @github-guidelines.md for details)
 git commit -m "feat(task-1): implement [brief description]
@@ -84,6 +88,7 @@ This file enables automatic pull request creation.
 ## Development Tools & Patterns
 
 ### Claude Code Integration
+
 - Use `LS` and `Glob` to explore codebase structure
 - Use `Read` to examine existing code patterns
 - Use `Grep` to find similar implementations
@@ -91,6 +96,7 @@ This file enables automatic pull request creation.
 - Validate with `Bash` commands after each change
 
 ### Implementation Guidelines
+
 - Focus on current task requirements in `task/` directory
 - Follow architectural guidance provided in @task/architecture.md
 - Ensure all acceptance criteria are met before completion
@@ -98,4 +104,4 @@ This file enables automatic pull request creation.
 
 ---
 
-*All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above.*
+_All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above._

@@ -9,24 +9,30 @@ This task implements comprehensive security controls including JWT authenticatio
 ### Filesystem Server Tools
 
 #### read_file
+
 **Purpose**: Analyze existing security implementations and configuration patterns
-**When to Use**: 
+**When to Use**:
+
 - Examine current authentication and authorization implementations
 - Study existing middleware and security patterns in codebase
 - Review current database security and access control mechanisms
 - Analyze existing error handling and security logging approaches
 
 #### write_file
+
 **Purpose**: Create comprehensive security infrastructure and configurations
 **When to Use**:
+
 - Implement JWT authentication and token management systems
 - Create RBAC authorization middleware and role definitions
 - Write TLS/SSL configuration and certificate management
 - Add audit logging infrastructure and security monitoring
 
 #### edit_file
+
 **Purpose**: Integrate security controls into existing application components
 **When to Use**:
+
 - Add authentication middleware to existing HTTP handlers
 - Integrate authorization checks into existing tool implementations
 - Modify database queries to include audit logging
@@ -35,24 +41,30 @@ This task implements comprehensive security controls including JWT authenticatio
 ### Security Server Tools
 
 #### audit_scan
+
 **Purpose**: Perform security audits and vulnerability assessments
 **When to Use**:
+
 - Scanning for known vulnerabilities in dependencies
 - Validating security configuration compliance
 - Checking for common security misconfigurations
 - Performing automated security assessments
 
 #### vulnerability_check
+
 **Purpose**: Check for specific security vulnerabilities and weaknesses
 **When to Use**:
+
 - Testing authentication bypass vulnerabilities
 - Validating authorization controls effectiveness
 - Checking for injection vulnerabilities (SQL, XSS)
 - Testing rate limiting and DoS protection
 
 #### compliance_report
+
 **Purpose**: Generate compliance reports for security standards
 **When to Use**:
+
 - Creating OWASP Top 10 compliance reports
 - Generating audit reports for security assessments
 - Documenting security control implementation
@@ -61,16 +73,20 @@ This task implements comprehensive security controls including JWT authenticatio
 ### Kubernetes Tools
 
 #### kubernetes_getResource
+
 **Purpose**: Examine existing security configurations in Kubernetes
 **When to Use**:
+
 - Review current TLS/SSL certificate configurations
 - Check existing RBAC policies and service accounts
 - Validate current network policies and security contexts
 - Examine existing secret and ConfigMap security
 
 #### kubernetes_listResources
+
 **Purpose**: Discover security-related infrastructure and policies
 **When to Use**:
+
 - Finding existing security policies and configurations
 - Locating certificate management and PKI infrastructure
 - Identifying current monitoring and logging systems
@@ -79,30 +95,35 @@ This task implements comprehensive security controls including JWT authenticatio
 ## Implementation Flow
 
 ### Phase 1: Authentication Infrastructure
+
 1. Implement JWT token generation and validation system
 2. Create authentication middleware for all protected endpoints
 3. Add token refresh and rotation mechanisms
 4. Integrate authentication with existing application state
 
 ### Phase 2: Authorization and RBAC
+
 1. Design role hierarchy and permission system
 2. Implement authorization middleware with role checking
 3. Create database schema for role and permission management
 4. Add role management endpoints for administrative control
 
 ### Phase 3: Transport Security
+
 1. Configure TLS/SSL with proper certificate management
 2. Implement request signing for message integrity
 3. Add security headers for web application protection
 4. Configure HTTPS enforcement and security policies
 
 ### Phase 4: Monitoring and Logging
+
 1. Implement comprehensive audit logging system
 2. Add rate limiting with configurable thresholds
 3. Create security event monitoring and alerting
 4. Implement log rotation and retention policies
 
 ### Phase 5: Input Validation and Compliance
+
 1. Add comprehensive input validation and sanitization
 2. Implement OWASP security controls
 3. Add API key rotation and management system
@@ -111,24 +132,28 @@ This task implements comprehensive security controls including JWT authenticatio
 ## Best Practices
 
 ### Authentication Security
+
 - Use cryptographically secure random number generation
 - Implement proper token lifecycle management
 - Add token blacklisting for secure logout
 - Monitor and alert on authentication anomalies
 
 ### Authorization Design
+
 - Follow principle of least privilege
 - Implement defense-in-depth authorization layers
 - Cache authorization decisions for performance
 - Regular review and audit of role assignments
 
 ### Cryptographic Implementation
+
 - Use industry-standard algorithms (RS256, HS256)
 - Proper key management and rotation procedures
 - Secure storage of cryptographic materials
 - Regular security assessments of cryptographic implementations
 
 ### Logging and Monitoring
+
 - Log all security-relevant events comprehensively
 - Implement real-time security monitoring
 - Create automated alerting for security incidents
@@ -137,6 +162,7 @@ This task implements comprehensive security controls including JWT authenticatio
 ## Task-Specific Implementation Guidelines
 
 ### 1. JWT Authentication System
+
 ```rust
 // JWT authentication implementation
 use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
@@ -161,19 +187,19 @@ impl JwtAuth {
     pub fn new(secret: &str) -> Self {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims.insert("exp".to_string());
-        
+
         Self {
             encoding_key: EncodingKey::from_secret(secret.as_ref()),
             decoding_key: DecodingKey::from_secret(secret.as_ref()),
             validation,
         }
     }
-    
+
     pub fn generate_token(&self, claims: &Claims) -> Result<String> {
         encode(&Header::default(), claims, &self.encoding_key)
             .map_err(|e| AuthError::TokenGeneration(e.to_string()))
     }
-    
+
     pub fn validate_token(&self, token: &str) -> Result<Claims> {
         decode::<Claims>(token, &self.decoding_key, &self.validation)
             .map(|data| data.claims)
@@ -183,6 +209,7 @@ impl JwtAuth {
 ```
 
 ### 2. RBAC Authorization System
+
 ```rust
 // RBAC implementation
 #[derive(Debug, Clone, PartialEq)]
@@ -207,27 +234,27 @@ pub struct RbacService {
 impl RbacService {
     pub fn new() -> Self {
         let mut role_permissions = HashMap::new();
-        
+
         role_permissions.insert(Role::Admin, vec![
             Permission::ReadDocuments,
             Permission::WriteDocuments,
             Permission::ManageCrates,
             Permission::AdministerSystem,
         ]);
-        
+
         role_permissions.insert(Role::Operator, vec![
             Permission::ReadDocuments,
             Permission::WriteDocuments,
             Permission::ManageCrates,
         ]);
-        
+
         role_permissions.insert(Role::Viewer, vec![
             Permission::ReadDocuments,
         ]);
-        
+
         Self { role_permissions }
     }
-    
+
     pub fn check_permission(&self, roles: &[Role], required_permission: Permission) -> bool {
         roles.iter().any(|role| {
             self.role_permissions
@@ -239,13 +266,14 @@ impl RbacService {
 ```
 
 ### 3. Security Headers Middleware
+
 ```rust
 // Security headers implementation
 use axum::http::{HeaderMap, HeaderName, HeaderValue};
 
 pub fn security_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
-    
+
     // Content Security Policy
     headers.insert(
         HeaderName::from_static("content-security-policy"),
@@ -253,36 +281,37 @@ pub fn security_headers() -> HeaderMap {
             "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
         ),
     );
-    
+
     // HTTP Strict Transport Security
     headers.insert(
         HeaderName::from_static("strict-transport-security"),
         HeaderValue::from_static("max-age=31536000; includeSubDomains; preload"),
     );
-    
+
     // X-Frame-Options
     headers.insert(
         HeaderName::from_static("x-frame-options"),
         HeaderValue::from_static("DENY"),
     );
-    
+
     // X-Content-Type-Options
     headers.insert(
         HeaderName::from_static("x-content-type-options"),
         HeaderValue::from_static("nosniff"),
     );
-    
+
     // Referrer Policy
     headers.insert(
         HeaderName::from_static("referrer-policy"),
         HeaderValue::from_static("strict-origin-when-cross-origin"),
     );
-    
+
     headers
 }
 ```
 
 ### 4. Audit Logging System
+
 ```rust
 // Audit logging implementation
 #[derive(Debug, Serialize, Deserialize)]
@@ -340,13 +369,14 @@ impl AuditLogger for DatabaseAuditLogger {
         .execute(&self.pool)
         .await
         .map_err(|e| AuditError::Database(e.to_string()))?;
-        
+
         Ok(())
     }
 }
 ```
 
 ### 5. Rate Limiting Implementation
+
 ```rust
 // Rate limiting with tower-governor
 use tower_governor::{
@@ -359,7 +389,7 @@ pub struct IpKeyExtractor;
 
 impl KeyExtractor for IpKeyExtractor {
     type Key = IpAddr;
-    
+
     fn extract<B>(&self, req: &Request<B>) -> Result<Self::Key, tower_governor::GovernorError> {
         req.headers()
             .get("x-forwarded-for")
@@ -389,12 +419,14 @@ pub fn create_rate_limiter() -> Governor<IpAddr> {
 ### Authentication Issues
 
 #### JWT Token Validation Failures
+
 - Verify JWT secret configuration and environment variables
 - Check token expiry and clock synchronization
 - Validate JWT algorithm configuration (HS256 vs RS256)
 - Monitor token blacklist and revocation status
 
 #### Session Management Problems
+
 - Check session storage and persistence mechanisms
 - Validate session timeout and renewal logic
 - Monitor concurrent session limits and enforcement
@@ -403,12 +435,14 @@ pub fn create_rate_limiter() -> Governor<IpAddr> {
 ### Authorization Problems
 
 #### Role Assignment Issues
+
 - Verify role-to-permission mapping accuracy
 - Check role inheritance and hierarchy logic
 - Validate role assignment and modification procedures
 - Monitor role-based access control effectiveness
 
 #### Permission Enforcement Failures
+
 - Check authorization middleware integration
 - Verify permission checking logic and caching
 - Validate tool-specific access control implementation
@@ -417,12 +451,14 @@ pub fn create_rate_limiter() -> Governor<IpAddr> {
 ### Security Configuration Issues
 
 #### TLS/SSL Problems
+
 - Verify certificate validity and expiry
 - Check TLS version enforcement and cipher suites
 - Validate certificate chain and trust store
 - Monitor SSL/TLS handshake performance
 
 #### Rate Limiting Ineffectiveness
+
 - Check rate limit configuration and thresholds
 - Verify client identification and key extraction
 - Monitor rate limit state storage and persistence
@@ -431,18 +467,21 @@ pub fn create_rate_limiter() -> Governor<IpAddr> {
 ## Validation Steps
 
 ### Security Testing
+
 1. **Authentication Testing**: JWT token validation and bypass attempts
 2. **Authorization Testing**: Role-based access control enforcement
 3. **Injection Testing**: SQL injection and XSS vulnerability scanning
 4. **Transport Security**: TLS/SSL configuration and certificate validation
 
 ### Compliance Validation
+
 1. **OWASP Testing**: Top 10 vulnerability assessment
 2. **Penetration Testing**: Comprehensive security assessment
 3. **Audit Testing**: Logging completeness and accuracy validation
 4. **Policy Compliance**: Security policy adherence verification
 
 ### Quality Assurance
+
 ```bash
 # Security testing and validation
 cargo test --package mcp security_tests

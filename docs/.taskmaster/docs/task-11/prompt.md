@@ -9,6 +9,7 @@ Create a complete Rust crate management system with automatic documentation fetc
 ## Execution Steps
 
 ### Step 1: Create Core Data Structures and Database Schema
+
 - Extend database schema with 'crates' table containing:
   - id, name, version, description, documentation_url
   - last_updated, status (active/inactive/updating)
@@ -19,6 +20,7 @@ Create a complete Rust crate management system with automatic documentation fetc
 - Implement transaction helper methods for atomic operations
 
 ### Step 2: Implement add_rust_crate Tool with docs.rs Integration (Async)
+
 - Build AddRustCrateTool following Tool trait pattern that enqueues a background job and returns 202 Accepted
 - Add docs.rs API client in `crates/doc-loader/src/loaders.rs`
 - Implement rate limiting (max 10 requests/minute) using tokio::time::interval
@@ -30,6 +32,7 @@ Create a complete Rust crate management system with automatic documentation fetc
 - Register tool in McpHandler
 
 ### Step 3: Implement remove_rust_crate Tool with Cascade Deletion
+
 - Create RemoveRustCrateTool with transaction support
 - Implement cascade deletion logic:
   - Query documents where metadata->>'crate_name' matches target
@@ -40,6 +43,7 @@ Create a complete Rust crate management system with automatic documentation fetc
 - Implement comprehensive audit logging
 
 ### Step 4: Implement list_rust_crates Tool with Pagination
+
 - Build ListRustCratesTool with configurable pagination
 - Default 20 items per page with customizable limits
 - Include comprehensive information:
@@ -50,6 +54,7 @@ Create a complete Rust crate management system with automatic documentation fetc
 - Format output as structured JSON with pagination metadata
 
 ### Step 5: Implement check_rust_status Tool and Dependency Analysis
+
 - Create CheckRustStatusTool for comprehensive health monitoring
 - Report system health metrics:
   - Database connectivity and performance
@@ -88,6 +93,7 @@ Generate these implementation artifacts:
 ## Success Criteria
 
 Your implementation is complete when:
+
 - All four management tools are implemented and registered
 - add_rust_crate enqueues a background job and returns 202 + job id
 - check_rust_status reports real-time job status and final counts
@@ -134,6 +140,7 @@ CREATE INDEX idx_crates_last_updated ON crates(last_updated);
 ## Validation Commands
 
 Before completion, run:
+
 ```bash
 cd /workspace
 cargo test --package mcp --test crate_management

@@ -125,6 +125,7 @@ fn test_configuration_validation_failures() {
             title: "Invalid Tool".to_string(),
             description: "Invalid tool name".to_string(),
             enabled: true,
+            metadata_hints: None,
         }],
     };
 
@@ -142,6 +143,7 @@ fn test_configuration_validation_failures() {
             title: "Valid Tool".to_string(),
             description: "Valid tool with invalid doc type".to_string(),
             enabled: true,
+            metadata_hints: None,
         }],
     };
 
@@ -160,6 +162,7 @@ fn test_configuration_validation_failures() {
                 title: "First Tool".to_string(),
                 description: "First tool".to_string(),
                 enabled: true,
+                metadata_hints: None,
             },
             ToolConfig {
                 name: "duplicate_query".to_string(),
@@ -167,6 +170,7 @@ fn test_configuration_validation_failures() {
                 title: "Second Tool".to_string(),
                 description: "Second tool with same name".to_string(),
                 enabled: true,
+                metadata_hints: None,
             },
         ],
     };

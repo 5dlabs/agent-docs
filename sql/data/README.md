@@ -7,7 +7,7 @@ This directory contains a complete dump of the Doc Server database with all inge
 The `docs_database_dump.sql.gz` file contains:
 
 - **40+ Rust crates** with full documentation and embeddings
-- **BirdEye API documentation** (OpenAPI specs and endpoints)  
+- **BirdEye API documentation** (OpenAPI specs and endpoints)
 - **Solana documentation** (markdown, PDFs, architecture diagrams, ZK cryptography specs)
 - **Vector embeddings** (3072-dimensional OpenAI text-embedding-3-large)
 - **Complete metadata** for all document types
@@ -19,12 +19,14 @@ The `docs_database_dump.sql.gz` file contains:
 ## Quick Restoration
 
 ### Option 1: Use Development Script (Recommended)
+
 ```bash
 # This will automatically detect and load the database dump
 ./scripts/dev.sh --with-data
 ```
 
 ### Option 2: Manual Restoration to Docker Container
+
 ```bash
 # Start PostgreSQL container
 docker compose -f docker-compose.dev.yml up -d postgres
@@ -38,6 +40,7 @@ gunzip -c sql/data/docs_database_dump.sql.gz | \
 ```
 
 ### Option 3: Manual Restoration to Local PostgreSQL
+
 ```bash
 # If you have local PostgreSQL and want to restore there
 gunzip -c sql/data/docs_database_dump.sql.gz | \
@@ -62,8 +65,9 @@ psql -c "SELECT doc_type, source_name, LEFT(content, 100) FROM documents LIMIT 5
 ## Expected Results
 
 You should see approximately:
+
 - **3,000+ Rust documents** from 40+ crates
-- **600+ BirdEye API endpoints** with OpenAPI documentation  
+- **600+ BirdEye API endpoints** with OpenAPI documentation
 - **400+ Solana documents** including core docs, architecture diagrams, and ZK specs
 - **100% embedding coverage** (all documents have vector embeddings)
 

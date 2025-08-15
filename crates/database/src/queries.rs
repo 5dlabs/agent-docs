@@ -8,6 +8,16 @@ use tracing::{info, warn};
 
 use crate::models::{DocType, Document};
 
+/// Metadata filters for document search
+#[derive(Debug, Clone, Default)]
+pub struct MetadataFilters {
+    pub format: Option<String>,
+    pub complexity: Option<String>,
+    pub category: Option<String>,
+    pub topic: Option<String>,
+    pub api_version: Option<String>,
+}
+
 /// Trait for types that can report how many rows they represent
 pub trait RowCountable {
     fn row_count(&self) -> usize;
@@ -292,6 +302,112 @@ impl DocumentQueries {
         .bind(limit)
         .fetch_all(pool)
         .await?;
+
+        let docs = rows
+            .into_iter()
+            .map(|row| {
+                Document {
+                    id: row.get("id"),
+                    doc_type: row.get("doc_type"),
+                    source_name: row.get("source_name"),
+                    doc_path: row.get("doc_path"),
+                    content: row.get("content"),
+                    metadata: row.get("metadata"),
+                    embedding: None, // Skip embedding for now
+                    token_count: row.get("token_count"),
+                    created_at: row.get("created_at"),
+                    updated_at: row.get("updated_at"),
+                }
+            })
+            .collect();
+
+        Ok(docs)
+    }
+
+    /// Perform vector similarity search with metadata filtering
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub async fn doc_type_vector_search_with_filters(
+        pool: &PgPool,
+        doc_type: &str,
+        _embedding: &[f32],
+        limit: i64,
+        filters: &MetadataFilters,
+    ) -> Result<Vec<Document>> {
+        // Build dynamic WHERE clause based on provided filters
+        let mut query_parts = vec!["doc_type = $1".to_string()];
+        let mut bind_count = 2;
+
+        // Add metadata filters using JSONB operators
+        if filters.format.is_some() {
+            query_parts.push(format!("(metadata->>'format' = ${bind_count})"));
+            bind_count += 1;
+        }
+        if filters.complexity.is_some() {
+            query_parts.push(format!("(metadata->>'complexity' = ${bind_count})"));
+            bind_count += 1;
+        }
+        if filters.category.is_some() {
+            query_parts.push(format!("(metadata->>'category' = ${bind_count})"));
+            bind_count += 1;
+        }
+        if filters.topic.is_some() {
+            query_parts.push(format!("(metadata->>'topic' = ${bind_count})"));
+            bind_count += 1;
+        }
+        if filters.api_version.is_some() {
+            query_parts.push(format!("(metadata->>'api_version' = ${bind_count})"));
+            bind_count += 1;
+        }
+
+        let where_clause = query_parts.join(" AND ");
+        let final_bind_count = bind_count;
+
+        let query_str = format!(
+            r"
+            SELECT 
+                id,
+                doc_type::text as doc_type,
+                source_name,
+                doc_path,
+                content,
+                metadata,
+                token_count,
+                created_at,
+                updated_at
+            FROM documents 
+            WHERE {where_clause}
+            ORDER BY created_at DESC
+            LIMIT ${final_bind_count}
+            "
+        );
+
+        // Build query with dynamic binding
+        let mut query = sqlx::query(&query_str).bind(doc_type);
+
+        // Bind filter values in order
+        if let Some(format_val) = &filters.format {
+            query = query.bind(format_val);
+        }
+        if let Some(complexity_val) = &filters.complexity {
+            query = query.bind(complexity_val);
+        }
+        if let Some(category_val) = &filters.category {
+            query = query.bind(category_val);
+        }
+        if let Some(topic_val) = &filters.topic {
+            query = query.bind(topic_val);
+        }
+        if let Some(api_version_val) = &filters.api_version {
+            query = query.bind(api_version_val);
+        }
+
+        // Bind limit
+        query = query.bind(limit);
+
+        let rows = query.fetch_all(pool).await?;
 
         let docs = rows
             .into_iter()
