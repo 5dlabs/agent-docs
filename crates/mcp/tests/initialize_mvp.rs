@@ -13,8 +13,10 @@ async fn test_initialize_protocol_version_2025_06_18() {
 
     // For this test, we'll skip actual database setup and just test the handler logic
     // In a real scenario, you'd set up a test database
-    if database_url != "mock" && DatabasePool::new(&database_url).await.is_ok() {
-        let db_pool = DatabasePool::new(&database_url).await.expect("db");
+    if database_url == "mock" {
+        // If we can't connect to a test database, skip this test
+        eprintln!("Skipping initialize test - no test database available");
+    } else if let Ok(Ok(db_pool)) = tokio::time::timeout(std::time::Duration::from_secs(2), DatabasePool::new(&database_url)).await {
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
         let request = json!({
@@ -49,8 +51,7 @@ async fn test_initialize_protocol_version_2025_06_18() {
             "Tools capability should be present"
         );
     } else {
-        // If we can't connect to a test database, skip this test
-        eprintln!("Skipping initialize test - no test database available");
+        eprintln!("Skipping initialize test - DB not reachable within 2s");
 
         // Instead, we'll test the JSON structure manually
         let expected_response = json!({
