@@ -110,8 +110,11 @@ mod tests {
                 }
 
                 if start_time.elapsed() > max_wait_time {
-                    warn!("Batch processing timeout after {} seconds ({} minutes)", 
-                          max_wait_secs, max_wait_secs / 60);
+                    warn!(
+                        "Batch processing timeout after {} seconds ({} minutes)",
+                        max_wait_secs,
+                        max_wait_secs / 60
+                    );
                     break;
                 }
 
