@@ -41,7 +41,7 @@ impl ConfigLoader {
     ///
     /// Returns an error if the default config is invalid.
     pub fn load_default() -> Result<ToolsConfig> {
-        const DEFAULT_CONFIG: &str = include_str!("../../config/tools.json");
+        const DEFAULT_CONFIG: &str = include_str!("../../tools.json");
 
         debug!("Loading default embedded configuration");
 
