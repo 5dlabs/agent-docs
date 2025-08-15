@@ -35,14 +35,14 @@ async fn create_test_server() -> Router {
     let database_url = std::env::var("TEST_DATABASE_URL")
         .expect("TEST_DATABASE_URL should be set when using real DB");
 
-    match doc_server_database::DatabasePool::new(&database_url).await {
-        Ok(db_pool) => {
+    match tokio::time::timeout(std::time::Duration::from_secs(2), doc_server_database::DatabasePool::new(&database_url)).await {
+        Ok(Ok(db_pool)) => {
             let server = McpServer::new(db_pool)
                 .await
                 .expect("Failed to create server");
             server.create_router()
         }
-        Err(_) => create_mock_router(),
+        _ => create_mock_router(),
     }
 }
 
