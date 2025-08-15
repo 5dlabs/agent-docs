@@ -19,7 +19,7 @@
       "overwriteMemory": false,
       "repository": "5dlabs/agent-docs",
       "docsRepository": "5dlabs/agent-docs",
-      "docsProjectDirectory": "docs",
+      "docsProjectDirectory": ".docs",
       "service": "agent-docs"
     }
   },
