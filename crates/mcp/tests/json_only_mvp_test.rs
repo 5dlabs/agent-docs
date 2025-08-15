@@ -35,7 +35,12 @@ async fn create_test_server() -> Router {
     let database_url = std::env::var("TEST_DATABASE_URL")
         .expect("TEST_DATABASE_URL should be set when using real DB");
 
-    match tokio::time::timeout(std::time::Duration::from_secs(2), doc_server_database::DatabasePool::new(&database_url)).await {
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        doc_server_database::DatabasePool::new(&database_url),
+    )
+    .await
+    {
         Ok(Ok(db_pool)) => {
             let server = McpServer::new(db_pool)
                 .await

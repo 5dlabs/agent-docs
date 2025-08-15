@@ -6,7 +6,7 @@ set -e
 
 # Configuration
 IMAGE_NAME=${1:-"doc-server:latest"}
-OUTPUT_DIR=${2:-"./security-scan-results"}
+OUTPUT_DIR=${2:-"./security-reports"}
 SEVERITY_THRESHOLD="HIGH,CRITICAL"
 EXIT_ON_VIOLATION=${EXIT_ON_VIOLATION:-1}
 
@@ -64,7 +64,7 @@ vulnerability_scan() {
     echo "🔧 Generating SARIF report for CI/CD integration..."
     trivy image \
         --format sarif \
-        --output "$OUTPUT_DIR/vulnerability-report.sarif" \
+        --output "$OUTPUT_DIR/results.sarif" \
         "$IMAGE_NAME"
     
     echo "✅ Vulnerability scan complete"
