@@ -151,20 +151,16 @@ jobs:
           export EMBEDDINGS_TEST_POLL_SECS=${EMBEDDINGS_TEST_POLL_SECS:-5}
           cargo test -p doc-server-embeddings -- --nocapture
 
-  # Build step removed - using optimized Dockerfile with cargo-chef
-  # that builds the binary internally for better caching and optimization
-
-  build-and-push-image:
+  # Build binary for pre-built Dockerfile approach
+  build-binary:
     needs: [version, test]
     runs-on: k8s-runner
     env:
       KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
     outputs:
-      image_digest: ${{ steps.build.outputs.digest }}
-      image_name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/server:${{ needs.version.outputs.version }}
+      binary_path: ${{ steps.build.outputs.binary_path }}
     permissions:
       contents: read
-      packages: write
     steps:
       - name: Install git (self-hosted runner)
         run: |
@@ -184,6 +180,60 @@ jobs:
           else
             echo "No kubeconfig provided; skipping"
           fi
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Build binary
+        id: build
+        run: |
+          cargo build --release --bin http_server
+          mkdir -p build
+          cp target/release/http_server build/http_server
+          echo "binary_path=build/http_server" >> $GITHUB_OUTPUT
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: http_server_binary
+          path: build/http_server
+          retention-days: 1
+
+  build-and-push-image:
+    needs: [version, test, build-binary]
+    runs-on: k8s-runner
+    env:
+      KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
+      image_name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/server:${{ needs.version.outputs.version }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Install git (self-hosted runner)
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y git
+          fi
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: http_server_binary
+          path: build/
+      - name: Configure kubeconfig (if provided)
+        run: |
+          if [ -n "${KUBECONFIG_CONTENT:-}" ]; then
+            mkdir -p "$HOME/.kube"
+            printf "%s" "$KUBECONFIG_CONTENT" > "$HOME/.kube/config"
+            chmod 600 "$HOME/.kube/config"
+            echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          else
+            echo "No kubeconfig provided; skipping"
+          fi
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Log in to GHCR
@@ -192,12 +242,12 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push optimized image
+      - name: Build and push pre-built image
         id: build
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.optimized
+          file: ./Dockerfile
           platforms: linux/amd64
           push: true
           tags: |
