@@ -2,10 +2,10 @@
   "remoteTools": [
     "read_file",
     "write_file",
-    "edit_file", 
+    "edit_file",
     "search_files",
     "kubernetes_listResources",
-    "kubernetes_getResource", 
+    "kubernetes_getResource",
     "kubernetes_createResource",
     "kubernetes_describeResource",
     "brave_web_search",
@@ -13,7 +13,7 @@
   ],
   "localServers": {
     "filesystem": {
-      "command": "npx", 
+      "command": "npx",
       "args": ["@modelcontextprotocol/server-filesystem", "/workspace/docs"],
       "env": {}
     },

@@ -7,6 +7,7 @@ The Doc Server is a comprehensive documentation server that transforms from a si
 ## Current Implementation Status
 
 ### ✅ Completed Infrastructure
+
 - **Database**: Migrated from `rust_docs_vectors` to `docs` with harmonized schema
 - **Production Database**: PostgreSQL with pgvector extension in dedicated cluster
 - **MCP Server**: Streamable HTTP server (JSON-only MVP) with Toolman integration on port 3001
@@ -14,12 +15,14 @@ The Doc Server is a comprehensive documentation server that transforms from a si
 - **Embeddings**: 4,000+ documents with OpenAI text-embedding-3-large (3072 dimensions)
 
 ### ✅ Working Query Tools
+
 - `rust_query` - Fully implemented and tested in Cursor MCP
 - Database contains BirdEye and Solana documentation (ingestion completed)
 
 ### 🔄 Next Priority
+
 - Task 35: Project State Evaluation (for new implementation agent)
- - Task 17: Keep-alive/heartbeat without SSE (e.g., periodic ping); SSE intentionally disabled per security policy
+- Task 17: Keep-alive/heartbeat without SSE (e.g., periodic ping); SSE intentionally disabled per security policy
 
 ## System Architecture
 
@@ -61,7 +64,7 @@ The Doc Server is a comprehensive documentation server that transforms from a si
 CREATE TABLE documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN (
-        'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
+        'rust', 'jupyter', 'birdeye', 'cilium', 'talos',
         'meteora', 'solana', 'ebpf', 'raydium', 'rust_best_practices'
     )),
     source_name VARCHAR(255) NOT NULL,
@@ -72,7 +75,7 @@ CREATE TABLE documents (
     token_count INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     UNIQUE(doc_type, source_name, doc_path)
 );
 
@@ -102,7 +105,7 @@ CREATE INDEX idx_documents_created_at ON documents(created_at DESC);
 ### Current Data Contents
 
 - **Rust Documentation**: 40+ crates with complete documentation
-- **BirdEye API**: 600+ endpoints with OpenAPI specifications  
+- **BirdEye API**: 600+ endpoints with OpenAPI specifications
 - **Solana Documentation**: 400+ documents including:
   - Core documentation (markdown)
   - Architecture diagrams (BOB format)
@@ -119,7 +122,7 @@ Each documentation type has its own specific query tool for better relevance:
 // Currently implemented
 "rust_query" -> RustQueryTool
 
-// Planned implementations  
+// Planned implementations
 "birdeye_query" -> BirdeyeQueryTool
 "solana_query" -> SolanaQueryTool
 "jupyter_query" -> JupyterQueryTool
@@ -137,7 +140,7 @@ Only Rust crates support dynamic management via MCP tools:
 
 ```rust
 "add_rust_crate" -> Add new Rust crate
-"remove_rust_crate" -> Remove Rust crate  
+"remove_rust_crate" -> Remove Rust crate
 "list_rust_crates" -> List available crates
 "check_rust_status" -> Check population status
 ```
@@ -197,6 +200,7 @@ Only Rust crates support dynamic management via MCP tools:
 Each documentation type stores specific metadata in JSONB format:
 
 ### Rust Crates
+
 ```json
 {
   "version": "1.0.0",
@@ -207,6 +211,7 @@ Each documentation type stores specific metadata in JSONB format:
 ```
 
 ### BirdEye API
+
 ```json
 {
   "api_version": "v1",
@@ -217,7 +222,8 @@ Each documentation type stores specific metadata in JSONB format:
 }
 ```
 
-### Solana Documentation  
+### Solana Documentation
+
 ```json
 {
   "category": "core|architecture|crypto",
@@ -272,16 +278,19 @@ RATE_LIMIT_RPM=3000
 ### From Original Implementation
 
 **Database Changes**:
+
 - `rust_docs_vectors` → `docs` (renamed)
 - `doc_embeddings` → `documents` (harmonized schema)
 - `crate_configs` → `document_sources` (unified configuration)
 
 **Tool Changes**:
+
 - `query_rust_docs` → `rust_query` (type-specific)
 - `add_crate` → `add_rust_crate` (explicit naming)
 - `list_crates` → `list_rust_crates` (clear scope)
 
 **Architecture Changes**:
+
 - Single-type → Multi-type documentation support
 - Voyage AI → OpenAI only (simplified embedding stack)
 - Synchronous → Planned batch processing
@@ -321,7 +330,7 @@ RATE_LIMIT_RPM=3000
 ### Optimization Roadmap
 
 1. **Batch Processing**: 70% cost reduction for embeddings
-2. **Connection Reliability**: Streamable HTTP transport implementation  
+2. **Connection Reliability**: Streamable HTTP transport implementation
 3. **Query Optimization**: Improved indexing strategies
 4. **Caching**: In-memory caching for frequently accessed content
 5. **Scaling**: Kubernetes horizontal pod autoscaling

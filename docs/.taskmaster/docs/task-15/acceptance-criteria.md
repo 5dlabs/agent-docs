@@ -3,6 +3,7 @@
 ## Functional Requirements
 
 ### 1. Prometheus Metrics Infrastructure
+
 - [ ] prometheus and prometheus-hyper crates added to Cargo.toml
 - [ ] `crates/mcp/src/metrics.rs` module created with custom metrics:
   - [ ] query_latency_histogram for database operation timing
@@ -16,6 +17,7 @@
 - [ ] Metrics properly labeled for Grafana dashboard filtering
 
 ### 2. Structured JSON Logging with Correlation IDs
+
 - [ ] tracing-subscriber configured with json formatter in main function
 - [ ] Correlation ID middleware generates X-Correlation-ID headers
 - [ ] Correlation IDs propagate through all async operations
@@ -28,6 +30,7 @@
 - [ ] Log aggregation compatible format (ELK stack)
 
 ### 3. OpenTelemetry Tracing with Jaeger Integration
+
 - [ ] Required crates added: opentelemetry, opentelemetry-jaeger, tracing-opentelemetry
 - [ ] OpenTelemetry pipeline configured with Jaeger exporter
 - [ ] Key operations instrumented with spans:
@@ -40,6 +43,7 @@
 - [ ] Jaeger UI shows complete request traces
 
 ### 4. Custom Performance Metrics Implementation
+
 - [ ] DocumentQueries methods instrumented with timing histograms
 - [ ] McpHandler::handle_tool_call includes per-tool metrics with labels
 - [ ] Embedding generation batch processing timing tracked
@@ -51,6 +55,7 @@
 - [ ] Performance bottlenecks identifiable through metrics
 
 ### 5. Performance Profiling Endpoints
+
 - [ ] pprof crate added for CPU and memory profiling support
 - [ ] /debug/pprof/profile endpoint for CPU profiling:
   - [ ] Configurable duration parameter (default 30s)
@@ -64,6 +69,7 @@
 ## Non-Functional Requirements
 
 ### 1. Performance Requirements
+
 - [ ] Observability overhead < 5% of total system resources
 - [ ] Metrics collection adds < 1ms latency per request
 - [ ] Structured logging performance impact < 2%
@@ -71,6 +77,7 @@
 - [ ] Memory usage increase < 10MB for observability stack
 
 ### 2. Security Requirements
+
 - [ ] Profiling endpoints require authentication
 - [ ] Rate limiting prevents resource exhaustion attacks
 - [ ] Sensitive data excluded from traces and logs
@@ -78,6 +85,7 @@
 - [ ] Profiling disabled by default in production
 
 ### 3. Integration Requirements
+
 - [ ] Compatible with existing Kubernetes deployment
 - [ ] Prometheus ServiceMonitor configuration provided
 - [ ] Grafana dashboard JSON templates created
@@ -87,45 +95,55 @@
 ## Test Cases
 
 ### Test Case 1: Prometheus Metrics Collection
+
 **Given**: Application running with metrics enabled
 **When**: /metrics endpoint queried
 **Then**:
+
 - Prometheus format metrics returned
 - All custom metrics present with values
 - Histogram buckets properly configured
 - Labels applied correctly for filtering
 
 ### Test Case 2: Correlation ID Propagation
+
 **Given**: HTTP request with correlation ID header
 **When**: Request processed through system
 **Then**:
+
 - Same correlation ID appears in all related logs
 - Database operation logs include correlation ID
 - Error logs maintain correlation context
 - Trace spans connected by correlation ID
 
 ### Test Case 3: Distributed Tracing
+
 **Given**: Complex request requiring multiple operations
 **When**: Request processed with tracing enabled
 **Then**:
+
 - Complete trace visible in Jaeger UI
 - All major operations have spans
 - Parent-child relationships correct
 - Timing information accurate
 
 ### Test Case 4: Performance Profiling
+
 **Given**: Profiling endpoints enabled and authenticated
 **When**: CPU profile requested
 **Then**:
+
 - Profile generated within specified duration
 - Flame graph data accurate and useful
 - No significant performance impact during profiling
 - Rate limiting enforced correctly
 
 ### Test Case 5: Database Query Instrumentation
+
 **Given**: Database operations under monitoring
 **When**: Queries executed with various complexity
 **Then**:
+
 - Query latency histograms updated correctly
 - Slow queries identifiable in metrics
 - Connection pool status accurately tracked
@@ -134,6 +152,7 @@
 ## Deliverables Checklist
 
 ### Core Implementation
+
 - [ ] Metrics module with Prometheus integration
 - [ ] Structured logging configuration
 - [ ] OpenTelemetry tracing setup
@@ -141,6 +160,7 @@
 - [ ] Database and tool instrumentation
 
 ### Configuration and Documentation
+
 - [ ] Environment variable configuration guide
 - [ ] Prometheus ServiceMonitor YAML
 - [ ] Grafana dashboard JSON templates
@@ -148,6 +168,7 @@
 - [ ] Observability runbook for operations team
 
 ### Testing and Validation
+
 - [ ] Unit tests for metrics collection
 - [ ] Integration tests for tracing propagation
 - [ ] Performance impact benchmarks
@@ -157,6 +178,7 @@
 ## Validation Criteria
 
 ### Automated Testing
+
 ```bash
 # Metrics endpoint testing
 curl http://localhost:8080/metrics | grep -E 'query_latency|embedding_generation'
@@ -170,6 +192,7 @@ cargo test --package mcp tracing_overhead
 ```
 
 ### Manual Validation
+
 1. **Prometheus Integration**: Metrics scraped successfully by Prometheus
 2. **Grafana Dashboards**: Custom dashboards display system metrics
 3. **Jaeger Tracing**: End-to-end traces visible and accurate

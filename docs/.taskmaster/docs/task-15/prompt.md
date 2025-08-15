@@ -9,6 +9,7 @@ Implement a complete observability stack with Prometheus metrics, structured JSO
 ## Execution Steps
 
 ### Step 1: Set up Prometheus Metrics Infrastructure
+
 - Add prometheus and prometheus-hyper crates to Cargo.toml
 - Create `crates/mcp/src/metrics.rs` module for custom metrics
 - Define key metrics:
@@ -21,6 +22,7 @@ Implement a complete observability stack with Prometheus metrics, structured JSO
 - Add GET /metrics endpoint for Prometheus scraping
 
 ### Step 2: Implement Structured JSON Logging
+
 - Configure tracing-subscriber with json formatter
 - Add correlation ID middleware to generate X-Correlation-ID headers
 - Implement correlation ID propagation through async operations
@@ -29,6 +31,7 @@ Implement a complete observability stack with Prometheus metrics, structured JSO
 - Ensure correlation IDs propagate through database queries
 
 ### Step 3: Add OpenTelemetry Tracing with Jaeger
+
 - Add opentelemetry, opentelemetry-jaeger, tracing-opentelemetry crates
 - Configure OpenTelemetry pipeline with Jaeger exporter
 - Create spans for key operations:
@@ -40,6 +43,7 @@ Implement a complete observability stack with Prometheus metrics, structured JSO
 - Configure sampling rate via OTEL_TRACE_SAMPLE_RATE
 
 ### Step 4: Create Custom Performance Metrics
+
 - Instrument DocumentQueries methods with timing metrics
 - Add per-tool metrics in McpHandler::handle_tool_call
 - Track embedding generation performance with batch timing
@@ -48,6 +52,7 @@ Implement a complete observability stack with Prometheus metrics, structured JSO
 - Export metrics with labels for Grafana dashboard filtering
 
 ### Step 5: Implement Performance Profiling Endpoints
+
 - Add pprof crate for CPU and memory profiling
 - Create /debug/pprof/profile endpoint for CPU profiling
 - Add /debug/pprof/heap endpoint for memory snapshots
@@ -81,6 +86,7 @@ Implement a complete observability stack with Prometheus metrics, structured JSO
 ## Success Criteria
 
 Your implementation is complete when:
+
 - Prometheus metrics endpoint exposes comprehensive system metrics
 - Structured logging provides searchable JSON logs with correlation IDs
 - OpenTelemetry tracing shows end-to-end request flows

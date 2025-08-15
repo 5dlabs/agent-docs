@@ -9,6 +9,7 @@ Transform the existing Dockerfile to achieve production-ready container images w
 ## Execution Steps
 
 ### Step 1: Implement cargo-chef for Dependency Caching
+
 - Examine current Dockerfile structure and dependency handling
 - Install cargo-chef in builder stage for optimal dependency caching
 - Create dedicated chef stage with `cargo chef prepare` for recipe.json generation
@@ -17,6 +18,7 @@ Transform the existing Dockerfile to achieve production-ready container images w
 - Verify build time improvements for code-only changes
 
 ### Step 2: Migrate to Distroless Runtime Image
+
 - Replace current debian:bookworm-slim with gcr.io/distroless/cc-debian12
 - Remove apt-get installations from runtime stage (unnecessary in distroless)
 - Ensure required shared libraries (libssl, libpq) are available or statically linked
@@ -25,6 +27,7 @@ Transform the existing Dockerfile to achieve production-ready container images w
 - Test container startup and functionality with distroless base
 
 ### Step 3: Add Binary Optimization and Compression
+
 - Configure Cargo.toml with size optimization settings:
   - opt-level = "z" for size optimization
   - lto = true for link-time optimization
@@ -36,6 +39,7 @@ Transform the existing Dockerfile to achieve production-ready container images w
 - Verify compressed binary functionality
 
 ### Step 4: Implement Graceful Shutdown and Signal Handling
+
 - Navigate to `crates/mcp/src/http_server.rs`
 - Implement tokio::signal handlers for SIGTERM and SIGINT
 - Add graceful shutdown logic:
@@ -47,6 +51,7 @@ Transform the existing Dockerfile to achieve production-ready container images w
 - Ensure signal handling works with non-root user
 
 ### Step 5: Integrate Security Scanning Pipeline
+
 - Create `scripts/scan_image.sh` with Trivy vulnerability scanning
 - Configure severity thresholds (CRITICAL and HIGH must be zero)
 - Add GitHub Action workflow for automated security scanning
@@ -55,6 +60,7 @@ Transform the existing Dockerfile to achieve production-ready container images w
 - Document security scanning process and remediation procedures
 
 ### Step 6: CI/CD Workflow (Build → Scan → Deploy)
+
 - Jobs:
   - `lint-test`: run fmt/clippy/tests with pedantic gating
   - `build-image`: build with `Dockerfile.optimized` and cargo-chef; push to GHCR
@@ -128,6 +134,7 @@ trivy image --format spdx-json --output sbom.spdx.json doc-server:latest
 ## Success Criteria
 
 Your optimization is complete when:
+
 - cargo-chef reduces rebuild times for code-only changes by 80%+
 - Distroless base image reduces attack surface significantly
 - Binary optimization achieves target size reduction
@@ -151,13 +158,13 @@ use tokio::signal;
 
 pub async fn run_server_with_shutdown() -> Result<(), Box<dyn std::error::Error>> {
     let server = create_server().await?;
-    
+
     let graceful = server.with_graceful_shutdown(shutdown_signal());
-    
+
     if let Err(e) = graceful.await {
         eprintln!("Server error: {}", e);
     }
-    
+
     Ok(())
 }
 
@@ -188,6 +195,7 @@ async fn shutdown_signal() {
 ## Validation Commands
 
 Before completion, run:
+
 ```bash
 cd /workspace
 docker build -t doc-server:optimized .
@@ -210,4 +218,3 @@ Begin optimization focusing on security, performance, and operational excellence
   - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
   - Require the deployment stage to complete successfully before creating a pull request.
   - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
-

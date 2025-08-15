@@ -9,6 +9,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
 ## Execution Steps
 
 ### Step 1: Create Shared Utility Module
+
 - Create `crates/mcp/src/query_utils.rs` module
 - Implement shared utility functions:
   - `parse_metadata_field()`: Generic JSONB field extraction with type conversion
@@ -19,6 +20,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
 - Export utilities from lib.rs for use by all QueryTool implementations
 
 ### Step 2: Implement Jupyter and Cilium Query Tools
+
 - Create `JupyterQueryTool` in `crates/mcp/src/tools.rs`:
   - Handle notebook-specific metadata (kernel, language, cell_types)
   - Parse cell execution results and outputs
@@ -31,6 +33,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
 - Register both tools in McpHandler with comprehensive tool definitions
 
 ### Step 3: Implement Talos and Meteora Query Tools
+
 - Create `TalosQueryTool`:
   - Parse Kubernetes-specific metadata (resource_type, api_version, namespace)
   - Handle Talos node configuration and cluster setup
@@ -43,6 +46,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
 - Implement custom response formatting for technical specifications
 
 ### Step 4: Implement Raydium and eBPF Query Tools
+
 - Create `RaydiumQueryTool`:
   - Handle AMM and liquidity pool metadata (amm_version, pool_address, fee_structure)
   - Process Solana-based DeFi protocol parameters
@@ -55,6 +59,7 @@ Create seven specialized query tools with type-specific metadata parsing, consis
 - Register tools in MCP handler with proper error handling
 
 ### Step 5: Implement RustBestPractices Tool and Integration Testing
+
 - Create `RustBestPracticesQueryTool`:
   - Handle pattern/anti-pattern metadata (practice_category, rust_version, complexity_level)
   - Parse best practice recommendations and code patterns
@@ -89,36 +94,43 @@ Generate these implementation artifacts:
 ## Documentation Type Specifications
 
 ### Jupyter Notebooks
+
 - **Metadata Fields**: kernel, language, cell_types, execution_count
 - **Content Types**: Code cells, markdown cells, output results
 - **Formatting**: Syntax highlighting, execution results display
 
 ### Cilium Networking
+
 - **Metadata Fields**: policy_type, namespace, endpoints, rules
 - **Content Types**: Network policies, security contexts, traffic rules
 - **Formatting**: YAML configuration blocks, network diagrams
 
 ### Talos Kubernetes
+
 - **Metadata Fields**: resource_type, api_version, namespace, node_config
 - **Content Types**: System configurations, boot sequences, cluster setup
 - **Formatting**: Configuration files, system commands
 
 ### Meteora DeFi
+
 - **Metadata Fields**: pool_type, liquidity_params, reward_structure, apy
 - **Content Types**: Liquidity strategies, yield calculations, protocol mechanics
 - **Formatting**: Financial formulas, pool configurations
 
 ### Raydium AMM
+
 - **Metadata Fields**: amm_version, pool_address, fee_structure, trading_pairs
 - **Content Types**: Swap mechanics, liquidity provision, price calculations
 - **Formatting**: Trading parameters, pool statistics
 
 ### eBPF Programming
+
 - **Metadata Fields**: program_type, kernel_version, hook_points, verifier_info
 - **Content Types**: BPF programs, kernel integration, performance metrics
 - **Formatting**: C code examples, assembly output
 
 ### Rust Best Practices
+
 - **Metadata Fields**: practice_category, rust_version, complexity_level, pattern_type
 - **Content Types**: Code patterns, anti-patterns, recommendations
 - **Formatting**: Before/after examples, best practice explanations
@@ -133,6 +145,7 @@ Generate these implementation artifacts:
 ## Success Criteria
 
 Your implementation is complete when:
+
 - All seven query tools are implemented following consistent patterns
 - Shared utility module provides reusable functionality
 - Database queries are optimized with proper indexing
@@ -152,6 +165,7 @@ Your implementation is complete when:
 ## Validation Commands
 
 Before completion, run:
+
 ```bash
 cd /workspace
 cargo test --package mcp --test query_tools_integration

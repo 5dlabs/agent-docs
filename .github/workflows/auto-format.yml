@@ -32,4 +32,3 @@ jobs:
           commit_user_name: "5DLabs CI"
           commit_user_email: "ci@5dlabs.dev"
           branch: ${{ github.ref_name }}
-

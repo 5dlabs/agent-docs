@@ -7,7 +7,7 @@
 resolver = "2"
 members = [
     "crates/database",
-    "crates/mcp", 
+    "crates/mcp",
     "crates/embeddings",
     "crates/doc-loader",
     "crates/llm",
@@ -104,7 +104,7 @@ strip = true          # Remove debug symbols
 resolver = "2"
 members = [
     "crates/database",
-    "crates/mcp", 
+    "crates/mcp",
     "crates/embeddings",
     "crates/doc-loader",
     "crates/llm",
@@ -227,7 +227,6 @@ strip = true          # Remove debug symbols
     "cipher": "5DLabs-Cipher"
   }
 }
-
 ```
 
 ### crates/database/Cargo.toml
@@ -1454,7 +1453,7 @@ impl DocumentQueries {
 
         let rows = sqlx::query(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -1464,7 +1463,7 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
+            FROM documents
             WHERE doc_type::text = $1
             ORDER BY created_at DESC
             ",
@@ -1503,7 +1502,7 @@ impl DocumentQueries {
     pub async fn find_by_source(pool: &PgPool, source_name: &str) -> Result<Vec<Document>> {
         let rows = sqlx::query(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -1513,7 +1512,7 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
+            FROM documents
             WHERE source_name = $1
             ORDER BY created_at DESC
             ",
@@ -1556,7 +1555,7 @@ impl DocumentQueries {
         // For now, return a basic text search as fallback
         let rows = sqlx::query(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -1566,7 +1565,7 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
+            FROM documents
             WHERE content IS NOT NULL
             ORDER BY created_at DESC
             LIMIT $1
@@ -1610,7 +1609,7 @@ impl DocumentQueries {
         // For now, return Rust documents ordered by relevance
         let rows = sqlx::query(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -1620,7 +1619,7 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
+            FROM documents
             WHERE doc_type = 'rust'
             ORDER BY created_at DESC
             LIMIT $1
@@ -1665,7 +1664,7 @@ impl DocumentQueries {
         // For now, return documents of specified type ordered by relevance
         let rows = sqlx::query(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -1675,7 +1674,7 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
+            FROM documents
             WHERE doc_type = $1
             ORDER BY created_at DESC
             LIMIT $2
@@ -1861,7 +1860,7 @@ impl QueryPerformanceMonitor {
     async fn benchmark_latest_documents(pool: &PgPool, limit: i64) -> Result<Vec<Document>> {
         let rows = sqlx::query(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -1871,7 +1870,7 @@ impl QueryPerformanceMonitor {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
+            FROM documents
             ORDER BY created_at DESC
             LIMIT $1
             ",
@@ -1912,7 +1911,7 @@ impl QueryPerformanceMonitor {
 
 ### crates/database/src/migrations.rs
 
-```rust
+````rust
 //! Legacy database migrations (DEPRECATED)
 //!
 //! **NOTE: This module is deprecated. Use `DatabaseMigrationManager` from `migration_system` instead.**
@@ -1972,7 +1971,7 @@ impl Migrations {
     }
 }
 
-```
+````
 
 ### crates/database/src/connection.rs
 
@@ -2866,7 +2865,7 @@ mod tests {
             .max_connections(10)
             .build()
             .unwrap();
-        
+
         assert_eq!(config.min_connections, 2);
         assert_eq!(config.max_connections, 10);
 
@@ -2876,7 +2875,7 @@ mod tests {
             .min_connections(15)
             .max_connections(10)
             .build();
-        
+
         assert!(invalid_config.is_err());
     }
 
@@ -2961,17 +2960,17 @@ mod tests {
         if let Some(pool) = create_mock_pool().await {
             // Test basic ping
             let ping_result = pool.ping().await;
-            
+
             // In a real test environment, this should succeed
             // In CI without a database, we skip this test
             match ping_result {
                 Ok(()) => {
                     println!("Database ping successful");
-                    
+
                     // Test health check
                     let health = pool.health_check().await.unwrap();
                     assert!(health.response_time_ms > 0);
-                    
+
                     // Test metrics
                     let metrics = pool.get_metrics_snapshot();
                     assert!(metrics.total_queries >= 1); // At least the ping query
@@ -2993,7 +2992,7 @@ mod tests {
                     assert!(status.pool_utilization_percent >= 0.0);
                     assert!(status.pool_utilization_percent <= 100.0);
                     assert_eq!(status.config.application_name, "doc-server");
-                    
+
                     // Verify health check components
                     assert!(status.health.checked_at <= chrono::Utc::now());
                     assert!(status.metrics.success_rate_percent >= 0.0);
@@ -3049,18 +3048,18 @@ mod tests {
     async fn test_health_check_performance() {
         if let Some(pool) = create_mock_pool().await {
             let start = std::time::Instant::now();
-            
+
             // Perform multiple health checks to test caching
             for _ in 0..5 {
                 let _ = pool.health_check().await;
             }
-            
+
             let elapsed = start.elapsed();
-            
+
             // With caching, 5 health checks should complete quickly
             // Allow generous time for CI environments
             assert!(elapsed < Duration::from_secs(10));
-            
+
             println!("Health check performance: 5 checks completed in {:?}", elapsed);
         }
     }
@@ -3109,7 +3108,7 @@ mod manual_tests {
                 // Test health check
                 match pool.health_check().await {
                     Ok(health) => {
-                        println!("🏥 Health check: {} ({}ms)", 
+                        println!("🏥 Health check: {} ({}ms)",
                                 if health.is_healthy { "HEALTHY" } else { "UNHEALTHY" },
                                 health.response_time_ms);
                         println!("   Active connections: {}", health.active_connections);
@@ -12092,7 +12091,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     let enum_sql = r"
         DO $$ BEGIN
             CREATE TYPE doc_type AS ENUM (
-                'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
+                'rust', 'jupyter', 'birdeye', 'cilium', 'talos',
                 'meteora', 'raydium', 'solana', 'ebpf', 'rust_best_practices'
             );
         EXCEPTION
@@ -12193,9 +12192,9 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
 
     // Migration 6: Add foreign key constraint
     let fk_sql = r"
-        ALTER TABLE documents 
-        ADD CONSTRAINT IF NOT EXISTS fk_documents_source 
-        FOREIGN KEY (doc_type, source_name) 
+        ALTER TABLE documents
+        ADD CONSTRAINT IF NOT EXISTS fk_documents_source
+        FOREIGN KEY (doc_type, source_name)
         REFERENCES document_sources(doc_type, source_name);
     ";
     migration_manager.register_migration(MigrationInfo {
@@ -12304,12 +12303,12 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         CREATE TABLE IF NOT EXISTS archived_documents (
             LIKE documents INCLUDING ALL
         );
-        
+
         -- Add archival metadata
-        ALTER TABLE archived_documents 
+        ALTER TABLE archived_documents
         ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         ADD COLUMN IF NOT EXISTS archival_reason TEXT;
-        
+
         -- Create function to archive old documents (>1 year old)
         CREATE OR REPLACE FUNCTION archive_old_documents() RETURNS INTEGER
         LANGUAGE plpgsql AS $$
@@ -12318,23 +12317,23 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         BEGIN
             -- Move documents older than 1 year to archive
             WITH archived_rows AS (
-                DELETE FROM documents 
+                DELETE FROM documents
                 WHERE created_at < CURRENT_DATE - INTERVAL '1 year'
                 RETURNING *
             )
             INSERT INTO archived_documents (
-                id, doc_type, source_name, doc_path, content, metadata, 
+                id, doc_type, source_name, doc_path, content, metadata,
                 embedding, token_count, created_at, updated_at,
                 archived_at, archival_reason
             )
-            SELECT 
+            SELECT
                 id, doc_type, source_name, doc_path, content, metadata,
                 embedding, token_count, created_at, updated_at,
                 CURRENT_TIMESTAMP, 'Automatic archival - age > 1 year'
             FROM archived_rows;
-            
+
             GET DIAGNOSTICS archived_count = ROW_COUNT;
-            
+
             -- Log archival operation
             INSERT INTO migration_history (migration_id, version, status, applied_by, execution_time_ms)
             VALUES (
@@ -12344,11 +12343,11 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
                 'archival_function',
                 0
             );
-            
+
             RETURN archived_count;
         END;
         $$;
-        
+
         -- Create indexes on archived table
         CREATE INDEX IF NOT EXISTS idx_archived_documents_created_at ON archived_documents(created_at);
         CREATE INDEX IF NOT EXISTS idx_archived_documents_archived_at ON archived_documents(archived_at);
@@ -14425,7 +14424,7 @@ use crate::protocol_version::ProtocolRegistry;
 
 /// MCP protocol version header name
 pub const MCP_PROTOCOL_VERSION: &str = "MCP-Protocol-Version";
-/// MCP session ID header name  
+/// MCP session ID header name
 pub const MCP_SESSION_ID: &str = "Mcp-Session-Id";
 /// The only supported protocol version (fixed for MVP)
 pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
@@ -14846,7 +14845,14 @@ use_small_heuristics = "Default"
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file", "search_files"],
+      "tools": [
+        "read_file",
+        "write_file",
+        "list_directory",
+        "create_directory",
+        "edit_file",
+        "search_files"
+      ],
       "workingDirectory": "project_root"
     }
   }
@@ -14866,7 +14872,7 @@ use_small_heuristics = "Default"
       "enabled": true
     },
     {
-      "name": "solana_query", 
+      "name": "solana_query",
       "docType": "solana",
       "title": "Solana Documentation Query",
       "description": "Search Solana core documentation, architecture diagrams, ZK cryptography specifications, and development guides. Includes consensus, networking, and validator documentation.",
@@ -14874,7 +14880,7 @@ use_small_heuristics = "Default"
     },
     {
       "name": "jupyter_query",
-      "docType": "jupyter", 
+      "docType": "jupyter",
       "title": "Jupyter Notebook Documentation Query",
       "description": "Search interactive notebook documentation and examples across data science and development workflows.",
       "enabled": true
@@ -14882,7 +14888,7 @@ use_small_heuristics = "Default"
     {
       "name": "cilium_query",
       "docType": "cilium",
-      "title": "Cilium Documentation Query", 
+      "title": "Cilium Documentation Query",
       "description": "Search Cilium networking and security documentation for Kubernetes and cloud-native environments.",
       "enabled": true
     },
@@ -14895,7 +14901,7 @@ use_small_heuristics = "Default"
     },
     {
       "name": "meteora_query",
-      "docType": "meteora", 
+      "docType": "meteora",
       "title": "Meteora Protocol Documentation Query",
       "description": "Search Meteora DeFi protocol documentation including liquidity pools, farming, and yield strategies.",
       "enabled": true
@@ -14903,7 +14909,7 @@ use_small_heuristics = "Default"
     {
       "name": "raydium_query",
       "docType": "raydium",
-      "title": "Raydium Protocol Documentation Query", 
+      "title": "Raydium Protocol Documentation Query",
       "description": "Search Raydium DEX and AMM documentation for Solana-based trading and liquidity provision.",
       "enabled": true
     },
@@ -14916,7 +14922,7 @@ use_small_heuristics = "Default"
     },
     {
       "name": "rust_best_practices_query",
-      "docType": "rust_best_practices", 
+      "docType": "rust_best_practices",
       "title": "Rust Best Practices Query",
       "description": "Search curated Rust best practices, patterns, and guidelines for idiomatic and performant code.",
       "enabled": true
@@ -14927,8 +14933,7 @@ use_small_heuristics = "Default"
 
 ### github-guidelines.md
 
-```markdown
-
+````markdown
 # GitHub Workflow Guidelines
 
 ## �� **MANDATORY BRANCH AND PR REQUIREMENTS** 🚨
@@ -14945,7 +14950,8 @@ use_small_heuristics = "Default"
 ## Git Workflow
 
 ### Your Current Context
-- **Repository**: 
+
+- **Repository**:
 - **Feature Branch**: feature/task--implementation
 - **Target Branch**: main (never push directly to this)
 - **Authentication**: GitHub App (5DLabs-Rex - pre-configured)
@@ -14958,8 +14964,10 @@ git add .
 git commit -m "feat: implement [specific change made]"
 git push origin feature/task--implementation
 ```
+````
 
 ### **When to Commit & Push:**
+
 - ✅ After implementing a significant feature or fix
 - ✅ After completing a subtask or milestone
 - ✅ When you've made meaningful progress (ideally every turn)
@@ -14967,6 +14975,7 @@ git push origin feature/task--implementation
 - ✅ When switching between different areas of the codebase
 
 ### **Commit Message Format:**
+
 ```
 <type>: <brief description of what was implemented>
 
@@ -14980,7 +14989,9 @@ test: add unit tests for payment processing
 ## 🔄 **Merge Conflict Prevention & Resolution**
 
 ### **Prevention (Automated in Container Script):**
+
 The container automatically syncs with main before you start work:
+
 ```bash
 # This happens automatically for you:
 git fetch origin main
@@ -14992,12 +15003,14 @@ git merge origin/main --no-edit  # Auto-merge if possible
 **If you see merge conflict warnings during startup or at any time:**
 
 1. **Check conflict status:**
+
    ```bash
    git status
    # Look for "Unmerged paths" or files marked with "UU", "AA", or "DD"
    ```
 
 2. **Identify conflicted files:**
+
    ```bash
    # Files with merge conflicts will show:
    # - <<<<<<< HEAD (your changes)
@@ -15019,12 +15032,14 @@ git merge origin/main --no-edit  # Auto-merge if possible
    ```
 
 ### **Best Practices:**
+
 - ✅ **Always resolve conflicts immediately** - Don't ignore them
 - ✅ **Test after resolving** - Ensure your changes still work
 - ✅ **Ask for clarification** if unsure which changes to keep
 - ✅ **Sync frequently** - Smaller conflicts are easier to resolve
 
 ### **If Stuck on Conflicts:**
+
 Comment in your PR: "Need help resolving merge conflicts in [file names]" and describe what you're unsure about.
 
 ## **🚨 PULL REQUEST SUBMISSION - MANDATORY FOR TASK COMPLETION 🚨**
@@ -15034,6 +15049,7 @@ Comment in your PR: "Need help resolving merge conflicts in [file names]" and de
 When you have completed implementation and met all acceptance criteria, and ONLY after all pre-PR quality gates are green locally:
 
 ### ✅ Pre-PR Quality Gates (must pass locally)
+
 ```bash
 # Formatting
 cargo fmt --all -- --check
@@ -15048,6 +15064,7 @@ cargo llvm-cov --workspace --all-features --fail-under-lines 95 || \
 ```
 
 ### **✅ MANDATORY: Submit a Pull Request Using GitHub CLI:**
+
 ```bash
 # This command is REQUIRED - the task is not done without it
 gh pr create --title "feat: [brief summary of implementation]" \
@@ -15070,12 +15087,14 @@ gh pr create --title "feat: [brief summary of implementation]" \
 ```
 
 ### **✅ PR Requirements:**
+
 - Create PR from your feature branch (feature/task--implementation) to main
 - Use descriptive title starting with feat:, fix:, etc.
 - Include comprehensive PR description with all sections above
 - **CRITICAL**: You MUST run the `gh pr create` command - just pushing is not enough
 
 ### **❌ NEVER Push to Main:**
+
 - ❌ **DO NOT** push directly to main branch
 - ❌ **DO NOT** merge your own PR
 - ✅ **ONLY** work on feature branch feature/task--implementation
@@ -15083,12 +15102,14 @@ gh pr create --title "feat: [brief summary of implementation]" \
 ## Authentication
 
 ### GitHub App Configuration
+
 - GitHub App authentication is pre-configured in the container
 - All git operations use GitHub App tokens automatically
 - Repository access: ``
 - GitHub App: `5DLabs-Rex`
 
 ### Git Commands (GitHub App-based)
+
 ```bash
 # Check current status
 git status
@@ -15110,6 +15131,7 @@ git log --oneline -10
 ```
 
 ### **Gitignore Requirements**
+
 - ⭐ **ALWAYS add hooks to .gitignore** - Never commit hook files
 - Add these patterns to your .gitignore:
   ```
@@ -15141,23 +15163,28 @@ git log --oneline -10
 **WITHOUT STEP 4, THE TASK IS INCOMPLETE - NO EXCEPTIONS**
 
 ### **PR Description Template:**
+
 ```markdown
 ## Implementation Summary
+
 Brief description of what was implemented and why.
 
 ## Changes Made
+
 - List of significant changes
 - New features added
 - Bug fixes implemented
 - Refactoring completed
 
 ## Testing Performed
+
 - Unit tests written/updated
 - Integration testing completed
 - Manual testing performed
 - Edge cases verified
 
 ## Implementation Notes
+
 - Any important technical decisions
 - Performance considerations
 - Security implications
@@ -15168,7 +15195,7 @@ Brief description of what was implemented and why.
 
 **Remember: Your feature branch (feature/task--implementation) is your workspace. Keep it updated with regular commits, then submit a comprehensive PR when implementation is complete!**
 
-```
+````
 
 ### k8s/migration-job.yaml
 
@@ -15251,7 +15278,7 @@ data:
   parallel-workers: "8"
   max-documents: "0"  # 0 = unlimited
   validation-level: "full"
-```
+````
 
 ### docs/migrations/live_run_checklist.md
 
@@ -15259,6 +15286,7 @@ data:
 # Live Run Checklist (Task 7)
 
 ## Pre-flight
+
 - [ ] Backup snapshot taken and restore verified
 - [ ] Staging dry-run against fresh prod snapshot completed
 - [ ] Zero-downtime plan finalized (additive changes; backfill plan; dual-write if needed)
@@ -15266,19 +15294,21 @@ data:
 - [ ] Rollback plan acknowledged (see rollback_plan.md)
 
 ## Execute
+
 - [ ] Run K8s migration job (uses `--migrate-only`)
 - [ ] Observe logs; ensure validation → apply → record phases succeed
 
 ## Post-flight
+
 - [ ] Run `scripts/db_audit.sh` to capture TC-1b snapshot
 - [ ] Run performance smoke tests; record p95 latencies
 - [ ] Verify pool/config tuning meets objectives
 - [ ] Update `docs/perf/summary.md` with measurements
 
 ## Sign-off
+
 - [ ] DBA approval
 - [ ] App owner approval
-
 ```
 
 ### docs/migrations/rollback_plan.md
@@ -15292,9 +15322,11 @@ data:
   - Change window and stakeholder comms ready
 
 ## Scope
+
 - Schema-only changes from Task 7 migrations (`001`..`008`).
 
 ## Rollback Steps (high level)
+
 1. Quiesce writers or enable dual-write fallback, depending on impact.
 2. Apply inverse DDL in a transaction where safe.
    - Drop FKs added in `006_foreign_keys` only if necessary
@@ -15304,17 +15336,19 @@ data:
 4. Re-enable traffic; monitor errors and performance.
 
 ## Data Safety Notes
+
 - Prefer additive changes; avoid destructive drops.
 - For archival, never delete—only move; retain original.
 
 ## Verification
+
 - Run `scripts/db_audit.sh` post-rollback
 - Confirm app boot and health probes.
 
 ## Contacts
+
 - DB admin on-call: <TBD>
 - Incident commander: <TBD>
-
 ```
 
 ### docs/requirements.yaml
@@ -15333,42 +15367,41 @@ environment:
   PORT: "3000"
   RUST_LOG: "info,doc_server=debug"
   DOC_SERVER_CONFIG_PATH: "/app/config/doc-server.config.yaml"
-  
+
   # OpenAI API Configuration
   OPENAI_BASE_URL: "https://api.openai.com/v1"
   OPENAI_EMBEDDING_MODEL: "text-embedding-3-large"
   OPENAI_MAX_TOKENS: "8192"
   OPENAI_TEMPERATURE: "0.1"
-  
+
   # Batch processing settings
   EMBEDDING_BATCH_SIZE: "100"
   EMBEDDING_BATCH_TIMEOUT_SECONDS: "60"
-  
+
   # Rate limiting
   RATE_LIMIT_REQUESTS_PER_MINUTE: "100"
   RATE_LIMIT_BURST_SIZE: "20"
-  
+
   # Caching (Redis) - using the existing Redis instance
   REDIS_URL: "redis://redis-auth-service.databases.svc.cluster.local:6379"
   CACHE_TTL_SECONDS: "3600"
-  
+
   # Development settings
   DEVELOPMENT_MODE: "true"
   CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8080"
-  
+
   # Monitoring and observability
   METRICS_ENABLED: "true"
   HEALTH_CHECK_INTERVAL_SECONDS: "30"
-  
+
   # Documentation ingestion settings
   DOCS_RS_BASE_URL: "https://docs.rs"
   MAX_CONCURRENT_DOWNLOADS: "5"
   DOWNLOAD_TIMEOUT_SECONDS: "300"
-  
+
   # Vector search settings
   VECTOR_SEARCH_LIMIT: "50"
   SIMILARITY_THRESHOLD: "0.7"
-
 ```
 
 ### docs/client-config.json
@@ -15385,12 +15418,22 @@ environment:
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file"],
+      "tools": [
+        "read_file",
+        "write_file",
+        "list_directory",
+        "create_directory",
+        "edit_file"
+      ],
       "workingDirectory": "project_root"
     },
     "database": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "${DATABASE_URL}"
+      ],
       "tools": ["query", "execute", "schema"],
       "workingDirectory": "project_root"
     }
@@ -15400,8 +15443,7 @@ environment:
 
 ### docs/github-guidelines.md
 
-```markdown
-
+````markdown
 # GitHub Workflow Guidelines
 
 ## �� **MANDATORY BRANCH AND PR REQUIREMENTS** 🚨
@@ -15418,7 +15460,8 @@ environment:
 ## Git Workflow
 
 ### Your Current Context
-- **Repository**: 
+
+- **Repository**:
 - **Feature Branch**: feature/task--implementation
 - **Target Branch**: main (never push directly to this)
 - **Authentication**: GitHub App (5DLabs-Rex - pre-configured)
@@ -15431,8 +15474,10 @@ git add .
 git commit -m "feat: implement [specific change made]"
 git push origin feature/task--implementation
 ```
+````
 
 ### **When to Commit & Push:**
+
 - ✅ After implementing a significant feature or fix
 - ✅ After completing a subtask or milestone
 - ✅ When you've made meaningful progress (ideally every turn)
@@ -15440,6 +15485,7 @@ git push origin feature/task--implementation
 - ✅ When switching between different areas of the codebase
 
 ### **Commit Message Format:**
+
 ```
 <type>: <brief description of what was implemented>
 
@@ -15453,7 +15499,9 @@ test: add unit tests for payment processing
 ## 🔄 **Merge Conflict Prevention & Resolution**
 
 ### **Prevention (Automated in Container Script):**
+
 The container automatically syncs with main before you start work:
+
 ```bash
 # This happens automatically for you:
 git fetch origin main
@@ -15465,12 +15513,14 @@ git merge origin/main --no-edit  # Auto-merge if possible
 **If you see merge conflict warnings during startup or at any time:**
 
 1. **Check conflict status:**
+
    ```bash
    git status
    # Look for "Unmerged paths" or files marked with "UU", "AA", or "DD"
    ```
 
 2. **Identify conflicted files:**
+
    ```bash
    # Files with merge conflicts will show:
    # - <<<<<<< HEAD (your changes)
@@ -15492,12 +15542,14 @@ git merge origin/main --no-edit  # Auto-merge if possible
    ```
 
 ### **Best Practices:**
+
 - ✅ **Always resolve conflicts immediately** - Don't ignore them
 - ✅ **Test after resolving** - Ensure your changes still work
 - ✅ **Ask for clarification** if unsure which changes to keep
 - ✅ **Sync frequently** - Smaller conflicts are easier to resolve
 
 ### **If Stuck on Conflicts:**
+
 Comment in your PR: "Need help resolving merge conflicts in [file names]" and describe what you're unsure about.
 
 ## **🚨 PULL REQUEST SUBMISSION - MANDATORY FOR TASK COMPLETION 🚨**
@@ -15507,6 +15559,7 @@ Comment in your PR: "Need help resolving merge conflicts in [file names]" and de
 When you have completed implementation and met all acceptance criteria:
 
 ### **✅ MANDATORY: Submit a Pull Request Using GitHub CLI:**
+
 ```bash
 # This command is REQUIRED - the task is not done without it
 gh pr create --title "feat: [brief summary of implementation]" \
@@ -15529,12 +15582,14 @@ gh pr create --title "feat: [brief summary of implementation]" \
 ```
 
 ### **✅ PR Requirements:**
+
 - Create PR from your feature branch (feature/task--implementation) to main
 - Use descriptive title starting with feat:, fix:, etc.
 - Include comprehensive PR description with all sections above
 - **CRITICAL**: You MUST run the `gh pr create` command - just pushing is not enough
 
 ### **❌ NEVER Push to Main:**
+
 - ❌ **DO NOT** push directly to main branch
 - ❌ **DO NOT** merge your own PR
 - ✅ **ONLY** work on feature branch feature/task--implementation
@@ -15542,12 +15597,14 @@ gh pr create --title "feat: [brief summary of implementation]" \
 ## Authentication
 
 ### GitHub App Configuration
+
 - GitHub App authentication is pre-configured in the container
 - All git operations use GitHub App tokens automatically
 - Repository access: ``
 - GitHub App: `5DLabs-Rex`
 
 ### Git Commands (GitHub App-based)
+
 ```bash
 # Check current status
 git status
@@ -15569,6 +15626,7 @@ git log --oneline -10
 ```
 
 ### **Gitignore Requirements**
+
 - ⭐ **ALWAYS add hooks to .gitignore** - Never commit hook files
 - Add these patterns to your .gitignore:
   ```
@@ -15600,23 +15658,28 @@ git log --oneline -10
 **WITHOUT STEP 4, THE TASK IS INCOMPLETE - NO EXCEPTIONS**
 
 ### **PR Description Template:**
+
 ```markdown
 ## Implementation Summary
+
 Brief description of what was implemented and why.
 
 ## Changes Made
+
 - List of significant changes
 - New features added
 - Bug fixes implemented
 - Refactoring completed
 
 ## Testing Performed
+
 - Unit tests written/updated
 - Integration testing completed
 - Manual testing performed
 - Edge cases verified
 
 ## Implementation Notes
+
 - Any important technical decisions
 - Performance considerations
 - Security implications
@@ -15627,7 +15690,7 @@ Brief description of what was implemented and why.
 
 **Remember: Your feature branch (feature/task--implementation) is your workspace. Keep it updated with regular commits, then submit a comprehensive PR when implementation is complete!**
 
-```
+````
 
 ### docs/task-gap-report.md
 
@@ -15731,12 +15794,11 @@ Status: Optimization largely implemented; CI/CD and security scanning integratio
 
 
 
-```
+````
 
 ### docs/coding-guidelines.md
 
-```markdown
-
+````markdown
 # Rust Coding Guidelines
 
 This document provides coding standards and best practices for Rust development in this project.
@@ -15744,6 +15806,7 @@ This document provides coding standards and best practices for Rust development 
 ## Code Quality Standards
 
 ### Error Handling
+
 - Use `Result<T, E>` for fallible operations
 - Use `anyhow::Result` for application-level errors
 - Use `thiserror` for library-level custom errors
@@ -15752,6 +15815,7 @@ This document provides coding standards and best practices for Rust development 
 - Provide meaningful error messages with context
 
 ### Memory Management
+
 - Prefer owned types (`String`, `Vec<T>`) over borrowed types for struct fields
 - Use `Cow<str>` when you need flexibility between owned and borrowed strings
 - Minimize `clone()` calls - consider borrowing or moving when possible
@@ -15759,6 +15823,7 @@ This document provides coding standards and best practices for Rust development 
 - Use `Rc<T>` for shared data within single-threaded contexts
 
 ### Async Programming
+
 - Use `async`/`await` for I/O-bound operations
 - Use `tokio` runtime for async execution
 - Prefer `async fn` over `impl Future`
@@ -15768,6 +15833,7 @@ This document provides coding standards and best practices for Rust development 
 ## Code Organization
 
 ### Module Structure
+
 ```rust
 // Public API at the top
 pub use self::public_types::*;
@@ -15781,8 +15847,10 @@ pub mod prelude {
     pub use super::{PublicType, PublicTrait};
 }
 ```
+````
 
 ### Naming Conventions
+
 - Use `snake_case` for variables, functions, and modules
 - Use `PascalCase` for types, traits, and enum variants
 - Use `SCREAMING_SNAKE_CASE` for constants
@@ -15790,6 +15858,7 @@ pub mod prelude {
 - Prefix boolean functions with `is_`, `has_`, or `can_`
 
 ### Documentation
+
 - Document all public APIs with `///` comments
 - Include examples in documentation when helpful
 - Use `//!` for module-level documentation
@@ -15798,18 +15867,21 @@ pub mod prelude {
 ## Performance Guidelines
 
 ### Allocations
+
 - Minimize heap allocations in hot paths
 - Use `Vec::with_capacity()` when size is known
 - Consider `SmallVec` for collections that are usually small
 - Use string formatting (`format!`) judiciously
 
 ### Collections
+
 - Use `HashMap` for general key-value storage
 - Use `BTreeMap` when ordering matters
 - Use `HashSet` for unique values
 - Use `VecDeque` for FIFO/LIFO operations
 
 ### Iterators
+
 - Prefer iterator chains over explicit loops when readable
 - Use `collect()` only when necessary
 - Consider `fold()` and `reduce()` for aggregations
@@ -15818,23 +15890,24 @@ pub mod prelude {
 ## Testing Guidelines
 
 ### Unit Tests
+
 ```rust
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_function_name() {
         // Given
         let input = setup_test_data();
-        
+
         // When
         let result = function_under_test(input);
-        
+
         // Then
         assert_eq!(result, expected_value);
     }
-    
+
     #[test]
     #[should_panic(expected = "specific error message")]
     fn test_error_conditions() {
@@ -15844,6 +15917,7 @@ mod tests {
 ```
 
 ### Integration Tests
+
 - Place integration tests in `tests/` directory
 - Test public API only
 - Use realistic data and scenarios
@@ -15852,12 +15926,14 @@ mod tests {
 ## Security Guidelines
 
 ### Input Validation
+
 - Validate all external input
 - Use type-safe parsing (`str::parse()`)
 - Sanitize data before storage or transmission
 - Use prepared statements for database queries
 
 ### Secrets Management
+
 - Never hardcode secrets in source code
 - Use environment variables for configuration
 - Use secure random number generation (`rand::thread_rng()`)
@@ -15866,6 +15942,7 @@ mod tests {
 ## Rust-Specific Best Practices
 
 ### Pattern Matching
+
 ```rust
 // Prefer exhaustive matching
 match value {
@@ -15880,12 +15957,14 @@ if let Some(value) = optional_value {
 ```
 
 ### Ownership
+
 - Pass by reference (`&T`) for read-only access
 - Pass by mutable reference (`&mut T`) for modification
 - Pass by value (`T`) for ownership transfer
 - Use `Clone` when multiple ownership is needed
 
 ### Traits
+
 - Implement common traits (`Debug`, `Clone`, `PartialEq`)
 - Use trait bounds instead of concrete types in generics
 - Prefer composition over inheritance (use traits)
@@ -15893,6 +15972,7 @@ if let Some(value) = optional_value {
 ## Service Architecture Guidelines
 
 ### Project Structure
+
 ```
 src/
 ├── bin/           # Binary targets
@@ -15905,12 +15985,14 @@ src/
 ```
 
 ### Configuration
+
 - Use `serde` for configuration deserialization
 - Support both file-based and environment-based config
 - Provide sensible defaults
 - Validate configuration on startup
 
 ### Logging
+
 - Use `tracing` for structured logging
 - Include relevant context in log messages
 - Use appropriate log levels (error, warn, info, debug, trace)
@@ -15919,6 +16001,7 @@ src/
 ## Common Patterns
 
 ### Builder Pattern
+
 ```rust
 pub struct ConfigBuilder {
     host: Option<String>,
@@ -15929,17 +16012,17 @@ impl ConfigBuilder {
     pub fn new() -> Self {
         Self { host: None, port: None }
     }
-    
+
     pub fn host(mut self, host: impl Into<String>) -> Self {
         self.host = Some(host.into());
         self
     }
-    
+
     pub fn port(mut self, port: u16) -> Self {
         self.port = Some(port);
         self
     }
-    
+
     pub fn build(self) -> Result<Config> {
         Ok(Config {
             host: self.host.unwrap_or_else(|| "localhost".to_string()),
@@ -15950,6 +16033,7 @@ impl ConfigBuilder {
 ```
 
 ### Resource Management
+
 ```rust
 // Use RAII for resource cleanup
 pub struct Database {
@@ -15973,7 +16057,7 @@ impl Drop for Database {
 
 Remember: These guidelines promote code that is safe, performant, and maintainable. When in doubt, choose clarity over cleverness.
 
-```
+````
 
 ### docs/perf/summary.md
 
@@ -15993,15 +16077,15 @@ Remember: These guidelines promote code that is safe, performant, and maintainab
 - No vector index on 3072-dim `embedding`; rely on metadata filters + brute-force similarity
 - Further gains possible with partitioning pruning
 
-```
+````
 
 ### docs/CLAUDE.md
 
-```markdown
-
+````markdown
 # Claude Code Project Memory
 
 ## Project Information
+
 - **Repository**: 5dlabs/agent-docs
 - **Source Branch**: main
 - **GitHub App**: 5DLabs-Rex
@@ -16020,6 +16104,7 @@ See @github-guidelines.md for git workflow and commit message standards
 ## Current Task Documentation
 
 **Your current task (2) documentation:**
+
 - See @task/task.md for requirements and description
 - See @task/acceptance-criteria.md for success criteria
 - See @task/architecture.md for technical approach and guidance
@@ -16028,10 +16113,10 @@ See @github-guidelines.md for git workflow and commit message standards
 
 See @.taskmaster/docs/architecture.md for system design patterns and architectural decisions
 
-
 ## Implementation Workflow
 
 ### Current Task Process
+
 1. **Understand**: Read @task/task.md for requirements
 2. **Plan**: Review @task/architecture.md for technical approach
 3. **Validate**: Check @task/acceptance-criteria.md for success criteria
@@ -16040,6 +16125,7 @@ See @.taskmaster/docs/architecture.md for system design patterns and architectur
 6. **Test**: Verify all acceptance criteria are met
 
 ### Task Context
+
 - **Task ID**: 2
 - **Repository**: 5dlabs/agent-docs
 - **Branch**: main
@@ -16048,6 +16134,7 @@ See @.taskmaster/docs/architecture.md for system design patterns and architectur
 ## Quick Command Reference
 
 ### Testing & Quality
+
 ```bash
 # Run tests (check package.json/Cargo.toml for project-specific commands)
 npm test || cargo test
@@ -16059,8 +16146,10 @@ npm run format || cargo fmt
 # Build verification
 npm run build || cargo build
 ```
+````
 
 ### Git Workflow
+
 ```bash
 # Commit with task-specific message (see @github-guidelines.md for details)
 git commit -m "feat(task-2): implement [brief description]
@@ -16084,6 +16173,7 @@ This file enables automatic pull request creation.
 ## Development Tools & Patterns
 
 ### Claude Code Integration
+
 - Use `LS` and `Glob` to explore codebase structure
 - Use `Read` to examine existing code patterns
 - Use `Grep` to find similar implementations
@@ -16091,6 +16181,7 @@ This file enables automatic pull request creation.
 - Validate with `Bash` commands after each change
 
 ### Implementation Guidelines
+
 - Focus on current task requirements in `task/` directory
 - Follow architectural guidance provided in @task/architecture.md
 - Ensure all acceptance criteria are met before completion
@@ -16098,9 +16189,9 @@ This file enables automatic pull request creation.
 
 ---
 
-*All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above.*
+_All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above._
 
-```
+````
 
 ### PR_DESCRIPTION.md
 
@@ -16196,36 +16287,39 @@ DB_RETRY_JITTER=true
 
 # Application Configuration
 APP_NAME=doc-server-production
-```
+````
 
 ### Kubernetes Health Check Configuration
+
 ```yaml
 spec:
   containers:
-  - name: doc-server
-    livenessProbe:
-      httpGet:
-        path: /health/live
-        port: 3001
-      initialDelaySeconds: 30
-      periodSeconds: 10
-    readinessProbe:
-      httpGet:
-        path: /health/ready
-        port: 3001
-      initialDelaySeconds: 5
-      periodSeconds: 5
+    - name: doc-server
+      livenessProbe:
+        httpGet:
+          path: /health/live
+          port: 3001
+        initialDelaySeconds: 30
+        periodSeconds: 10
+      readinessProbe:
+        httpGet:
+          path: /health/ready
+          port: 3001
+        initialDelaySeconds: 5
+        periodSeconds: 5
 ```
 
 ## Performance Improvements
 
 ### Connection Management
+
 - **Pool Efficiency**: 80% reduction in connection establishment overhead
 - **Health Check Caching**: 5-second TTL reduces database load by 90%
 - **Retry Logic**: Intelligent backoff prevents resource waste during outages
 - **Connection Lifecycle**: Automatic cleanup and connection recycling
 
 ### Monitoring & Observability
+
 - **Real-time Metrics**: Live connection pool utilization and performance data
 - **Proactive Alerts**: Early warning system for connection pool saturation
 - **Operational Visibility**: Detailed status endpoints for debugging and monitoring
@@ -16234,12 +16328,14 @@ spec:
 ## Migration Strategy
 
 ### Zero-Downtime Deployment
+
 - **Additive Changes**: New tables and columns are added without breaking existing functionality
 - **Backward Compatibility**: Existing database pool creation continues to work
 - **Graceful Degradation**: Health checks work even if new features are disabled
 - **Rollback Plan**: Roll-forward approach with comprehensive error handling
 
 ### Production Deployment Steps
+
 1. **Deploy Code**: New functionality is inactive by default
 2. **Environment Variables**: Configure production pool settings
 3. **Health Check Validation**: Verify Kubernetes probe functionality
@@ -16254,18 +16350,21 @@ None. All changes are backward-compatible additions that enhance existing functi
 ## Important Reviewer Notes
 
 ### Architecture Decisions
+
 - **Migration System**: Uses PostgreSQL-native transactions for atomicity
 - **Health Caching**: Balances database load vs. freshness (5s TTL)
 - **Error Classification**: Distinguishes between retryable and non-retryable errors
 - **Pool Monitoring**: Background tasks don't block main request handling
 
 ### Security Considerations
+
 - **Connection Strings**: Sensitive data not logged or exposed in health checks
 - **Database Credentials**: Proper environment variable handling
 - **Error Messages**: Sanitized error responses in production health checks
 - **Connection Isolation**: Proper connection cleanup and resource management
 
 ### Performance Impact
+
 - **Minimal Overhead**: Health check caching reduces database queries
 - **Background Monitoring**: Non-blocking periodic status collection
 - **Connection Efficiency**: Pool optimization reduces connection establishment costs
@@ -16274,6 +16373,7 @@ None. All changes are backward-compatible additions that enhance existing functi
 ## Testing Recommendations
 
 ### Local Testing
+
 ```bash
 # Start development environment
 ./scripts/dev.sh --with-data
@@ -16290,6 +16390,7 @@ curl http://localhost:3001/health/detailed
 ```
 
 ### Production Validation
+
 ```bash
 # Verify health check endpoints
 curl -f https://your-domain/health/ready
@@ -16303,7 +16404,8 @@ curl https://your-domain/health/detailed | jq '.checks.database'
 ```
 
 This implementation provides a robust foundation for production deployment with comprehensive monitoring, intelligent retry logic, and zero-downtime migration capabilities.
-```
+
+````
 
 ### scripts/backup_docs_database.sh
 
@@ -16386,29 +16488,29 @@ SELECT 'documents', COUNT(*) FROM documents;
 \\echo ''
 \\echo 'Documents by Type:'
 SELECT doc_type, COUNT(*) as doc_count, COUNT(DISTINCT source_name) as sources
-FROM documents 
-GROUP BY doc_type 
+FROM documents
+GROUP BY doc_type
 ORDER BY doc_count DESC;
 \\echo ''
 \\echo 'Sources Summary:'
 SELECT doc_type, source_name, total_docs, total_tokens, enabled, last_updated
-FROM document_sources 
+FROM document_sources
 ORDER BY doc_type, total_docs DESC;
 \\echo ''
 \\echo 'Embedding Status:'
-SELECT 
+SELECT
     doc_type,
     COUNT(*) as total_docs,
     COUNT(embedding) as docs_with_embeddings,
     ROUND(100.0 * COUNT(embedding) / COUNT(*), 2) as embedding_percentage
-FROM documents 
+FROM documents
 GROUP BY doc_type;
 \\echo ''
 \\echo 'Top 10 Sources by Document Count:'
-SELECT source_name, doc_type, COUNT(*) as doc_count 
-FROM documents 
-GROUP BY source_name, doc_type 
-ORDER BY doc_count DESC 
+SELECT source_name, doc_type, COUNT(*) as doc_count
+FROM documents
+GROUP BY source_name, doc_type
+ORDER BY doc_count DESC
 LIMIT 10;
 EOF
 echo -e "${GREEN}✓ Created: db_stats.txt${NC}"
@@ -16491,7 +16593,7 @@ echo "Full restore: cd $BACKUP_PATH && ./restore.sh <new_db_name>"
 echo "Manual restore: pg_restore -d <db_name> ${DB_NAME}_full.dump"
 echo "SQL restore: psql -d <db_name> -f ${DB_NAME}_full.sql"
 echo "Verify database: cd $BACKUP_PATH && ./verify_migration.sh [db_name]"
-```
+````
 
 ### scripts/ingestion/ingest_solana.py
 
@@ -16536,15 +16638,15 @@ class SolanaDocument:
 
 class SolanaDocProcessor:
     """Processes Solana documentation from the Agave repository"""
-    
+
     def __init__(self, repo_path: str = "solana-agave"):
         self.repo_path = Path(repo_path)
         self.base_path = Path(".")
-        
+
     def categorize_document(self, relative_path: str) -> str:
         """Categorize document based on its path"""
         path_lower = relative_path.lower()
-        
+
         # Main documentation categories
         if "docs/src/consensus" in path_lower:
             return "consensus"
@@ -16560,7 +16662,7 @@ class SolanaDocProcessor:
             return "operations"
         elif "docs/src" in path_lower:
             return "core-docs"
-        
+
         # Module-specific documentation
         elif "readme.md" in path_lower:
             # Extract module name from path
@@ -16568,63 +16670,63 @@ class SolanaDocProcessor:
             if len(parts) > 1:
                 return f"module-{parts[-2]}"
             return "module-readme"
-        
+
         # Top-level files
         elif relative_path.count("/") == 0:
             return "project-root"
-        
+
         # Default categorization by directory
         else:
             first_dir = Path(relative_path).parts[0]
             return f"module-{first_dir}"
-    
+
     def extract_title_from_content(self, content: str, file_path: str) -> str:
         """Extract title from markdown content"""
         lines = content.strip().split('\n')
-        
+
         # Look for H1 header (# Title)
         for line in lines:
             line = line.strip()
             if line.startswith('# '):
                 return line[2:].strip()
-        
-        # Look for H2 header (## Title) 
+
+        # Look for H2 header (## Title)
         for line in lines:
             line = line.strip()
             if line.startswith('## '):
                 return line[3:].strip()
-        
+
         # Use filename if no header found
         filename = Path(file_path).stem
         if filename.lower() == 'readme':
             # Use parent directory name for README files
             parent = Path(file_path).parent.name
             return f"{parent.title()} Module"
-        
+
         return filename.replace('-', ' ').replace('_', ' ').title()
-    
+
     def clean_markdown_content(self, content: str) -> str:
         """Clean and format markdown content for better readability"""
         # Remove excessive whitespace
         content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)
-        
+
         # Fix common markdown issues
         content = re.sub(r'^\s*\n', '', content)  # Remove leading empty lines
         content = content.strip()
-        
+
         return content
-    
+
     def discover_markdown_files(self) -> List[str]:
         """Find all markdown files in the repository"""
         print("🔍 Discovering Solana documentation files...")
-        
+
         md_files = []
-        
+
         # Search for all .md files
         for md_file in self.repo_path.rglob("*.md"):
             # Skip certain directories/files
             relative_path = str(md_file.relative_to(self.repo_path))
-            
+
             # Skip files we don't want
             skip_patterns = [
                 'node_modules/',
@@ -16636,36 +16738,36 @@ class SolanaDocProcessor:
                 'CODEOWNERS',
                 'NOTICE',
             ]
-            
+
             if any(pattern in relative_path for pattern in skip_patterns):
                 continue
-                
+
             md_files.append(str(md_file))
-        
+
         print(f"  📚 Found {len(md_files)} markdown files")
         return md_files
-    
+
     def process_markdown_file(self, file_path: str) -> Optional[SolanaDocument]:
         """Process a single markdown file"""
         try:
             relative_path = str(Path(file_path).relative_to(self.repo_path))
-            
+
             # Read file content
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 raw_content = f.read()
-            
+
             if not raw_content.strip():
                 return None
-            
+
             # Clean content
             content = self.clean_markdown_content(raw_content)
-            
+
             # Extract title
             title = self.extract_title_from_content(content, file_path)
-            
+
             # Categorize
             category = self.categorize_document(relative_path)
-            
+
             # Create document
             doc = SolanaDocument(
                 file_path=file_path,
@@ -16682,46 +16784,46 @@ class SolanaDocProcessor:
                     'repository': 'anza-xyz/agave'
                 }
             )
-            
+
             return doc
-            
+
         except Exception as e:
             print(f"  ❌ Error processing {file_path}: {e}")
             return None
-    
+
     def process_all_files(self) -> List[SolanaDocument]:
         """Process all markdown files"""
         print("📝 Processing Solana documentation files...")
-        
+
         md_files = self.discover_markdown_files()
         documents = []
-        
+
         for i, file_path in enumerate(md_files):
             print(f"  Processing {i+1}/{len(md_files)}: {Path(file_path).relative_to(self.repo_path)}")
-            
+
             doc = self.process_markdown_file(file_path)
             if doc:
                 documents.append(doc)
-        
+
         print(f"  ✅ Processed {len(documents)} documents successfully")
-        
+
         # Print category summary
         categories = {}
         for doc in documents:
             categories[doc.category] = categories.get(doc.category, 0) + 1
-        
+
         print(f"  📊 Categories found:")
         for category, count in sorted(categories.items()):
             print(f"    - {category}: {count} documents")
-        
+
         return documents
 
 class EmbeddingGenerator:
     """Generates embeddings using OpenAI API"""
-    
+
     def __init__(self, api_key: str):
         self.client = openai.Client(api_key=api_key)
-    
+
     def generate_embedding(self, text: str, doc_title: str = "") -> List[float]:
         """Generate embedding for text using OpenAI API"""
         # Truncate text if too long (OpenAI embedding model limit is 8192 tokens)
@@ -16729,7 +16831,7 @@ class EmbeddingGenerator:
         if len(text) > MAX_CHARS:
             print(f"    ⚠️  Truncating content from {len(text):,} to {MAX_CHARS:,} characters")
             text = text[:MAX_CHARS] + "... [TRUNCATED]"
-        
+
         try:
             response = self.client.embeddings.create(
                 model="text-embedding-3-large",
@@ -16742,39 +16844,39 @@ class EmbeddingGenerator:
 
 class DatabaseManager:
     """Manages database operations"""
-    
+
     def __init__(self, database_url: str):
         self.database_url = database_url
-    
+
     async def store_documents(self, documents: List[SolanaDocument], embeddings: List[List[float]]):
         """Store documents and embeddings in database"""
         print("💾 Storing in database...")
-        
+
         conn = await asyncpg.connect(self.database_url)
-        
+
         # Register vector type for pgvector
         await register_vector(conn)
-        
+
         try:
             for i, (doc, embedding) in enumerate(zip(documents, embeddings)):
                 print(f"  Storing {i+1}/{len(documents)}: {doc.title}")
-                
+
                 # Use relative path as doc_path for uniqueness
                 doc_path = doc.relative_path
-                
+
                 await conn.execute("""
                     INSERT INTO documents (
-                        doc_type, source_name, doc_path, content, 
+                        doc_type, source_name, doc_path, content,
                         metadata, embedding, token_count
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    ON CONFLICT (doc_type, source_name, doc_path) 
-                    DO UPDATE SET 
+                    ON CONFLICT (doc_type, source_name, doc_path)
+                    DO UPDATE SET
                         content = EXCLUDED.content,
                         metadata = EXCLUDED.metadata,
                         embedding = EXCLUDED.embedding,
                         token_count = EXCLUDED.token_count,
                         updated_at = CURRENT_TIMESTAMP
-                """, 
+                """,
                     'solana',  # doc_type
                     'Solana Agave',  # source_name
                     doc_path,  # doc_path
@@ -16783,48 +16885,48 @@ class DatabaseManager:
                     embedding,  # embedding (pgvector format)
                     len(doc.content) // 4  # estimated token count
                 )
-            
+
             print(f"  ✅ Stored {len(documents)} documents in database")
-            
+
         finally:
             await conn.close()
 
 async def main():
     """Main ingestion process"""
     print("🚀 Starting Solana Documentation Ingestion")
-    
+
     # Check environment variables
     database_url = os.getenv('DATABASE_URL')
     openai_api_key = os.getenv('OPENAI_API_KEY')
-    
+
     if not database_url:
         print("❌ DATABASE_URL environment variable required")
         sys.exit(1)
-    
+
     if not openai_api_key:
         print("❌ OPENAI_API_KEY environment variable required")
         sys.exit(1)
-    
+
     # Check if repository exists
     if not Path("solana-agave").exists():
         print("❌ solana-agave repository not found. Please clone it first:")
         print("   git clone https://github.com/anza-xyz/agave.git solana-agave")
         sys.exit(1)
-    
+
     # Initialize components
     processor = SolanaDocProcessor()
     embedding_generator = EmbeddingGenerator(openai_api_key)
     db_manager = DatabaseManager(database_url)
-    
+
     # Process all documentation
     documents = processor.process_all_files()
-    
+
     if not documents:
         print("❌ No documents found to process")
         return
-    
+
     print(f"📋 Processing {len(documents)} documents...")
-    
+
     # Generate embeddings
     print("🔮 Generating embeddings...")
     embeddings = []
@@ -16832,20 +16934,20 @@ async def main():
         print(f"  Generating embedding {i+1}/{len(documents)} for: {doc.title}")
         embedding = embedding_generator.generate_embedding(doc.content, doc.title)
         embeddings.append(embedding)
-    
+
     # Store in database
     await db_manager.store_documents(documents, embeddings)
-    
+
     print("🎉 Solana documentation ingestion completed successfully!")
     print(f"📊 Summary:")
     print(f"  - Total documents: {len(documents)}")
     print(f"  - Total embeddings: {len(embeddings)}")
-    
+
     # Show category breakdown
     categories = {}
     for doc in documents:
         categories[doc.category] = categories.get(doc.category, 0) + 1
-    
+
     print(f"  - Categories:")
     for category, count in sorted(categories.items()):
         print(f"    * {category}: {count}")
@@ -16886,7 +16988,7 @@ Comprehensive Solana Documentation Ingestion
 
 Ingests ALL documentation from the Anza-xyz/agave repository including:
 - Markdown files (.md, .mdx)
-- ASCII art diagrams (.bob)  
+- ASCII art diagrams (.bob)
 - Message sequence charts (.msc)
 - PDF technical specifications (metadata + basic text if possible)
 
@@ -16926,15 +17028,15 @@ class SolanaDocument:
 
 class ComprehensiveSolanaProcessor:
     """Processes all types of Solana documentation from the Agave repository"""
-    
+
     def __init__(self, repo_path: str = "solana-agave-full"):
         self.repo_path = Path(repo_path)
         self.base_path = Path(".")
-        
+
     def categorize_document(self, relative_path: str, file_type: str) -> str:
         """Enhanced categorization for all file types"""
         path_lower = relative_path.lower()
-        
+
         # Special categories for new file types
         if file_type == "bob":
             return "architecture-diagrams"
@@ -16944,7 +17046,7 @@ class ComprehensiveSolanaProcessor:
             if "zk-docs" in path_lower:
                 return "zk-cryptography"
             return "technical-specs"
-        
+
         # Existing markdown categorization
         if "docs/src/consensus" in path_lower:
             return "consensus"
@@ -16960,26 +17062,26 @@ class ComprehensiveSolanaProcessor:
             return "operations"
         elif "docs/src" in path_lower:
             return "core-docs"
-        
+
         # Module-specific documentation
         elif "readme.md" in path_lower:
             parts = Path(relative_path).parts
             if len(parts) > 1:
                 return f"module-{parts[-2]}"
             return "module-readme"
-        
+
         # Top-level files
         elif relative_path.count("/") == 0:
             return "project-root"
-        
+
         # Default categorization by directory
         else:
             first_dir = Path(relative_path).parts[0]
             return f"module-{first_dir}"
-    
+
     def extract_title_from_content(self, content: str, file_path: str, file_type: str) -> str:
         """Enhanced title extraction for different file types"""
-        
+
         if file_type in ["md", "mdx"]:
             # Check for frontmatter title first
             if content.startswith('---'):
@@ -16989,20 +17091,20 @@ class ComprehensiveSolanaProcessor:
                     title_match = re.search(r'^title:\s*(.+)$', frontmatter, re.MULTILINE)
                     if title_match:
                         return title_match.group(1).strip('"\'')
-            
+
             # Look for H1 header (# Title)
             lines = content.strip().split('\n')
             for line in lines:
                 line = line.strip()
                 if line.startswith('# '):
                     return line[2:].strip()
-            
-            # Look for H2 header (## Title) 
+
+            # Look for H2 header (## Title)
             for line in lines:
                 line = line.strip()
                 if line.startswith('## '):
                     return line[3:].strip()
-        
+
         elif file_type == "bob":
             # Extract title from BOB diagram comments or filename
             lines = content.strip().split('\n')
@@ -17013,11 +17115,11 @@ class ComprehensiveSolanaProcessor:
                     potential_title = line.lstrip('#/').strip()
                     if len(potential_title) > 3 and len(potential_title) < 100:
                         return potential_title
-            
+
             # Use filename-based title for BOB files
             filename = Path(file_path).stem
             return f"{filename.replace('-', ' ').replace('_', ' ').title()} Diagram"
-        
+
         elif file_type == "msc":
             # Message Sequence Chart
             lines = content.strip().split('\n')
@@ -17026,20 +17128,20 @@ class ComprehensiveSolanaProcessor:
                     return "Message Sequence Chart"
             filename = Path(file_path).stem
             return f"{filename.replace('-', ' ').replace('_', ' ').title()} Sequence"
-        
+
         elif file_type == "pdf":
             # PDF files - use filename
             filename = Path(file_path).stem
             return f"{filename.replace('-', ' ').replace('_', ' ').title()} (PDF)"
-        
+
         # Default fallback
         filename = Path(file_path).stem
         if filename.lower() == 'readme':
             parent = Path(file_path).parent.name
             return f"{parent.title()} Module"
-        
+
         return filename.replace('-', ' ').replace('_', ' ').title()
-    
+
     def clean_content(self, content: str, file_type: str) -> str:
         """Clean content based on file type"""
         if file_type in ["md", "mdx"]:
@@ -17047,30 +17149,30 @@ class ComprehensiveSolanaProcessor:
             content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)
             content = re.sub(r'^\s*\n', '', content)
             return content.strip()
-        
+
         elif file_type in ["bob", "msc"]:
             # Preserve ASCII art formatting
             return content.strip()
-        
+
         elif file_type == "pdf":
             # For PDFs, we'll just note it's a PDF - actual text extraction would need additional libraries
             return f"[PDF Document: {Path(content).name}]\n\nThis is a PDF technical specification. Content requires PDF reader to view."
-        
+
         return content.strip()
-    
+
     def discover_documentation_files(self) -> List[str]:
         """Find all documentation files of supported types"""
         print("🔍 Discovering ALL Solana documentation files...")
-        
+
         doc_files = []
         supported_extensions = ['.md', '.mdx', '.bob', '.msc', '.pdf']
-        
+
         # Search for all supported documentation files
         for ext in supported_extensions:
             pattern = f"*{ext}"
             for doc_file in self.repo_path.rglob(pattern):
                 relative_path = str(doc_file.relative_to(self.repo_path))
-                
+
                 # Skip certain directories/files
                 skip_patterns = [
                     'node_modules/',
@@ -17082,30 +17184,30 @@ class ComprehensiveSolanaProcessor:
                     'CODEOWNERS',
                     'NOTICE',
                 ]
-                
+
                 if any(pattern in relative_path for pattern in skip_patterns):
                     continue
-                    
+
                 doc_files.append(str(doc_file))
-        
+
         # Count by type
         type_counts = {}
         for file_path in doc_files:
             ext = Path(file_path).suffix[1:]  # Remove dot
             type_counts[ext] = type_counts.get(ext, 0) + 1
-        
+
         print(f"  📚 Found {len(doc_files)} documentation files:")
         for file_type, count in sorted(type_counts.items()):
             print(f"    - {file_type}: {count} files")
-        
+
         return doc_files
-    
+
     def process_documentation_file(self, file_path: str) -> Optional[SolanaDocument]:
         """Process a single documentation file of any supported type"""
         try:
             relative_path = str(Path(file_path).relative_to(self.repo_path))
             file_extension = Path(file_path).suffix[1:].lower()  # Remove dot and lowercase
-            
+
             # Read file content based on type
             if file_extension == "pdf":
                 # For PDFs, we'll store metadata and reference
@@ -17116,18 +17218,18 @@ class ComprehensiveSolanaProcessor:
                 # Text-based files
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     raw_content = f.read()
-                
+
                 if not raw_content.strip():
                     return None
-                
+
                 content = self.clean_content(raw_content, file_extension)
-            
+
             # Extract title
             title = self.extract_title_from_content(content, file_path, file_extension)
-            
+
             # Categorize
             category = self.categorize_document(relative_path, file_extension)
-            
+
             # Enhanced metadata
             metadata = {
                 'source_type': file_extension,
@@ -17138,7 +17240,7 @@ class ComprehensiveSolanaProcessor:
                 'repository': 'anza-xyz/agave',
                 'file_extension': file_extension
             }
-            
+
             # Add specific metadata for PDFs
             if file_extension == "pdf":
                 metadata['is_pdf'] = True
@@ -17157,7 +17259,7 @@ This is a PDF document containing technical specifications for Solana's {title.l
 **Category:** Technical specification document
 **Format:** Portable Document Format (PDF)
 """
-            
+
             # Create document
             doc = SolanaDocument(
                 file_path=file_path,
@@ -17168,52 +17270,52 @@ This is a PDF document containing technical specifications for Solana's {title.l
                 category=category,
                 metadata=metadata
             )
-            
+
             return doc
-            
+
         except Exception as e:
             print(f"  ❌ Error processing {file_path}: {e}")
             return None
-    
+
     def process_all_files(self) -> List[SolanaDocument]:
         """Process all documentation files"""
         print("📝 Processing ALL Solana documentation files...")
-        
+
         doc_files = self.discover_documentation_files()
         documents = []
-        
+
         for i, file_path in enumerate(doc_files):
             print(f"  Processing {i+1}/{len(doc_files)}: {Path(file_path).relative_to(self.repo_path)}")
-            
+
             doc = self.process_documentation_file(file_path)
             if doc:
                 documents.append(doc)
-        
+
         print(f"  ✅ Processed {len(documents)} documents successfully")
-        
+
         # Print comprehensive category summary
         categories = {}
         file_types = {}
         for doc in documents:
             categories[doc.category] = categories.get(doc.category, 0) + 1
             file_types[doc.file_type] = file_types.get(doc.file_type, 0) + 1
-        
+
         print(f"  📊 Categories found:")
         for category, count in sorted(categories.items()):
             print(f"    - {category}: {count} documents")
-        
+
         print(f"  📄 File types processed:")
         for file_type, count in sorted(file_types.items()):
             print(f"    - {file_type}: {count} documents")
-        
+
         return documents
 
 class EmbeddingGenerator:
     """Generates embeddings using OpenAI API"""
-    
+
     def __init__(self, api_key: str):
         self.client = openai.Client(api_key=api_key)
-    
+
     def generate_embedding(self, text: str, doc_title: str = "") -> List[float]:
         """Generate embedding for text using OpenAI API"""
         # Truncate text if too long (OpenAI embedding model limit is 8192 tokens)
@@ -17221,7 +17323,7 @@ class EmbeddingGenerator:
         if len(text) > MAX_CHARS:
             print(f"    ⚠️  Truncating content from {len(text):,} to {MAX_CHARS:,} characters")
             text = text[:MAX_CHARS] + "... [TRUNCATED]"
-        
+
         try:
             response = self.client.embeddings.create(
                 model="text-embedding-3-large",
@@ -17234,39 +17336,39 @@ class EmbeddingGenerator:
 
 class DatabaseManager:
     """Manages database operations"""
-    
+
     def __init__(self, database_url: str):
         self.database_url = database_url
-    
+
     async def store_documents(self, documents: List[SolanaDocument], embeddings: List[List[float]]):
         """Store documents and embeddings in database"""
         print("💾 Storing in database...")
-        
+
         conn = await asyncpg.connect(self.database_url)
-        
+
         # Register vector type for pgvector
         await register_vector(conn)
-        
+
         try:
             for i, (doc, embedding) in enumerate(zip(documents, embeddings)):
                 print(f"  Storing {i+1}/{len(documents)}: {doc.title} ({doc.file_type})")
-                
+
                 # Use relative path as doc_path for uniqueness
                 doc_path = doc.relative_path
-                
+
                 await conn.execute("""
                     INSERT INTO documents (
-                        doc_type, source_name, doc_path, content, 
+                        doc_type, source_name, doc_path, content,
                         metadata, embedding, token_count
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    ON CONFLICT (doc_type, source_name, doc_path) 
-                    DO UPDATE SET 
+                    ON CONFLICT (doc_type, source_name, doc_path)
+                    DO UPDATE SET
                         content = EXCLUDED.content,
                         metadata = EXCLUDED.metadata,
                         embedding = EXCLUDED.embedding,
                         token_count = EXCLUDED.token_count,
                         updated_at = CURRENT_TIMESTAMP
-                """, 
+                """,
                     'solana',  # doc_type
                     'Solana Agave',  # source_name
                     doc_path,  # doc_path
@@ -17275,9 +17377,9 @@ class DatabaseManager:
                     embedding,  # embedding (pgvector format)
                     len(doc.content) // 4  # estimated token count
                 )
-            
+
             print(f"  ✅ Stored {len(documents)} documents in database")
-            
+
         finally:
             await conn.close()
 
@@ -17285,39 +17387,39 @@ async def main():
     """Main ingestion process"""
     print("🚀 Starting COMPREHENSIVE Solana Documentation Ingestion")
     print("📋 Supported formats: Markdown (.md, .mdx), ASCII Diagrams (.bob), Sequence Charts (.msc), PDFs (.pdf)")
-    
+
     # Check environment variables
     database_url = os.getenv('DATABASE_URL')
     openai_api_key = os.getenv('OPENAI_API_KEY')
-    
+
     if not database_url:
         print("❌ DATABASE_URL environment variable required")
         sys.exit(1)
-    
+
     if not openai_api_key:
         print("❌ OPENAI_API_KEY environment variable required")
         sys.exit(1)
-    
+
     # Check if repository exists
     if not Path("solana-agave-full").exists():
         print("❌ solana-agave-full repository not found. Please clone it first:")
         print("   git clone https://github.com/anza-xyz/agave.git solana-agave-full")
         sys.exit(1)
-    
+
     # Initialize components
     processor = ComprehensiveSolanaProcessor()
     embedding_generator = EmbeddingGenerator(openai_api_key)
     db_manager = DatabaseManager(database_url)
-    
+
     # Process all documentation
     documents = processor.process_all_files()
-    
+
     if not documents:
         print("❌ No documents found to process")
         return
-    
+
     print(f"📋 Processing {len(documents)} comprehensive documents...")
-    
+
     # Generate embeddings
     print("🔮 Generating embeddings...")
     embeddings = []
@@ -17325,26 +17427,26 @@ async def main():
         print(f"  Generating embedding {i+1}/{len(documents)} for: {doc.title} ({doc.file_type})")
         embedding = embedding_generator.generate_embedding(doc.content, doc.title)
         embeddings.append(embedding)
-    
+
     # Store in database
     await db_manager.store_documents(documents, embeddings)
-    
+
     print("🎉 COMPREHENSIVE Solana documentation ingestion completed successfully!")
     print(f"📊 Summary:")
     print(f"  - Total documents: {len(documents)}")
     print(f"  - Total embeddings: {len(embeddings)}")
-    
+
     # Show detailed breakdown
     categories = {}
     file_types = {}
     for doc in documents:
         categories[doc.category] = categories.get(doc.category, 0) + 1
         file_types[doc.file_type] = file_types.get(doc.file_type, 0) + 1
-    
+
     print(f"  - Categories:")
     for category, count in sorted(categories.items()):
         print(f"    * {category}: {count}")
-    
+
     print(f"  - File Types:")
     for file_type, count in sorted(file_types.items()):
         print(f"    * {file_type}: {count}")
@@ -17355,7 +17457,7 @@ if __name__ == "__main__":
 
 ### scripts/ingestion/ingest_birdeye_simple.py
 
-```python
+````python
 #!/usr/bin/env python3
 """
 BirdEye API Documentation Ingestion - Simple Approach
@@ -17392,7 +17494,7 @@ class BirdEyeEndpoint:
 
 class BirdEyeProcessor:
     """Processes BirdEye API documentation from OpenAPI spec"""
-    
+
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
@@ -17400,49 +17502,49 @@ class BirdEyeProcessor:
             'Accept': 'application/json',
             'Accept-Encoding': 'identity',  # Avoid compression issues
         })
-    
+
     def download_openapi_spec(self, output_file: str = "birdeye_openapi.json") -> Dict:
         """Download the complete BirdEye OpenAPI specification"""
         print("🌍 Downloading complete BirdEye OpenAPI specification...")
-        
+
         # Use any endpoint to get the full spec - they all contain the same schema
         url = "https://docs.birdeye.so/birdeyedotso/api-next/v2/branches/1.0/reference/get-defi-price?dereference=true&reduce=false"
-        
+
         print(f"  📡 Fetching: {url}")
         response = self.session.get(url, timeout=30)
         response.raise_for_status()
-        
+
         data = response.json()
-        
+
         # Extract the OpenAPI schema
         if 'data' not in data or 'api' not in data['data'] or 'schema' not in data['data']['api']:
             raise Exception("Could not find OpenAPI schema in response")
-        
+
         openapi_spec = data['data']['api']['schema']
-        
+
         # Save to disk
         with open(output_file, 'w') as f:
             json.dump(openapi_spec, f, indent=2)
-        
+
         print(f"  ✅ Saved OpenAPI spec to {output_file}")
         print(f"  📊 Found {len(openapi_spec.get('paths', {}))} API paths")
-        
+
         return openapi_spec
-    
+
     def extract_endpoints_from_spec(self, openapi_spec: Dict) -> List[BirdEyeEndpoint]:
         """Extract individual endpoints from OpenAPI specification"""
         print("🔧 Processing OpenAPI specification...")
-        
+
         endpoints = []
         paths = openapi_spec.get('paths', {})
-        
+
         for path, path_data in paths.items():
             for method, endpoint_data in path_data.items():
                 if method.upper() in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']:
-                    
+
                     title = endpoint_data.get('summary', f'{method.upper()} {path}')
                     description = endpoint_data.get('description', '')
-                    
+
                     # Build comprehensive content for this endpoint
                     content_parts = [
                         f"# {title}",
@@ -17450,10 +17552,10 @@ class BirdEyeProcessor:
                         f"**Path:** {path}",
                         ""
                     ]
-                    
+
                     if description:
                         content_parts.extend([f"**Description:** {description}", ""])
-                    
+
                     # Add parameters
                     if 'parameters' in endpoint_data:
                         content_parts.extend(["## Parameters", ""])
@@ -17462,11 +17564,11 @@ class BirdEyeProcessor:
                             param_desc = param.get('description', 'No description')
                             param_required = param.get('required', False)
                             param_location = param.get('in', 'unknown')
-                            
+
                             required_text = " (required)" if param_required else " (optional)"
                             content_parts.append(f"- **{param_name}** ({param_location}){required_text}: {param_desc}")
                         content_parts.append("")
-                    
+
                     # Add response schemas
                     if 'responses' in endpoint_data:
                         content_parts.extend(["## Responses", ""])
@@ -17474,7 +17576,7 @@ class BirdEyeProcessor:
                             response_desc = response_data.get('description', 'No description')
                             content_parts.append(f"- **{status_code}**: {response_desc}")
                         content_parts.append("")
-                    
+
                     # Add complete endpoint schema as JSON (but limit size)
                     content_parts.extend(["## Complete Schema", "```json"])
                     endpoint_json = json.dumps(endpoint_data, indent=2)
@@ -17482,9 +17584,9 @@ class BirdEyeProcessor:
                         endpoint_json = endpoint_json[:20_000] + "... [TRUNCATED]"
                     content_parts.append(endpoint_json)
                     content_parts.extend(["```", ""])
-                    
+
                     full_content = "\n".join(content_parts)
-                    
+
                     endpoint = BirdEyeEndpoint(
                         path=path,
                         method=method.upper(),
@@ -17497,18 +17599,18 @@ class BirdEyeProcessor:
                             'endpoint_data': endpoint_data
                         }
                     )
-                    
+
                     endpoints.append(endpoint)
-        
+
         print(f"  ✅ Extracted {len(endpoints)} endpoints")
         return endpoints
 
 class EmbeddingGenerator:
     """Generates embeddings using OpenAI API"""
-    
+
     def __init__(self, api_key: str):
         self.client = openai.Client(api_key=api_key)
-    
+
     def generate_embedding(self, text: str) -> List[float]:
         """Generate embedding for text using OpenAI API"""
         # Ensure text fits in embedding model limits
@@ -17516,7 +17618,7 @@ class EmbeddingGenerator:
         if len(text) > MAX_CHARS:
             print(f"  ⚠️  Truncating content from {len(text):,} to {MAX_CHARS:,} characters")
             text = text[:MAX_CHARS] + "... [TRUNCATED]"
-        
+
         try:
             response = self.client.embeddings.create(
                 model="text-embedding-3-large",
@@ -17529,39 +17631,39 @@ class EmbeddingGenerator:
 
 class DatabaseManager:
     """Manages database operations"""
-    
+
     def __init__(self, database_url: str):
         self.database_url = database_url
-    
+
     async def store_endpoints(self, endpoints: List[BirdEyeEndpoint], embeddings: List[List[float]]):
         """Store endpoints and embeddings in database"""
         print("💾 Storing in database...")
-        
+
         conn = await asyncpg.connect(self.database_url)
-        
+
         # Register vector type for pgvector
         await register_vector(conn)
-        
+
         try:
             for i, (endpoint, embedding) in enumerate(zip(endpoints, embeddings)):
                 print(f"  Storing {i+1}/{len(endpoints)}: {endpoint.title}")
-                
+
                 # Create doc_path as method + path
                 doc_path = f"{endpoint.method} {endpoint.path}"
-                
+
                 await conn.execute("""
                     INSERT INTO documents (
-                        doc_type, source_name, doc_path, content, 
+                        doc_type, source_name, doc_path, content,
                         metadata, embedding, token_count
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    ON CONFLICT (doc_type, source_name, doc_path) 
-                    DO UPDATE SET 
+                    ON CONFLICT (doc_type, source_name, doc_path)
+                    DO UPDATE SET
                         content = EXCLUDED.content,
                         metadata = EXCLUDED.metadata,
                         embedding = EXCLUDED.embedding,
                         token_count = EXCLUDED.token_count,
                         updated_at = CURRENT_TIMESTAMP
-                """, 
+                """,
                     'birdeye',  # doc_type
                     'BirdEye API',  # source_name
                     doc_path,  # doc_path
@@ -17570,41 +17672,41 @@ class DatabaseManager:
                     embedding,  # embedding (pgvector format)
                     len(endpoint.content) // 4  # estimated token count
                 )
-            
+
             print(f"  ✅ Stored {len(endpoints)} endpoints in database")
-            
+
         finally:
             await conn.close()
 
 async def main():
     """Main ingestion process"""
     print("🚀 Starting BirdEye API Documentation Ingestion (Simple Approach)")
-    
+
     # Check environment variables
     database_url = os.getenv('DATABASE_URL')
     openai_api_key = os.getenv('OPENAI_API_KEY')
-    
+
     if not database_url:
         print("❌ DATABASE_URL environment variable required")
         sys.exit(1)
-    
+
     if not openai_api_key:
         print("❌ OPENAI_API_KEY environment variable required")
         sys.exit(1)
-    
+
     # Initialize components
     processor = BirdEyeProcessor()
     embedding_generator = EmbeddingGenerator(openai_api_key)
     db_manager = DatabaseManager(database_url)
-    
+
     # Download OpenAPI spec (one request!)
     openapi_spec = processor.download_openapi_spec()
-    
+
     # Extract individual endpoints
     endpoints = processor.extract_endpoints_from_spec(openapi_spec)
-    
+
     print(f"📋 Processing {len(endpoints)} endpoints...")
-    
+
     # Generate embeddings
     print("🔮 Generating embeddings...")
     embeddings = []
@@ -17612,19 +17714,19 @@ async def main():
         print(f"  Generating embedding {i+1}/{len(endpoints)} for: {endpoint.title}")
         embedding = embedding_generator.generate_embedding(endpoint.content)
         embeddings.append(embedding)
-    
+
     # Store in database
     await db_manager.store_endpoints(endpoints, embeddings)
-    
+
     print("🎉 BirdEye ingestion completed successfully!")
 
 if __name__ == "__main__":
     asyncio.run(main())
-```
+````
 
 ### scripts/ingestion/ingest_birdeye.py
 
-```python
+````python
 #!/usr/bin/env python3
 """
 BirdEye API Documentation Ingestion Script
@@ -17669,7 +17771,7 @@ class BirdEyeEndpoint:
 
 class BirdEyeExtractor:
     """Extracts BirdEye API documentation from their docs pages"""
-    
+
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
@@ -17680,43 +17782,43 @@ class BirdEyeExtractor:
             'Connection': 'keep-alive',
         })
         self.base_url = "https://docs.birdeye.so"
-    
+
     def discover_all_endpoints(self) -> List[str]:
         """Get all BirdEye API endpoints (using curated list since site is React-based)"""
         print("🔍 Getting BirdEye API endpoints...")
-        
+
         # BirdEye uses React/JS rendering, so use curated comprehensive endpoint list
         print("  📋 Using comprehensive endpoint list (React site - JS rendered navigation)")
         return [
             # Core price endpoints
             "https://docs.birdeye.so/reference/get-defi-price",
-            "https://docs.birdeye.so/reference/get-defi-multi_price", 
+            "https://docs.birdeye.so/reference/get-defi-multi_price",
             "https://docs.birdeye.so/reference/post-defi-multi_price",
             "https://docs.birdeye.so/reference/get-defi-historical_price_unix",
             "https://docs.birdeye.so/reference/get-defi-history_price",
             "https://docs.birdeye.so/reference/get-defi-price_volume-single",
             "https://docs.birdeye.so/reference/post-defi-price_volume-multi",
-            
-            # Trading data endpoints  
+
+            # Trading data endpoints
             "https://docs.birdeye.so/reference/get-defi-txs-token",
             "https://docs.birdeye.so/reference/get-defi-txs-pair",
             "https://docs.birdeye.so/reference/get-defi-txs-token-seek_by_time",
             "https://docs.birdeye.so/reference/get-defi-txs-pair-seek_by_time",
             "https://docs.birdeye.so/reference/get-defi-v3-txs",
-            "https://docs.birdeye.so/reference/get-defi-v3-token-txs", 
+            "https://docs.birdeye.so/reference/get-defi-v3-token-txs",
             "https://docs.birdeye.so/reference/get-defi-v3-txs-recent",
-            
+
             # OHLCV endpoints
             "https://docs.birdeye.so/reference/get-defi-ohlcv",
             "https://docs.birdeye.so/reference/get-defi-ohlcv-pair",
             "https://docs.birdeye.so/reference/get-defi-ohlcv-base_quote",
             "https://docs.birdeye.so/reference/get-defi-v3-ohlcv",
             "https://docs.birdeye.so/reference/get-defi-v3-ohlcv-pair",
-            
+
             # Token endpoints
             "https://docs.birdeye.so/reference/get-defi-token_overview",
             "https://docs.birdeye.so/reference/get-defi-token_security",
-            "https://docs.birdeye.so/reference/get-defi-token_creation_info", 
+            "https://docs.birdeye.so/reference/get-defi-token_creation_info",
             "https://docs.birdeye.so/reference/get-defi-tokenlist",
             "https://docs.birdeye.so/reference/get-defi-token_trending",
             "https://docs.birdeye.so/reference/get-defi-v3-token-list",
@@ -17727,7 +17829,7 @@ class BirdEyeExtractor:
             "https://docs.birdeye.so/reference/get-defi-v3-token-market-data-multiple",
             "https://docs.birdeye.so/reference/get-defi-v3-token-trade-data-single",
             "https://docs.birdeye.so/reference/get-defi-v3-token-trade-data-multiple",
-            
+
             # Wallet endpoints
             "https://docs.birdeye.so/reference/get-trader-gainers-losers",
             "https://docs.birdeye.so/reference/get-trader-txs-seek_by_time",
@@ -17736,76 +17838,76 @@ class BirdEyeExtractor:
             "https://docs.birdeye.so/reference/get-v1-wallet-token_balance",
             "https://docs.birdeye.so/reference/get-v1-wallet-tx_list",
             "https://docs.birdeye.so/reference/get-v1-wallet-net_worth",
-            
+
             # Utility endpoints
-            "https://docs.birdeye.so/reference/get-defi-v3-search", 
+            "https://docs.birdeye.so/reference/get-defi-v3-search",
             "https://docs.birdeye.so/reference/get-defi-networks",
             "https://docs.birdeye.so/reference/get-v1-wallet-list_supported_chain",
         ]
-    
+
     def extract_endpoint_data(self, url: str) -> Optional[BirdEyeEndpoint]:
         """Extract API documentation from a BirdEye docs URL using dereference API"""
         try:
             # Convert regular docs URL to dereference API URL
             # From: https://docs.birdeye.so/reference/get-defi-price
             # To: https://docs.birdeye.so/birdeyedotso/api-next/v2/branches/1.0/reference/get-defi-price?dereference=true&reduce=false
-            
+
             if '/reference/' not in url:
                 print(f"  ❌ Invalid URL format: {url}")
                 return None
-                
+
             # Extract the endpoint slug
             slug = url.split('/reference/')[-1]
             api_url = f"https://docs.birdeye.so/birdeyedotso/api-next/v2/branches/1.0/reference/{slug}?dereference=true&reduce=false"
-            
+
             print(f"  📡 Fetching: {api_url}")
             response = self.session.get(api_url, timeout=30)
             response.raise_for_status()
-            
+
             # Parse JSON response directly
             data = response.json()
-            
+
             # Extract clean API documentation from dereference response
             if 'data' not in data:
                 print(f"  ❌ No data section in response")
                 return None
-                
+
             data_section = data['data']
             title = data_section.get('title', 'Unknown Endpoint')
-            
+
             # Note: Removed overly aggressive rate limit detection
             # Those keywords appear in OpenAPI error response descriptions, not actual rate limiting
-            
+
             # Extract method and path from API section
             method = "GET"  # Default
             path = "/unknown"
             api_spec = {}
-            
+
             if 'api' in data_section:
                 api_info = data_section['api']
                 method = api_info.get('method', 'GET').upper()
                 path = api_info.get('path', '/unknown')
-                
+
                 # Get the full OpenAPI schema if available
                 if 'schema' in api_info:
                     api_spec = api_info['schema']
-            
+
             # Build comprehensive content
             content_parts = []
-            
+
             # Add title and basic info
             content_parts.append(f"# {title}")
             content_parts.append(f"**Method:** {method}")
             content_parts.append(f"**Path:** {path}")
             content_parts.append("")
-            
+
             # Add content body/description from the dereference API
             content_body = ""
             if 'content' in data_section and 'body' in data_section['content']:
                 content_body = data_section['content']['body']
                 content_parts.append(f"**Description:**\n{content_body}")
                 content_parts.append("")
-            
+
             # Add OpenAPI specification if available
             if api_spec:
                 content_parts.append("## OpenAPI Specification")
@@ -17813,7 +17915,7 @@ class BirdEyeExtractor:
                 content_parts.append(json.dumps(api_spec, indent=2))
                 content_parts.append("```")
                 content_parts.append("")
-            
+
             # Add metadata information
             if 'metadata' in data_section:
                 metadata_info = data_section['metadata']
@@ -17823,9 +17925,9 @@ class BirdEyeExtractor:
                         if value:
                             content_parts.append(f"**{key.title()}:** {value}")
                     content_parts.append("")
-            
+
             full_content = "\n".join(content_parts)
-            
+
             endpoint = BirdEyeEndpoint(
                 url=url,
                 title=title,
@@ -17843,21 +17945,21 @@ class BirdEyeExtractor:
                     'extracted_at': datetime.utcnow().isoformat()
                 }
             )
-            
+
             print(f"  ✅ Extracted: {title} ({method} {path})")
             return endpoint
-            
+
         except Exception as e:
             print(f"  ❌ Error processing {url}: {e}")
             return None
 
 class EmbeddingGenerator:
     """Generates OpenAI embeddings for text content"""
-    
+
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.base_url = "https://api.openai.com/v1"
-    
+
     async def generate_embedding(self, text: str) -> List[float]:
         """Generate embedding for text using OpenAI API"""
         # Truncate text if too long (OpenAI embedding model limit is 8192 tokens)
@@ -17865,18 +17967,18 @@ class EmbeddingGenerator:
         if len(text) > MAX_CHARS:
             print(f"  ⚠️  Truncating content from {len(text):,} to {MAX_CHARS:,} characters")
             text = text[:MAX_CHARS] + "... [TRUNCATED]"
-        
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        
+
         payload = {
             "model": "text-embedding-3-large",
             "input": text,
             "encoding_format": "float"
         }
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 f"{self.base_url}/embeddings",
@@ -17887,34 +17989,34 @@ class EmbeddingGenerator:
                     error_text = await response.text()
                     print(f"❌ OpenAI API Error {response.status}: {error_text}")
                     raise Exception(f"OpenAI API error: {response.status} - {error_text}")
-                
+
                 result = await response.json()
                 return result['data'][0]['embedding']
 
 class DatabaseManager:
     """Manages database operations for BirdEye documentation"""
-    
+
     def __init__(self, database_url: str):
         self.database_url = database_url
-    
+
     async def store_endpoints(self, endpoints: List[BirdEyeEndpoint], embeddings: List[List[float]]):
         """Store BirdEye endpoints in the database"""
         conn = await asyncpg.connect(self.database_url)
-        
+
         try:
             # First, create or update the document source
             await self.ensure_document_source(conn)
-            
+
             # Store individual documents
             for endpoint, embedding in zip(endpoints, embeddings):
                 await self.store_document(conn, endpoint, embedding)
-            
+
             # Update source statistics
             await self.update_source_stats(conn)
-            
+
         finally:
             await conn.close()
-    
+
     async def ensure_document_source(self, conn):
         """Ensure BirdEye document source exists"""
         await conn.execute('''
@@ -17931,11 +18033,11 @@ class DatabaseManager:
             'extraction_method': 'data-initial-props scraping',
             'last_ingestion': datetime.utcnow().isoformat()
         }))
-    
+
     async def store_document(self, conn, endpoint: BirdEyeEndpoint, embedding: List[float]):
         """Store a single BirdEye endpoint document"""
         doc_path = f"{endpoint.method.lower()}{endpoint.path.replace('/', '_')}"
-        
+
         await conn.execute('''
             INSERT INTO documents (
                 doc_type, source_name, doc_path, content, metadata, embedding, token_count
@@ -17947,22 +18049,22 @@ class DatabaseManager:
                 embedding = $4,
                 token_count = $5,
                 updated_at = CURRENT_TIMESTAMP
-        ''', doc_path, endpoint.content, json.dumps(endpoint.metadata), 
+        ''', doc_path, endpoint.content, json.dumps(endpoint.metadata),
              embedding, len(endpoint.content.split()))
-    
+
     async def update_source_stats(self, conn):
         """Update document source statistics"""
         await conn.execute('''
-            UPDATE document_sources 
-            SET 
+            UPDATE document_sources
+            SET
                 total_docs = (
-                    SELECT COUNT(*) 
-                    FROM documents 
+                    SELECT COUNT(*)
+                    FROM documents
                     WHERE doc_type = 'birdeye' AND source_name = 'birdeye-api'
                 ),
                 total_tokens = (
-                    SELECT COALESCE(SUM(token_count), 0) 
-                    FROM documents 
+                    SELECT COALESCE(SUM(token_count), 0)
+                    FROM documents
                     WHERE doc_type = 'birdeye' AND source_name = 'birdeye-api'
                 )
             WHERE doc_type = 'birdeye' AND source_name = 'birdeye-api'
@@ -17971,27 +18073,27 @@ class DatabaseManager:
 async def main():
     """Main ingestion workflow"""
     print("🚀 Starting BirdEye API Documentation Ingestion")
-    
+
     # Check for required environment variables
     database_url = os.getenv('DATABASE_URL')
     openai_api_key = os.getenv('OPENAI_API_KEY')
-    
+
     if not database_url:
         print("❌ DATABASE_URL environment variable required")
         sys.exit(1)
-    
+
     if not openai_api_key:
         print("❌ OPENAI_API_KEY environment variable required")
         sys.exit(1)
-    
+
     # Initialize components
     extractor = BirdEyeExtractor()
     embedding_generator = EmbeddingGenerator(openai_api_key)
     db_manager = DatabaseManager(database_url)
-    
+
     # Discover all BirdEye API endpoints automatically
     all_endpoints = extractor.discover_all_endpoints()
-    
+
     # For testing: limit to first 3 endpoints (set to None for full run)
     test_mode = True  # Change to False for full ingestion
     if test_mode:
@@ -18001,30 +18103,30 @@ async def main():
             print(f"  - {url}")
     else:
         endpoints_to_extract = all_endpoints
-    
+
     # Extract endpoints
     print(f"📋 Extracting {len(endpoints_to_extract)} BirdEye endpoints...")
     endpoints = []
-    
+
     for i, url in enumerate(endpoints_to_extract):
         print(f"Processing {i+1}/{len(endpoints_to_extract)}: {url}")
-        
+
         endpoint = extractor.extract_endpoint_data(url)
         if endpoint:
             endpoints.append(endpoint)
-        
+
         # Rate limiting - wait between requests to be respectful
         if i < len(endpoints_to_extract) - 1:
             delay = 15 if len(endpoints_to_extract) > 20 else 10
             print(f"  💤 Waiting {delay} seconds...")
             time.sleep(delay)
-    
+
     if not endpoints:
         print("❌ No endpoints successfully extracted")
         sys.exit(1)
-    
+
     print(f"✅ Extracted {len(endpoints)} endpoints")
-    
+
     # Generate embeddings
     print("🔮 Generating embeddings...")
     embeddings = []
@@ -18032,16 +18134,16 @@ async def main():
         print(f"  Generating embedding {i+1}/{len(endpoints)} for: {endpoint.title}")
         embedding = await embedding_generator.generate_embedding(endpoint.content)
         embeddings.append(embedding)
-        
+
         # Small delay to respect rate limits
         await asyncio.sleep(1)
-    
+
     print(f"✅ Generated {len(embeddings)} embeddings")
-    
+
     # Store in database
     print("💾 Storing in database...")
     await db_manager.store_endpoints(endpoints, embeddings)
-    
+
     print("🎉 BirdEye ingestion completed successfully!")
     print(f"📊 Ingested {len(endpoints)} BirdEye API endpoints")
 
@@ -18052,15 +18154,15 @@ if __name__ == "__main__":
     except ImportError:
         print("❌ aiohttp required. Install with: pip install aiohttp")
         sys.exit(1)
-    
+
     try:
         import asyncpg
     except ImportError:
         print("❌ asyncpg required. Install with: pip install asyncpg")
         sys.exit(1)
-    
+
     asyncio.run(main())
-```
+````
 
 ### scripts/add_quality_gate.sh
 
@@ -18198,7 +18300,7 @@ update_trivy_db() {
 # Function to perform vulnerability scan
 vulnerability_scan() {
     echo "🛡️  Performing vulnerability scan..."
-    
+
     # Scan with exit code enforcement for CRITICAL and HIGH vulnerabilities
     if [ "$EXIT_ON_VIOLATION" = "1" ]; then
         echo "🚨 Scanning with exit-code enforcement for $SEVERITY_THRESHOLD vulnerabilities"
@@ -18214,65 +18316,65 @@ vulnerability_scan() {
             --format table \
             "$IMAGE_NAME"
     fi
-    
+
     # Generate detailed JSON report
     echo "📊 Generating detailed JSON report..."
     trivy image \
         --format json \
         --output "$OUTPUT_DIR/vulnerability-report.json" \
         "$IMAGE_NAME"
-    
+
     # Generate SARIF format for CI/CD tooling integration
     echo "🔧 Generating SARIF report for CI/CD integration..."
     trivy image \
         --format sarif \
         --output "$OUTPUT_DIR/vulnerability-report.sarif" \
         "$IMAGE_NAME"
-    
+
     echo "✅ Vulnerability scan complete"
 }
 
 # Function to generate SBOM (Software Bill of Materials)
 generate_sbom() {
     echo "📋 Generating Software Bill of Materials (SBOM)..."
-    
+
     # Generate SPDX-JSON SBOM
     trivy image \
         --format spdx-json \
         --output "$OUTPUT_DIR/sbom.spdx.json" \
         "$IMAGE_NAME"
-    
+
     # Generate CycloneDX SBOM for broader compatibility
     trivy image \
         --format cyclonedx \
         --output "$OUTPUT_DIR/sbom.cyclonedx.json" \
         "$IMAGE_NAME"
-    
+
     echo "✅ SBOM generation complete"
 }
 
 # Function to perform configuration scanning
 config_scan() {
     echo "⚙️  Performing container configuration scan..."
-    
+
     trivy config \
         --format table \
         --exit-code 0 \
         .
-    
+
     # Generate configuration scan report
     trivy config \
         --format json \
         --output "$OUTPUT_DIR/config-scan.json" \
         .
-    
+
     echo "✅ Configuration scan complete"
 }
 
 # Function to generate summary report
 generate_summary() {
     echo "📈 Generating scan summary..."
-    
+
     # Extract key metrics from the JSON report
     if [ -f "$OUTPUT_DIR/vulnerability-report.json" ]; then
         cat > "$OUTPUT_DIR/scan-summary.txt" <<EOF
@@ -18286,7 +18388,7 @@ Trivy Version: $(trivy version | head -n1)
 Vulnerability Summary:
 $(jq -r '
 if .Results then
-  .Results[] | 
+  .Results[] |
   if .Vulnerabilities then
     "Total Vulnerabilities: " + (.Vulnerabilities | length | tostring) + "\n" +
     "CRITICAL: " + ([.Vulnerabilities[] | select(.Severity == "CRITICAL")] | length | tostring) + "\n" +
@@ -18330,23 +18432,23 @@ trap cleanup EXIT
 # Main execution
 main() {
     echo "🚀 Starting container security scan pipeline..."
-    
+
     check_trivy
     update_trivy_db
     vulnerability_scan
     generate_sbom
     config_scan
     generate_summary
-    
+
     echo ""
     echo "🎉 Security scan pipeline completed successfully!"
     echo "📁 Results available in: $OUTPUT_DIR"
-    
+
     # Final security assessment
     if [ -f "$OUTPUT_DIR/vulnerability-report.json" ]; then
         CRITICAL_COUNT=$(jq -r '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' "$OUTPUT_DIR/vulnerability-report.json" 2>/dev/null || echo "0")
         HIGH_COUNT=$(jq -r '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "HIGH")] | length' "$OUTPUT_DIR/vulnerability-report.json" 2>/dev/null || echo "0")
-        
+
         if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
             echo "❌ SECURITY VIOLATION: Found $CRITICAL_COUNT CRITICAL and $HIGH_COUNT HIGH severity vulnerabilities"
             if [ "$EXIT_ON_VIOLATION" = "1" ]; then
@@ -18549,33 +18651,33 @@ import asyncpg
 import os
 async def check_results():
     conn = await asyncpg.connect(os.getenv('DATABASE_URL'))
-    
+
     # Check document source
     source = await conn.fetchrow('''
-        SELECT source_name, total_docs, total_tokens, last_updated 
-        FROM document_sources 
+        SELECT source_name, total_docs, total_tokens, last_updated
+        FROM document_sources
         WHERE doc_type = 'birdeye'
     ''')
-    
+
     if source:
         print(f'📋 Document Source: {source[\"source_name\"]}')
         print(f'📄 Total Documents: {source[\"total_docs\"]}')
         print(f'🔤 Total Tokens: {source[\"total_tokens\"]}')
         print(f'🕒 Last Updated: {source[\"last_updated\"]}')
-    
+
     # Check sample documents
     docs = await conn.fetch('''
-        SELECT doc_path, token_count 
-        FROM documents 
-        WHERE doc_type = 'birdeye' 
-        ORDER BY created_at 
+        SELECT doc_path, token_count
+        FROM documents
+        WHERE doc_type = 'birdeye'
+        ORDER BY created_at
         LIMIT 5
     ''')
-    
+
     print('\\n📄 Sample Documents:')
     for doc in docs:
         print(f'  - {doc[\"doc_path\"]} ({doc[\"token_count\"]} tokens)')
-    
+
     await conn.close()
 
 asyncio.run(check_results())
@@ -18653,11 +18755,11 @@ SELECT 'doc_embeddings', COUNT(*) FROM doc_embeddings;
 SELECT COUNT(DISTINCT name) as total_crates, SUM(total_docs) as total_docs FROM crates;
 \echo ''
 \echo 'Top 10 Crates by Document Count:'
-SELECT c.name, COUNT(de.id) as doc_count 
-FROM crates c 
-LEFT JOIN doc_embeddings de ON c.id = de.crate_id 
-GROUP BY c.name 
-ORDER BY doc_count DESC 
+SELECT c.name, COUNT(de.id) as doc_count
+FROM crates c
+LEFT JOIN doc_embeddings de ON c.id = de.crate_id
+GROUP BY c.name
+ORDER BY doc_count DESC
 LIMIT 10;
 EOF
 echo -e "${GREEN}✓ Created: db_stats.txt${NC}"
@@ -18716,7 +18818,7 @@ set -e  # Exit on any error
 
 # Configuration
 DB_NAME="docs"
-OLD_DB_NAME="rust_docs_vectors" 
+OLD_DB_NAME="rust_docs_vectors"
 DB_USER="${DB_USER:-$(whoami)}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
@@ -18785,7 +18887,7 @@ run_sql "Creating database schema" "sql/schema.sql"
 if [ "$OLD_DB_EXISTS" = true ]; then
     echo -e "${YELLOW}🔗 Enabling dblink for migration...${NC}"
     run_sql_cmd "Enabling dblink extension" "CREATE EXTENSION IF NOT EXISTS dblink;"
-    
+
     echo -e "${YELLOW}📋 Ready to migrate data from $OLD_DB_NAME to $DB_NAME${NC}"
     echo -e "${YELLOW}⚠️  Migration requires manual execution of sql/migrate_from_rust_docs.sql${NC}"
     echo -e "${YELLOW}   Run: psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f sql/migrate_from_rust_docs.sql${NC}"
@@ -18797,14 +18899,14 @@ fi
 echo -e "${GREEN}📊 Database setup summary:${NC}"
 run_sql_cmd "Checking doc_type enum values" "SELECT unnest(enum_range(NULL::doc_type)) AS doc_types;"
 run_sql_cmd "Checking table counts" "
-SELECT 
-    'documents' as table_name, 
-    COUNT(*) as rows 
-FROM documents 
-UNION ALL 
-SELECT 
-    'document_sources' as table_name, 
-    COUNT(*) as rows 
+SELECT
+    'documents' as table_name,
+    COUNT(*) as rows
+FROM documents
+UNION ALL
+SELECT
+    'document_sources' as table_name,
+    COUNT(*) as rows
 FROM document_sources;
 "
 
@@ -18991,14 +19093,18 @@ This task focuses on implementing the BirdEye query tool for semantic search acr
 Essential for implementing the query tool code and database integration.
 
 #### read_file
+
 **Purpose**: Examine existing code patterns and structures
 **When to Use**:
+
 - Review existing RustQueryTool implementation as template
 - Check database query patterns in queries.rs
 - Examine tool registration in handlers.rs
-**Example**:
+  **Example**:
 ```
+
 read_file("/workspace/crates/mcp/src/tools.rs")
+
 ```
 
 #### write_file / edit_file
@@ -19009,7 +19115,9 @@ read_file("/workspace/crates/mcp/src/tools.rs")
 - Update handler registration
 **Example**:
 ```
+
 edit_file("/workspace/crates/mcp/src/tools.rs", "impl BirdEyeQueryTool...")
+
 ```
 
 #### search_files
@@ -19020,8 +19128,10 @@ edit_file("/workspace/crates/mcp/src/tools.rs", "impl BirdEyeQueryTool...")
 - Search for metadata parsing patterns
 **Example**:
 ```
-search_files("*.rs", "Tool trait")
-```
+
+search_files("\*.rs", "Tool trait")
+
+````
 
 ### Query Tool (Once Implemented)
 
@@ -19139,15 +19249,17 @@ search_files("*.rs", "Tool trait")
     "timestamp": "unix"
   }
 }
-```
+````
 
 ### Query Patterns
+
 1. **Endpoint search**: Find specific API endpoints
 2. **Method filtering**: Filter by GET/POST/PUT/DELETE
 3. **Version filtering**: Limit to specific API versions
 4. **Parameter search**: Find endpoints with specific parameters
 
 ### Response Format Example
+
 ```json
 {
   "results": [
@@ -19166,12 +19278,14 @@ search_files("*.rs", "Tool trait")
 ## Performance Optimization
 
 ### Query Optimization
+
 - Use appropriate pgvector indexes
 - Limit result set early
 - Optimize similarity thresholds
 - Batch similar queries
 
 ### Cache Implementation
+
 - Use async RwLock for thread safety
 - Implement LRU eviction if needed
 - Monitor memory usage
@@ -19194,7 +19308,8 @@ search_files("*.rs", "Tool trait")
 - Proper error handling
 - Clean code structure
 - Comprehensive test coverage
-```
+
+````
 
 ### task/architecture.md
 
@@ -19262,7 +19377,7 @@ The Doc Server is a comprehensive documentation server that transforms from a si
 CREATE TABLE documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN (
-        'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
+        'rust', 'jupyter', 'birdeye', 'cilium', 'talos',
         'meteora', 'solana', 'ebpf', 'raydium', 'rust_best_practices'
     )),
     source_name VARCHAR(255) NOT NULL,
@@ -19273,7 +19388,7 @@ CREATE TABLE documents (
     token_count INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     UNIQUE(doc_type, source_name, doc_path)
 );
 
@@ -19298,12 +19413,12 @@ CREATE INDEX idx_documents_created_at ON documents(created_at DESC);
 
 -- Note: No vector index due to pgvector 2000-dimension limit
 -- OpenAI embeddings are 3072 dimensions, queries work but slower
-```
+````
 
 ### Current Data Contents
 
 - **Rust Documentation**: 40+ crates with complete documentation
-- **BirdEye API**: 600+ endpoints with OpenAPI specifications  
+- **BirdEye API**: 600+ endpoints with OpenAPI specifications
 - **Solana Documentation**: 400+ documents including:
   - Core documentation (markdown)
   - Architecture diagrams (BOB format)
@@ -19320,7 +19435,7 @@ Each documentation type has its own specific query tool for better relevance:
 // Currently implemented
 "rust_query" -> RustQueryTool
 
-// Planned implementations  
+// Planned implementations
 "birdeye_query" -> BirdeyeQueryTool
 "solana_query" -> SolanaQueryTool
 "jupyter_query" -> JupyterQueryTool
@@ -19338,7 +19453,7 @@ Only Rust crates support dynamic management via MCP tools:
 
 ```rust
 "add_rust_crate" -> Add new Rust crate
-"remove_rust_crate" -> Remove Rust crate  
+"remove_rust_crate" -> Remove Rust crate
 "list_rust_crates" -> List available crates
 "check_rust_status" -> Check population status
 ```
@@ -19398,6 +19513,7 @@ Only Rust crates support dynamic management via MCP tools:
 Each documentation type stores specific metadata in JSONB format:
 
 ### Rust Crates
+
 ```json
 {
   "version": "1.0.0",
@@ -19408,6 +19524,7 @@ Each documentation type stores specific metadata in JSONB format:
 ```
 
 ### BirdEye API
+
 ```json
 {
   "api_version": "v1",
@@ -19418,7 +19535,8 @@ Each documentation type stores specific metadata in JSONB format:
 }
 ```
 
-### Solana Documentation  
+### Solana Documentation
+
 ```json
 {
   "category": "core|architecture|crypto",
@@ -19473,16 +19591,19 @@ RATE_LIMIT_RPM=3000
 ### From Original Implementation
 
 **Database Changes**:
+
 - `rust_docs_vectors` → `docs` (renamed)
 - `doc_embeddings` → `documents` (harmonized schema)
 - `crate_configs` → `document_sources` (unified configuration)
 
 **Tool Changes**:
+
 - `query_rust_docs` → `rust_query` (type-specific)
 - `add_crate` → `add_rust_crate` (explicit naming)
 - `list_crates` → `list_rust_crates` (clear scope)
 
 **Architecture Changes**:
+
 - Single-type → Multi-type documentation support
 - Voyage AI → OpenAI only (simplified embedding stack)
 - Synchronous → Planned batch processing
@@ -19522,7 +19643,7 @@ RATE_LIMIT_RPM=3000
 ### Optimization Roadmap
 
 1. **Batch Processing**: 70% cost reduction for embeddings
-2. **Connection Reliability**: Streamable HTTP transport implementation  
+2. **Connection Reliability**: Streamable HTTP transport implementation
 3. **Query Optimization**: Improved indexing strategies
 4. **Caching**: In-memory caching for frequently accessed content
 5. **Scaling**: Kubernetes horizontal pod autoscaling
@@ -19574,7 +19695,8 @@ RATE_LIMIT_RPM=3000
 - In-memory session and query caching
 - Load balancing via Kubernetes ingress
 - Monitoring and alerting with Prometheus/Grafana
-```
+
+````
 
 ### task/task.txt
 
@@ -19623,29 +19745,32 @@ Create format_birdeye_response() method that formats search results with structu
 Implement Tool trait for BirdEyeQueryTool with definition() method returning proper JSON schema including name='birdeye_query', description, and inputSchema with query and limit parameters. Add execute() method with parameter validation for query (required string) and limit (optional integer 1-20). In handlers.rs, instantiate and register BirdEyeQueryTool in McpHandler::new() similar to RustQueryTool. Implement cache_endpoint() and get_cached_endpoint() methods to store frequently accessed endpoints with 15-minute TTL. Update semantic_search to check cache before database queries for common endpoints.
 
 
-```
+````
 
 ### task/acceptance-criteria.md
 
-```markdown
+````markdown
 # Acceptance Criteria: Task 9 - Config-Driven Documentation Query Tools
 
 ## Functional Requirements
 
 ### 1. Dynamic Tool Implementation
+
 - [ ] JSON config defined and validated (tools: name, docType, title, description, enabled)
 - [ ] Tools dynamically registered at startup from config
 - [ ] Unified query handler used by all dynamic tools
 - [ ] Semantic search using pgvector similarity (<=> operator)
 - [ ] Result ranking with relevance scores implemented
 
-### 2. Database Integration  
+### 2. Database Integration
+
 - [ ] Filters documents by `docType` from tool config
 - [ ] Vector similarity search functional
 - [ ] Metadata JSONB fields parsed when present
 - [ ] Query performance < 2 seconds
 
 ### 3. MCP Registration
+
 - [ ] Tools registered dynamically during server startup
 - [ ] Appear in tools/list response with names from config
 - [ ] JSON-RPC invocation working for each dynamic tool
@@ -19653,23 +19778,27 @@ Implement Tool trait for BirdEyeQueryTool with definition() method returning pro
 - [ ] Error handling for invalid requests
 
 ### 4. Response Formatting
+
 - [ ] Source attribution and relevance scores displayed
 - [ ] Category-appropriate fields included when present (e.g., API endpoint/method)
 
 ## Non-Functional Requirements
 
 ### 1. Performance
+
 - [ ] Query response time < 2 seconds
 - [ ] Concurrent query handling supported
 - [ ] Database connection pooling utilized
 
 ### 2. Data Quality
+
 - [ ] All configured docTypes searchable
 - [ ] Metadata accurately extracted when available
 - [ ] No duplicate results in responses
 - [ ] Relevance ranking accurate
 
 ### 3. Error Handling
+
 - [ ] Graceful handling of missing embeddings
 - [ ] Database connection failures handled
 - [ ] Invalid query parameters rejected
@@ -19679,6 +19808,7 @@ Implement Tool trait for BirdEyeQueryTool with definition() method returning pro
 ## Test Cases
 
 ### Test Case 1: Basic Query (docType)
+
 **Given**: Configured tool `birdeye_query` with docType `birdeye`
 **When**: Query "defi price" submitted via that tool
 **Then**: Results include price-related endpoints
@@ -19686,30 +19816,37 @@ Implement Tool trait for BirdEyeQueryTool with definition() method returning pro
 **And**: Metadata includes endpoint and method
 
 ### Test Case 2: Metadata Filtering
+
 **Given**: Multiple API versions present
 **When**: Query specifies api_version="v1"
 **Then**:
+
 - Only v1 endpoints returned
 - Filtering correctly applied
 - No v2 endpoints in results
 
 ### Test Case 3: Registration from Config
+
 **Given**: Server starts with a config listing `birdeye_query` and `solana_query`
 **When**: Server lists tools
 **Then**: Both tools appear in `tools/list` and invoke the same unified handler with different docType
 
 ### Test Case 4: Parameter Validation
+
 **Given**: Tool invoked via MCP
 **When**: Invalid limit (e.g., 100) provided
 **Then**:
+
 - Error returned with validation message
 - No database query executed
 - 400 status code returned
 
 ### Test Case 5: Response Formatting
+
 **Given**: Query returns multiple results
 **When**: Results formatted for output
 **Then**:
+
 - Each result has endpoint URL
 - HTTP method specified
 - Parameters documented
@@ -19718,6 +19855,7 @@ Implement Tool trait for BirdEyeQueryTool with definition() method returning pro
 ## Deliverables
 
 ### Code Artifacts
+
 - [ ] JSON config and loader/validation
 - [ ] Unified query implementation and db queries
 - [ ] Dynamic tool registration code
@@ -19725,6 +19863,7 @@ Implement Tool trait for BirdEyeQueryTool with definition() method returning pro
 - [ ] Documentation comments in code
 
 ### Documentation
+
 - [ ] Tool usage examples
 - [ ] API endpoint coverage report
 - [ ] Performance benchmarks
@@ -19734,6 +19873,7 @@ Implement Tool trait for BirdEyeQueryTool with definition() method returning pro
 ## Validation Criteria
 
 ### Automated Tests
+
 ```bash
 # Unit tests for tool implementation
 cargo test birdeye_query
@@ -19744,8 +19884,10 @@ cargo test --test integration birdeye
 # Performance benchmarks
 cargo bench birdeye_query
 ```
+````
 
 ### Manual Validation
+
 1. Query various BirdEye endpoints
 2. Verify metadata extraction accuracy
 3. Test cache effectiveness
@@ -19776,7 +19918,7 @@ Task 8 is complete when:
 - [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR
 - [ ] PR creation is gated on a green CI pipeline and successful deployment of the server artifact
 
-```
+````
 
 ### task/prompt.md
 
@@ -19819,55 +19961,82 @@ Implement dynamic tool registration from a JSON config. Each configured tool map
   - Require the deployment stage to complete successfully before creating a pull request.
   - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
 
-```
+````
 
 ### task/task.md
 
 ```markdown
 # Task ID: 9
+
 # Title: Implement BirdEye Query Tool
+
 # Status: pending
+
 # Dependencies: 6, 7
+
 # Priority: medium
+
 # Description: Create the birdeye_query tool for querying BirdEye blockchain API documentation with semantic search and metadata filtering.
+
 # Details:
+
 Implement BirdeyeQueryTool struct following the pattern in tools.rs. Add semantic search using pgvector similarity (<=> operator). Parse BirdEye-specific metadata (api_version, endpoint, method, parameters, response_schema). Implement result ranking with relevance scores. Format responses with endpoint details and example usage. Add parameter validation for query and limit fields. Register tool in MCP handler with proper definition. Cache frequently accessed endpoints for performance.
 
 # Test Strategy:
+
 Test query accuracy for various BirdEye endpoints, validate metadata filtering by API version and category, test response formatting and completeness, verify integration with MCP server, and benchmark query performance (< 2 seconds).
 
 # Subtasks:
+
 ## 1. Create BirdEyeQueryTool struct and basic implementation [pending]
+
 ### Dependencies: None
+
 ### Description: Define the BirdEyeQueryTool struct following the existing RustQueryTool pattern in tools.rs with required fields for database pool, embedding client, and optional caching mechanism
+
 ### Details:
+
 Create BirdEyeQueryTool struct in crates/mcp/src/tools.rs with fields for db_pool (DatabasePool), embedding_client (EmbeddingClient), and a cache using HashMap<String, (String, chrono::DateTime<Utc>)> for frequently accessed endpoints. Implement new() constructor method that initializes database pool and embedding client. Add helper method to validate cache entries based on TTL (15 minutes). Create placeholder methods for semantic_search and metadata filtering that will be implemented in subsequent subtasks.
 
 ## 2. Implement semantic search with pgvector similarity [pending]
+
 ### Dependencies: 8.1
+
 ### Description: Add birdeye_vector_search method to DocumentQueries and implement semantic search functionality using pgvector's <=> operator for BirdEye documents
+
 ### Details:
+
 In crates/database/src/queries.rs, create birdeye_vector_search method similar to rust_vector_search but filtering for doc_type='birdeye'. Implement proper vector similarity search using embedding <=> $1 ORDER BY embedding <=> $1 syntax when real embeddings are available. For now, use fallback query filtering by doc_type and metadata fields. In BirdEyeQueryTool, implement semantic_search method that generates embeddings for the query using embedding_client, calls birdeye_vector_search, and calculates relevance scores based on similarity distance.
 
 ## 3. Parse and filter BirdEye-specific metadata [pending]
+
 ### Dependencies: 8.2
+
 ### Description: Implement metadata extraction and filtering for BirdEye API fields including api_version, endpoint, method, parameters, and response_schema
+
 ### Details:
+
 Enhance semantic_search method to parse metadata JSONB fields specific to BirdEye documents (api_version, endpoint, method, parameters, response_schema) as shown in ingest_birdeye_simple.py. Add filtering capabilities to narrow results by API version (e.g., 'v1', 'v2'), HTTP method (GET, POST), or endpoint category. Extract and validate these fields from the metadata column during result processing. Implement helper methods parse_birdeye_metadata() and filter_by_metadata() to handle JSON parsing and filtering logic.
 
 ## 4. Format responses with endpoint details and examples [pending]
+
 ### Dependencies: 8.3
+
 ### Description: Implement result formatting that presents BirdEye API documentation with endpoint details, parameter descriptions, and usage examples
+
 ### Details:
+
 Create format_birdeye_response() method that formats search results with structured output including endpoint URL, HTTP method, required/optional parameters from metadata, response schema details, and example API calls. Extract parameter descriptions and types from the parameters field in metadata. Generate example curl commands or code snippets based on endpoint configuration. Format responses similar to the existing Rust documentation formatting but tailored for API documentation presentation. Include relevance scores in the output for transparency.
 
 ## 5. Register tool in MCP handler and add caching [pending]
+
 ### Dependencies: 8.4
+
 ### Description: Register BirdEyeQueryTool in the MCP handler, implement Tool trait, add parameter validation, and implement endpoint caching for performance
+
 ### Details:
+
 Implement Tool trait for BirdEyeQueryTool with definition() method returning proper JSON schema including name='birdeye_query', description, and inputSchema with query and limit parameters. Add execute() method with parameter validation for query (required string) and limit (optional integer 1-20). In handlers.rs, instantiate and register BirdEyeQueryTool in McpHandler::new() similar to RustQueryTool. Implement cache_endpoint() and get_cached_endpoint() methods to store frequently accessed endpoints with 15-minute TTL. Update semantic_search to check cache before database queries for common endpoints.
-
-
 ```
 
 ### clippy.toml
@@ -19905,8 +20074,7 @@ enum-variant-size-threshold = 200
 
 ### coding-guidelines.md
 
-```markdown
-
+````markdown
 # Rust Coding Guidelines
 
 This document provides coding standards and best practices for Rust development in this project.
@@ -19930,6 +20098,7 @@ Before opening any pull request or requesting merge:
 ## Code Quality Standards
 
 ### Error Handling
+
 - Use `Result<T, E>` for fallible operations
 - Use `anyhow::Result` for application-level errors
 - Use `thiserror` for library-level custom errors
@@ -19938,6 +20107,7 @@ Before opening any pull request or requesting merge:
 - Provide meaningful error messages with context
 
 ### Memory Management
+
 - Prefer owned types (`String`, `Vec<T>`) over borrowed types for struct fields
 - Use `Cow<str>` when you need flexibility between owned and borrowed strings
 - Minimize `clone()` calls - consider borrowing or moving when possible
@@ -19945,6 +20115,7 @@ Before opening any pull request or requesting merge:
 - Use `Rc<T>` for shared data within single-threaded contexts
 
 ### Async Programming
+
 - Use `async`/`await` for I/O-bound operations
 - Use `tokio` runtime for async execution
 - Prefer `async fn` over `impl Future`
@@ -19954,6 +20125,7 @@ Before opening any pull request or requesting merge:
 ## Code Organization
 
 ### Module Structure
+
 ```rust
 // Public API at the top
 pub use self::public_types::*;
@@ -19967,8 +20139,10 @@ pub mod prelude {
     pub use super::{PublicType, PublicTrait};
 }
 ```
+````
 
 ### Naming Conventions
+
 - Use `snake_case` for variables, functions, and modules
 - Use `PascalCase` for types, traits, and enum variants
 - Use `SCREAMING_SNAKE_CASE` for constants
@@ -19976,6 +20150,7 @@ pub mod prelude {
 - Prefix boolean functions with `is_`, `has_`, or `can_`
 
 ### Documentation
+
 - Document all public APIs with `///` comments
 - Include examples in documentation when helpful
 - Use `//!` for module-level documentation
@@ -19984,18 +20159,21 @@ pub mod prelude {
 ## Performance Guidelines
 
 ### Allocations
+
 - Minimize heap allocations in hot paths
 - Use `Vec::with_capacity()` when size is known
 - Consider `SmallVec` for collections that are usually small
 - Use string formatting (`format!`) judiciously
 
 ### Collections
+
 - Use `HashMap` for general key-value storage
 - Use `BTreeMap` when ordering matters
 - Use `HashSet` for unique values
 - Use `VecDeque` for FIFO/LIFO operations
 
 ### Iterators
+
 - Prefer iterator chains over explicit loops when readable
 - Use `collect()` only when necessary
 - Consider `fold()` and `reduce()` for aggregations
@@ -20004,23 +20182,24 @@ pub mod prelude {
 ## Testing Guidelines
 
 ### Unit Tests
+
 ```rust
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_function_name() {
         // Given
         let input = setup_test_data();
-        
+
         // When
         let result = function_under_test(input);
-        
+
         // Then
         assert_eq!(result, expected_value);
     }
-    
+
     #[test]
     #[should_panic(expected = "specific error message")]
     fn test_error_conditions() {
@@ -20030,6 +20209,7 @@ mod tests {
 ```
 
 ### Integration Tests
+
 - Place integration tests in `tests/` directory
 - Test public API only
 - Use realistic data and scenarios
@@ -20038,12 +20218,14 @@ mod tests {
 ## Security Guidelines
 
 ### Input Validation
+
 - Validate all external input
 - Use type-safe parsing (`str::parse()`)
 - Sanitize data before storage or transmission
 - Use prepared statements for database queries
 
 ### Secrets Management
+
 - Never hardcode secrets in source code
 - Use environment variables for configuration
 - Use secure random number generation (`rand::thread_rng()`)
@@ -20052,6 +20234,7 @@ mod tests {
 ## Rust-Specific Best Practices
 
 ### Pattern Matching
+
 ```rust
 // Prefer exhaustive matching
 match value {
@@ -20066,12 +20249,14 @@ if let Some(value) = optional_value {
 ```
 
 ### Ownership
+
 - Pass by reference (`&T`) for read-only access
 - Pass by mutable reference (`&mut T`) for modification
 - Pass by value (`T`) for ownership transfer
 - Use `Clone` when multiple ownership is needed
 
 ### Traits
+
 - Implement common traits (`Debug`, `Clone`, `PartialEq`)
 - Use trait bounds instead of concrete types in generics
 - Prefer composition over inheritance (use traits)
@@ -20079,6 +20264,7 @@ if let Some(value) = optional_value {
 ## Service Architecture Guidelines
 
 ### Project Structure
+
 ```
 src/
 ├── bin/           # Binary targets
@@ -20091,12 +20277,14 @@ src/
 ```
 
 ### Configuration
+
 - Use `serde` for configuration deserialization
 - Support both file-based and environment-based config
 - Provide sensible defaults
 - Validate configuration on startup
 
 ### Logging
+
 - Use `tracing` for structured logging
 - Include relevant context in log messages
 - Use appropriate log levels (error, warn, info, debug, trace)
@@ -20105,6 +20293,7 @@ src/
 ## Common Patterns
 
 ### Builder Pattern
+
 ```rust
 pub struct ConfigBuilder {
     host: Option<String>,
@@ -20115,17 +20304,17 @@ impl ConfigBuilder {
     pub fn new() -> Self {
         Self { host: None, port: None }
     }
-    
+
     pub fn host(mut self, host: impl Into<String>) -> Self {
         self.host = Some(host.into());
         self
     }
-    
+
     pub fn port(mut self, port: u16) -> Self {
         self.port = Some(port);
         self
     }
-    
+
     pub fn build(self) -> Result<Config> {
         Ok(Config {
             host: self.host.unwrap_or_else(|| "localhost".to_string()),
@@ -20136,6 +20325,7 @@ impl ConfigBuilder {
 ```
 
 ### Resource Management
+
 ```rust
 // Use RAII for resource cleanup
 pub struct Database {
@@ -20168,7 +20358,7 @@ When implementing or modifying code covered by these guidelines and when an inte
 - If a divergence from the recommended approach is necessary, document the rationale in the PR description and in code comments above the relevant implementation.
 - Re-check the document server for updates when addressing review feedback or refactoring.
 
-```
+````
 
 ### helm/doc-server/Chart.yaml
 
@@ -20196,7 +20386,7 @@ sources:
 
 home: https://github.com/jonathonfritz/agent-docs
 
-```
+````
 
 ### helm/doc-server/templates/deployment.yaml
 
@@ -20328,23 +20518,20 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "agent-docs-server.fullname" . }}
+  name: { { include "agent-docs-server.fullname" . } }
   labels:
-    app.kubernetes.io/name: {{ include "agent-docs-server.name" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: { { include "agent-docs-server.name" . } }
+    app.kubernetes.io/instance: { { .Release.Name } }
 spec:
-  type: {{ .Values.service.type }}
+  type: { { .Values.service.type } }
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort }}
+    - port: { { .Values.service.port } }
+      targetPort: { { .Values.service.targetPort } }
       protocol: TCP
       name: http
   selector:
-    app.kubernetes.io/name: {{ include "agent-docs-server.name" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-
-
-
+    app.kubernetes.io/name: { { include "agent-docs-server.name" . } }
+    app.kubernetes.io/instance: { { .Release.Name } }
 ```
 
 ### helm/doc-server/templates/hpa.yaml
@@ -20536,18 +20723,15 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-
-
 ```
 
 ### CLAUDE.md
 
-```markdown
-
+````markdown
 # Claude Code Project Memory
 
 ## Project Information
+
 - **Repository**: 5dlabs/agent-docs
 - **Source Branch**: main
 - **GitHub App**: 5DLabs-Rex
@@ -20566,6 +20750,7 @@ See @github-guidelines.md for git workflow and commit message standards
 ## Current Task Documentation
 
 **Your current task (1) documentation:**
+
 - See @task/task.md for requirements and description
 - See @task/acceptance-criteria.md for success criteria
 - See @task/architecture.md for technical approach and guidance
@@ -20574,10 +20759,10 @@ See @github-guidelines.md for git workflow and commit message standards
 
 See @.taskmaster/docs/architecture.md for system design patterns and architectural decisions
 
-
 ## Implementation Workflow
 
 ### Current Task Process
+
 1. **Understand**: Read @task/task.md for requirements
 2. **Plan**: Review @task/architecture.md for technical approach
 3. **Validate**: Check @task/acceptance-criteria.md for success criteria
@@ -20586,6 +20771,7 @@ See @.taskmaster/docs/architecture.md for system design patterns and architectur
 6. **Test**: Verify all acceptance criteria are met
 
 ### Task Context
+
 - **Task ID**: 1
 - **Repository**: 5dlabs/agent-docs
 - **Branch**: main
@@ -20594,6 +20780,7 @@ See @.taskmaster/docs/architecture.md for system design patterns and architectur
 ## Quick Command Reference
 
 ### Testing & Quality
+
 ```bash
 # Run tests (check package.json/Cargo.toml for project-specific commands)
 npm test || cargo test
@@ -20605,8 +20792,10 @@ npm run format || cargo fmt
 # Build verification
 npm run build || cargo build
 ```
+````
 
 ### Git Workflow
+
 ```bash
 # Commit with task-specific message (see @github-guidelines.md for details)
 git commit -m "feat(task-1): implement [brief description]
@@ -20630,6 +20819,7 @@ This file enables automatic pull request creation.
 ## Development Tools & Patterns
 
 ### Claude Code Integration
+
 - Use `LS` and `Glob` to explore codebase structure
 - Use `Read` to examine existing code patterns
 - Use `Grep` to find similar implementations
@@ -20637,6 +20827,7 @@ This file enables automatic pull request creation.
 - Validate with `Bash` commands after each change
 
 ### Implementation Guidelines
+
 - Focus on current task requirements in `task/` directory
 - Follow architectural guidance provided in @task/architecture.md
 - Ensure all acceptance criteria are met before completion
@@ -20644,9 +20835,9 @@ This file enables automatic pull request creation.
 
 ---
 
-*All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above.*
+_All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above._
 
-```
+````
 
 ### sql/init/01-extensions.sql
 
@@ -20662,7 +20853,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Verify extensions are loaded
 SELECT extname, extversion FROM pg_extension WHERE extname IN ('vector', 'uuid-ossp');
-```
+````
 
 ### sql/init/02-setup-user-and-schema.sql
 
@@ -20677,7 +20868,7 @@ SELECT extname, extversion FROM pg_extension WHERE extname IN ('vector', 'uuid-o
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN (
-        'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
+        'rust', 'jupyter', 'birdeye', 'cilium', 'talos',
         'meteora', 'solana', 'ebpf', 'raydium', 'rust_best_practices'
     )),
     source_name VARCHAR(255) NOT NULL,
@@ -20688,7 +20879,7 @@ CREATE TABLE IF NOT EXISTS documents (
     token_count INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Ensure uniqueness per documentation type
     UNIQUE(doc_type, source_name, doc_path)
 );
@@ -20699,8 +20890,8 @@ CREATE INDEX IF NOT EXISTS idx_documents_source_name ON documents(source_name);
 CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at DESC);
 
 -- Note: pgvector indexes (IVFFlat and HNSW) have a 2000 dimension limit
--- For 3072 dimensions (OpenAI text-embedding-3-large), we skip the index. 
--- Queries will still work but be slower. Consider upgrading pgvector 
+-- For 3072 dimensions (OpenAI text-embedding-3-large), we skip the index.
+-- Queries will still work but be slower. Consider upgrading pgvector
 -- or using 1536 dimensions if performance is critical.
 
 -- Create a trigger to update the updated_at timestamp
@@ -20712,9 +20903,9 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_documents_updated_at 
-    BEFORE UPDATE ON documents 
-    FOR EACH ROW 
+CREATE TRIGGER update_documents_updated_at
+    BEFORE UPDATE ON documents
+    FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Grant necessary permissions to the docserver user
@@ -20731,18 +20922,18 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO docserver;
 
 -- Step 1: Migrate crate information to document_sources
 INSERT INTO document_sources (
-    doc_type, 
-    source_name, 
-    version, 
-    config, 
-    enabled, 
-    last_updated, 
-    total_docs, 
+    doc_type,
+    source_name,
+    version,
+    config,
+    enabled,
+    last_updated,
+    total_docs,
     total_tokens,
     created_at,
     updated_at
 )
-SELECT 
+SELECT
     'rust'::doc_type as doc_type,
     name as source_name,
     version,
@@ -20779,7 +20970,7 @@ INSERT INTO documents (
     created_at,
     updated_at
 )
-SELECT 
+SELECT
     'rust'::doc_type as doc_type,
     crate_name as source_name,
     doc_path,
@@ -20807,18 +20998,18 @@ FROM dblink(
 );
 
 -- Step 3: Update document_sources statistics based on actual migrated data
-UPDATE document_sources 
-SET 
+UPDATE document_sources
+SET
     total_docs = (
-        SELECT COUNT(*) 
-        FROM documents 
-        WHERE documents.source_name = document_sources.source_name 
+        SELECT COUNT(*)
+        FROM documents
+        WHERE documents.source_name = document_sources.source_name
         AND documents.doc_type = document_sources.doc_type
     ),
     total_tokens = (
-        SELECT COALESCE(SUM(token_count), 0) 
-        FROM documents 
-        WHERE documents.source_name = document_sources.source_name 
+        SELECT COALESCE(SUM(token_count), 0)
+        FROM documents
+        WHERE documents.source_name = document_sources.source_name
         AND documents.doc_type = document_sources.doc_type
     )
 WHERE doc_type = 'rust';
@@ -20833,7 +21024,7 @@ SELECT 'original_crates' as table_name, COUNT(*) as count FROM dblink(
     'SELECT COUNT(*) FROM crates'
 ) AS count_result(count BIGINT);
 
--- Verify document count  
+-- Verify document count
 SELECT 'documents' as table_name, COUNT(*) as count FROM documents WHERE doc_type = 'rust'
 UNION ALL
 SELECT 'original_doc_embeddings' as table_name, COUNT(*) as count FROM dblink(
@@ -20843,16 +21034,16 @@ SELECT 'original_doc_embeddings' as table_name, COUNT(*) as count FROM dblink(
 
 -- Verify sample data
 SELECT source_name, COUNT(*) as doc_count, SUM(token_count) as total_tokens
-FROM documents 
-WHERE doc_type = 'rust' 
-GROUP BY source_name 
-ORDER BY doc_count DESC 
+FROM documents
+WHERE doc_type = 'rust'
+GROUP BY source_name
+ORDER BY doc_count DESC
 LIMIT 10;
 
 -- Test vector search still works
 SELECT source_name, doc_path, content
-FROM documents 
-WHERE doc_type = 'rust' 
+FROM documents
+WHERE doc_type = 'rust'
 AND embedding IS NOT NULL
 ORDER BY embedding <-> (SELECT embedding FROM documents WHERE doc_type = 'rust' AND embedding IS NOT NULL LIMIT 1)
 LIMIT 5;
@@ -20872,7 +21063,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Create enum for documentation types
 CREATE TYPE doc_type AS ENUM (
     'rust',
-    'jupyter', 
+    'jupyter',
     'birdeye',
     'cilium',
     'talos',
@@ -20921,8 +21112,8 @@ CREATE INDEX idx_documents_created_at ON documents(created_at);
 CREATE INDEX idx_documents_updated_at ON documents(updated_at);
 
 -- Note: pgvector indexes (IVFFlat and HNSW) have a 2000 dimension limit
--- For 3072 dimensions (OpenAI text-embedding-3-large), we skip the index. 
--- Queries will still work but be slower. Consider upgrading pgvector 
+-- For 3072 dimensions (OpenAI text-embedding-3-large), we skip the index.
+-- Queries will still work but be slower. Consider upgrading pgvector
 -- or using 1536 dimensions if performance is critical.
 
 -- Document sources indexes
@@ -20939,12 +21130,12 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_documents_updated_at 
-    BEFORE UPDATE ON documents 
+CREATE TRIGGER update_documents_updated_at
+    BEFORE UPDATE ON documents
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_document_sources_updated_at 
-    BEFORE UPDATE ON document_sources 
+CREATE TRIGGER update_document_sources_updated_at
+    BEFORE UPDATE ON document_sources
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Views for easier querying
@@ -20964,7 +21155,7 @@ RETURNS TABLE(
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         ds.source_name,
         COUNT(d.id) as doc_count,
         COALESCE(SUM(d.token_count), 0) as total_tokens,
@@ -21054,7 +21245,7 @@ SELECT 'archived_documents' AS table, COUNT(*) AS rows FROM archived_documents;
 
 ### sql/data/README.md
 
-```markdown
+````markdown
 # Database Dump and Restoration
 
 This directory contains a complete dump of the Doc Server database with all ingested documentation.
@@ -21064,7 +21255,7 @@ This directory contains a complete dump of the Doc Server database with all inge
 The `docs_database_dump.sql.gz` file contains:
 
 - **40+ Rust crates** with full documentation and embeddings
-- **BirdEye API documentation** (OpenAPI specs and endpoints)  
+- **BirdEye API documentation** (OpenAPI specs and endpoints)
 - **Solana documentation** (markdown, PDFs, architecture diagrams, ZK cryptography specs)
 - **Vector embeddings** (3072-dimensional OpenAI text-embedding-3-large)
 - **Complete metadata** for all document types
@@ -21076,12 +21267,15 @@ The `docs_database_dump.sql.gz` file contains:
 ## Quick Restoration
 
 ### Option 1: Use Development Script (Recommended)
+
 ```bash
 # This will automatically detect and load the database dump
 ./scripts/dev.sh --with-data
 ```
+````
 
 ### Option 2: Manual Restoration to Docker Container
+
 ```bash
 # Start PostgreSQL container
 docker compose -f docker-compose.dev.yml up -d postgres
@@ -21095,6 +21289,7 @@ gunzip -c sql/data/docs_database_dump.sql.gz | \
 ```
 
 ### Option 3: Manual Restoration to Local PostgreSQL
+
 ```bash
 # If you have local PostgreSQL and want to restore there
 gunzip -c sql/data/docs_database_dump.sql.gz | \
@@ -21119,8 +21314,9 @@ psql -c "SELECT doc_type, source_name, LEFT(content, 100) FROM documents LIMIT 5
 ## Expected Results
 
 You should see approximately:
+
 - **3,000+ Rust documents** from 40+ crates
-- **600+ BirdEye API endpoints** with OpenAPI documentation  
+- **600+ BirdEye API endpoints** with OpenAPI documentation
 - **400+ Solana documents** including core docs, architecture diagrams, and ZK specs
 - **100% embedding coverage** (all documents have vector embeddings)
 
@@ -21146,5 +21342,7 @@ pg_dump -h localhost -p 5432 -U [username] -d docs | gzip > sql/data/docs_databa
 - No need to run ingestion scripts if you restore this dump
 - Embeddings are ready for immediate vector search
 - All metadata and relationships are preserved
+
 ```
 
+```

@@ -9,6 +9,7 @@ Implement enterprise-grade security controls with JWT authentication, role-based
 ## Execution Steps
 
 ### Step 1: Implement JWT Authentication for MCP Endpoints
+
 - Create auth module in `crates/mcp/src/auth.rs` with JWT token generation
 - Use jsonwebtoken crate for secure token handling
 - Implement middleware validating JWT tokens in Authorization headers
@@ -18,6 +19,7 @@ Implement enterprise-grade security controls with JWT authentication, role-based
 - Integrate with McpServerState for authenticated user context
 
 ### Step 2: Add Role-Based Access Control (RBAC) System
+
 - Create rbac module in `crates/mcp/src/rbac.rs` with role definitions
 - Define roles (admin, operator, viewer) with specific permissions
 - Add role_permissions table to database schema
@@ -27,6 +29,7 @@ Implement enterprise-grade security controls with JWT authentication, role-based
 - Add role management endpoints at `/auth/roles` for admin users
 
 ### Step 3: Enable TLS/SSL and Implement Request Signing
+
 - Add TLS configuration to Axum server using rustls or native-tls
 - Support both certificate files and Let's Encrypt auto-renewal
 - Implement request signing using HMAC-SHA256 for integrity validation
@@ -36,6 +39,7 @@ Implement enterprise-grade security controls with JWT authentication, role-based
 - Add certificate pinning support for enhanced security
 
 ### Step 4: Implement Audit Logging and Rate Limiting
+
 - Create audit_logs table with user_id, action, resource, timestamp, IP address
 - Implement AuditLogger trait logging all tool calls and authentication attempts
 - Add rate limiting using tower-governor crate (100 req/min default)
@@ -45,6 +49,7 @@ Implement enterprise-grade security controls with JWT authentication, role-based
 - Implement log rotation and retention policies
 
 ### Step 5: Add Security Headers and Input Validation
+
 - Implement security headers middleware:
   - Content-Security-Policy (CSP)
   - HTTP Strict-Transport-Security (HSTS)
@@ -109,6 +114,7 @@ MCP Handler
 ## Success Criteria
 
 Your implementation is complete when:
+
 - JWT authentication protects all MCP endpoints securely
 - RBAC system provides appropriate access control for different user roles
 - TLS/SSL encrypts all communications with proper certificate management

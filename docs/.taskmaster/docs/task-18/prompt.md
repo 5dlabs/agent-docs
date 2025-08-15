@@ -9,6 +9,7 @@ Generate complete documentation ecosystem covering Rust API documentation, OpenA
 ## Execution Steps
 
 ### Step 1: Generate Rust API Documentation with cargo doc
+
 - Use `cargo doc --all-features --no-deps` for comprehensive API documentation
 - Configure rustdoc settings for external links and search indexes
 - Generate documentation for all workspace crates (database, mcp, embeddings, doc-loader, llm)
@@ -16,6 +17,7 @@ Generate complete documentation ecosystem covering Rust API documentation, OpenA
 - Prepare documentation for hosting and integration
 
 ### Step 2: Create OpenAPI/Swagger Specification
+
 - Create `openapi.yaml` documenting MCP server HTTP endpoints
 - Document POST /mcp and GET /mcp endpoints with JSON-RPC schemas
 - Include SSE event stream documentation for server-sent events
@@ -24,6 +26,7 @@ Generate complete documentation ecosystem covering Rust API documentation, OpenA
 - Validate OpenAPI specification with standard validators
 
 ### Step 3: Write Kubernetes Deployment Guide
+
 - Document Helm chart creation in `helm/doc-server/` directory
 - Write comprehensive `values.yaml` configuration guide
 - Document resource limits (CPU: 500m-2000m, Memory: 512Mi-2Gi)
@@ -32,6 +35,7 @@ Generate complete documentation ecosystem covering Rust API documentation, OpenA
 - Create troubleshooting section for common deployment issues
 
 ### Step 4: Document MCP Tool Usage with Client Integration
+
 - Document rust_query tool usage with detailed examples
 - Create Cursor IDE integration guide with MCP configuration
 - Write Toolman client setup and usage documentation
@@ -40,6 +44,7 @@ Generate complete documentation ecosystem covering Rust API documentation, OpenA
 - Add troubleshooting guide for client integration issues
 
 ### Step 5: Create Architecture Diagrams and Performance Guide
+
 - Generate mermaid diagrams for system architecture
 - Document data flow from ingestion through vector search
 - Write performance tuning guide with optimization parameters
@@ -73,6 +78,7 @@ Generate complete documentation ecosystem covering Rust API documentation, OpenA
 ## Success Criteria
 
 Your documentation is complete when:
+
 - Rust API documentation covers all public interfaces comprehensively
 - OpenAPI specification enables client generation and integration
 - Kubernetes deployment guide enables successful production deployment
