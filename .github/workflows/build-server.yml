@@ -308,7 +308,33 @@ jobs:
           EXIT_ON_VIOLATION: 0
         run: |
           docker pull "$IMAGE_NAME"
-          ./scripts/scan_image.sh "$IMAGE_NAME"
+          
+          # Create security reports directory
+          mkdir -p security-reports
+          
+          # Run Trivy vulnerability scan
+          echo "Running Trivy vulnerability scan on $IMAGE_NAME..."
+          trivy image --format json --output security-reports/vulnerability-report.json "$IMAGE_NAME" || true
+          
+          # Run Trivy config scan
+          echo "Running Trivy config scan on $IMAGE_NAME..."
+          trivy config --format json --output security-reports/config-report.json "$IMAGE_NAME" || true
+          
+          # Generate SARIF report for GitHub security tab
+          echo "Generating SARIF report..."
+          trivy image --format sarif --output security-reports/results.sarif "$IMAGE_NAME" || true
+          
+          # Display summary
+          echo "Security scan completed. Reports saved to security-reports/"
+          if [ -f security-reports/vulnerability-report.json ]; then
+            echo "Vulnerability report generated"
+          fi
+          if [ -f security-reports/config-report.json ]; then
+            echo "Config report generated"
+          fi
+          if [ -f security-reports/results.sarif ]; then
+            echo "SARIF report generated"
+          fi
       - name: Upload SARIF results
         if: always()
         continue-on-error: true
