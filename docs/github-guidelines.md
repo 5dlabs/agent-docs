@@ -111,6 +111,17 @@ Comment in your PR: "Need help resolving merge conflicts in [file names]" and de
 
 When you have completed implementation and met all acceptance criteria:
 
+### ✅ CI MUST BE GREEN BEFORE PR (and before marking tasks done)
+
+- Run local quality gates first:
+  ```bash
+  cargo fmt --all -- --check
+  cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic
+  cargo test --all-features
+  ```
+- Push to your feature branch and wait for the GitHub Actions workflow to finish
+- Only proceed when all jobs are green; if a deploy stage exists, it must also succeed
+
 ### **✅ MANDATORY: Submit a Pull Request Using GitHub CLI:**
 
 ```bash
