@@ -63,21 +63,21 @@ impl SecurityConfig {
 
     /// Set strict origin validation mode
     #[must_use]
-    pub fn with_strict_origin_validation(mut self, strict: bool) -> Self {
+    pub const fn with_strict_origin_validation(mut self, strict: bool) -> Self {
         self.strict_origin_validation = strict;
         self
     }
 
     /// Set localhost-only binding mode
     #[must_use]
-    pub fn with_localhost_only(mut self, localhost_only: bool) -> Self {
+    pub const fn with_localhost_only(mut self, localhost_only: bool) -> Self {
         self.localhost_only = localhost_only;
         self
     }
 
     /// Set whether Origin header is required
     #[must_use]
-    pub fn with_require_origin_header(mut self, require: bool) -> Self {
+    pub const fn with_require_origin_header(mut self, require: bool) -> Self {
         self.require_origin_header = require;
         self
     }
@@ -120,20 +120,20 @@ pub enum SecurityError {
 impl IntoResponse for SecurityError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            SecurityError::OriginNotAllowed(_) => (StatusCode::FORBIDDEN, "Origin not allowed"),
-            SecurityError::MissingOriginHeader => {
+            Self::OriginNotAllowed(_) => (StatusCode::FORBIDDEN, "Origin not allowed"),
+            Self::MissingOriginHeader => {
                 (StatusCode::BAD_REQUEST, "Missing Origin header")
             }
-            SecurityError::DnsRebindingDetected { .. } => {
+            Self::DnsRebindingDetected { .. } => {
                 (StatusCode::FORBIDDEN, "DNS rebinding attack detected")
             }
-            SecurityError::InvalidOriginFormat(_) => {
+            Self::InvalidOriginFormat(_) => {
                 (StatusCode::BAD_REQUEST, "Invalid origin format")
             }
-            SecurityError::LocalhostBindingRequired => {
+            Self::LocalhostBindingRequired => {
                 (StatusCode::FORBIDDEN, "Localhost binding required")
             }
-            SecurityError::InvalidHostHeader(_) => (StatusCode::BAD_REQUEST, "Invalid Host header"),
+            Self::InvalidHostHeader(_) => (StatusCode::BAD_REQUEST, "Invalid Host header"),
         };
 
         error!("Security validation error: {}", self);
@@ -211,17 +211,9 @@ pub fn validate_dns_rebinding(
     // If both headers are present, validate they match for security
     if let (Some(host_value), Some(origin_value)) = (host, origin) {
         // Parse origin to extract host part
-        let origin_host = if let Ok(url) = url::Url::parse(&origin_value) {
-            url.host_str().map(|h| {
-                if let Some(port) = url.port() {
-                    format!("{h}:{port}")
-                } else {
-                    h.to_string()
-                }
-            })
-        } else {
-            None
-        };
+        let origin_host = url::Url::parse(&origin_value).map_or(None, |url| url.host_str().map(|h| {
+                url.port().map_or_else(|| h.to_string(), |port| format!("{h}:{port}"))
+            }));
 
         // Check for DNS rebinding attack
         if let Some(origin_host_value) = origin_host {
@@ -319,17 +311,15 @@ pub fn validate_server_binding(
         }
         _ => {
             // Try to parse as IP address
-            if let Ok(ip) = addr_str.parse::<IpAddr>() {
-                if ip.is_loopback() {
+            addr_str.parse::<IpAddr>().map_or_else(|_| {
+                error!("Invalid server bind address: {}", bind_addr);
+                Err(SecurityError::LocalhostBindingRequired)
+            }, |ip| if ip.is_loopback() {
                     Ok(())
                 } else {
                     error!("Server binding to {} is not localhost", bind_addr);
                     Err(SecurityError::LocalhostBindingRequired)
-                }
-            } else {
-                error!("Invalid server bind address: {}", bind_addr);
-                Err(SecurityError::LocalhostBindingRequired)
-            }
+                })
         }
     }
 }

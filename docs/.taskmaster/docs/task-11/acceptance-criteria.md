@@ -15,6 +15,7 @@
 - [ ] Documents and embeddings written with crate metadata
 - [ ] Deletions remove related docs/embeddings without orphans
 - [ ] Audit logs for add/remove/status
+- [ ] New `crate_jobs` table persists job state and history (UUID id, crate_name, operation, status, progress, started_at, finished_at, error) so job IDs survive restarts
 
 ### 3. Performance and Reliability
 

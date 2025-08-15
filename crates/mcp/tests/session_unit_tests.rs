@@ -339,7 +339,7 @@ fn test_session_manager_config() {
         cleanup_interval: chrono::Duration::minutes(10),
     };
 
-    let manager = SessionManager::new(custom_config.clone());
+    let manager = SessionManager::new(custom_config);
     let retrieved_config = manager.config();
 
     assert_eq!(retrieved_config.default_ttl, chrono::Duration::minutes(60));

@@ -214,7 +214,7 @@ impl DynamicQueryTool {
             let relevance_score = self.calculate_relevance_score(i, results.len());
 
             // Apply adaptive formatting based on content type
-            let formatted_content = self.format_content_adaptively(doc);
+            let formatted_content = Self::format_content_adaptively(doc);
 
             let _ = write!(
                 &mut response,
@@ -229,7 +229,7 @@ impl DynamicQueryTool {
     }
 
     /// Format content adaptively based on metadata hints
-    fn format_content_adaptively(&self, doc: &doc_server_database::models::Document) -> String {
+    fn format_content_adaptively(doc: &doc_server_database::models::Document) -> String {
         // Check content format from metadata
         let format = doc
             .metadata
@@ -258,7 +258,7 @@ impl DynamicQueryTool {
                     .metadata
                     .as_object()
                     .and_then(|m| m.get("page_count"))
-                    .and_then(|p| p.as_i64())
+                    .and_then(serde_json::Value::as_i64)
                     .unwrap_or(0);
 
                 format!(
