@@ -89,10 +89,11 @@ mod tests {
             info!("Successfully submitted batch: {}", submitted_batch_id);
 
             // Monitor batch status (with timeout). Allow env overrides for CI speed.
+            // OpenAI batch processing can take 10+ minutes even for small batches
             let max_wait_secs: u64 = env::var("EMBEDDINGS_TEST_MAX_WAIT_SECS")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .unwrap_or(120);
+                .unwrap_or(900); // Default 15 minutes for batch processing
             let poll_secs: u64 = env::var("EMBEDDINGS_TEST_POLL_SECS")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -109,7 +110,11 @@ mod tests {
                 }
 
                 if start_time.elapsed() > max_wait_time {
-                    warn!("Batch processing timeout after 10 minutes");
+                    warn!(
+                        "Batch processing timeout after {} seconds ({} minutes)",
+                        max_wait_secs,
+                        max_wait_secs / 60
+                    );
                     break;
                 }
 
