@@ -106,3 +106,109 @@ pub struct ToolMetadataHints {
 pub struct ToolsConfig {
     pub tools: Vec<ToolConfig>,
 }
+
+/// Job status enumeration for crate operations
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "job_status", rename_all = "snake_case")]
+pub enum JobStatus {
+    Queued,
+    Running,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+/// Crate job record for tracking background operations
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct CrateJob {
+    pub id: Uuid,
+    pub crate_name: String,
+    pub operation: String,
+    pub status: JobStatus,
+    pub progress: Option<i32>,
+    pub error: Option<String>,
+    pub started_at: DateTime<Utc>,
+    pub finished_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Pagination parameters for listing operations
+#[derive(Debug, Clone)]
+pub struct PaginationParams {
+    pub page: i32,
+    pub limit: i32,
+    pub offset: i32,
+}
+
+impl PaginationParams {
+    /// Create new pagination parameters
+    #[must_use]
+    pub fn new(page: Option<i32>, limit: Option<i32>) -> Self {
+        let page = page.unwrap_or(1).max(1);
+        let limit = limit.unwrap_or(20).clamp(1, 100);
+        let offset = (page - 1) * limit;
+
+        Self {
+            page,
+            limit,
+            offset,
+        }
+    }
+}
+
+/// Paginated response container
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaginatedResponse<T> {
+    pub items: Vec<T>,
+    pub page: i32,
+    pub total_pages: i32,
+    pub total_items: i64,
+    pub has_previous: bool,
+    pub has_next: bool,
+}
+
+impl<T> PaginatedResponse<T> {
+    /// Create a new paginated response
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)] // Pagination pages are expected to be small integers
+    #[allow(clippy::cast_precision_loss)] // Acceptable for pagination calculations
+    #[allow(clippy::cast_lossless)] // i32 to f64 is lossless
+    pub fn new(items: Vec<T>, pagination: &PaginationParams, total_items: i64) -> Self {
+        let total_pages = ((total_items as f64) / f64::from(pagination.limit)).ceil() as i32;
+        let has_previous = pagination.page > 1;
+        let has_next = pagination.page < total_pages;
+
+        Self {
+            items,
+            page: pagination.page,
+            total_pages,
+            total_items,
+            has_previous,
+            has_next,
+        }
+    }
+}
+
+/// Crate information derived from document metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrateInfo {
+    pub name: String,
+    pub version: String,
+    pub description: Option<String>,
+    pub documentation_url: Option<String>,
+    pub total_docs: i32,
+    pub total_tokens: i64,
+    pub last_updated: DateTime<Utc>,
+}
+
+/// Crate statistics for system monitoring
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrateStatistics {
+    pub total_crates: i64,
+    pub active_crates: i64,
+    pub total_docs_managed: i64,
+    pub total_tokens_managed: i64,
+    pub average_docs_per_crate: f64,
+    pub last_update: Option<DateTime<Utc>>,
+}

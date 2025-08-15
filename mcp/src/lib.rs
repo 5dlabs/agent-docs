@@ -4,9 +4,11 @@
 //! HTTP transport, and integration with the database and other services.
 
 pub mod config;
+pub mod crate_tools;
 pub mod handlers;
 pub mod headers;
 pub mod health;
+pub mod job_queue;
 pub mod metrics;
 pub mod protocol_version;
 pub mod security;

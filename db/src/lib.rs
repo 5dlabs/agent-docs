@@ -24,7 +24,10 @@ pub use migration_system::{
 };
 pub use models::*;
 pub use pool_config::{PoolConfig, PoolConfigBuilder};
-pub use queries::{DocumentQueries, QueryPerformanceMetrics, QueryPerformanceMonitor};
+pub use queries::{
+    CrateJobQueries, CrateQueries, DocumentQueries, QueryPerformanceMetrics,
+    QueryPerformanceMonitor,
+};
 pub use retry::{DatabaseError, RetryConfig, RetryExecutor};
 
 /// Re-export commonly used types

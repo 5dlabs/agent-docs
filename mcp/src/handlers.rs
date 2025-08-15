@@ -1,12 +1,17 @@
 //! MCP request handlers
 
 use crate::config::ConfigLoader;
+use crate::crate_tools::{
+    AddRustCrateTool, CheckRustStatusTool, ListRustCratesTool, RemoveRustCrateTool,
+};
 use crate::protocol_version::ProtocolRegistry;
 use crate::tools::{DynamicQueryTool, RustQueryTool, Tool};
 use anyhow::{anyhow, Result};
 use db::DatabasePool;
+use embed::OpenAIEmbeddingClient;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
 /// MCP request handler
@@ -27,6 +32,9 @@ impl McpHandler {
         let rust_query_tool = RustQueryTool::new(db_pool.clone())?;
         tools.insert("rust_query".to_string(), Box::new(rust_query_tool));
         debug!("Registered hardcoded rust_query tool");
+
+        // Register crate management tools
+        Self::register_crate_management_tools(&mut tools, db_pool)?;
 
         // Load and register dynamic tools from configuration
         match Self::register_dynamic_tools(&mut tools, db_pool) {
@@ -102,6 +110,43 @@ impl McpHandler {
         }
 
         Ok(registered_count)
+    }
+
+    /// Register crate management tools
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if tool initialization fails.
+    fn register_crate_management_tools(
+        tools: &mut HashMap<String, Box<dyn Tool + Send + Sync>>,
+        db_pool: &DatabasePool,
+    ) -> Result<()> {
+        // Create embedding client for add_rust_crate tool
+        let embedding_client: Arc<dyn embed::client::EmbeddingClient + Send + Sync> =
+            Arc::new(OpenAIEmbeddingClient::new()?);
+
+        // Register add_rust_crate tool
+        let add_crate_tool = AddRustCrateTool::new(db_pool.clone(), embedding_client);
+        tools.insert("add_rust_crate".to_string(), Box::new(add_crate_tool));
+        debug!("Registered add_rust_crate tool");
+
+        // Register remove_rust_crate tool
+        let remove_crate_tool = RemoveRustCrateTool::new(db_pool.clone());
+        tools.insert("remove_rust_crate".to_string(), Box::new(remove_crate_tool));
+        debug!("Registered remove_rust_crate tool");
+
+        // Register list_rust_crates tool
+        let list_crates_tool = ListRustCratesTool::new(db_pool.clone());
+        tools.insert("list_rust_crates".to_string(), Box::new(list_crates_tool));
+        debug!("Registered list_rust_crates tool");
+
+        // Register check_rust_status tool
+        let status_tool = CheckRustStatusTool::new(db_pool.clone());
+        tools.insert("check_rust_status".to_string(), Box::new(status_tool));
+        debug!("Registered check_rust_status tool");
+
+        info!("Successfully registered 4 crate management tools");
+        Ok(())
     }
 
     /// Handle an MCP request
