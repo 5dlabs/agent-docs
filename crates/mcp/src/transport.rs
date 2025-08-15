@@ -92,11 +92,9 @@ impl McpSession {
     /// Check if session has expired
     #[must_use]
     pub fn is_expired(&self, timeout: Duration) -> bool {
-        if let Ok(last_activity) = self.last_activity.read() {
-            last_activity.elapsed() > timeout
-        } else {
-            false
-        }
+        self.last_activity
+            .read()
+            .is_ok_and(|last_activity| last_activity.elapsed() > timeout)
     }
 }
 
@@ -132,11 +130,10 @@ impl SessionManager {
         let session = McpSession::new();
         let session_id = session.id;
 
-        let mut sessions = self
-            .sessions
+        self.sessions
             .write()
-            .map_err(|_| TransportError::SessionLockError)?;
-        sessions.insert(session_id, session);
+            .map_err(|_| TransportError::SessionLockError)?
+            .insert(session_id, session);
 
         debug!("Created new session: {}", session_id);
         Ok(session_id)
@@ -184,12 +181,13 @@ impl SessionManager {
             .sessions
             .read()
             .map_err(|_| TransportError::SessionLockError)?;
-        if let Some(session) = sessions.get(&session_id) {
-            session.update_activity();
-            Ok(())
-        } else {
-            Err(TransportError::SessionNotFound(session_id))
-        }
+        sessions.get(&session_id).map_or(
+            Err(TransportError::SessionNotFound(session_id)),
+            |session| {
+                session.update_activity();
+                Ok(())
+            },
+        )
     }
 
     /// Clean up expired sessions
@@ -208,6 +206,7 @@ impl SessionManager {
         sessions.retain(|_id, session| !session.is_expired(self.config.session_timeout));
 
         let cleaned_count = initial_count - sessions.len();
+        drop(sessions);
         if cleaned_count > 0 {
             debug!("Cleaned up {} expired sessions", cleaned_count);
         }
@@ -276,35 +275,23 @@ pub enum TransportError {
 impl IntoResponse for TransportError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            TransportError::MethodNotAllowed => {
-                (StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed")
-            }
-            TransportError::UnsupportedProtocolVersion(_) => {
+            Self::MethodNotAllowed => (StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed"),
+            Self::UnsupportedProtocolVersion(_) => {
                 (StatusCode::BAD_REQUEST, "Unsupported Protocol Version")
             }
-            TransportError::SessionNotFound(_) => (StatusCode::BAD_REQUEST, "Session Not Found"),
-            TransportError::InvalidSessionId(_) => (StatusCode::BAD_REQUEST, "Invalid Session ID"),
-            TransportError::SessionLockError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Session Lock Error")
-            }
-            TransportError::MissingContentType => (StatusCode::BAD_REQUEST, "Missing Content-Type"),
-            TransportError::InvalidContentType(_) => {
-                (StatusCode::BAD_REQUEST, "Unsupported Media Type")
-            }
-            TransportError::JsonParseError(_) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
-            TransportError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
-            TransportError::InternalError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
-            }
-            TransportError::SecurityValidationFailed(_) => {
+            Self::SessionNotFound(_) => (StatusCode::BAD_REQUEST, "Session Not Found"),
+            Self::InvalidSessionId(_) => (StatusCode::BAD_REQUEST, "Invalid Session ID"),
+            Self::SessionLockError => (StatusCode::INTERNAL_SERVER_ERROR, "Session Lock Error"),
+            Self::MissingContentType => (StatusCode::BAD_REQUEST, "Missing Content-Type"),
+            Self::InvalidContentType(_) => (StatusCode::BAD_REQUEST, "Unsupported Media Type"),
+            Self::JsonParseError(_) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
+            Self::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
+            Self::InternalError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
+            Self::SecurityValidationFailed(_) => {
                 (StatusCode::FORBIDDEN, "Security Validation Failed")
             }
-            TransportError::InvalidAcceptHeader(_) => {
-                (StatusCode::BAD_REQUEST, "Invalid Accept Header")
-            }
-            TransportError::UnacceptableAcceptHeader(_) => {
-                (StatusCode::NOT_ACCEPTABLE, "Not Acceptable")
-            }
+            Self::InvalidAcceptHeader(_) => (StatusCode::BAD_REQUEST, "Invalid Accept Header"),
+            Self::UnacceptableAcceptHeader(_) => (StatusCode::NOT_ACCEPTABLE, "Not Acceptable"),
         };
 
         error!("Transport error: {}", self);
@@ -720,7 +707,7 @@ async fn handle_json_rpc_request(
 /// It should be called during server startup.
 pub async fn initialize_transport(session_manager: SessionManager) {
     let cleanup_interval = Duration::from_secs(60); // Cleanup every minute
-    let manager = session_manager.clone();
+    let manager = session_manager;
 
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(cleanup_interval);

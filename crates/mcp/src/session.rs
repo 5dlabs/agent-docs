@@ -277,17 +277,20 @@ impl SessionManager {
     pub fn get_session(&self, session_id: Uuid) -> Result<Session, SessionError> {
         let sessions = self.sessions.read().map_err(|_| SessionError::LockError)?;
 
-        if let Some(session) = sessions.get(&session_id) {
-            if session.is_expired() {
-                debug!("Session expired: {}", session_id);
-                Err(SessionError::SessionExpired(session_id))
-            } else {
-                Ok(session.clone())
-            }
-        } else {
-            debug!("Session not found: {}", session_id);
-            Err(SessionError::SessionNotFound(session_id))
-        }
+        sessions.get(&session_id).map_or_else(
+            || {
+                debug!("Session not found: {}", session_id);
+                Err(SessionError::SessionNotFound(session_id))
+            },
+            |session| {
+                if session.is_expired() {
+                    debug!("Session expired: {}", session_id);
+                    Err(SessionError::SessionExpired(session_id))
+                } else {
+                    Ok(session.clone())
+                }
+            },
+        )
     }
 
     /// Update session activity timestamp (session renewal)
@@ -300,19 +303,22 @@ impl SessionManager {
     pub fn update_last_accessed(&self, session_id: Uuid) -> Result<(), SessionError> {
         let mut sessions = self.sessions.write().map_err(|_| SessionError::LockError)?;
 
-        if let Some(session) = sessions.get_mut(&session_id) {
-            if session.is_expired() {
-                debug!("Attempted to refresh expired session: {}", session_id);
-                Err(SessionError::SessionExpired(session_id))
-            } else {
-                session.refresh();
-                debug!("Updated session activity: {}", session_id);
-                Ok(())
-            }
-        } else {
-            debug!("Cannot refresh non-existent session: {}", session_id);
-            Err(SessionError::SessionNotFound(session_id))
-        }
+        sessions.get_mut(&session_id).map_or_else(
+            || {
+                debug!("Cannot refresh non-existent session: {}", session_id);
+                Err(SessionError::SessionNotFound(session_id))
+            },
+            |session| {
+                if session.is_expired() {
+                    debug!("Attempted to refresh expired session: {}", session_id);
+                    Err(SessionError::SessionExpired(session_id))
+                } else {
+                    session.refresh();
+                    debug!("Updated session activity: {}", session_id);
+                    Ok(())
+                }
+            },
+        )
     }
 
     /// Delete a session explicitly (for DELETE endpoint support)
@@ -392,17 +398,20 @@ impl SessionManager {
     ) -> Result<(), SessionError> {
         let sessions = self.sessions.read().map_err(|_| SessionError::LockError)?;
 
-        if let Some(session) = sessions.get(&session_id) {
-            if session.is_expired() {
-                debug!("Session expired: {session_id}");
-                Err(SessionError::SessionExpired(session_id))
-            } else {
-                session.validate_protocol_version(expected_version)
-            }
-        } else {
-            debug!("Session not found: {session_id}");
-            Err(SessionError::SessionNotFound(session_id))
-        }
+        sessions.get(&session_id).map_or_else(
+            || {
+                debug!("Session not found: {session_id}");
+                Err(SessionError::SessionNotFound(session_id))
+            },
+            |session| {
+                if session.is_expired() {
+                    debug!("Session expired: {session_id}");
+                    Err(SessionError::SessionExpired(session_id))
+                } else {
+                    session.validate_protocol_version(expected_version)
+                }
+            },
+        )
     }
 
     /// Get session statistics for monitoring
@@ -436,6 +445,7 @@ impl SessionManager {
         if total == 0 {
             newest_age = Duration::zero();
         }
+        drop(sessions);
 
         Ok(SessionStats {
             total,

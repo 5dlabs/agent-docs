@@ -214,7 +214,7 @@ impl DynamicQueryTool {
             let relevance_score = self.calculate_relevance_score(i, results.len());
 
             // Apply adaptive formatting based on content type
-            let formatted_content = self.format_content_adaptively(doc);
+            let formatted_content = Self::format_content_adaptively(doc);
 
             let _ = write!(
                 &mut response,
@@ -229,8 +229,7 @@ impl DynamicQueryTool {
     }
 
     /// Format content adaptively based on metadata hints
-    #[allow(clippy::unused_self)]
-    fn format_content_adaptively(&self, doc: &doc_server_database::models::Document) -> String {
+    fn format_content_adaptively(doc: &doc_server_database::models::Document) -> String {
         // Check content format from metadata
         let format = doc
             .metadata

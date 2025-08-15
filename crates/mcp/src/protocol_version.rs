@@ -82,7 +82,7 @@ pub struct ProtocolRegistry {
 impl ProtocolRegistry {
     /// Create a new protocol registry with the current supported version
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             current_version: ProtocolVersion::current(),
         }
@@ -90,17 +90,15 @@ impl ProtocolRegistry {
 
     /// Check if a protocol version is supported
     #[must_use]
-    pub fn is_version_supported(&self, version: ProtocolVersion) -> bool {
+    pub const fn is_version_supported(&self, version: ProtocolVersion) -> bool {
         version.is_supported()
     }
 
     /// Check if a protocol version string is supported
     #[must_use]
     pub fn is_version_string_supported(&self, version_str: &str) -> bool {
-        match ProtocolVersion::from_str(version_str) {
-            Ok(version) => self.is_version_supported(version),
-            Err(_) => false,
-        }
+        ProtocolVersion::from_str(version_str)
+            .is_ok_and(|version| self.is_version_supported(version))
     }
 
     /// Get the current supported version
