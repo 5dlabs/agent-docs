@@ -9,24 +9,30 @@ This task creates comprehensive documentation including API reference, deploymen
 ### Filesystem Server Tools
 
 #### read_file
+
 **Purpose**: Analyze existing code structure and extract documentation requirements
-**When to Use**: 
+**When to Use**:
+
 - Examine existing API implementations for documentation extraction
 - Study current deployment configurations and procedures
 - Review existing integration patterns and client usage
 - Analyze system architecture and component relationships
 
 #### write_file
+
 **Purpose**: Create comprehensive documentation files and configuration
 **When to Use**:
+
 - Generate OpenAPI specification for MCP endpoints
 - Create Kubernetes deployment guides and Helm charts
 - Write client integration guides for Cursor and Toolman
 - Add architecture documentation and performance guides
 
 #### edit_file
+
 **Purpose**: Enhance existing documentation and add missing information
 **When to Use**:
+
 - Add documentation comments to existing Rust code
 - Update existing configuration files with documentation
 - Enhance existing guides with additional examples
@@ -37,16 +43,20 @@ This task creates comprehensive documentation including API reference, deploymen
 All query tools serve as both documentation subjects and validation tools for the documentation being created.
 
 #### rust_query
+
 **Purpose**: Document and validate Rust-specific functionality
 **When to Use**:
+
 - Extracting examples for Rust API documentation
 - Validating code examples in documentation
 - Testing query functionality for documentation accuracy
 - Generating realistic usage examples
 
 #### jupyter_query, cilium_query, talos_query, meteora_query, raydium_query, ebpf_query, rust_best_practices_query
+
 **Purpose**: Document comprehensive MCP tool usage across all domains
 **When to Use**:
+
 - Creating usage examples for each tool in client integration guides
 - Validating tool functionality and response formats
 - Testing query patterns for documentation examples
@@ -55,30 +65,35 @@ All query tools serve as both documentation subjects and validation tools for th
 ## Implementation Flow
 
 ### Phase 1: API Documentation Generation
+
 1. Use `read_file` to analyze existing API implementations
 2. Generate comprehensive Rust API documentation with cargo doc
 3. Configure rustdoc settings for optimal documentation output
 4. Validate documentation completeness and accuracy
 
 ### Phase 2: OpenAPI Specification Creation
+
 1. Document all MCP HTTP endpoints and JSON-RPC methods
 2. Define schemas for all tool inputs and outputs
 3. Include authentication and protocol documentation
 4. Validate specification with OpenAPI tools
 
 ### Phase 3: Deployment Documentation
+
 1. Create comprehensive Kubernetes deployment guide
 2. Document Helm chart creation and configuration
 3. Add troubleshooting guides for common deployment issues
 4. Include monitoring and operational procedures
 
 ### Phase 4: Client Integration Guides
+
 1. Document MCP tool usage with detailed examples
 2. Create Cursor IDE integration guide
 3. Write Toolman client setup documentation
 4. Add troubleshooting for client integration issues
 
 ### Phase 5: Architecture and Performance Documentation
+
 1. Create system architecture diagrams with mermaid
 2. Document data flow and component interactions
 3. Write performance tuning guide with benchmarks
@@ -87,24 +102,28 @@ All query tools serve as both documentation subjects and validation tools for th
 ## Best Practices
 
 ### Documentation Quality
+
 - Test all code examples for accuracy and completeness
 - Use consistent formatting and style across all documents
 - Include troubleshooting sections for common issues
 - Provide step-by-step procedures with clear prerequisites
 
 ### API Documentation
+
 - Document all public APIs with comprehensive examples
 - Include error conditions and edge cases
 - Use clear parameter descriptions and return value documentation
 - Provide usage examples for complex functionality
 
 ### Deployment Guides
+
 - Include complete configuration examples
 - Document all required environment variables and secrets
 - Provide troubleshooting for common deployment failures
 - Include resource sizing and scaling recommendations
 
 ### Client Integration
+
 - Provide complete setup procedures from scratch
 - Include authentication and connection setup
 - Document error handling and retry strategies
@@ -113,6 +132,7 @@ All query tools serve as both documentation subjects and validation tools for th
 ## Task-Specific Implementation Guidelines
 
 ### 1. Cargo Doc Configuration
+
 ```toml
 # Cargo.toml
 [package.metadata.docs.rs]
@@ -130,6 +150,7 @@ serde = { version = "1.0", features = ["derive"] }
 ```
 
 ### 2. OpenAPI Specification Structure
+
 ```yaml
 # openapi.yaml
 openapi: 3.0.0
@@ -147,14 +168,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JSONRPCRequest'
+              $ref: "#/components/schemas/JSONRPCRequest"
       responses:
-        '200':
+        "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JSONRPCResponse'
+                $ref: "#/components/schemas/JSONRPCResponse"
 
 components:
   schemas:
@@ -177,6 +198,7 @@ components:
 ```
 
 ### 3. Helm Chart Values Documentation
+
 ```yaml
 # helm/doc-server/values.yaml
 # Default values for doc-server
@@ -215,6 +237,7 @@ database:
 ```
 
 ### 4. Client Integration Example
+
 ```typescript
 // Cursor IDE MCP Configuration
 // .cursor/mcp_servers.json
@@ -239,6 +262,7 @@ const response = await mcpClient.callTool('rust_query', {
 ```
 
 ### 5. Architecture Diagram (Mermaid)
+
 ```mermaid
 graph TB
     Client["MCP Clients<br/>(Cursor, Toolman)"] --> LB[Load Balancer]
@@ -246,14 +270,14 @@ graph TB
     Server --> DB[("PostgreSQL<br/>+ pgvector")]
     Server --> Embed["Embedding Service<br/>OpenAI API"]
     Server --> Cache["Redis Cache<br/>(Optional)"]
-    
+
     subgraph "Query Tools"
         RustQuery[rust_query]
         JupyterQuery[jupyter_query]
         CiliumQuery[cilium_query]
         TalosQuery[talos_query]
     end
-    
+
     Server --> RustQuery
     Server --> JupyterQuery
     Server --> CiliumQuery
@@ -265,18 +289,21 @@ graph TB
 ### Documentation Generation Issues
 
 #### Cargo Doc Failures
+
 - Ensure all dependencies are available and up to date
 - Check for missing documentation comments on public APIs
 - Verify rustdoc configuration and feature flags
 - Monitor build time and memory usage during generation
 
 #### OpenAPI Validation Errors
+
 - Use OpenAPI validation tools to check specification syntax
 - Ensure all referenced schemas are properly defined
 - Validate example requests and responses
 - Check for circular references in schema definitions
 
 #### Missing Documentation
+
 - Audit public APIs for missing documentation
 - Check for undocumented configuration options
 - Validate example code for correctness
@@ -285,12 +312,14 @@ graph TB
 ### Client Integration Issues
 
 #### MCP Connection Problems
+
 - Verify server accessibility and network configuration
 - Check authentication credentials and headers
 - Validate JSON-RPC message format
 - Monitor connection timeouts and retry logic
 
 #### Tool Usage Errors
+
 - Ensure all tools are properly registered and available
 - Check parameter validation and error messages
 - Validate response format and schema compliance
@@ -299,18 +328,21 @@ graph TB
 ## Validation Steps
 
 ### Documentation Completeness
+
 1. **API Coverage**: Verify all public APIs documented
 2. **Example Testing**: Test all code examples for accuracy
 3. **Link Validation**: Check all internal and external links
 4. **Accessibility**: Validate documentation accessibility compliance
 
 ### Technical Accuracy
+
 1. **OpenAPI Validation**: Use automated tools to validate specification
 2. **Deployment Testing**: Follow deployment guide in clean environment
 3. **Client Integration**: Test integration guides with actual clients
 4. **Performance Validation**: Verify performance guide recommendations
 
 ### Quality Assurance
+
 ```bash
 # Documentation generation
 cargo doc --all-features --no-deps --open

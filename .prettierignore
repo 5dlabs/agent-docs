@@ -1,0 +1,2 @@
+# Ignore Helm chart templates (contain Go templating that breaks YAML parser)
+helm/**

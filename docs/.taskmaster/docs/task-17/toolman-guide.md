@@ -9,24 +9,30 @@ This task enhances the GitHub Actions CI/CD pipeline with comprehensive testing,
 ### Filesystem Server Tools
 
 #### read_file
+
 **Purpose**: Analyze current CI/CD configuration and deployment patterns
-**When to Use**: 
+**When to Use**:
+
 - Examine existing `.github/workflows/deploy-doc-server.yml`
 - Study current Kubernetes deployment configurations
 - Review existing test infrastructure and patterns
 - Analyze current security scanning and monitoring setup
 
 #### write_file
+
 **Purpose**: Create enhanced pipeline configuration and deployment scripts
 **When to Use**:
+
 - Implement enhanced GitHub Actions workflow with all stages
 - Create blue-green deployment scripts and configurations
 - Write comprehensive smoke test suite
 - Add security scanning configurations and policies
 
 #### edit_file
+
 **Purpose**: Modify existing configurations to integrate enhancements
 **When to Use**:
+
 - Update existing workflow with additional testing stages
 - Modify Kubernetes deployment manifests for blue-green strategy
 - Integrate security scanning into existing pipeline stages
@@ -35,24 +41,30 @@ This task enhances the GitHub Actions CI/CD pipeline with comprehensive testing,
 ### Kubernetes Tools
 
 #### kubernetes_getResource
+
 **Purpose**: Examine current deployment configuration for enhancement
 **When to Use**:
+
 - Review existing deployment and service configurations
 - Check current ingress and load balancer setup
 - Validate current resource limits and scaling policies
 - Examine existing monitoring and health check configurations
 
 #### kubernetes_listResources
+
 **Purpose**: Discover CI/CD and deployment infrastructure components
 **When to Use**:
+
 - Find existing deployment environments (staging, production)
 - Locate current monitoring and logging infrastructure
 - Identify existing service mesh or ingress controller setup
 - Check for current blue-green deployment infrastructure
 
 #### kubernetes_describeResource
+
 **Purpose**: Get detailed information about deployment status and health
 **When to Use**:
+
 - Troubleshoot deployment issues during blue-green transitions
 - Validate health check configurations and status
 - Monitor resource utilization during deployment processes
@@ -61,30 +73,35 @@ This task enhances the GitHub Actions CI/CD pipeline with comprehensive testing,
 ## Implementation Flow
 
 ### Phase 1: Integration Testing Enhancement
+
 1. Add PostgreSQL service container to GitHub Actions
 2. Create database fixtures and comprehensive test data
 3. Implement integration tests covering all MCP functionality
 4. Add parallel test execution and reporting
 
 ### Phase 2: Security Scanning Integration
+
 1. Integrate cargo-audit and cargo-deny for dependency scanning
 2. Add Trivy container image vulnerability scanning
 3. Implement SAST tools for static code analysis
 4. Configure security alerting and reporting
 
 ### Phase 3: Performance Regression Testing
+
 1. Add performance benchmarks to CI pipeline
 2. Implement baseline comparison and regression detection
 3. Configure performance alerting and reporting
 4. Integrate load testing for major releases
 
 ### Phase 4: Blue-Green Deployment Implementation
+
 1. Design Kubernetes blue-green deployment strategy
 2. Implement traffic switching and health checking logic
 3. Add automated rollback on deployment failures
 4. Configure deployment monitoring and alerting
 
 ### Phase 5: Smoke Testing and Validation
+
 1. Create comprehensive post-deployment smoke tests
 2. Implement health verification and functional testing
 3. Add monitoring integration and alert validation
@@ -93,24 +110,28 @@ This task enhances the GitHub Actions CI/CD pipeline with comprehensive testing,
 ## Best Practices
 
 ### Pipeline Optimization
+
 - Run tests in parallel where possible to minimize execution time
 - Use caching strategies for dependencies and build artifacts
 - Implement early failure detection to stop pipeline quickly
 - Optimize container image builds with multi-stage Dockerfiles
 
 ### Security Integration
+
 - Fail fast on CRITICAL and HIGH severity vulnerabilities
 - Implement security policy as code with cargo-deny
 - Regular dependency updates with automated PR creation
 - Maintain security scan result history for trend analysis
 
 ### Deployment Strategy
+
 - Implement gradual traffic shifting for safer deployments
 - Use health checks at multiple levels (container, application, business logic)
 - Maintain deployment history for quick rollback capability
 - Monitor key metrics during deployment process
 
 ### Testing Strategy
+
 - Separate unit, integration, and end-to-end testing stages
 - Use realistic test data and scenarios
 - Implement test result aggregation and reporting
@@ -119,6 +140,7 @@ This task enhances the GitHub Actions CI/CD pipeline with comprehensive testing,
 ## Task-Specific Implementation Guidelines
 
 ### 1. Enhanced GitHub Actions Workflow
+
 ```yaml
 name: Enhanced CI/CD Pipeline
 on:
@@ -167,6 +189,7 @@ jobs:
 ```
 
 ### 2. Blue-Green Deployment Script
+
 ```bash
 #!/bin/bash
 # scripts/blue_green_deploy.sh
@@ -187,7 +210,7 @@ if ./scripts/health_check.sh green; then
     # Switch traffic to green
     kubectl patch service ${APP_NAME} -p '{"spec":{"selector":{"version":"green"}}}' -n ${NAMESPACE}
     echo "Deployment successful, traffic switched to green"
-    
+
     # Scale down blue environment
     kubectl scale deployment ${APP_NAME}-blue --replicas=0 -n ${NAMESPACE}
 else
@@ -198,6 +221,7 @@ fi
 ```
 
 ### 3. Comprehensive Smoke Tests
+
 ```rust
 // tests/smoke_tests.rs
 use reqwest::Client;
@@ -211,7 +235,7 @@ async fn test_health_endpoint() {
         .send()
         .await
         .expect("Failed to send request");
-    
+
     assert_eq!(response.status(), 200);
 }
 
@@ -235,7 +259,7 @@ async fn test_mcp_tool_functionality() {
         .send()
         .await
         .expect("Failed to send request");
-    
+
     assert_eq!(response.status(), 200);
     let body: serde_json::Value = response.json().await.unwrap();
     assert!(body["result"]["content"].is_array());
@@ -243,6 +267,7 @@ async fn test_mcp_tool_functionality() {
 ```
 
 ### 4. Security Scanning Configuration
+
 ```toml
 # .cargo/deny.toml
 [advisories]
@@ -276,6 +301,7 @@ wildcards = "allow"
 ```
 
 ### 5. Performance Regression Detection
+
 ```bash
 #!/bin/bash
 # scripts/compare_performance.sh
@@ -307,24 +333,28 @@ fi
 ### Common Pipeline Issues
 
 #### Integration Test Failures
+
 - Verify PostgreSQL service container startup and health
 - Check database fixture loading and test data consistency
 - Validate test isolation and cleanup between runs
 - Monitor test execution time and resource usage
 
 #### Security Scan Failures
+
 - Review dependency vulnerability reports and remediation options
 - Check license compliance issues and approved license list
 - Validate cargo-deny configuration and policy settings
 - Monitor security scan execution time and reliability
 
 #### Blue-Green Deployment Issues
+
 - Verify Kubernetes cluster connectivity and permissions
 - Check deployment health checks and readiness probes
 - Monitor traffic switching and load balancer configuration
 - Validate rollback procedures and automation
 
 #### Performance Regression Detection
+
 - Ensure consistent benchmark execution environment
 - Validate baseline performance data and comparison logic
 - Check for environmental factors affecting performance
@@ -333,12 +363,14 @@ fi
 ### Pipeline Performance Issues
 
 #### Slow Pipeline Execution
+
 - Optimize parallel job execution and dependencies
 - Use build caching for dependencies and artifacts
 - Minimize container image sizes and layer caching
 - Profile pipeline stages for optimization opportunities
 
 #### Resource Exhaustion
+
 - Monitor GitHub Actions runner resource usage
 - Optimize test execution memory and CPU usage
 - Use appropriate runner sizes for different job types
@@ -347,12 +379,14 @@ fi
 ## Validation Steps
 
 ### Development Testing
+
 1. **Pipeline Validation**: Test all stages in feature branch
 2. **Security Integration**: Test with known vulnerabilities
 3. **Performance Testing**: Validate regression detection logic
 4. **Deployment Testing**: Test blue-green deployment in staging
 
 ### Production Validation
+
 1. **Full Pipeline**: Execute complete enhanced pipeline
 2. **Rollback Testing**: Validate automated rollback procedures
 3. **Performance Impact**: Measure pipeline execution time

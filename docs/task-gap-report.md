@@ -16,6 +16,7 @@ Status: Largely complete for MVP; one notable gap.
 - [ ] Accept header extractor and strict `Accept` validation
 
 Notes:
+
 - Current code validates request `Content-Type` and sets response headers correctly, with solid unit/integration coverage. Strict `Accept` header validation (mentioned in acceptance text) is not implemented; add a small extractor or inline check if required.
 
 ### Task 7: Database Migration and Schema Optimization
@@ -61,6 +62,7 @@ Status: Not implemented (beyond chart stubs).
 - [ ] Documentation/deployment guides not present.
 
 Artifacts seen:
+
 - `helm/agent-docs-server/Chart.yaml` and `helm/doc-server/Chart.yaml` exist without accompanying `templates/` or `values.yaml` files.
 
 ### Task 14: Container Image Optimization and CI/CD
@@ -94,5 +96,3 @@ Status: Optimization largely implemented; CI/CD and security scanning integratio
 - Task 7: Integrate `DatabaseMigrationManager` into startup, align migration job image/binary, add live migration safeguards/docs, and implement FK/partitioning/archival as per acceptance.
 - Task 13: Build out Helm `templates/` and a comprehensive `values.yaml`; wire secrets/env; add HPA/PDB/security contexts; write a deploy README; optionally include chart tests.
 - Task 14: Add `.github/workflows` for CI/CD (build, clippy/tests, Docker build with cargo-chef, push to GHCR, Trivy scan gate, Helm deploy); capture image size/benchmark artifacts in CI logs.
-
-

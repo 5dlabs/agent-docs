@@ -2,11 +2,11 @@ name: CodeQL (Rust)
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '0 3 * * 0'
+    - cron: "0 3 * * 0"
 
 permissions:
   contents: read
@@ -31,5 +31,3 @@ jobs:
         with:
           category: /language:rust
           upload: never
-
-

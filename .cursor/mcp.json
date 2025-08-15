@@ -1,7 +1,7 @@
 {
-	"mcpServers": {
-		"task-master-ai": {
-			"command": "task-master-ai"
-		}
-	}
+  "mcpServers": {
+    "task-master-ai": {
+      "command": "task-master-ai"
+    }
+  }
 }

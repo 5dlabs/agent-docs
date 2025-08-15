@@ -1,7 +1,7 @@
 {
   "remoteTools": [
     "read_file",
-    "write_file", 
+    "write_file",
     "edit_file",
     "kubernetes_listResources",
     "kubernetes_getResource",

@@ -3,26 +3,31 @@
 ## Functional Requirements
 
 ### 1. Tool Enhancements
+
 - [ ] `add_rust_crate` supports version/feature selection and rollback on failure
 - [ ] `remove_rust_crate` performs cascade deletion with soft-delete option
 - [ ] `list_rust_crates` supports pagination, filtering, and stats
 - [ ] `check_rust_status` reports health, counts, update status, and basic performance
 
 ### 2. Robustness and Integration
+
 - [ ] Atomic DB transactions with proper error handling
 - [ ] Rate limiting for external calls (docs.rs)
 - [ ] Integration with embedding batch processing (Task 7)
 
 ### 3. Performance Targets
+
 - [ ] `add_rust_crate` completes within reasonable time for typical crates
 - [ ] `list_rust_crates` and `check_rust_status` respond < 2s
 
 ## Non-Functional Requirements
+
 - [ ] Consistent error handling and logging
 - [ ] Zero data corruption on failures (rollback)
 - [ ] Tests for core operations and edge cases
 
 ### 2. Code Quality and Consistency
+
 - [ ] All tools follow identical patterns from RustQueryTool
 - [ ] Shared utilities used consistently across implementations
 - [ ] Comprehensive error handling with informative messages
@@ -30,6 +35,7 @@
 - [ ] Zero clippy warnings and proper rustfmt formatting
 
 ### 3. Reliability and Robustness
+
 - [ ] Graceful handling of missing or malformed metadata
 - [ ] Proper fallback behavior for unsupported content types
 - [ ] Thread safety for concurrent query operations
@@ -37,16 +43,19 @@
 - [ ] Consistent behavior across all documentation types
 
 ## Test Cases
+
 - [ ] Add popular crate (tokio) end-to-end succeeds
 - [ ] Remove crate cascades and soft-delete works
 - [ ] List with pagination and filters returns expected data
 - [ ] Status reports accurate metrics and detects updates
 
 ## Deliverables
+
 - [ ] Updated tools with docs and tests
 - [ ] Database helpers and migrations if needed
 
 ### Testing Suite
+
 - [ ] Unit tests for all utility functions
 - [ ] Individual tool functionality tests
 - [ ] Integration tests for complete workflows
@@ -55,6 +64,7 @@
 - [ ] Concurrent usage tests
 
 ### Documentation and Quality
+
 - [ ] Code documentation comments
 - [ ] Usage examples for each tool
 - [ ] Performance optimization notes
@@ -62,6 +72,7 @@
 - [ ] Metadata schema definitions
 
 ## Validation
+
 ```bash
 cargo test --package mcp crate_management
 cargo test --package database crate_operations

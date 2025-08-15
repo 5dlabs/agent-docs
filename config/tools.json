@@ -15,7 +15,7 @@
       }
     },
     {
-      "name": "solana_query", 
+      "name": "solana_query",
       "docType": "solana",
       "title": "Solana Documentation Query",
       "description": "Search Solana core documentation, architecture diagrams, ZK cryptography specifications, and development guides. Includes consensus, networking, and validator documentation.",
@@ -23,14 +23,25 @@
       "metadataHints": {
         "supported_formats": ["markdown", "pdf", "bob", "msc"],
         "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
-        "supported_categories": ["core", "architecture-diagrams", "sequence-diagrams", "zk-cryptography"],
-        "supported_topics": ["consensus", "networking", "validators", "cryptography", "development"],
+        "supported_categories": [
+          "core",
+          "architecture-diagrams",
+          "sequence-diagrams",
+          "zk-cryptography"
+        ],
+        "supported_topics": [
+          "consensus",
+          "networking",
+          "validators",
+          "cryptography",
+          "development"
+        ],
         "supports_api_version": false
       }
     },
     {
       "name": "jupyter_query",
-      "docType": "jupyter", 
+      "docType": "jupyter",
       "title": "Jupyter Notebook Documentation Query",
       "description": "Search interactive notebook documentation and examples across data science and development workflows.",
       "enabled": true
@@ -38,7 +49,7 @@
     {
       "name": "cilium_query",
       "docType": "cilium",
-      "title": "Cilium Documentation Query", 
+      "title": "Cilium Documentation Query",
       "description": "Search Cilium networking and security documentation for Kubernetes and cloud-native environments.",
       "enabled": true
     },
@@ -51,7 +62,7 @@
     },
     {
       "name": "meteora_query",
-      "docType": "meteora", 
+      "docType": "meteora",
       "title": "Meteora Protocol Documentation Query",
       "description": "Search Meteora DeFi protocol documentation including liquidity pools, farming, and yield strategies.",
       "enabled": true
@@ -59,7 +70,7 @@
     {
       "name": "raydium_query",
       "docType": "raydium",
-      "title": "Raydium Protocol Documentation Query", 
+      "title": "Raydium Protocol Documentation Query",
       "description": "Search Raydium DEX and AMM documentation for Solana-based trading and liquidity provision.",
       "enabled": true
     },
@@ -72,7 +83,7 @@
     },
     {
       "name": "rust_best_practices_query",
-      "docType": "rust_best_practices", 
+      "docType": "rust_best_practices",
       "title": "Rust Best Practices Query",
       "description": "Search curated Rust best practices, patterns, and guidelines for idiomatic and performant code.",
       "enabled": true
