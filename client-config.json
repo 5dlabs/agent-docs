@@ -1,9 +1,13 @@
 {
+  "remoteTools": [
+    "rust_query",
+    "solana_query"
+  ],
   "localServers": {
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
-      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file", "search_files"],
+      "tools": ["read_file", "write_file", "list_directory", "create_directory", "edit_file"],
       "workingDirectory": "project_root"
     }
   }

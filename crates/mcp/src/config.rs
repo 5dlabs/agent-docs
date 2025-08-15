@@ -173,6 +173,7 @@ mod tests {
             title: "Test".to_string(),
             description: "Test tool".to_string(),
             enabled: true,
+            metadata_hints: None,
         };
         let tool2 = tool1.clone();
         let config = ToolsConfig {
@@ -195,6 +196,7 @@ mod tests {
             title: "Test".to_string(),
             description: "Test tool".to_string(),
             enabled: true,
+            metadata_hints: None,
         };
         let config = ToolsConfig { tools: vec![tool] };
 
@@ -214,6 +216,7 @@ mod tests {
             title: "Test".to_string(),
             description: "Test tool".to_string(),
             enabled: true,
+            metadata_hints: None,
         };
         let config = ToolsConfig { tools: vec![tool] };
 
@@ -230,6 +233,7 @@ mod tests {
             title: "Enabled".to_string(),
             description: "Enabled tool".to_string(),
             enabled: true,
+            metadata_hints: None,
         };
         let tool2 = ToolConfig {
             name: "disabled_query".to_string(),
@@ -237,6 +241,7 @@ mod tests {
             title: "Disabled".to_string(),
             description: "Disabled tool".to_string(),
             enabled: false,
+            metadata_hints: None,
         };
         let config = ToolsConfig {
             tools: vec![tool1.clone(), tool2],

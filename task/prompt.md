@@ -1,37 +1,50 @@
-# Autonomous Agent Prompt: Config-Driven Documentation Query Tools (Dynamic Registration)
+# Autonomous Agent Prompt: Dynamic Tooling Extensions (Config-Driven) – Task 10
 
 ## Mission
-Implement dynamic tool registration from a JSON config. Each configured tool maps to a `docType` and shares one unified query method. Keep Rust docs tools hardcoded; all other categories (e.g., birdeye, solana, cilium) are defined in config.
 
-## Primary Objectives
-1. **Config Loader**: Read and validate JSON config (tools: name, docType, title, description, enabled)
-2. **Dynamic Registration**: Create tools at startup for each enabled config entry
-3. **Unified Query**: Route all tool calls to a shared handler filtering by `docType`
-4. **Response Formatting**: Include source attribution and relevance
-5. **Performance**: Ensure < 2 second query response time
+Generalize and extend the config-driven tool system from Task 9. Do not create hardcoded per-domain tools (e.g., Solana). Instead:
+- Ensure the JSON config can declare additional tools (name, docType, title, description, enabled).
+- Enhance the unified query handler to support optional metadata filters and adaptive formatting across all configured docTypes.
+- Keep Rust docs tooling hardcoded; all other categories are config-driven.
 
-## Implementation Steps
-1. Define config schema and place example config file
-2. Implement config reader and validation
-3. Register tools dynamically in MCP server startup
-4. Implement unified query handler that accepts `docType`
-5. Add tests for registration and query routing
+## Execution Steps
+
+1) Config and Loader
+- Validate schema supports fields: name, docType, title, description, enabled, and optional metadata hints (e.g., supported formats, topics).
+- Add/adjust example config entries to demonstrate multiple docTypes (e.g., solana, birdeye, cilium).
+
+2) Unified Query Enhancements
+- Accept optional arguments in the shared handler: `limit` (1–20), and generic filters such as `format`, `complexity`, `category`, `topic`, `api_version` when present in metadata.
+- Filter results by `docType` and apply provided filters server-side.
+- Maintain < 2s response target.
+
+3) Adaptive Response Formatting
+- If metadata indicates diagrams (bob/msc), preserve ASCII-block formatting.
+- If metadata indicates PDFs, output a concise metadata summary (location, size, description, page count, when available).
+- For markdown, present clean snippets with headers/context.
+- Always include source attribution and relevance score when available.
+
+4) Registration and Tests
+- Register dynamic tools solely from the JSON config (no new hardcoded tools).
+- Add tests to verify: tools/list includes configured tools; tools/call routes to the unified handler; metadata filters and formatting behave as expected.
 
 ## Success Criteria
-- [ ] Tools loaded from config and listed in `tools/list`
-- [ ] Unified query returns results filtered by `docType`
-- [ ] Response time < 2 seconds
-- [ ] Source attribution in responses## Quality Gates and CI/CD Process
+- Tools appear via `tools/list` based on the config.
+- `tools/call` returns results filtered by `docType` and optional metadata filters.
+- Responses include source attribution and relevance; formatting adapts to content type.
+- P50/P95 response times remain under 2 seconds in test runs.
 
-- Run static analysis after every new function is written:
-  - Command: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
-  - Fix all warnings before proceeding to write the next function.
-- Before submission, ensure the workspace is clean:
+## Quality Gates and CI/CD Process
+
+- After every new function: `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings.
+- Before submission (blocking):
   - `cargo fmt --all -- --check`
   - `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`
   - `cargo test --all-features`
-- Feature branch workflow and CI gating:
-  - Do all work on a feature branch (e.g., `feature/<task-id>-<short-name>`).
-  - Push to the remote feature branch and monitor the GitHub Actions workflow (`.github/workflows/build-server.yml`) until it is green.
-  - Require the deployment stage to complete successfully before creating a pull request.
-  - Only create the PR after the workflow is green and deployment has succeeded; otherwise fix issues and re-run.
+- Branch & CI: Work on a feature branch, push, and require a green GitHub Actions workflow (including deployment) before opening a PR.
+
+## Implementation Notes
+- Reuse `DocumentQueries` and existing DB abstractions.
+- Do not add separate structs per docType; use the unified handler and config entries only (Rust docs tool remains hardcoded).
+- Ensure parameter validation returns helpful errors; keep 1–20 bound for `limit`.
+- Add structured logs for filter usage and result counts.

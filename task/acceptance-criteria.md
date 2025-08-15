@@ -1,146 +1,136 @@
-# Acceptance Criteria: Task 9 - Config-Driven Documentation Query Tools
+# Acceptance Criteria: Task 10 - Dynamic Tooling Extensions (Config-Driven)
 
 ## Functional Requirements
 
-### 1. Dynamic Tool Implementation
-- [ ] JSON config defined and validated (tools: name, docType, title, description, enabled)
-- [ ] Tools dynamically registered at startup from config
-- [ ] Unified query handler used by all dynamic tools
-- [ ] Semantic search using pgvector similarity (<=> operator)
-- [ ] Result ranking with relevance scores implemented
+### 1. Config and Registration
+- [ ] JSON config extended/validated to define tools: `name`, `docType`, `title`, `description`, `enabled`, optional `metadataHints`
+- [ ] Dynamic tool registration from config at startup (no new hardcoded domain tools)
+- [ ] Tools appear in `tools/list` using config-provided names and descriptions
 
-### 2. Database Integration  
-- [ ] Filters documents by `docType` from tool config
-- [ ] Vector similarity search functional
-- [ ] Metadata JSONB fields parsed when present
-- [ ] Query performance < 2 seconds
+### 2. Unified Query + Metadata Filters
+- [ ] Unified handler accepts: `query` (required), `limit` (1–20), and optional filters: `format`, `complexity`, `category`, `topic`, `api_version`
+- [ ] Filters applied server-side against JSONB metadata where present
+- [ ] Vector similarity or fallback ranking used; include relevance score
+- [ ] Queries constrained to requested `docType`; response time < 2s
 
-### 3. MCP Registration
-- [ ] Tools registered dynamically during server startup
-- [ ] Appear in tools/list response with names from config
-- [ ] JSON-RPC invocation working for each dynamic tool
-- [ ] Parameter validation for query and limit
-- [ ] Error handling for invalid requests
+### 3. Adaptive Response Formatting
+- [ ] Diagram content (bob/msc) preserves ASCII formatting
+- [ ] PDFs summarized via metadata (location, size, description, page count when available)
+- [ ] Markdown snippets include headers/context
+- [ ] All responses include source attribution and relevance
 
-### 4. Response Formatting
-- [ ] Source attribution and relevance scores displayed
-- [ ] Category-appropriate fields included when present (e.g., API endpoint/method)
+### 4. MCP Interface
+- [ ] Dynamic tools return definitions that reflect unified input schema (query, limit, optional filters)
+- [ ] Parameter validation returns helpful error messages for invalid inputs
+
+### 5. MCP Handler Integration
+- [ ] Handler builds tools from config entries at startup
+- [ ] tools/list shows all enabled config tools; tools/call routes by `name`
+- [ ] Proper error handling during instantiation and invocation
 
 ## Non-Functional Requirements
 
-### 1. Performance
-- [ ] Query response time < 2 seconds
-- [ ] Concurrent query handling supported
-- [ ] Database connection pooling utilized
+### 1. Performance Requirements
+- [ ] Response time consistently < 2 seconds
+- [ ] Pooling used; memory stable under concurrent queries
 
-### 2. Data Quality
-- [ ] All configured docTypes searchable
-- [ ] Metadata accurately extracted when available
-- [ ] No duplicate results in responses
-- [ ] Relevance ranking accurate
+### 2. Code Quality Standards
+- [ ] Follows RustQueryTool patterns exactly
+- [ ] Proper error handling with informative messages
+- [ ] Comprehensive documentation comments
+- [ ] Clippy warnings resolved
+- [ ] Code formatted with rustfmt
 
-### 3. Error Handling
-- [ ] Graceful handling of missing embeddings
-- [ ] Database connection failures handled
-- [ ] Invalid query parameters rejected
-- [ ] Meaningful error messages returned
-- [ ] Fallback for unavailable cache
+### 3. Reliability and Robustness
+- [ ] Graceful handling of missing metadata fields
+- [ ] Proper error messages for invalid parameters
+- [ ] Fallback behavior for unsupported content formats
+- [ ] Database connection failure recovery
+- [ ] Concurrent query handling without race conditions
 
 ## Test Cases
 
-### Test Case 1: Basic Query (docType)
-**Given**: Configured tool `birdeye_query` with docType `birdeye`
-**When**: Query "defi price" submitted via that tool
-**Then**: Results include price-related endpoints
-**And**: Response time < 2 seconds
-**And**: Metadata includes endpoint and method
+### Test Case 1: Config Registration
+**Given**: Config defines `solana_query` and `birdeye_query`
+**When**: Server starts and lists tools
+**Then**: Both tools appear with names/descriptions from config
 
-### Test Case 2: Metadata Filtering
-**Given**: Multiple API versions present
-**When**: Query specifies api_version="v1"
-**Then**:
-- Only v1 endpoints returned
-- Filtering correctly applied
-- No v2 endpoints in results
+### Test Case 2: Format Filter
+**Given**: Mixed formats exist for a docType
+**When**: Query with `format=pdf`
+**Then**: Only PDF results returned with summarized metadata
 
-### Test Case 3: Registration from Config
-**Given**: Server starts with a config listing `birdeye_query` and `solana_query`
-**When**: Server lists tools
-**Then**: Both tools appear in `tools/list` and invoke the same unified handler with different docType
+### Test Case 3: Complexity Filter
+**Given**: Documents include `complexity`
+**When**: Query with `complexity=advanced`
+**Then**: Only advanced-level results returned and shown in output
 
-### Test Case 4: Parameter Validation
-**Given**: Tool invoked via MCP
-**When**: Invalid limit (e.g., 100) provided
-**Then**:
-- Error returned with validation message
-- No database query executed
-- 400 status code returned
+### Test Case 4: Diagram Formatting
+**Given**: Results include `bob`/`msc` diagrams
+**When**: Rendered
+**Then**: ASCII art preserved with monospace formatting
 
-### Test Case 5: Response Formatting
-**Given**: Query returns multiple results
-**When**: Results formatted for output
-**Then**:
-- Each result has endpoint URL
-- HTTP method specified
-- Parameters documented
-- Example curl command included
+### Test Case 5: Error Handling
+**Given**: Invalid `limit` or unsupported `format`
+**When**: tools/call executed
+**Then**: Validation error returned; no DB query performed
 
-## Deliverables
+## Deliverables Checklist
 
-### Code Artifacts
-- [ ] JSON config and loader/validation
-- [ ] Unified query implementation and db queries
+### Code Implementation
+- [ ] Config schema and loader enhancements
+- [ ] Unified handler filter/formatting additions
 - [ ] Dynamic tool registration code
-- [ ] Integration tests in tests/
-- [ ] Documentation comments in code
+- [ ] Integration tests for registration/routing/filters
 
-### Documentation
-- [ ] Tool usage examples
-- [ ] API endpoint coverage report
+### Testing Artifacts
+- [ ] Unit tests for SolanaQueryTool methods
+- [ ] Integration tests for MCP protocol
 - [ ] Performance benchmarks
-- [ ] Cache configuration guide
-- [ ] Troubleshooting guide
+- [ ] Error handling test cases
+- [ ] Format-specific handling tests
+
+### Documentation Updates
+- [ ] Code documentation comments
+- [ ] Tool usage examples
+- [ ] Metadata schema documentation
+- [ ] Error message catalog
+- [ ] Performance characteristics
 
 ## Validation Criteria
 
-### Automated Tests
+### Automated Testing
 ```bash
-# Unit tests for tool implementation
-cargo test birdeye_query
-
-# Integration tests with database
-cargo test --test integration birdeye
-
-# Performance benchmarks
-cargo bench birdeye_query
+# All tests must pass
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic
+cargo test --all-features
 ```
 
 ### Manual Validation
-1. Query various BirdEye endpoints
-2. Verify metadata extraction accuracy
-3. Test cache effectiveness
-4. Validate response formatting
-5. Check MCP integration
+1. **Tool Registration**: Verify 'solana_query' appears in MCP tools list
+2. **Query Execution**: Test various query patterns and filters
+3. **Format Handling**: Validate all supported content formats
+4. **Performance**: Measure response times under load
+5. **Error Scenarios**: Test with invalid inputs and edge cases
 
 ## Definition of Done
 
-Task 8 is complete when:
-
-1. **Tool fully implemented**: All code components working
-2. **Database integrated**: Vector search functional
-3. **MCP registered**: Tool accessible via server
-4. **Cache operational**: Frequently accessed data cached
-5. **Tests passing**: All unit and integration tests pass
-6. **Performance met**: < 2 second response time
-7. **Documentation complete**: Usage guide and examples provided
+1. Dynamic tools load from JSON config and list via MCP
+2. Unified handler routes calls and applies filters correctly
+3. Responses adapt formatting based on metadata and include attribution/relevance
+4. Performance target met (< 2s) in tests
+5. All quality gates pass (fmt, clippy pedantic, tests)
 
 ## Success Metrics
 
-- 100% of BirdEye endpoints searchable
-- Query response time consistently < 2 seconds
-- Cache hit rate > 60% in production
-- Zero critical bugs in implementation
-- Tool usage in production environment### NFR-0: Code Quality and Automation
+- 100% test coverage for SolanaQueryTool methods
+- Query response time p95 < 1.5 seconds
+- Zero critical clippy warnings
+- All metadata fields properly parsed and displayed
+- Cross-format search accuracy > 95%
+- Error handling covers all edge cases
+- Code review approval from technical lead### NFR-0: Code Quality and Automation
 - [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
 - [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
 - [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR

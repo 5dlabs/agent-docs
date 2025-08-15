@@ -1,216 +1,227 @@
-# Toolman Guide: Task 8 - BirdEye Query Tool Implementation
+# Toolman Guide: Task 9 - Solana Query Tool Implementation
 
 ## Overview
 
-This task focuses on implementing the BirdEye query tool for semantic search across BirdEye blockchain API documentation. The selected tools provide file system access for code implementation and the birdeye_query tool for testing once implemented.
+This task implements the SolanaQueryTool for semantic search across Solana blockchain documentation. The selected tools provide file system access for code development and testing of the documentation query capabilities.
 
 ## Core Tools
 
 ### Filesystem Server Tools
 
-Essential for implementing the query tool code and database integration.
+Essential for implementing and testing the Solana query functionality.
 
 #### read_file
-**Purpose**: Examine existing code patterns and structures
-**When to Use**:
-- Review existing RustQueryTool implementation as template
-- Check database query patterns in queries.rs
-- Examine tool registration in handlers.rs
-**Example**:
+**Purpose**: Read and analyze existing code patterns and implementation details
+**When to Use**: 
+- Examining existing RustQueryTool implementation for patterns
+- Reading Solana documentation files for testing
+- Analyzing database schema and query utilities
+- Reviewing existing tool implementations
+
+**Usage Example**:
 ```
 read_file("/workspace/crates/mcp/src/tools.rs")
 ```
 
-#### write_file / edit_file
-**Purpose**: Implement the BirdEyeQueryTool
+#### write_file
+**Purpose**: Create new implementation files and test cases
 **When to Use**:
-- Create new tool implementation
-- Add database query methods
-- Update handler registration
-**Example**:
+- Implementing SolanaQueryTool struct and methods
+- Creating unit and integration tests
+- Writing helper utilities for metadata parsing
+- Adding documentation and examples
+
+**Usage Example**:
 ```
-edit_file("/workspace/crates/mcp/src/tools.rs", "impl BirdEyeQueryTool...")
+write_file("/workspace/crates/mcp/src/tools.rs", "impl SolanaQueryTool { ... }")
 ```
 
-#### search_files
-**Purpose**: Find relevant code locations
+#### edit_file
+**Purpose**: Modify existing files to integrate new functionality
 **When to Use**:
-- Locate tool trait definitions
-- Find database query examples
-- Search for metadata parsing patterns
-**Example**:
+- Adding SolanaQueryTool to existing tools module
+- Updating MCP handler registration
+- Modifying database queries module
+- Adding new dependencies to Cargo.toml
+
+**Usage Example**:
 ```
-search_files("*.rs", "Tool trait")
+edit_file("/workspace/crates/mcp/src/handlers.rs", add_solana_tool_registration)
 ```
 
-### Query Tool (Once Implemented)
-
-#### birdeye_query
-**Purpose**: Test the implemented BirdEye documentation search
+#### list_directory
+**Purpose**: Navigate project structure and understand codebase organization
 **When to Use**:
-- Validate search functionality after implementation
-- Test metadata filtering capabilities
-- Verify response formatting
+- Exploring crates directory structure
+- Finding existing test files for pattern reference
+- Locating documentation and example files
+- Understanding workspace organization
+
+**Usage Example**:
+```
+list_directory("/workspace/crates/mcp/src")
+```
+
+### Remote Tools
+
+#### rust_query
+**Purpose**: Query existing Rust documentation for implementation patterns
+**When to Use**:
+- Understanding existing tool implementations
+- Finding code patterns for semantic search
+- Testing query functionality during development
+- Validating tool integration works correctly
+
 **Parameters**:
-- `query`: Search string for BirdEye endpoints
-- `limit`: Maximum results (1-20)
-- `api_version`: Optional filter for API version
+- `query`: Search terms for Rust documentation
+- `limit`: Number of results to return
+
+#### solana_query
+**Purpose**: Test the newly implemented Solana query tool
+**When to Use**:
+- Validating tool registration and availability
+- Testing semantic search functionality
+- Verifying metadata filtering works correctly
+- Checking format-specific content handling
+
+**Parameters**:
+- `query`: Search terms for Solana documentation
+- `limit`: Number of results (1-20)
+- `format`: Optional filter (markdown/pdf/bob/msc)
+- `complexity`: Optional complexity level filter
 
 ## Implementation Flow
 
-### Phase 1: Code Analysis
-1. Use `read_file` to study RustQueryTool implementation
-2. Examine database query patterns in queries.rs
-3. Review tool registration in handlers.rs
-4. Understand metadata structure for BirdEye docs
+### Phase 1: Code Analysis and Pattern Understanding
+1. Use `read_file` to examine existing RustQueryTool implementation
+2. Study database query patterns and utilities
+3. Understand MCP tool registration process
+4. Review metadata parsing approaches
 
-### Phase 2: Tool Implementation
-1. Create BirdEyeQueryTool struct in tools.rs
-2. Implement Tool trait with definition
-3. Add semantic search functionality
-4. Implement metadata parsing for BirdEye fields
+### Phase 2: Core Implementation
+1. Use `write_file` to create SolanaQueryTool struct
+2. Implement semantic search with metadata filtering
+3. Add content formatting for different document types
+4. Create comprehensive Tool trait implementation
 
-### Phase 3: Database Integration
-1. Add birdeye_vector_search to queries.rs
-2. Implement pgvector similarity search
-3. Add metadata filtering logic
-4. Optimize query performance
+### Phase 3: Integration and Registration
+1. Use `edit_file` to register tool in MCP handler
+2. Update tools module exports
+3. Modify database queries if needed
+4. Add proper error handling throughout
 
-### Phase 4: MCP Registration
-1. Register tool in McpHandler::new()
-2. Add to tools HashMap
-3. Ensure proper error handling
-4. Test registration success
-
-### Phase 5: Testing
-1. Use birdeye_query tool to test searches
-2. Validate metadata extraction
-3. Test cache functionality
-4. Verify response formatting
+### Phase 4: Testing and Validation
+1. Create unit tests using `write_file`
+2. Use `solana_query` tool to test functionality
+3. Validate different content format handling
+4. Test metadata filtering capabilities
 
 ## Best Practices
 
-### Code Implementation
-- Follow existing RustQueryTool patterns
-- Maintain consistent error handling
-- Use proper async/await patterns
-- Implement comprehensive logging
+### Code Development
+- Follow existing RustQueryTool patterns exactly
+- Use consistent error handling approaches
+- Implement proper logging for debugging
+- Add comprehensive documentation comments
 
-### Database Queries
-- Use parameterized queries for safety
-- Implement proper connection pooling
-- Handle pgvector operations correctly
-- Optimize for performance
+### Testing Strategy
+- Test all metadata filtering combinations
+- Validate each content format handling
+- Test error scenarios and edge cases
+- Verify performance requirements are met
 
-### Caching Strategy
-- Cache frequently accessed endpoints
-- Implement 15-minute TTL
-- Use thread-safe HashMap
-- Monitor cache hit rates
+### Integration Approach
+- Register tool properly in MCP handler
+- Ensure database queries are optimized
+- Add appropriate validation for all parameters
+- Handle missing metadata gracefully
 
-### Response Formatting
-- Include all relevant endpoint details
-- Generate useful examples
-- Format for readability
-- Include relevance scores
+## Task-Specific Implementation Guidelines
+
+### 1. SolanaQueryTool Structure
+```rust
+pub struct SolanaQueryTool {
+    db_pool: Arc<DatabasePool>,
+    embedding_client: Arc<dyn EmbeddingClient>,
+}
+```
+
+### 2. Metadata Field Handling
+- **category**: architecture-diagrams, sequence-diagrams, zk-cryptography
+- **format**: markdown, pdf, bob, msc
+- **section**: Document section identifier
+- **complexity**: Difficulty level filter
+- **topic**: Subject matter categorization
+
+### 3. Content Formatting Logic
+- **BOB diagrams**: Preserve ASCII structure with monospace formatting
+- **MSC charts**: Maintain sequence flow visualization
+- **PDF documents**: Extract and display metadata summary
+- **Markdown**: Apply proper header hierarchy and code blocks
+
+### 4. Performance Optimization
+- Use pgvector similarity search with <=> operator
+- Implement result ranking by relevance score
+- Cache frequently accessed metadata patterns
+- Optimize database query performance
 
 ## Troubleshooting
 
-### Common Issues
+### Common Implementation Issues
 
-#### Vector Search Failures
-- Verify pgvector extension installed
-- Check embedding dimensions match (3072)
-- Ensure proper vector operators used
-- Validate database connectivity
+#### Database Connection Errors
+- Verify database pool initialization
+- Check connection string configuration
+- Ensure pgvector extension is available
+- Test vector similarity operations
 
-#### Metadata Parsing Errors
-- Check JSONB field structure
-- Handle missing fields gracefully
-- Validate JSON parsing logic
-- Test with various metadata formats
+#### Metadata Parsing Problems
+- Handle missing JSONB fields gracefully
+- Validate metadata structure before parsing
+- Provide default values for optional fields
+- Log parsing errors for debugging
 
-#### Performance Issues
-- Optimize database queries
-- Implement proper indexing
-- Use connection pooling
-- Enable query caching
+#### Tool Registration Failures
+- Verify tool name 'solana_query' is unique
+- Check MCP handler initialization order
+- Ensure proper error handling in constructor
+- Validate tool definition JSON schema
 
-#### Registration Problems
-- Verify tool name uniqueness
-- Check handler initialization
-- Validate tool definition JSON
-- Ensure proper state management
-
-## Task-Specific Implementation
-
-### BirdEye Metadata Structure
-```json
-{
-  "api_version": "v1",
-  "endpoint": "/defi/price",
-  "method": "GET",
-  "parameters": {
-    "address": "string",
-    "chain": "solana"
-  },
-  "response_schema": {
-    "price": "number",
-    "timestamp": "unix"
-  }
-}
-```
-
-### Query Patterns
-1. **Endpoint search**: Find specific API endpoints
-2. **Method filtering**: Filter by GET/POST/PUT/DELETE
-3. **Version filtering**: Limit to specific API versions
-4. **Parameter search**: Find endpoints with specific parameters
-
-### Response Format Example
-```json
-{
-  "results": [
-    {
-      "endpoint": "/defi/price",
-      "method": "GET",
-      "description": "Get token price",
-      "parameters": [...],
-      "example": "curl -X GET ...",
-      "relevance": 0.95
-    }
-  ]
-}
-```
-
-## Performance Optimization
-
-### Query Optimization
-- Use appropriate pgvector indexes
-- Limit result set early
-- Optimize similarity thresholds
-- Batch similar queries
-
-### Cache Implementation
-- Use async RwLock for thread safety
-- Implement LRU eviction if needed
-- Monitor memory usage
-- Track cache statistics
+### Performance Issues
+- Check vector index usage in queries
+- Monitor database connection pool utilization
+- Profile memory usage during large result sets
+- Optimize metadata filtering query patterns
 
 ## Validation Steps
 
-1. **Unit Tests**: Test each component in isolation
-2. **Integration Tests**: Test full query flow
-3. **Performance Tests**: Benchmark response times
-4. **Load Tests**: Verify concurrent query handling
-5. **Acceptance Tests**: Validate against criteria
+### Development Testing
+1. **Compilation**: Ensure code compiles without warnings
+2. **Unit Tests**: All SolanaQueryTool methods tested
+3. **Integration**: Tool available through MCP protocol
+4. **Performance**: Response times under 2 seconds
+
+### Functional Testing
+1. **Query Execution**: Test various search patterns
+2. **Format Filtering**: Validate each content type
+3. **Metadata Filtering**: Test complexity and topic filters
+4. **Error Handling**: Verify graceful error responses
+
+### Quality Assurance
+```bash
+# Run these commands to validate implementation
+cargo test --package mcp solana_query
+cargo clippy --package mcp --lib
+cargo fmt --package mcp --check
+cargo doc --package mcp --no-deps
+```
 
 ## Success Indicators
 
-- All BirdEye endpoints searchable
-- Response times < 2 seconds
-- Cache improving performance
-- Accurate metadata extraction
-- Proper error handling
-- Clean code structure
-- Comprehensive test coverage
+- SolanaQueryTool registers successfully in MCP server
+- Semantic search returns relevant Solana documentation
+- All content formats handled appropriately
+- Metadata filtering works as specified
+- Performance targets consistently met
+- Error handling graceful and informative
+- Code quality meets project standards
