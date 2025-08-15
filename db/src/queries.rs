@@ -1,6 +1,7 @@
 //! Database query operations
 
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use std::time::{Duration, Instant};
@@ -628,5 +629,382 @@ impl QueryPerformanceMonitor {
 
         let explain_result: serde_json::Value = row.get(0);
         Ok(explain_result.to_string())
+    }
+}
+
+/// Crate job query operations
+pub struct CrateJobQueries;
+
+impl CrateJobQueries {
+    /// Create a new crate job
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database insertion fails.
+    pub async fn create_job(
+        pool: &PgPool,
+        crate_name: &str,
+        operation: &str,
+    ) -> Result<crate::models::CrateJob> {
+        let job_id = uuid::Uuid::new_v4();
+        let now = chrono::Utc::now();
+
+        let row = sqlx::query_as::<_, crate::models::CrateJob>(
+            r"
+            INSERT INTO crate_jobs (id, crate_name, operation, status, started_at, created_at, updated_at)
+            VALUES ($1, $2, $3, 'queued', $4, $4, $4)
+            RETURNING *
+            "
+        )
+        .bind(job_id)
+        .bind(crate_name)
+        .bind(operation)
+        .bind(now)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// Find job by ID
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub async fn find_job_by_id(
+        pool: &PgPool,
+        job_id: uuid::Uuid,
+    ) -> Result<Option<crate::models::CrateJob>> {
+        let row =
+            sqlx::query_as::<_, crate::models::CrateJob>("SELECT * FROM crate_jobs WHERE id = $1")
+                .bind(job_id)
+                .fetch_optional(pool)
+                .await?;
+
+        Ok(row)
+    }
+
+    /// Update job status
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database update fails.
+    pub async fn update_job_status(
+        pool: &PgPool,
+        job_id: uuid::Uuid,
+        status: crate::models::JobStatus,
+        progress: Option<i32>,
+        error: Option<&str>,
+    ) -> Result<crate::models::CrateJob> {
+        let now = chrono::Utc::now();
+        let finished_at = if matches!(
+            status,
+            crate::models::JobStatus::Completed
+                | crate::models::JobStatus::Failed
+                | crate::models::JobStatus::Cancelled
+        ) {
+            Some(now)
+        } else {
+            None
+        };
+
+        let row = sqlx::query_as::<_, crate::models::CrateJob>(
+            r"
+            UPDATE crate_jobs 
+            SET status = $2, progress = $3, error = $4, finished_at = $5, updated_at = $6
+            WHERE id = $1
+            RETURNING *
+            ",
+        )
+        .bind(job_id)
+        .bind(status)
+        .bind(progress)
+        .bind(error)
+        .bind(finished_at)
+        .bind(now)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// Find active jobs (queued or running)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub async fn find_active_jobs(pool: &PgPool) -> Result<Vec<crate::models::CrateJob>> {
+        let rows = sqlx::query_as::<_, crate::models::CrateJob>(
+            r"
+            SELECT * FROM crate_jobs 
+            WHERE status IN ('queued', 'running')
+            ORDER BY created_at ASC
+            ",
+        )
+        .fetch_all(pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    /// Clean up old completed jobs
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the cleanup operation fails.
+    pub async fn cleanup_old_jobs(pool: &PgPool) -> Result<i32> {
+        let result = sqlx::query(
+            r"
+            DELETE FROM crate_jobs 
+            WHERE status IN ('completed', 'failed', 'cancelled') 
+            AND finished_at < CURRENT_TIMESTAMP - INTERVAL '30 days'
+            ",
+        )
+        .execute(pool)
+        .await?;
+
+        #[allow(clippy::cast_possible_truncation)] // Database row counts are expected to fit in i32
+        Ok(result.rows_affected() as i32)
+    }
+}
+
+/// Crate-related query operations (using documents table only)
+pub struct CrateQueries;
+
+impl CrateQueries {
+    /// Get list of crates from document metadata with pagination
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub async fn list_crates(
+        pool: &PgPool,
+        pagination: &crate::models::PaginationParams,
+        name_pattern: Option<&str>,
+    ) -> Result<crate::models::PaginatedResponse<crate::models::CrateInfo>> {
+        // Build the base query for crate information from documents
+        let mut query_parts = vec![r"
+            WITH crate_stats AS (
+                SELECT 
+                    metadata->>'crate_name' as crate_name,
+                    metadata->>'crate_version' as crate_version,
+                    COUNT(*) as total_docs,
+                    COALESCE(SUM(token_count), 0) as total_tokens,
+                    MAX(created_at) as last_updated
+                FROM documents 
+                WHERE doc_type = 'rust' 
+                AND metadata->>'crate_name' IS NOT NULL
+            "
+        .to_string()];
+
+        // Add name pattern filter if provided
+        if name_pattern.is_some() {
+            query_parts.push("AND metadata->>'crate_name' ILIKE $3".to_string());
+        }
+
+        query_parts.push(
+            r"
+                GROUP BY metadata->>'crate_name', metadata->>'crate_version'
+            )
+            SELECT 
+                crate_name as name,
+                crate_version as version,
+                '' as description,
+                '' as documentation_url,
+                total_docs::int as total_docs,
+                total_tokens,
+                last_updated
+            FROM crate_stats
+            ORDER BY crate_name
+            LIMIT $1 OFFSET $2
+        "
+            .to_string(),
+        );
+
+        let query_str = query_parts.join(" ");
+
+        // Execute main query
+        let mut query = sqlx::query_as::<
+            _,
+            (String, String, String, String, i32, i64, DateTime<Utc>),
+        >(&query_str)
+        .bind(pagination.limit)
+        .bind(pagination.offset);
+
+        if let Some(pattern) = name_pattern {
+            query = query.bind(format!("%{pattern}%"));
+        }
+
+        let rows = query.fetch_all(pool).await?;
+
+        // Get total count
+        let mut count_query_parts = vec![r"
+            SELECT COUNT(DISTINCT metadata->>'crate_name') 
+            FROM documents 
+            WHERE doc_type = 'rust' 
+            AND metadata->>'crate_name' IS NOT NULL
+            "
+        .to_string()];
+
+        if name_pattern.is_some() {
+            count_query_parts.push("AND metadata->>'crate_name' ILIKE $1".to_string());
+        }
+
+        let count_query_str = count_query_parts.join(" ");
+        let mut count_query = sqlx::query_scalar::<_, i64>(&count_query_str);
+
+        if let Some(pattern) = name_pattern {
+            count_query = count_query.bind(format!("%{pattern}%"));
+        }
+
+        let total_items = count_query.fetch_one(pool).await?;
+
+        // Convert rows to CrateInfo
+        let items = rows
+            .into_iter()
+            .map(
+                |(
+                    name,
+                    version,
+                    description,
+                    documentation_url,
+                    total_docs,
+                    total_tokens,
+                    last_updated,
+                )| {
+                    crate::models::CrateInfo {
+                        name,
+                        version,
+                        description: if description.is_empty() {
+                            None
+                        } else {
+                            Some(description)
+                        },
+                        documentation_url: if documentation_url.is_empty() {
+                            None
+                        } else {
+                            Some(documentation_url)
+                        },
+                        total_docs,
+                        total_tokens,
+                        last_updated,
+                    }
+                },
+            )
+            .collect();
+
+        Ok(crate::models::PaginatedResponse::new(
+            items,
+            pagination,
+            total_items,
+        ))
+    }
+
+    /// Get crate statistics
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub async fn get_crate_statistics(pool: &PgPool) -> Result<crate::models::CrateStatistics> {
+        let row = sqlx::query_as::<_, (i64, i64, i64, Option<DateTime<Utc>>)>(
+            r"
+            WITH crate_stats AS (
+                SELECT 
+                    metadata->>'crate_name' as crate_name,
+                    COUNT(*) as docs_count,
+                    COALESCE(SUM(token_count), 0) as tokens_count,
+                    MAX(created_at) as last_updated
+                FROM documents 
+                WHERE doc_type = 'rust' 
+                AND metadata->>'crate_name' IS NOT NULL
+                GROUP BY metadata->>'crate_name'
+            )
+            SELECT 
+                COUNT(*) as total_crates,
+                COUNT(*) as active_crates,
+                COALESCE(SUM(docs_count), 0) as total_docs,
+                MAX(last_updated) as last_update
+            FROM crate_stats
+            ",
+        )
+        .fetch_one(pool)
+        .await?;
+
+        let (total_crates, active_crates, total_docs, last_update) = row;
+
+        // Get total tokens separately
+        let total_tokens = sqlx::query_scalar::<_, Option<i64>>(
+            r"
+            SELECT COALESCE(SUM(token_count), 0) 
+            FROM documents 
+            WHERE doc_type = 'rust' 
+            AND metadata->>'crate_name' IS NOT NULL
+            ",
+        )
+        .fetch_one(pool)
+        .await?
+        .unwrap_or(0);
+
+        let average_docs_per_crate = if total_crates > 0 {
+            #[allow(clippy::cast_precision_loss)] // Acceptable precision loss for statistics
+            {
+                total_docs as f64 / total_crates as f64
+            }
+        } else {
+            0.0
+        };
+
+        Ok(crate::models::CrateStatistics {
+            total_crates,
+            active_crates,
+            total_docs_managed: total_docs,
+            total_tokens_managed: total_tokens,
+            average_docs_per_crate,
+            last_update,
+        })
+    }
+
+    /// Check if crate exists by name
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub async fn find_crate_by_name(
+        pool: &PgPool,
+        crate_name: &str,
+    ) -> Result<Option<crate::models::CrateInfo>> {
+        let row = sqlx::query_as::<_, (String, String, i64, i64, DateTime<Utc>)>(
+            r"
+            SELECT 
+                metadata->>'crate_name' as name,
+                metadata->>'crate_version' as version,
+                COUNT(*) as total_docs,
+                COALESCE(SUM(token_count), 0) as total_tokens,
+                MAX(created_at) as last_updated
+            FROM documents 
+            WHERE doc_type = 'rust' 
+            AND metadata->>'crate_name' = $1
+            GROUP BY metadata->>'crate_name', metadata->>'crate_version'
+            LIMIT 1
+            ",
+        )
+        .bind(crate_name)
+        .fetch_optional(pool)
+        .await?;
+
+        if let Some((name, version, total_docs, total_tokens, last_updated)) = row {
+            Ok(Some(crate::models::CrateInfo {
+                name,
+                version,
+                description: None,
+                documentation_url: None,
+                #[allow(clippy::cast_possible_truncation)] // Document counts are expected to fit in i32
+                total_docs: total_docs as i32,
+                total_tokens,
+                last_updated,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }
