@@ -219,7 +219,7 @@ jobs:
       - name: Deploy with Helm
         run: |
           kubectl create namespace mcp --dry-run=client -o yaml | kubectl apply -f -
-          helm upgrade --install doc-server ./helm/agent-docs-server \
+          helm upgrade --install doc-server ./helm/doc-server \
             --namespace mcp \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/server \
             --set image.tag=${{ needs.version.outputs.version }} \
