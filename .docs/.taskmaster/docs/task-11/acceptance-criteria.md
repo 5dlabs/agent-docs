@@ -11,11 +11,11 @@
 
 ### 2. Database and Storage
 
-- [ ] New `crates` table present; atomic transactions used
-- [ ] Documents and embeddings written with crate metadata
+- [ ] No new `crates` table added; we use existing `documents` and `document_sources`
+- [ ] Documents and embeddings written with crate metadata (e.g., `metadata.crate_name`, `metadata.version`)
 - [ ] Deletions remove related docs/embeddings without orphans
 - [ ] Audit logs for add/remove/status
-- [ ] New `crate_jobs` table persists job state and history (UUID id, crate_name, operation, status, progress, started_at, finished_at, error) so job IDs survive restarts
+- [ ] `crate_jobs` table persists job state and history (UUID id, crate_name, operation, status, progress, started_at, finished_at, error) so job IDs survive restarts
 
 ### 3. Performance and Reliability
 

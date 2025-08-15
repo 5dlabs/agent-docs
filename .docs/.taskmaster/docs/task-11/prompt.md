@@ -8,28 +8,29 @@ Create a complete Rust crate management system with automatic documentation fetc
 
 ## Execution Steps
 
-### Step 1: Create Core Data Structures and Database Schema
+### Step 1: Core Structures and Existing Schema Usage
 
-- Extend database schema with 'crates' table containing:
-  - id, name, version, description, documentation_url
-  - last_updated, status (active/inactive/updating)
-  - metadata JSONB field
-- Create RustCrateManager struct in `crates/mcp/src/tools.rs`
+- Do NOT create a new `crates` table. Use the existing harmonized schema:
+  - Store Rust crate documentation in `documents` with `doc_type = 'rust'`
+  - Store crate-level/source configuration in `document_sources` (per crate)
+  - Use `documents.metadata` JSON for crate-specific attributes (e.g., `{"crate_name":"tokio","version":"1.0"}`)
+- Create `RustCrateManager` struct in `mcp/src/tools.rs`
 - Add database pool, embedding client, and HTTP client fields
-- Create CrateInfo and CrateStatus models in `crates/database/src/models.rs`
-- Implement transaction helper methods for atomic operations
+- Add transaction helper methods for atomic operations where needed
+
+Optional new table for job tracking (recommended): `crate_jobs` to persist async job state
 
 ### Step 2: Implement add_rust_crate Tool with docs.rs Integration (Async)
 
 - Build AddRustCrateTool following Tool trait pattern that enqueues a background job and returns 202 Accepted
-- Add docs.rs API client in `crates/doc-loader/src/loaders.rs`
+- Add docs.rs API client in `loader/src/loaders.rs`
 - Implement rate limiting (max 10 requests/minute) using tokio::time::interval
 - Parse HTML documentation with scraper crate:
   - Extract modules, structs, functions, examples
   - Store in documents table with proper metadata
   - Generate embeddings for documentation chunks
 - Add version checking for update detection
-- Register tool in McpHandler
+- Register tool in `mcp/src/handlers.rs`
 
 ### Step 3: Implement remove_rust_crate Tool with Cascade Deletion
 
@@ -111,23 +112,22 @@ Your implementation is complete when:
 - Log all operations for audit and debugging
 - Ensure thread safety for concurrent operations
 
-## Database Schema Requirements
+## Database Schema Notes
+
+- Use existing tables `documents` and `document_sources`; do not add a `crates` table
+- Recommended new table for job persistence (so job IDs survive restarts):
 
 ```sql
-CREATE TABLE crates (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    version VARCHAR(50) NOT NULL,
-    description TEXT,
-    documentation_url TEXT,
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(20) DEFAULT 'active',
-    metadata JSONB DEFAULT '{}'::jsonb
+CREATE TABLE IF NOT EXISTS crate_jobs (
+    id UUID PRIMARY KEY,
+    crate_name TEXT NOT NULL,
+    operation TEXT NOT NULL CHECK (operation IN ('ingest','remove')),
+    status TEXT NOT NULL CHECK (status IN ('queued','running','failed','complete')),
+    progress INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    error TEXT
 );
-
-CREATE INDEX idx_crates_name ON crates(name);
-CREATE INDEX idx_crates_status ON crates(status);
-CREATE INDEX idx_crates_last_updated ON crates(last_updated);
 ```
 
 ## Tool Definitions Required

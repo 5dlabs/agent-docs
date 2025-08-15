@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implement Rust crate management via MCP tools with non-blocking ingestion: `add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`. Calling `add_rust_crate` MUST enqueue a background job that fetches from docs.rs, parses, chunks, embeds, and stores docs. The request returns 202 Accepted with a job ID; progress is available via `check_rust_status`. Persist job state in a `crate_jobs` table so job IDs survive restarts.
+Implement Rust crate management via MCP tools with non-blocking ingestion: `add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`. Calling `add_rust_crate` MUST enqueue a background job that fetches from docs.rs, parses, chunks, embeds, and stores docs in the existing `documents` table with `doc_type='rust'` and crate-specific metadata. The request returns 202 Accepted with a job ID; progress is available via `check_rust_status`. Persist job state in a `crate_jobs` table so job IDs survive restarts.
 
 ## Implementation Guide
 
