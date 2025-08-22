@@ -566,9 +566,7 @@ impl DatabaseMigrationManager {
             .await
         {
             Ok(_) => {
-                info!(
-                    "pgvector type accepts 3072 dimensions (text-embedding-3-large compatible)"
-                );
+                info!("pgvector type accepts 3072 dimensions (text-embedding-3-large compatible)");
             }
             Err(_) => {
                 report.issues.push(
