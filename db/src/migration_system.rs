@@ -559,20 +559,20 @@ impl DatabaseMigrationManager {
         &self,
         report: &mut SchemaValidationReport,
     ) -> Result<()> {
-        // Check if we can create a 3072-dimensional vector (OpenAI text-embedding-3-large)
-        match sqlx::query("SELECT '[1,2,3]'::vector(3072) as test_vector")
+        // Check if the type `vector(3072)` is accepted by the server (OpenAI text-embedding-3-large)
+        // Use NULL::vector(3072) to validate type support without requiring a 3072-length literal
+        match sqlx::query("SELECT NULL::vector(3072) as test_vector")
             .fetch_one(&self.pool)
             .await
         {
             Ok(_) => {
                 info!(
-                    "pgvector supports 3072 dimensions (OpenAI text-embedding-3-large compatible)"
+                    "pgvector type accepts 3072 dimensions (text-embedding-3-large compatible)"
                 );
             }
             Err(_) => {
-                // This is expected - current pgvector has 2000 dimension limit
                 report.issues.push(
-                    "pgvector does not support 3072 dimensions. Vector queries will work but be slower without index support. Consider upgrading pgvector or using 1536 dimensions.".to_string()
+                    "pgvector may not support 3072-dimensional vectors on this instance. If you intend to use 3072-dim embeddings, consider upgrading the pgvector extension or switch to a 1536-dim model.".to_string()
                 );
             }
         }

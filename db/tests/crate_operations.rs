@@ -8,7 +8,7 @@
 use anyhow::Result;
 use chrono::Utc;
 use db::models::{JobStatus, PaginationParams};
-use db::{CrateJobQueries, CrateQueries, DatabasePool, Row};
+use db::{CrateJobQueries, CrateQueries, DatabasePool, PoolConfig, Row};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -23,8 +23,12 @@ impl DatabaseTestFixture {
     async fn new() -> Result<Self> {
         let database_url = std::env::var("TEST_DATABASE_URL")
             .unwrap_or_else(|_| "postgresql://test:test@localhost:5433/test_docs".to_string());
-
-        let pool = DatabasePool::new(&database_url).await?.pool().clone();
+        // Use a leaner pool config for tests to avoid exhausting DB connections in CI
+        let mut config = PoolConfig::testing();
+        config.database_url = database_url;
+        config.min_connections = 1;
+        config.max_connections = 5;
+        let pool = DatabasePool::with_config(config).await?.pool().clone();
         let test_crate_name = format!("db-test-crate-{}", Uuid::new_v4());
 
         Ok(Self {

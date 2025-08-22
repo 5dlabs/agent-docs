@@ -12,21 +12,33 @@
       "githubApp": "5DLabs-Morgan"
     },
     "code": {
-      "model": "claude-sonnet-4-20250514",
+      "model": "claude-opus-4-1-20250805",
       "githubApp": "5DLabs-Rex",
       "continueSession": false,
       "workingDirectory": ".",
       "overwriteMemory": false,
+      "repository": "5dlabs/cto",
+      "docsRepository": "5dlabs/cto",
+      "docsProjectDirectory": "docs",
+      "service": "cto"
+    },
+    "play": {
+      "model": "claude-sonnet-4-20250514",
+      "implementationAgent": "5DLabs-Rex",
+      "qualityAgent": "5DLabs-Cleo",
+      "testingAgent": "5DLabs-Tess",
       "repository": "5dlabs/agent-docs",
+      "service": "cto",
       "docsRepository": "5dlabs/agent-docs",
-      "docsProjectDirectory": ".docs",
-      "service": "agent-docs"
+      "docsProjectDirectory": "docs"
     }
   },
   "agents": {
     "morgan": "5DLabs-Morgan",
     "rex": "5DLabs-Rex",
     "blaze": "5DLabs-Blaze",
-    "cipher": "5DLabs-Cipher"
+    "cipher": "5DLabs-Cipher",
+    "cleo": "5DLabs-Cleo",
+    "tess": "5DLabs-Tess"
   }
 }
