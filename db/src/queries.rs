@@ -826,7 +826,15 @@ impl CrateQueries {
         // Execute main query
         let mut query = sqlx::query_as::<
             _,
-            (String, String, String, String, i32, i64, DateTime<Utc>),
+            (
+                String,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                i32,
+                i64,
+                DateTime<Utc>,
+            ),
         >(&query_str)
         .bind(pagination.limit)
         .bind(pagination.offset);
@@ -874,17 +882,9 @@ impl CrateQueries {
                 )| {
                     crate::models::CrateInfo {
                         name,
-                        version,
-                        description: if description.is_empty() {
-                            None
-                        } else {
-                            Some(description)
-                        },
-                        documentation_url: if documentation_url.is_empty() {
-                            None
-                        } else {
-                            Some(documentation_url)
-                        },
+                        version: version.unwrap_or_else(|| "latest".to_string()),
+                        description: description.filter(|s| !s.is_empty()),
+                        documentation_url: documentation_url.filter(|s| !s.is_empty()),
                         total_docs,
                         total_tokens,
                         last_updated,
@@ -933,17 +933,16 @@ impl CrateQueries {
         let (total_crates, active_crates, total_docs, last_update) = row;
 
         // Get total tokens separately
-        let total_tokens = sqlx::query_scalar::<_, Option<i64>>(
+        let total_tokens = sqlx::query_scalar::<_, i64>(
             r"
-            SELECT COALESCE(SUM(token_count), 0) 
+            SELECT COALESCE(SUM(CAST(token_count AS BIGINT)), 0) 
             FROM documents 
             WHERE doc_type = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
             ",
         )
         .fetch_one(pool)
-        .await?
-        .unwrap_or(0);
+        .await?;
 
         let average_docs_per_crate = if total_crates > 0 {
             #[allow(clippy::cast_precision_loss)] // Acceptable precision loss for statistics
