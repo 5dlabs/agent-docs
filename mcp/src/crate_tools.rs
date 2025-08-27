@@ -19,7 +19,7 @@ use embed::client::EmbeddingClient;
 use loader::loaders::RustLoader;
 use serde_json::{json, Value};
 use sqlx;
-use std::{fmt::Write as _, sync::Arc};
+use std::sync::Arc;
 // use tokio::task; // Commented out for MVP - not using background tasks
 use uuid::Uuid;
 
@@ -95,40 +95,46 @@ impl Tool for AddRustCrateTool {
             ));
         }
 
-        // For MVP, run synchronously to avoid Send/Sync complexity with scraper
-        // Enqueue the job first
+        // Enqueue the background job
         let job_id = self.job_processor.enqueue_add_crate_job(crate_name).await?;
 
-        // Process immediately for MVP
-        let mut rust_loader = RustLoader::new();
-        match Self::process_crate_ingestion(
-            &self.job_processor,
-            &mut rust_loader,
-            &self.embedding_client,
-            &self.db_pool,
-            job_id,
-            crate_name,
-            version,
-        )
-        .await
-        {
-            Ok(()) => Ok(format!(
-                "Crate '{}' ingestion completed successfully. Job ID: {}",
-                crate_name, job_id
-            )),
-            Err(e) => {
-                tracing::error!("Crate ingestion failed: {}", e);
-                // Update job status to failed
-                if let Err(update_err) = self
-                    .job_processor
+        // Spawn background processing task
+        let job_processor = self.job_processor.clone();
+        let rust_loader = RustLoader::new();
+        let embedding_client = self.embedding_client.clone();
+        let db_pool = self.db_pool.clone();
+        let crate_name_owned = crate_name.to_string();
+        let version_owned = version.map(String::from);
+
+        tokio::spawn(async move {
+            let mut rust_loader = rust_loader;
+            if let Err(e) = Self::process_crate_ingestion(
+                &job_processor,
+                &mut rust_loader,
+                &embedding_client,
+                &db_pool,
+                job_id,
+                &crate_name_owned,
+                version_owned.as_deref(),
+            )
+            .await
+            {
+                tracing::error!("Background crate ingestion failed: {}", e);
+                if let Err(update_err) = job_processor
                     .update_job_status(job_id, JobStatus::Failed, Some(0), Some(&e.to_string()))
                     .await
                 {
                     tracing::error!("Failed to update job status to failed: {}", update_err);
                 }
-                Err(e)
             }
-        }
+        });
+
+        // Return 202 Accepted with job ID immediately
+        Ok(serde_json::to_string(&serde_json::json!({
+            "status": "accepted",
+            "message": format!("Crate '{}' ingestion job enqueued successfully", crate_name),
+            "job_id": job_id.to_string()
+        }))?)
     }
 }
 
@@ -340,7 +346,12 @@ impl Tool for RemoveRustCrateTool {
         // Check if crate exists
         let crate_info = CrateQueries::find_crate_by_name(self.db_pool.pool(), crate_name).await?;
         let Some(_crate_info) = crate_info else {
-            return Ok(format!("Crate '{}' not found in the system.", crate_name));
+            return Ok(serde_json::to_string(&serde_json::json!({
+                "success": false,
+                "message": format!("Crate '{}' not found in the system", crate_name),
+                "documents_removed": 0,
+                "operation": if soft_delete { "soft_delete" } else { "hard_delete" }
+            }))?);
         };
 
         if soft_delete {
@@ -383,10 +394,12 @@ impl RemoveRustCrateTool {
             documents_deleted.rows_affected()
         );
 
-        Ok(format!(
-            "Crate '{}' removed successfully. Deleted {} documents and all associated embeddings.",
-            crate_name, doc_count
-        ))
+        Ok(serde_json::to_string(&serde_json::json!({
+            "success": true,
+            "message": format!("Crate '{}' removed successfully", crate_name),
+            "documents_removed": doc_count,
+            "operation": "hard_delete"
+        }))?)
     }
 
     /// Perform soft deletion by marking documents as inactive
@@ -403,7 +416,12 @@ impl RemoveRustCrateTool {
 
         if doc_count == 0 {
             tx.rollback().await?;
-            return Ok(format!("Crate '{}' not found in the system.", crate_name));
+            return Ok(serde_json::to_string(&serde_json::json!({
+                "success": false,
+                "message": format!("Crate '{}' not found in the system", crate_name),
+                "documents_affected": 0,
+                "operation": "soft_delete"
+            }))?);
         }
 
         // Update metadata to mark as inactive
@@ -428,10 +446,12 @@ impl RemoveRustCrateTool {
             updated.rows_affected()
         );
 
-        Ok(format!(
-            "Crate '{}' marked as inactive. {} documents remain in the system but are not searchable.",
-            crate_name, doc_count
-        ))
+        Ok(serde_json::to_string(&serde_json::json!({
+            "success": true,
+            "message": format!("Crate '{}' marked as inactive", crate_name),
+            "documents_affected": doc_count,
+            "operation": "soft_delete"
+        }))?)
     }
 }
 
@@ -525,79 +545,18 @@ impl Tool for ListRustCratesTool {
             None
         };
 
-        // Format response
-        let mut output = format!(
-            "Rust Crates (Page {} of {}, {} total items):\n\n",
-            response.page, response.total_pages, response.total_items
-        );
-
-        // Add comprehensive statistics if requested
-        if let Some(stats) = &stats {
-            output.push_str("📊 **System Statistics:**\n");
-            let _ = write!(
-                &mut output,
-                "   Total Crates: {} (Active: {})\n",
-                stats.total_crates, stats.active_crates
-            );
-            let _ = write!(
-                &mut output,
-                "   Total Documents: {}\n",
-                stats.total_docs_managed
-            );
-            let _ = write!(
-                &mut output,
-                "   Total Tokens: {}\n",
-                stats.total_tokens_managed
-            );
-            let _ = write!(
-                &mut output,
-                "   Average Docs per Crate: {:.1}\n",
-                stats.average_docs_per_crate
-            );
-            if let Some(last_update) = &stats.last_update {
-                let _ = write!(
-                    &mut output,
-                    "   Last Update: {}\n",
-                    last_update.format("%Y-%m-%d %H:%M UTC")
-                );
-            }
-            output.push('\n');
-        }
-
-        for crate_info in &response.items {
-            let _ = write!(
-                &mut output,
-                "📦 **{}** (v{})\n   Docs: {} | Tokens: {} | Updated: {}\n",
-                crate_info.name,
-                crate_info.version,
-                crate_info.total_docs,
-                crate_info.total_tokens,
-                crate_info.last_updated.format("%Y-%m-%d %H:%M UTC")
-            );
-
-            if let Some(description) = &crate_info.description {
-                let _ = write!(&mut output, "   Description: {}\n", description);
-            }
-
-            output.push('\n');
-        }
-
-        // Add pagination info
-        if response.has_previous || response.has_next {
-            output.push_str("Navigation:\n");
-            if response.has_previous {
-                output.push_str("  ← Use page=");
-                output.push_str(&(response.page - 1).to_string());
-                output.push_str(" for previous\n");
-            }
-            if response.has_next {
-                output.push_str("  → Use page=");
-                output.push_str(&(response.page + 1).to_string());
-                output.push_str(" for next\n");
-            }
-        }
-
-        Ok(output)
+        // Create JSON response
+        Ok(serde_json::to_string(&serde_json::json!({
+            "crates": response.items,
+            "pagination": {
+                "page": response.page,
+                "total_pages": response.total_pages,
+                "total_items": response.total_items,
+                "has_previous": response.has_previous,
+                "has_next": response.has_next
+            },
+            "statistics": stats
+        }))?)
     }
 }
 
@@ -634,6 +593,10 @@ impl Tool for CheckRustStatusTool {
                     "include_active_jobs": {
                         "type": "boolean",
                         "description": "Include list of active/recent jobs (default: true)"
+                    },
+                    "crate_name": {
+                        "type": "string",
+                        "description": "Filter status for specific crate (optional)"
                     }
                 },
                 "required": []
@@ -643,105 +606,51 @@ impl Tool for CheckRustStatusTool {
 
     async fn execute(&self, arguments: Value) -> Result<String> {
         let job_id = arguments.get("job_id").and_then(Value::as_str);
+        let crate_name = arguments.get("crate_name").and_then(Value::as_str);
         let include_active_jobs = arguments
             .get("include_active_jobs")
             .and_then(Value::as_bool)
             .unwrap_or(true);
 
-        let mut output = String::new();
-
-        // If specific job ID requested
-        if let Some(job_id_str) = job_id {
+        // Handle specific job ID requests
+        let specific_job_info = if let Some(job_id_str) = job_id {
             let job_id =
                 Uuid::parse_str(job_id_str).map_err(|_| anyhow!("Invalid job ID format"))?;
 
             match self.job_processor.get_job_status(job_id).await? {
-                Some(job) => {
-                    let _ = write!(&mut output, "Job Status: {}\n\n", job_id);
-                    let _ = write!(&mut output, "  Crate: {}\n", job.crate_name);
-                    let _ = write!(&mut output, "  Operation: {}\n", job.operation);
-                    let _ = write!(&mut output, "  Status: {:?}\n", job.status);
-                    if let Some(progress) = job.progress {
-                        let _ = write!(&mut output, "  Progress: {}%\n", progress);
-                    }
-                    let _ = write!(
-                        &mut output,
-                        "  Started: {}\n",
-                        job.started_at.format("%Y-%m-%d %H:%M:%S UTC")
-                    );
-                    if let Some(finished) = job.finished_at {
-                        let _ = write!(
-                            &mut output,
-                            "  Finished: {}\n",
-                            finished.format("%Y-%m-%d %H:%M:%S UTC")
-                        );
-                    }
-                    if let Some(error) = &job.error {
-                        let _ = write!(&mut output, "  Error: {}\n", error);
-                    }
-                    output.push('\n');
-                }
-                None => {
-                    let _ = write!(&mut output, "Job {} not found.\n\n", job_id);
-                }
+                Some(job) => Some(serde_json::json!({
+                    "found": true,
+                    "id": job.id,
+                    "crate_name": job.crate_name,
+                    "operation": job.operation,
+                    "status": job.status,
+                    "progress": job.progress,
+                    "started_at": job.started_at,
+                    "finished_at": job.finished_at,
+                    "error": job.error
+                })),
+                None => Some(serde_json::json!({
+                    "found": false,
+                    "message": format!("Job {} not found", job_id)
+                })),
             }
-        }
+        } else {
+            None
+        };
 
         // Get overall system statistics
         let stats = CrateQueries::get_crate_statistics(self.db_pool.pool()).await?;
 
-        output.push_str("🦀 Rust Crate Management System Status\n\n");
+        // Get crate-specific information if requested
+        let crate_specific_info = if let Some(name) = crate_name {
+            CrateQueries::find_crate_by_name(self.db_pool.pool(), name).await?
+        } else {
+            None
+        };
 
-        let _ = write!(&mut output, "📊 **System Statistics:**\n");
-        let _ = write!(&mut output, "  • Total Crates: {}\n", stats.total_crates);
-        let _ = write!(&mut output, "  • Active Crates: {}\n", stats.active_crates);
-        let _ = write!(
-            &mut output,
-            "  • Total Documents: {}\n",
-            stats.total_docs_managed
-        );
-        let _ = write!(
-            &mut output,
-            "  • Total Tokens: {}\n",
-            stats.total_tokens_managed
-        );
-        let _ = write!(
-            &mut output,
-            "  • Average Docs/Crate: {:.1}\n",
-            stats.average_docs_per_crate
-        );
-
-        if let Some(last_update) = stats.last_update {
-            let _ = write!(
-                &mut output,
-                "  • Last Update: {}\n",
-                last_update.format("%Y-%m-%d %H:%M UTC")
-            );
-        }
-
-        output.push('\n');
-
-        // Show active/recent jobs if requested
-        if include_active_jobs {
+        // Get job information if requested
+        let job_data = if include_active_jobs {
             let active_jobs = CrateJobQueries::find_active_jobs(self.db_pool.pool()).await?;
-
-            if !active_jobs.is_empty() {
-                output.push_str("🔄 **Active Jobs:**\n");
-                for job in &active_jobs {
-                    let _ = write!(
-                        &mut output,
-                        "  • {} [{}] - {} ({:?}",
-                        job.crate_name, job.id, job.operation, job.status
-                    );
-                    if let Some(progress) = job.progress {
-                        let _ = write!(&mut output, " - {}%", progress);
-                    }
-                    output.push_str(")\n");
-                }
-                output.push('\n');
-            }
-
-            // Show recent completed jobs
             let all_jobs = sqlx::query_as::<_, CrateJob>(
                 "SELECT * FROM crate_jobs ORDER BY started_at DESC LIMIT 5",
             )
@@ -754,62 +663,71 @@ impl Tool for CheckRustStatusTool {
                 .take(3)
                 .collect();
 
-            if !recent_completed.is_empty() {
-                output.push_str("📋 **Recent Jobs:**\n");
-                for job in recent_completed {
-                    let _ = write!(
-                        &mut output,
-                        "  • {} - {} ({:?}) - {}\n",
-                        job.crate_name,
-                        job.operation,
-                        job.status,
-                        job.started_at.format("%m-%d %H:%M")
-                    );
-                }
-                output.push('\n');
-            }
-        }
+            Some(serde_json::json!({
+                "active_jobs": active_jobs,
+                "recent_jobs": recent_completed,
+                "total_jobs": active_jobs.len() + recent_completed.len()
+            }))
+        } else {
+            None
+        };
 
-        // Database connectivity and performance check
+        // Database health check
         let start_time = std::time::Instant::now();
         let db_health = sqlx::query("SELECT 1 as health")
             .fetch_one(self.db_pool.pool())
             .await;
         let db_response_time = start_time.elapsed();
 
-        output.push_str("🔍 **System Health:**\n");
-        match db_health {
-            Ok(_) => {
-                let _ = write!(
-                    &mut output,
-                    "  ✅ Database: Connected and responsive ({:.2}ms)\n",
-                    db_response_time.as_secs_f64() * 1000.0
-                );
+        let (health_status, is_healthy) = match &db_health {
+            Ok(_) => (
+                serde_json::json!({
+                    "status": "healthy",
+                    "connected": true,
+                    "response_time_ms": db_response_time.as_secs_f64() * 1000.0
+                }),
+                true,
+            ),
+            Err(e) => (
+                serde_json::json!({
+                    "status": "unhealthy",
+                    "connected": false,
+                    "error": e.to_string()
+                }),
+                false,
+            ),
+        };
+
+        // Build final response
+        let mut response = serde_json::json!({
+            "database_status": health_status,
+            "crate_statistics": stats,
+            "system_health": {
+                "status": if is_healthy { "healthy" } else { "unhealthy" }
             }
-            Err(e) => {
-                let _ = write!(&mut output, "  ❌ Database: Error - {}\n", e);
-            }
+        });
+
+        if let Some(jobs) = job_data {
+            response["job_statistics"] = jobs;
         }
 
-        // Get additional storage metrics (temporarily disabled due to DB schema issues)
-        // if let Ok(storage_info) = self.get_storage_metrics().await {
-        //     output.push_str(&format!("  📁 Storage Usage:\n"));
-        //     output.push_str(&format!("    • Documents table: {} records\n", storage_info.documents_count));
-        //     output.push_str(&format!("    • Embeddings: {} with vectors\n", storage_info.embeddings_count));
-        //     output.push_str(&format!("    • Average content size: {} chars\n", storage_info.avg_content_size));
-        //     output.push_str(&format!("    • Database size estimate: {:.1} MB\n", storage_info.estimated_size_mb));
-        // }
+        if let Some(job_info) = specific_job_info {
+            response["job_info"] = job_info;
+        }
 
-        // Get job queue metrics (temporarily disabled due to DB schema issues)
-        // if let Ok(job_metrics) = self.get_job_metrics().await {
-        //     output.push_str(&format!("  ⚙️ Job Queue Metrics:\n"));
-        //     output.push_str(&format!("    • Queued jobs: {}\n", job_metrics.queued_jobs));
-        //     output.push_str(&format!("    • Running jobs: {}\n", job_metrics.running_jobs));
-        //     output.push_str(&format!("    • Completed jobs (24h): {}\n", job_metrics.completed_jobs_24h));
-        //     output.push_str(&format!("    • Failed jobs (24h): {}\n", job_metrics.failed_jobs_24h));
-        // }
+        if let Some(crate_info) = crate_specific_info {
+            response["crate_info"] = serde_json::json!({
+                "name": crate_info.name,
+                "version": crate_info.version,
+                "total_docs": crate_info.total_docs,
+                "total_tokens": crate_info.total_tokens,
+                "last_updated": crate_info.last_updated,
+                "description": crate_info.description,
+                "documentation_url": crate_info.documentation_url
+            });
+        }
 
-        Ok(output)
+        Ok(serde_json::to_string(&response)?)
     }
 }
 
