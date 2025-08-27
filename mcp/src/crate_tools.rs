@@ -142,7 +142,8 @@ impl Tool for AddRustCrateTool {
             "message": "Crate ingestion job enqueued successfully",
             "job_id": job_id.to_string(),
             "crate_name": crate_name
-        }).to_string())
+        })
+        .to_string())
     }
 }
 
@@ -359,7 +360,8 @@ impl Tool for RemoveRustCrateTool {
                 "message": format!("Crate '{}' not found in the system.", crate_name),
                 "documents_removed": 0,
                 "crate_name": crate_name
-            }).to_string());
+            })
+            .to_string());
         };
 
         if soft_delete {
@@ -429,7 +431,8 @@ impl RemoveRustCrateTool {
                 "message": format!("Crate '{}' not found in the system.", crate_name),
                 "job_id": null,
                 "crate_name": crate_name
-            }).to_string());
+            })
+            .to_string());
         }
 
         // Update metadata to mark as inactive
@@ -555,17 +558,21 @@ impl Tool for ListRustCratesTool {
         };
 
         // Convert crates to JSON array
-        let crates_json: Vec<Value> = response.items.iter().map(|crate_info| {
-            json!({
-                "name": crate_info.name,
-                "version": crate_info.version,
-                "description": crate_info.description,
-                "documentation_url": crate_info.documentation_url,
-                "total_docs": crate_info.total_docs,
-                "total_tokens": crate_info.total_tokens,
-                "last_updated": crate_info.last_updated.format("%Y-%m-%d %H:%M UTC").to_string()
+        let crates_json: Vec<Value> = response
+            .items
+            .iter()
+            .map(|crate_info| {
+                json!({
+                    "name": crate_info.name,
+                    "version": crate_info.version,
+                    "description": crate_info.description,
+                    "documentation_url": crate_info.documentation_url,
+                    "total_docs": crate_info.total_docs,
+                    "total_tokens": crate_info.total_tokens,
+                    "last_updated": crate_info.last_updated.format("%Y-%m-%d %H:%M UTC").to_string()
+                })
             })
-        }).collect();
+            .collect();
 
         // Build pagination object
         let pagination_json = json!({
@@ -694,7 +701,7 @@ impl Tool for CheckRustStatusTool {
                 "connected": false,
                 "error": e.to_string(),
                 "status": "unhealthy"
-            })
+            }),
         };
 
         // Build crate statistics
@@ -715,11 +722,23 @@ impl Tool for CheckRustStatusTool {
         .fetch_all(self.db_pool.pool())
         .await?;
 
-        let queued_jobs = active_jobs.iter().filter(|job| matches!(job.status, JobStatus::Queued)).count();
-        let running_jobs = active_jobs.iter().filter(|job| matches!(job.status, JobStatus::Running)).count();
+        let queued_jobs = active_jobs
+            .iter()
+            .filter(|job| matches!(job.status, JobStatus::Queued))
+            .count();
+        let running_jobs = active_jobs
+            .iter()
+            .filter(|job| matches!(job.status, JobStatus::Running))
+            .count();
         let total_jobs = all_jobs.len();
-        let completed_jobs = all_jobs.iter().filter(|job| matches!(job.status, JobStatus::Completed)).count();
-        let failed_jobs = all_jobs.iter().filter(|job| matches!(job.status, JobStatus::Failed)).count();
+        let completed_jobs = all_jobs
+            .iter()
+            .filter(|job| matches!(job.status, JobStatus::Completed))
+            .count();
+        let failed_jobs = all_jobs
+            .iter()
+            .filter(|job| matches!(job.status, JobStatus::Failed))
+            .count();
 
         let job_statistics = json!({
             "total_jobs": total_jobs,
@@ -731,16 +750,19 @@ impl Tool for CheckRustStatusTool {
 
         // Build active jobs list if requested
         if include_active_jobs && !active_jobs.is_empty() {
-            let active_jobs_json: Vec<Value> = active_jobs.iter().map(|job| {
-                json!({
-                    "id": job.id.to_string(),
-                    "crate_name": job.crate_name,
-                    "operation": job.operation,
-                    "status": format!("{:?}", job.status),
-                    "progress": job.progress,
-                    "started_at": job.started_at.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+            let active_jobs_json: Vec<Value> = active_jobs
+                .iter()
+                .map(|job| {
+                    json!({
+                        "id": job.id.to_string(),
+                        "crate_name": job.crate_name,
+                        "operation": job.operation,
+                        "status": format!("{:?}", job.status),
+                        "progress": job.progress,
+                        "started_at": job.started_at.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+                    })
                 })
-            }).collect();
+                .collect();
             response_json["active_jobs"] = json!(active_jobs_json);
         }
 
