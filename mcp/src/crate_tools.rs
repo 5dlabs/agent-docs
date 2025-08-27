@@ -100,16 +100,18 @@ impl Tool for AddRustCrateTool {
             }).to_string());
         }
 
-        // Enqueue the background job
+        // Enqueue background job and return 202 immediately
         let job_id = self.job_processor.enqueue_add_crate_job(crate_name).await?;
 
-        // For MVP, spawn background task for processing
-        // Clone necessary data for the background task
+        // Store crate name for response before moving into async block
+        let crate_name_for_response = crate_name.to_string();
+
+        // Spawn background task for ingestion
         let job_processor = self.job_processor.clone();
         let embedding_client = Arc::clone(&self.embedding_client);
         let db_pool = self.db_pool.clone();
-        let crate_name_owned = crate_name.to_string();
-        let version_owned = version.map(std::string::ToString::to_string);
+        let crate_name_for_task = crate_name.to_string();
+        let version_owned = version.map(ToString::to_string);
 
         // Spawn background processing task
         tokio::spawn(async move {
@@ -120,12 +122,12 @@ impl Tool for AddRustCrateTool {
                 &embedding_client,
                 &db_pool,
                 job_id,
-                &crate_name_owned,
+                &crate_name_for_task,
                 version_owned.as_deref(),
             )
             .await
             {
-                tracing::error!("Background crate ingestion failed: {}", e);
+                tracing::error!("Crate ingestion failed for {}: {}", crate_name_for_task, e);
                 // Update job status to failed
                 if let Err(update_err) = job_processor
                     .update_job_status(job_id, JobStatus::Failed, Some(0), Some(&e.to_string()))
@@ -136,14 +138,13 @@ impl Tool for AddRustCrateTool {
             }
         });
 
-        // Return 202 response immediately with job ID
+        // Return 202 response immediately with job ID (combining both formats for compatibility)
         Ok(json!({
-            "status": 202,
-            "message": "Crate ingestion job enqueued successfully",
+            "status": "accepted",
             "job_id": job_id.to_string(),
-            "crate_name": crate_name
-        })
-        .to_string())
+            "message": format!("Crate '{}' ingestion queued successfully. Use check_rust_status with job_id to track progress.", crate_name_for_response),
+            "crate_name": crate_name_for_response
+        }).to_string())
     }
 }
 
