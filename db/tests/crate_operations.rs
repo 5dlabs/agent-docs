@@ -21,14 +21,8 @@ struct DatabaseTestFixture {
 
 impl DatabaseTestFixture {
     async fn new() -> Result<Self> {
-        let database_url =
-            std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
-
-        // Skip tests if no real database is available
-        if database_url == "mock" {
-            eprintln!("Skipping crate operations test - no test database available");
-            return Err(anyhow::anyhow!("No test database available"));
-        }
+        let database_url = std::env::var("TEST_DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://vector_user:EFwiPWDXMoOI2VKNF4eO3eSm8n3hzmjognKytNk2ndskgOAZgEBGDQULE6ryDc7z@vector-postgres.databases.svc.cluster.local:5432/vector_db".to_string());
 
         // Use a leaner pool config for tests to avoid exhausting DB connections in CI
         let mut config = PoolConfig::testing();
@@ -96,12 +90,6 @@ impl DatabaseTestFixture {
 
 #[tokio::test]
 async fn test_crate_job_lifecycle() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
     let fixture = DatabaseTestFixture::new().await?;
 
     // Create a new job
@@ -154,12 +142,7 @@ async fn test_crate_job_lifecycle() -> Result<()> {
 
 #[tokio::test]
 async fn test_crate_job_error_handling() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Create a job and mark it as failed
@@ -187,12 +170,7 @@ async fn test_crate_job_error_handling() -> Result<()> {
 
 #[tokio::test]
 async fn test_find_active_jobs() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Create multiple jobs in different states
@@ -235,12 +213,7 @@ async fn test_find_active_jobs() -> Result<()> {
 
 #[tokio::test]
 async fn test_cleanup_old_jobs() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Create a job and mark it as completed
@@ -268,12 +241,7 @@ async fn test_cleanup_old_jobs() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_crates_from_documents() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -301,12 +269,7 @@ async fn test_list_crates_from_documents() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_crates_with_name_filter() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -331,12 +294,7 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_crates_pagination() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -357,12 +315,7 @@ async fn test_list_crates_pagination() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_crate_statistics() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -384,12 +337,7 @@ async fn test_get_crate_statistics() -> Result<()> {
 
 #[tokio::test]
 async fn test_find_crate_by_name() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -415,12 +363,7 @@ async fn test_find_crate_by_name() -> Result<()> {
 
 #[tokio::test]
 async fn test_crate_document_metadata_queries() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert documents with different metadata
@@ -485,12 +428,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
 
 #[tokio::test]
 async fn test_concurrent_database_operations() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Test concurrent job creation
@@ -530,12 +468,7 @@ async fn test_concurrent_database_operations() -> Result<()> {
 
 #[tokio::test]
 async fn test_transaction_rollback_simulation() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Simulate transaction failure by trying to insert invalid data
@@ -563,12 +496,7 @@ async fn test_transaction_rollback_simulation() -> Result<()> {
 /// Test database connection and basic functionality
 #[tokio::test]
 async fn test_database_connection() -> Result<()> {
-    // Skip test if no database available
-    if std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string()) == "mock" {
-        eprintln!("Skipping test - no test database available");
-        return Ok(());
-    }
-
+    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Test basic query
