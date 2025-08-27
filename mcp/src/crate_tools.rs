@@ -20,7 +20,6 @@ use loader::loaders::RustLoader;
 use serde_json::{json, Value};
 use sqlx;
 use std::{fmt::Write as _, sync::Arc};
-// use tokio::task; // Commented out for MVP - not using background tasks
 use uuid::Uuid;
 
 use crate::tools::Tool;
@@ -95,40 +94,48 @@ impl Tool for AddRustCrateTool {
             ));
         }
 
-        // For MVP, run synchronously to avoid Send/Sync complexity with scraper
-        // Enqueue the job first
+        // Enqueue the job and return 202 Accepted immediately
         let job_id = self.job_processor.enqueue_add_crate_job(crate_name).await?;
 
-        // Process immediately for MVP
-        let mut rust_loader = RustLoader::new();
-        match Self::process_crate_ingestion(
-            &self.job_processor,
-            &mut rust_loader,
-            &self.embedding_client,
-            &self.db_pool,
-            job_id,
-            crate_name,
-            version,
-        )
-        .await
-        {
-            Ok(()) => Ok(format!(
-                "Crate '{}' ingestion completed successfully. Job ID: {}",
-                crate_name, job_id
-            )),
-            Err(e) => {
-                tracing::error!("Crate ingestion failed: {}", e);
+        // Store original crate name for response message
+        let crate_name_for_response = crate_name.to_string();
+
+        // Start the background processing task
+        let job_processor = self.job_processor.clone();
+        let embedding_client = Arc::clone(&self.embedding_client);
+        let db_pool = self.db_pool.clone();
+        let crate_name_for_task = crate_name.to_string();
+        let version_opt = version.map(String::from);
+
+        tokio::spawn(async move {
+            let mut rust_loader = RustLoader::new();
+            if let Err(e) = Self::process_crate_ingestion(
+                &job_processor,
+                &mut rust_loader,
+                &embedding_client,
+                &db_pool,
+                job_id,
+                &crate_name_for_task,
+                version_opt.as_deref(),
+            )
+            .await
+            {
+                tracing::error!("Background crate ingestion failed: {}", e);
                 // Update job status to failed
-                if let Err(update_err) = self
-                    .job_processor
+                if let Err(update_err) = job_processor
                     .update_job_status(job_id, JobStatus::Failed, Some(0), Some(&e.to_string()))
                     .await
                 {
                     tracing::error!("Failed to update job status to failed: {}", update_err);
                 }
-                Err(e)
             }
-        }
+        });
+
+        // Return 202 Accepted with job ID immediately
+        Ok(format!(
+            "HTTP 202 Accepted: Crate '{}' ingestion enqueued. Job ID: {} - use check_rust_status to monitor progress.",
+            crate_name_for_response, job_id
+        ))
     }
 }
 
