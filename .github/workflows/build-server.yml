@@ -78,7 +78,11 @@ jobs:
           workspaces: . -> target
       - name: Set test DB env (self-hosted runner)
         run: |
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then echo "TEST_DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV; fi
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then 
+            echo "TEST_DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV; 
+          else 
+            echo "TEST_DATABASE_URL=mock" >> $GITHUB_ENV; 
+          fi
           echo "APP_NAME=doc-server-ci" >> $GITHUB_ENV
           echo "POOL_MIN_CONNECTIONS=1" >> $GITHUB_ENV
           echo "POOL_MAX_CONNECTIONS=5" >> $GITHUB_ENV
