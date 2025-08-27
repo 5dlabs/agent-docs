@@ -19,7 +19,7 @@ use embed::client::EmbeddingClient;
 use loader::loaders::RustLoader;
 use serde_json::{json, Value};
 use sqlx;
-use std::{fmt::Write as _, sync::Arc};
+use std::sync::Arc;
 // use tokio::task; // Commented out for MVP - not using background tasks
 use uuid::Uuid;
 
@@ -89,10 +89,16 @@ impl Tool for AddRustCrateTool {
         if let Some(existing_crate) =
             CrateQueries::find_crate_by_name(self.db_pool.pool(), crate_name).await?
         {
-            return Ok(format!(
-                "Crate '{}' already exists in the system (version: {}). Use remove_rust_crate first if you want to re-add it.",
-                crate_name, existing_crate.version
-            ));
+            let response = json!({
+                "status": "already_exists",
+                "crate_name": crate_name,
+                "existing_version": existing_crate.version,
+                "message": format!(
+                    "Crate '{}' already exists in the system (version: {}). Use remove_rust_crate first if you want to re-add it.",
+                    crate_name, existing_crate.version
+                )
+            });
+            return Ok(response.to_string());
         }
 
         // For MVP, run synchronously to avoid Send/Sync complexity with scraper
@@ -112,10 +118,15 @@ impl Tool for AddRustCrateTool {
         )
         .await
         {
-            Ok(()) => Ok(format!(
-                "Crate '{}' ingestion completed successfully. Job ID: {}",
-                crate_name, job_id
-            )),
+            Ok(()) => {
+                let response = json!({
+                    "status": "completed",
+                    "job_id": job_id.to_string(),
+                    "crate_name": crate_name,
+                    "message": format!("Crate '{}' ingestion completed successfully", crate_name)
+                });
+                Ok(response.to_string())
+            }
             Err(e) => {
                 tracing::error!("Crate ingestion failed: {}", e);
                 // Update job status to failed
@@ -126,7 +137,14 @@ impl Tool for AddRustCrateTool {
                 {
                     tracing::error!("Failed to update job status to failed: {}", update_err);
                 }
-                Err(e)
+
+                let error_response = json!({
+                    "status": "failed",
+                    "job_id": job_id.to_string(),
+                    "crate_name": crate_name,
+                    "error": e.to_string()
+                });
+                Ok(error_response.to_string())
             }
         }
     }
@@ -340,12 +358,41 @@ impl Tool for RemoveRustCrateTool {
         // Check if crate exists
         let crate_info = CrateQueries::find_crate_by_name(self.db_pool.pool(), crate_name).await?;
         let Some(_crate_info) = crate_info else {
-            return Ok(format!("Crate '{}' not found in the system.", crate_name));
+            let response = json!({
+                "success": true,
+                "crate_name": crate_name,
+                "documents_removed": 0,
+                "message": format!("Crate '{}' not found in the system", crate_name)
+            });
+            return Ok(response.to_string());
         };
 
         if soft_delete {
-            // Soft delete - mark documents as inactive in metadata
-            self.perform_soft_deletion(crate_name).await
+            // Soft delete - create a job for background processing and return job ID
+            let job_processor = CrateJobProcessor::new(self.db_pool.clone());
+            let job_id = job_processor.enqueue_remove_crate_job(crate_name).await?;
+
+            // For MVP, execute immediately
+            match self.perform_soft_deletion(crate_name).await {
+                Ok(_) => {
+                    let _ = job_processor
+                        .update_job_status(job_id, JobStatus::Completed, Some(100), None)
+                        .await;
+                    let response = json!({
+                        "success": true,
+                        "job_id": job_id.to_string(),
+                        "crate_name": crate_name,
+                        "message": format!("Soft delete job created for crate '{}'", crate_name)
+                    });
+                    Ok(response.to_string())
+                }
+                Err(e) => {
+                    let _ = job_processor
+                        .update_job_status(job_id, JobStatus::Failed, Some(0), Some(&e.to_string()))
+                        .await;
+                    Err(e)
+                }
+            }
         } else {
             // Hard delete with cascade - use full transaction
             self.perform_cascade_deletion(crate_name).await
@@ -383,10 +430,13 @@ impl RemoveRustCrateTool {
             documents_deleted.rows_affected()
         );
 
-        Ok(format!(
-            "Crate '{}' removed successfully. Deleted {} documents and all associated embeddings.",
-            crate_name, doc_count
-        ))
+        let response = json!({
+            "success": true,
+            "crate_name": crate_name,
+            "documents_removed": doc_count,
+            "message": format!("Crate '{}' removed successfully. Deleted {} documents and all associated embeddings", crate_name, doc_count)
+        });
+        Ok(response.to_string())
     }
 
     /// Perform soft deletion by marking documents as inactive
@@ -403,7 +453,13 @@ impl RemoveRustCrateTool {
 
         if doc_count == 0 {
             tx.rollback().await?;
-            return Ok(format!("Crate '{}' not found in the system.", crate_name));
+            let response = json!({
+                "success": true,
+                "crate_name": crate_name,
+                "documents_updated": 0,
+                "message": format!("Crate '{}' not found in the system", crate_name)
+            });
+            return Ok(response.to_string());
         }
 
         // Update metadata to mark as inactive
@@ -428,10 +484,13 @@ impl RemoveRustCrateTool {
             updated.rows_affected()
         );
 
-        Ok(format!(
-            "Crate '{}' marked as inactive. {} documents remain in the system but are not searchable.",
-            crate_name, doc_count
-        ))
+        let response = json!({
+            "success": true,
+            "crate_name": crate_name,
+            "documents_updated": doc_count,
+            "message": format!("Crate '{}' marked as inactive. {} documents remain in the system but are not searchable", crate_name, doc_count)
+        });
+        Ok(response.to_string())
     }
 }
 
@@ -525,79 +584,31 @@ impl Tool for ListRustCratesTool {
             None
         };
 
-        // Format response
-        let mut output = format!(
-            "Rust Crates (Page {} of {}, {} total items):\n\n",
-            response.page, response.total_pages, response.total_items
-        );
+        // Build JSON response
+        let mut json_response = json!({
+            "crates": response.items,
+            "pagination": {
+                "page": response.page,
+                "total_pages": response.total_pages,
+                "total_items": response.total_items,
+                "has_previous": response.has_previous,
+                "has_next": response.has_next
+            }
+        });
 
         // Add comprehensive statistics if requested
-        if let Some(stats) = &stats {
-            output.push_str("📊 **System Statistics:**\n");
-            let _ = write!(
-                &mut output,
-                "   Total Crates: {} (Active: {})\n",
-                stats.total_crates, stats.active_crates
-            );
-            let _ = write!(
-                &mut output,
-                "   Total Documents: {}\n",
-                stats.total_docs_managed
-            );
-            let _ = write!(
-                &mut output,
-                "   Total Tokens: {}\n",
-                stats.total_tokens_managed
-            );
-            let _ = write!(
-                &mut output,
-                "   Average Docs per Crate: {:.1}\n",
-                stats.average_docs_per_crate
-            );
-            if let Some(last_update) = &stats.last_update {
-                let _ = write!(
-                    &mut output,
-                    "   Last Update: {}\n",
-                    last_update.format("%Y-%m-%d %H:%M UTC")
-                );
-            }
-            output.push('\n');
+        if let Some(stats) = stats {
+            json_response["statistics"] = json!({
+                "total_crates": stats.total_crates,
+                "active_crates": stats.active_crates,
+                "total_documents": stats.total_docs_managed,
+                "total_tokens": stats.total_tokens_managed,
+                "average_docs_per_crate": stats.average_docs_per_crate,
+                "last_update": stats.last_update
+            });
         }
 
-        for crate_info in &response.items {
-            let _ = write!(
-                &mut output,
-                "📦 **{}** (v{})\n   Docs: {} | Tokens: {} | Updated: {}\n",
-                crate_info.name,
-                crate_info.version,
-                crate_info.total_docs,
-                crate_info.total_tokens,
-                crate_info.last_updated.format("%Y-%m-%d %H:%M UTC")
-            );
-
-            if let Some(description) = &crate_info.description {
-                let _ = write!(&mut output, "   Description: {}\n", description);
-            }
-
-            output.push('\n');
-        }
-
-        // Add pagination info
-        if response.has_previous || response.has_next {
-            output.push_str("Navigation:\n");
-            if response.has_previous {
-                output.push_str("  ← Use page=");
-                output.push_str(&(response.page - 1).to_string());
-                output.push_str(" for previous\n");
-            }
-            if response.has_next {
-                output.push_str("  → Use page=");
-                output.push_str(&(response.page + 1).to_string());
-                output.push_str(" for next\n");
-            }
-        }
-
-        Ok(output)
+        Ok(json_response.to_string())
     }
 }
 
@@ -648,7 +659,11 @@ impl Tool for CheckRustStatusTool {
             .and_then(Value::as_bool)
             .unwrap_or(true);
 
-        let mut output = String::new();
+        let mut response = json!({
+            "database_status": {},
+            "crate_statistics": {},
+            "system_health": {}
+        });
 
         // If specific job ID requested
         if let Some(job_id_str) = job_id {
@@ -657,32 +672,21 @@ impl Tool for CheckRustStatusTool {
 
             match self.job_processor.get_job_status(job_id).await? {
                 Some(job) => {
-                    let _ = write!(&mut output, "Job Status: {}\n\n", job_id);
-                    let _ = write!(&mut output, "  Crate: {}\n", job.crate_name);
-                    let _ = write!(&mut output, "  Operation: {}\n", job.operation);
-                    let _ = write!(&mut output, "  Status: {:?}\n", job.status);
-                    if let Some(progress) = job.progress {
-                        let _ = write!(&mut output, "  Progress: {}%\n", progress);
-                    }
-                    let _ = write!(
-                        &mut output,
-                        "  Started: {}\n",
-                        job.started_at.format("%Y-%m-%d %H:%M:%S UTC")
-                    );
-                    if let Some(finished) = job.finished_at {
-                        let _ = write!(
-                            &mut output,
-                            "  Finished: {}\n",
-                            finished.format("%Y-%m-%d %H:%M:%S UTC")
-                        );
-                    }
-                    if let Some(error) = &job.error {
-                        let _ = write!(&mut output, "  Error: {}\n", error);
-                    }
-                    output.push('\n');
+                    response["job_status"] = json!({
+                        "id": job.id.to_string(),
+                        "crate_name": job.crate_name,
+                        "operation": job.operation,
+                        "status": job.status,
+                        "progress": job.progress,
+                        "started_at": job.started_at,
+                        "finished_at": job.finished_at,
+                        "error": job.error
+                    });
                 }
                 None => {
-                    let _ = write!(&mut output, "Job {} not found.\n\n", job_id);
+                    response["job_status"] = json!({
+                        "error": format!("Job {} not found", job_id)
+                    });
                 }
             }
         }
@@ -690,58 +694,20 @@ impl Tool for CheckRustStatusTool {
         // Get overall system statistics
         let stats = CrateQueries::get_crate_statistics(self.db_pool.pool()).await?;
 
-        output.push_str("🦀 Rust Crate Management System Status\n\n");
-
-        let _ = write!(&mut output, "📊 **System Statistics:**\n");
-        let _ = write!(&mut output, "  • Total Crates: {}\n", stats.total_crates);
-        let _ = write!(&mut output, "  • Active Crates: {}\n", stats.active_crates);
-        let _ = write!(
-            &mut output,
-            "  • Total Documents: {}\n",
-            stats.total_docs_managed
-        );
-        let _ = write!(
-            &mut output,
-            "  • Total Tokens: {}\n",
-            stats.total_tokens_managed
-        );
-        let _ = write!(
-            &mut output,
-            "  • Average Docs/Crate: {:.1}\n",
-            stats.average_docs_per_crate
-        );
-
-        if let Some(last_update) = stats.last_update {
-            let _ = write!(
-                &mut output,
-                "  • Last Update: {}\n",
-                last_update.format("%Y-%m-%d %H:%M UTC")
-            );
-        }
-
-        output.push('\n');
+        response["crate_statistics"] = json!({
+            "total_crates": stats.total_crates,
+            "active_crates": stats.active_crates,
+            "total_docs_managed": stats.total_docs_managed,
+            "total_tokens_managed": stats.total_tokens_managed,
+            "average_docs_per_crate": stats.average_docs_per_crate,
+            "last_update": stats.last_update
+        });
 
         // Show active/recent jobs if requested
         if include_active_jobs {
             let active_jobs = CrateJobQueries::find_active_jobs(self.db_pool.pool()).await?;
 
-            if !active_jobs.is_empty() {
-                output.push_str("🔄 **Active Jobs:**\n");
-                for job in &active_jobs {
-                    let _ = write!(
-                        &mut output,
-                        "  • {} [{}] - {} ({:?}",
-                        job.crate_name, job.id, job.operation, job.status
-                    );
-                    if let Some(progress) = job.progress {
-                        let _ = write!(&mut output, " - {}%", progress);
-                    }
-                    output.push_str(")\n");
-                }
-                output.push('\n');
-            }
-
-            // Show recent completed jobs
+            // Get all recent jobs
             let all_jobs = sqlx::query_as::<_, CrateJob>(
                 "SELECT * FROM crate_jobs ORDER BY started_at DESC LIMIT 5",
             )
@@ -754,20 +720,17 @@ impl Tool for CheckRustStatusTool {
                 .take(3)
                 .collect();
 
-            if !recent_completed.is_empty() {
-                output.push_str("📋 **Recent Jobs:**\n");
-                for job in recent_completed {
-                    let _ = write!(
-                        &mut output,
-                        "  • {} - {} ({:?}) - {}\n",
-                        job.crate_name,
-                        job.operation,
-                        job.status,
-                        job.started_at.format("%m-%d %H:%M")
-                    );
-                }
-                output.push('\n');
-            }
+            response["job_statistics"] = json!({
+                "active_jobs": active_jobs,
+                "recent_jobs": recent_completed,
+                "total_jobs": active_jobs.len() + recent_completed.len()
+            });
+        } else {
+            response["job_statistics"] = json!({
+                "active_jobs": [],
+                "recent_jobs": [],
+                "total_jobs": 0
+            });
         }
 
         // Database connectivity and performance check
@@ -777,39 +740,39 @@ impl Tool for CheckRustStatusTool {
             .await;
         let db_response_time = start_time.elapsed();
 
-        output.push_str("🔍 **System Health:**\n");
-        match db_health {
-            Ok(_) => {
-                let _ = write!(
-                    &mut output,
-                    "  ✅ Database: Connected and responsive ({:.2}ms)\n",
-                    db_response_time.as_secs_f64() * 1000.0
-                );
-            }
-            Err(e) => {
-                let _ = write!(&mut output, "  ❌ Database: Error - {}\n", e);
+        let is_healthy = db_health.is_ok();
+        let database_status = match db_health {
+            Ok(_) => json!({
+                "connected": true,
+                "response_time_ms": db_response_time.as_secs_f64() * 1000.0
+            }),
+            Err(e) => json!({
+                "connected": false,
+                "error": e.to_string()
+            }),
+        };
+
+        response["database_status"] = database_status;
+        response["system_health"] = json!({
+            "status": if is_healthy { "healthy" } else { "unhealthy" }
+        });
+
+        // Check if we need to include crate-specific information (from test expectations)
+        if let Some(crate_name) = arguments.get("crate_name").and_then(Value::as_str) {
+            if let Some(crate_info) =
+                CrateQueries::find_crate_by_name(self.db_pool.pool(), crate_name).await?
+            {
+                response["crate_info"] = json!({
+                    "name": crate_info.name,
+                    "version": crate_info.version,
+                    "total_docs": crate_info.total_docs,
+                    "total_tokens": crate_info.total_tokens,
+                    "last_updated": crate_info.last_updated
+                });
             }
         }
 
-        // Get additional storage metrics (temporarily disabled due to DB schema issues)
-        // if let Ok(storage_info) = self.get_storage_metrics().await {
-        //     output.push_str(&format!("  📁 Storage Usage:\n"));
-        //     output.push_str(&format!("    • Documents table: {} records\n", storage_info.documents_count));
-        //     output.push_str(&format!("    • Embeddings: {} with vectors\n", storage_info.embeddings_count));
-        //     output.push_str(&format!("    • Average content size: {} chars\n", storage_info.avg_content_size));
-        //     output.push_str(&format!("    • Database size estimate: {:.1} MB\n", storage_info.estimated_size_mb));
-        // }
-
-        // Get job queue metrics (temporarily disabled due to DB schema issues)
-        // if let Ok(job_metrics) = self.get_job_metrics().await {
-        //     output.push_str(&format!("  ⚙️ Job Queue Metrics:\n"));
-        //     output.push_str(&format!("    • Queued jobs: {}\n", job_metrics.queued_jobs));
-        //     output.push_str(&format!("    • Running jobs: {}\n", job_metrics.running_jobs));
-        //     output.push_str(&format!("    • Completed jobs (24h): {}\n", job_metrics.completed_jobs_24h));
-        //     output.push_str(&format!("    • Failed jobs (24h): {}\n", job_metrics.failed_jobs_24h));
-        // }
-
-        Ok(output)
+        Ok(response.to_string())
     }
 }
 

@@ -118,6 +118,15 @@ pub enum JobStatus {
     Cancelled,
 }
 
+/// Crate status enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CrateStatus {
+    Active,
+    Inactive,
+    Updating,
+    Failed,
+}
+
 /// Crate job record for tracking background operations
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct CrateJob {

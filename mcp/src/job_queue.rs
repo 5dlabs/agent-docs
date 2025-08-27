@@ -42,6 +42,19 @@ impl CrateJobProcessor {
         Ok(job.id)
     }
 
+    /// Enqueue a new crate removal job
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the job cannot be created in the database.
+    pub async fn enqueue_remove_crate_job(&self, crate_name: &str) -> Result<Uuid> {
+        let job =
+            CrateJobQueries::create_job(self.db_pool.pool(), crate_name, "remove_crate").await?;
+
+        info!("Enqueued remove_crate job {} for {}", job.id, crate_name);
+        Ok(job.id)
+    }
+
     /// Get job status by ID
     ///
     /// # Errors
