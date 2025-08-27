@@ -1,5 +1,17 @@
 # Autonomous Agent Prompt: Production Deployment and Validation
 
+## Database Access Configuration
+
+**IMPORTANT**: The database is accessible via the `DATABASE_URL` environment variable. This variable contains the full PostgreSQL connection string to the vector database in the `databases` namespace. The database includes:
+
+- **Connection**: `postgresql://vector_user:password@vector-postgres.databases.svc.cluster.local:5432/vector_db`
+- **UUID Extension**: Already enabled (`uuid-ossp`)
+- **Existing Data**: 4,375 documents already loaded across multiple documentation types
+- **Tables**: `documents` (with vector embeddings), `document_sources`
+- **Secrets**: Available via `doc-server-secrets` in `agent-platform` namespace
+
+The database connection is automatically configured when the `DATABASE_URL` environment variable is set. All database operations should use this connection string.
+
 ## Mission
 
 Execute final production deployment with comprehensive validation ensuring all acceptance criteria are met.

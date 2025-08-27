@@ -2,6 +2,18 @@
 
 You are tasked with implementing dynamic Rust crate management tools (add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status) for comprehensive MCP-based crate administration with docs.rs integration.
 
+## Database Access Configuration
+
+**IMPORTANT**: The database is accessible via the `DATABASE_URL` environment variable. This variable contains the full PostgreSQL connection string to the vector database in the `databases` namespace. The database includes:
+
+- **Connection**: `postgresql://vector_user:password@vector-postgres.databases.svc.cluster.local:5432/vector_db`
+- **UUID Extension**: Already enabled (`uuid-ossp`)
+- **Existing Data**: 4,375 documents already loaded
+- **Tables**: `documents`, `document_sources`, and recommended `crate_jobs` table
+- **Secrets**: Available via `doc-server-secrets` in `agent-platform` namespace
+
+The database connection is automatically configured when the `DATABASE_URL` environment variable is set. All database operations should use this connection string.
+
 ## Your Mission
 
 Create a complete Rust crate management system with automatic documentation fetching, atomic operations, health monitoring, and dependency analysis capabilities. The `add_rust_crate` tool must enqueue a background job and immediately return 202 + job id; the ingestion runs asynchronously.

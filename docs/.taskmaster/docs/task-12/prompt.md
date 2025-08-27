@@ -2,6 +2,18 @@
 
 You are tasked with implementing the remaining query tools for jupyter, cilium, talos, meteora, raydium, ebpf, and rust_best_practices documentation types following the established QueryTool pattern.
 
+## Database Access Configuration
+
+**IMPORTANT**: The database is accessible via the `DATABASE_URL` environment variable. This variable contains the full PostgreSQL connection string to the vector database in the `databases` namespace. The database includes:
+
+- **Connection**: `postgresql://vector_user:password@vector-postgres.databases.svc.cluster.local:5432/vector_db`
+- **UUID Extension**: Already enabled (`uuid-ossp`)
+- **Existing Data**: 4,375 documents already loaded across multiple documentation types
+- **Tables**: `documents` (with vector embeddings), `document_sources`
+- **Secrets**: Available via `doc-server-secrets` in `agent-platform` namespace
+
+The database connection is automatically configured when the `DATABASE_URL` environment variable is set. All database operations should use this connection string.
+
 ## Your Mission
 
 Create seven specialized query tools with type-specific metadata parsing, consistent response formatting, shared utility functions, and comprehensive caching strategies for optimal performance. Tools must be dynamically loaded from `tools.json` (no hardcoded registration).
