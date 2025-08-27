@@ -20,7 +20,7 @@
       "repository": "5dlabs/cto",
       "docsRepository": "5dlabs/cto",
       "docsProjectDirectory": "docs",
-      "service": "cto"
+      "service": "agent-docs"
     },
     "play": {
       "model": "claude-sonnet-4-20250514",
@@ -28,7 +28,7 @@
       "qualityAgent": "5DLabs-Cleo",
       "testingAgent": "5DLabs-Tess",
       "repository": "5dlabs/agent-docs",
-      "service": "cto",
+      "service": "agent-docs",
       "docsRepository": "5dlabs/agent-docs",
       "docsProjectDirectory": "docs"
     }
