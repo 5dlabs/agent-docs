@@ -103,14 +103,14 @@ impl Tool for AddRustCrateTool {
 
         // TASK 11 REQUIREMENT: Return 202 Accepted + job ID immediately (non-blocking)
         // Background processing will be handled by the job queue
-        
+
         // For MVP: Process synchronously but still return proper 202 response format
         let job_processor = self.job_processor.clone();
         let embedding_client = self.embedding_client.clone();
         let db_pool = self.db_pool.clone();
         let crate_name_owned = crate_name.to_string();
         let version_owned = version.map(str::to_string);
-        
+
         // Spawn background task for processing
         tokio::spawn(async move {
             let mut rust_loader = RustLoader::new();
@@ -140,7 +140,8 @@ impl Tool for AddRustCrateTool {
             "status": "accepted",
             "job_id": job_id.to_string(),
             "message": format!("Crate '{}' ingestion job enqueued successfully", crate_name)
-        }).to_string())
+        })
+        .to_string())
     }
 }
 
@@ -420,7 +421,8 @@ impl RemoveRustCrateTool {
                 "success": false,
                 "documents_removed": 0,
                 "message": format!("Crate '{}' not found in the system.", crate_name)
-            }).to_string());
+            })
+            .to_string());
         }
 
         // Update metadata to mark as inactive
@@ -664,8 +666,9 @@ impl Tool for CheckRustStatusTool {
 
         // Handle specific job ID query
         if let Some(job_id_str) = job_id {
-            let job_id = Uuid::parse_str(job_id_str).map_err(|_| anyhow!("Invalid job ID format"))?;
-            
+            let job_id =
+                Uuid::parse_str(job_id_str).map_err(|_| anyhow!("Invalid job ID format"))?;
+
             if let Some(job) = self.job_processor.get_job_status(job_id).await? {
                 response["specific_job"] = json!({
                     "id": job.id.to_string(),
@@ -688,16 +691,19 @@ impl Tool for CheckRustStatusTool {
         if include_active_jobs {
             let active_jobs = CrateJobQueries::find_active_jobs(self.db_pool.pool()).await?;
 
-            let active_jobs_json: Vec<_> = active_jobs.iter().map(|job| {
-                json!({
-                    "id": job.id.to_string(),
-                    "crate_name": job.crate_name,
-                    "operation": job.operation,
-                    "status": format!("{:?}", job.status),
-                    "progress": job.progress,
-                    "started_at": job.started_at.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+            let active_jobs_json: Vec<_> = active_jobs
+                .iter()
+                .map(|job| {
+                    json!({
+                        "id": job.id.to_string(),
+                        "crate_name": job.crate_name,
+                        "operation": job.operation,
+                        "status": format!("{:?}", job.status),
+                        "progress": job.progress,
+                        "started_at": job.started_at.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+                    })
                 })
-            }).collect();
+                .collect();
 
             // Get recent completed jobs
             let all_jobs = sqlx::query_as::<_, CrateJob>(
