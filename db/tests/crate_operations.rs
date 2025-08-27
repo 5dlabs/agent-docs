@@ -142,7 +142,6 @@ async fn test_crate_job_lifecycle() -> Result<()> {
 
 #[tokio::test]
 async fn test_crate_job_error_handling() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Create a job and mark it as failed
@@ -170,7 +169,6 @@ async fn test_crate_job_error_handling() -> Result<()> {
 
 #[tokio::test]
 async fn test_find_active_jobs() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Create multiple jobs in different states
@@ -213,7 +211,6 @@ async fn test_find_active_jobs() -> Result<()> {
 
 #[tokio::test]
 async fn test_cleanup_old_jobs() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Create a job and mark it as completed
@@ -241,7 +238,6 @@ async fn test_cleanup_old_jobs() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_crates_from_documents() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -269,7 +265,6 @@ async fn test_list_crates_from_documents() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_crates_with_name_filter() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -294,7 +289,6 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_crates_pagination() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -315,7 +309,6 @@ async fn test_list_crates_pagination() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_crate_statistics() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -337,7 +330,6 @@ async fn test_get_crate_statistics() -> Result<()> {
 
 #[tokio::test]
 async fn test_find_crate_by_name() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert test documents
@@ -363,7 +355,6 @@ async fn test_find_crate_by_name() -> Result<()> {
 
 #[tokio::test]
 async fn test_crate_document_metadata_queries() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Insert documents with different metadata
@@ -428,7 +419,6 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
 
 #[tokio::test]
 async fn test_concurrent_database_operations() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Test concurrent job creation
@@ -468,7 +458,6 @@ async fn test_concurrent_database_operations() -> Result<()> {
 
 #[tokio::test]
 async fn test_transaction_rollback_simulation() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Simulate transaction failure by trying to insert invalid data
@@ -496,7 +485,6 @@ async fn test_transaction_rollback_simulation() -> Result<()> {
 /// Test database connection and basic functionality
 #[tokio::test]
 async fn test_database_connection() -> Result<()> {
-    
     let fixture = DatabaseTestFixture::new().await?;
 
     // Test basic query
