@@ -20,6 +20,21 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
+/// Check if we have the required environment variables for live testing
+fn check_live_env() -> bool {
+    std::env::var("TEST_DATABASE_URL").is_ok() || std::env::var("DATABASE_URL").is_ok()
+}
+
+/// Skip test if live environment is not available
+macro_rules! skip_if_no_live_env {
+    () => {
+        if !check_live_env() {
+            tracing::warn!("Skipping database test: TEST_DATABASE_URL or DATABASE_URL not set");
+            return Ok(());
+        }
+    };
+}
+
 /// Test fixture for crate management tests
 struct CrateManagementTestFixture {
     pool: PgPool,
@@ -99,6 +114,7 @@ impl CrateManagementTestFixture {
 
 #[tokio::test]
 async fn test_add_rust_crate_tool() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Test adding a new crate
@@ -144,6 +160,7 @@ async fn test_add_rust_crate_tool() -> Result<()> {
 
 #[tokio::test]
 async fn test_add_rust_crate_invalid_input() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     let tool = AddRustCrateTool::new(
@@ -167,6 +184,7 @@ async fn test_add_rust_crate_invalid_input() -> Result<()> {
 
 #[tokio::test]
 async fn test_remove_rust_crate_tool() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Setup: Insert test documents
@@ -202,6 +220,7 @@ async fn test_remove_rust_crate_tool() -> Result<()> {
 
 #[tokio::test]
 async fn test_remove_rust_crate_soft_delete() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Setup: Insert test documents
@@ -226,6 +245,7 @@ async fn test_remove_rust_crate_soft_delete() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_rust_crates_tool() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Setup: Insert test documents
@@ -263,6 +283,7 @@ async fn test_list_rust_crates_tool() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_rust_crates_pagination() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Setup: Insert test documents
@@ -289,6 +310,7 @@ async fn test_list_rust_crates_pagination() -> Result<()> {
 
 #[tokio::test]
 async fn test_list_rust_crates_name_filter() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Setup: Insert test documents
@@ -315,6 +337,7 @@ async fn test_list_rust_crates_name_filter() -> Result<()> {
 
 #[tokio::test]
 async fn test_check_rust_status_tool() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Setup: Insert test documents and create jobs
@@ -372,6 +395,7 @@ async fn test_check_rust_status_tool() -> Result<()> {
 
 #[tokio::test]
 async fn test_check_rust_status_with_crate_filter() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Setup: Insert test documents
@@ -401,6 +425,7 @@ async fn test_check_rust_status_with_crate_filter() -> Result<()> {
 
 #[tokio::test]
 async fn test_concurrent_operations() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Test concurrent list operations (simulating multiple agents)
@@ -426,6 +451,7 @@ async fn test_concurrent_operations() -> Result<()> {
 
 #[tokio::test]
 async fn test_error_handling() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // Test removing non-existent crate
@@ -451,6 +477,7 @@ async fn test_error_handling() -> Result<()> {
 
 #[tokio::test]
 async fn test_tool_metadata() -> Result<()> {
+    skip_if_no_live_env!();
     let pool = DatabasePool::from_pool(
         sqlx::PgPool::connect("postgresql://test:test@localhost:5433/test_docs")
             .await
@@ -495,6 +522,7 @@ async fn test_tool_metadata() -> Result<()> {
 /// Integration test to verify the complete workflow
 #[tokio::test]
 async fn test_complete_crate_lifecycle() -> Result<()> {
+    skip_if_no_live_env!();
     let fixture = CrateManagementTestFixture::new().await?;
 
     // 1. Add a crate
