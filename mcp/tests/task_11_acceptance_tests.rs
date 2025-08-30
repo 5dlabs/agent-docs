@@ -73,12 +73,14 @@ async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
                     "❌ CRITICAL FAILURE: add_rust_crate processed synchronously instead of enqueueing background job! 
                      Response: {response}");
 
-            assert!(response.contains("Job ID:") || response.contains("job"), 
-                    "❌ CRITICAL FAILURE: add_rust_crate didn't return a job ID!
-                     Response: {response}");
+            assert!(
+                response.contains("Job ID:") || response.contains("job"),
+                "❌ CRITICAL FAILURE: add_rust_crate didn't return a job ID!
+                     Response: {response}"
+            );
 
             // Should return quickly (under 2 seconds for just enqueueing)
-            assert!(duration <= Duration::from_secs(2), 
+            assert!(duration <= Duration::from_secs(2),
                     "❌ CRITICAL FAILURE: add_rust_crate took too long ({duration:?}), should return immediately after enqueueing");
 
             println!("✅ add_rust_crate returned quickly with job reference");
@@ -86,7 +88,8 @@ async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
         Ok(Err(e)) => {
             println!("⚠️ Tool execution failed (may be expected in test env): {e}");
         }
-        Err(_) => { // Timeout error - acceptable in tests
+        Err(_) => {
+            // Timeout error - acceptable in tests
             panic!("❌ CRITICAL FAILURE: add_rust_crate timed out (took > 5s), indicating synchronous processing");
         }
     }
@@ -108,8 +111,10 @@ async fn test_acceptance_criterion_2_check_rust_status_reports_job_states() {
     match result {
         Ok(response) => {
             // Should include system statistics
-            assert!(response.contains("System Statistics") || response.contains("Total Crates"), 
-                    "❌ FAILURE: check_rust_status doesn't provide system statistics");
+            assert!(
+                response.contains("System Statistics") || response.contains("Total Crates"),
+                "❌ FAILURE: check_rust_status doesn't provide system statistics"
+            );
             println!("✅ check_rust_status provides system overview");
         }
         Err(e) => {
@@ -127,8 +132,10 @@ async fn test_acceptance_criterion_2_check_rust_status_reports_job_states() {
     match result {
         Ok(response) => {
             // Should handle job lookup gracefully
-            assert!(response.contains("not found") || response.contains("Job Status"), 
-                    "❌ FAILURE: check_rust_status doesn't handle job ID parameter correctly");
+            assert!(
+                response.contains("not found") || response.contains("Job Status"),
+                "❌ FAILURE: check_rust_status doesn't handle job ID parameter correctly"
+            );
             println!("✅ check_rust_status handles job ID lookup");
         }
         Err(e) => {
@@ -157,8 +164,10 @@ async fn test_acceptance_criterion_3_remove_rust_crate_cascade_delete() {
 
     match result {
         Ok(response) => {
-            assert!(response.contains("not found"), 
-                    "❌ FAILURE: remove_rust_crate should report when crate not found");
+            assert!(
+                response.contains("not found"),
+                "❌ FAILURE: remove_rust_crate should report when crate not found"
+            );
             println!("✅ remove_rust_crate handles non-existent crates gracefully");
         }
         Err(e) => {
@@ -183,9 +192,7 @@ async fn test_acceptance_criterion_3_remove_rust_crate_cascade_delete() {
             }
         }
         Err(e) => {
-            println!(
-                "⚠️ remove_rust_crate with soft_delete failed (may be expected): {e}"
-            );
+            println!("⚠️ remove_rust_crate with soft_delete failed (may be expected): {e}");
         }
     }
 }
@@ -206,8 +213,10 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
     match result {
         Ok(response) => {
             // Should include some stats or formatting
-            assert!(!response.is_empty(), 
-                    "❌ FAILURE: list_rust_crates returns empty response");
+            assert!(
+                !response.is_empty(),
+                "❌ FAILURE: list_rust_crates returns empty response"
+            );
             println!("✅ list_rust_crates returns formatted response");
         }
         Err(e) => {
@@ -232,9 +241,7 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
             }
         }
         Err(e) => {
-            println!(
-                "⚠️ list_rust_crates with parameters failed (may be expected): {e}"
-            );
+            println!("⚠️ list_rust_crates with parameters failed (may be expected): {e}");
         }
     }
 
@@ -250,9 +257,7 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
             println!("✅ list_rust_crates supports name pattern filtering");
         }
         Err(e) => {
-            println!(
-                "⚠️ list_rust_crates with name pattern failed (may be expected): {e}"
-            );
+            println!("⚠️ list_rust_crates with name pattern failed (may be expected): {e}");
         }
     }
 }
@@ -276,9 +281,7 @@ async fn test_acceptance_criterion_5_crate_jobs_table_persistence() {
             println!("✅ crate_jobs table exists and is queryable");
         }
         Err(e) => {
-            panic!(
-                "❌ CRITICAL FAILURE: crate_jobs table doesn't exist or isn't accessible: {e}"
-            );
+            panic!("❌ CRITICAL FAILURE: crate_jobs table doesn't exist or isn't accessible: {e}");
         }
     }
 
@@ -292,9 +295,7 @@ async fn test_acceptance_criterion_5_crate_jobs_table_persistence() {
             println!("✅ crate_jobs table has all required columns");
         }
         Err(e) => {
-            panic!(
-                "❌ CRITICAL FAILURE: crate_jobs table missing required columns: {e}"
-            );
+            panic!("❌ CRITICAL FAILURE: crate_jobs table missing required columns: {e}");
         }
     }
 }
@@ -445,11 +446,11 @@ async fn test_performance_requirements() {
 
     match result {
         Ok(_) => {
-            assert!(duration <= Duration::from_secs(5), 
-                    "❌ PERFORMANCE FAILURE: list_rust_crates took {duration:?}, should be under 5s");
-            println!(
-                "✅ list_rust_crates performs within acceptable time ({duration:?})"
+            assert!(
+                duration <= Duration::from_secs(5),
+                "❌ PERFORMANCE FAILURE: list_rust_crates took {duration:?}, should be under 5s"
             );
+            println!("✅ list_rust_crates performs within acceptable time ({duration:?})");
         }
         Err(e) => {
             println!("⚠️ Performance test skipped due to error: {e}");
@@ -464,11 +465,11 @@ async fn test_performance_requirements() {
 
     match result {
         Ok(_) => {
-            assert!(duration <= Duration::from_secs(3), 
-                    "❌ PERFORMANCE FAILURE: check_rust_status took {duration:?}, should be under 3s");
-            println!(
-                "✅ check_rust_status performs within acceptable time ({duration:?})"
+            assert!(
+                duration <= Duration::from_secs(3),
+                "❌ PERFORMANCE FAILURE: check_rust_status took {duration:?}, should be under 3s"
             );
+            println!("✅ check_rust_status performs within acceptable time ({duration:?})");
         }
         Err(e) => {
             println!("⚠️ Performance test skipped due to error: {e}");
