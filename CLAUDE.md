@@ -105,3 +105,9 @@ This file enables automatic pull request creation.
 ---
 
 _All referenced files (@filename) are automatically imported into Claude's context. For detailed information on any topic, refer to the specific imported files above._
+
+# PR Context for Testing
+- **PR Number**: 44
+- **PR URL**: https://github.com/5dlabs/agent-docs/pull/44
+- **Branch**: feature/task-11-implementation
+

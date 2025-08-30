@@ -787,7 +787,7 @@ impl CrateQueries {
             WITH crate_stats AS (
                 SELECT 
                     metadata->>'crate_name' as crate_name,
-                    metadata->>'crate_version' as crate_version,
+                    COALESCE(metadata->>'crate_version', 'unknown') as crate_version,
                     COUNT(*) as total_docs,
                     COALESCE(SUM(token_count), 0) as total_tokens,
                     MAX(created_at) as last_updated
@@ -922,7 +922,7 @@ impl CrateQueries {
             SELECT 
                 COUNT(*) as total_crates,
                 COUNT(*) as active_crates,
-                COALESCE(SUM(docs_count), 0) as total_docs,
+                COALESCE(SUM(docs_count), 0)::bigint as total_docs,
                 MAX(last_updated) as last_update
             FROM crate_stats
             ",

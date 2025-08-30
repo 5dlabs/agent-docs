@@ -375,8 +375,12 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         "module_path": format!("{}::my_function", fixture.test_crate_name)
     });
 
-    // Insert documents
-    for (doc_id, metadata) in [(doc1_id, metadata1), (doc2_id, metadata2)] {
+    // Insert documents with unique doc_paths
+    let docs = [
+        (doc1_id, metadata1, "test/struct_doc"),
+        (doc2_id, metadata2, "test/function_doc")
+    ];
+    for (doc_id, metadata, doc_path) in docs {
         sqlx::query(
             r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
@@ -385,7 +389,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         )
         .bind(doc_id)
         .bind(&fixture.test_crate_name)
-        .bind("test/doc")
+        .bind(doc_path)
         .bind("Test content")
         .bind(metadata)
         .bind(100)
