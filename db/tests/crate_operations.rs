@@ -243,9 +243,11 @@ async fn test_list_crates_from_documents() -> Result<()> {
     // Insert test documents
     fixture.insert_test_documents(5).await?;
 
-    // List crates with default pagination
+    // List crates with default pagination, but use name filter to ensure we find our test crate
     let pagination = PaginationParams::new(Some(1), Some(20));
-    let result = CrateQueries::list_crates(&fixture.pool, &pagination, None).await?;
+    let result =
+        CrateQueries::list_crates(&fixture.pool, &pagination, Some(&fixture.test_crate_name))
+            .await?;
 
     // Should find our test crate
     let found_crate = result
@@ -270,9 +272,9 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
     // Insert test documents
     fixture.insert_test_documents(3).await?;
 
-    // List crates with name pattern
+    // List crates with name pattern - use a longer pattern to be more specific
     let pagination = PaginationParams::new(Some(1), Some(20));
-    let pattern = &fixture.test_crate_name[..10]; // Use partial name
+    let pattern = &fixture.test_crate_name[..25]; // Use longer partial name for uniqueness
     let result = CrateQueries::list_crates(&fixture.pool, &pagination, Some(pattern)).await?;
 
     // Should find our test crate
@@ -375,17 +377,20 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         "module_path": format!("{}::my_function", fixture.test_crate_name)
     });
 
-    // Insert documents
-    for (doc_id, metadata) in [(doc1_id, metadata1), (doc2_id, metadata2)] {
+    // Insert documents with unique doc_paths to avoid constraint violations
+    for (i, (doc_id, metadata)) in [(doc1_id, metadata1), (doc2_id, metadata2)]
+        .iter()
+        .enumerate()
+    {
         sqlx::query(
             r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
             VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
             ",
         )
-        .bind(doc_id)
+        .bind(*doc_id)
         .bind(&fixture.test_crate_name)
-        .bind("test/doc")
+        .bind(format!("test/doc/{i}")) // Make doc_path unique
         .bind("Test content")
         .bind(metadata)
         .bind(100)

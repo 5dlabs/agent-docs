@@ -790,7 +790,7 @@ impl CrateQueries {
                     metadata->>'crate_name' as crate_name,
                     metadata->>'crate_version' as crate_version,
                     COUNT(*) as total_docs,
-                    COALESCE(SUM(token_count), 0) as total_tokens,
+                    COALESCE(SUM(CAST(token_count AS BIGINT))::BIGINT, 0) as total_tokens,
                     MAX(created_at) as last_updated
                 FROM documents 
                 WHERE doc_type = 'rust' 
@@ -914,7 +914,7 @@ impl CrateQueries {
                 SELECT 
                     metadata->>'crate_name' as crate_name,
                     COUNT(*) as docs_count,
-                    COALESCE(SUM(CAST(token_count AS BIGINT)), 0) as tokens_count,
+                    COALESCE(SUM(CAST(token_count AS BIGINT))::BIGINT, 0) as tokens_count,
                     MAX(created_at) as last_updated
                 FROM documents 
                 WHERE doc_type = 'rust' 
@@ -937,7 +937,7 @@ impl CrateQueries {
         // Get total tokens separately with proper type handling
         let total_tokens = sqlx::query_scalar::<_, Option<i64>>(
             r"
-            SELECT COALESCE(SUM(CAST(token_count AS BIGINT)), 0) 
+            SELECT COALESCE(SUM(CAST(token_count AS BIGINT))::BIGINT, 0) 
             FROM documents 
             WHERE doc_type = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
@@ -981,7 +981,7 @@ impl CrateQueries {
                 COALESCE(metadata->>'crate_name', 'unknown') as name,
                 COALESCE(metadata->>'crate_version', 'latest') as version,
                 COUNT(*) as total_docs,
-                COALESCE(SUM(CAST(token_count AS BIGINT)), 0) as total_tokens,
+                COALESCE(SUM(CAST(token_count AS BIGINT))::BIGINT, 0) as total_tokens,
                 MAX(created_at) as last_updated
             FROM documents 
             WHERE doc_type = 'rust' 
