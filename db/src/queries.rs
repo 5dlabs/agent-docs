@@ -826,12 +826,9 @@ impl CrateQueries {
         let query_str = query_parts.join(" ");
 
         // Execute main query
-        let mut query = sqlx::query_as::<
-            _,
-            (String, String, String, String, i32, i64, DateTime<Utc>),
-        >(&query_str)
-        .bind(pagination.limit)
-        .bind(pagination.offset);
+        let mut query = sqlx::query(&query_str)
+            .bind(pagination.limit)
+            .bind(pagination.offset);
 
         if let Some(pattern) = name_pattern {
             query = query.bind(format!("%{pattern}%"));
@@ -864,35 +861,33 @@ impl CrateQueries {
         // Convert rows to CrateInfo
         let items = rows
             .into_iter()
-            .map(
-                |(
+            .map(|row| {
+                let name: String = row.get("name");
+                let version: String = row.get("version");
+                let description: String = row.get("description");
+                let documentation_url: String = row.get("documentation_url");
+                let total_docs: i32 = row.get("total_docs");
+                let total_tokens: i64 = row.get("total_tokens");
+                let last_updated: DateTime<Utc> = row.get("last_updated");
+
+                crate::models::CrateInfo {
                     name,
                     version,
-                    description,
-                    documentation_url,
+                    description: if description.is_empty() {
+                        None
+                    } else {
+                        Some(description)
+                    },
+                    documentation_url: if documentation_url.is_empty() {
+                        None
+                    } else {
+                        Some(documentation_url)
+                    },
                     total_docs,
                     total_tokens,
                     last_updated,
-                )| {
-                    crate::models::CrateInfo {
-                        name,
-                        version,
-                        description: if description.is_empty() {
-                            None
-                        } else {
-                            Some(description)
-                        },
-                        documentation_url: if documentation_url.is_empty() {
-                            None
-                        } else {
-                            Some(documentation_url)
-                        },
-                        total_docs,
-                        total_tokens,
-                        last_updated,
-                    }
-                },
-            )
+                }
+            })
             .collect();
 
         Ok(crate::models::PaginatedResponse::new(
@@ -908,7 +903,7 @@ impl CrateQueries {
     ///
     /// Returns an error if the database query fails.
     pub async fn get_crate_statistics(pool: &PgPool) -> Result<crate::models::CrateStatistics> {
-        let row = sqlx::query_as::<_, (i64, i64, i64, Option<DateTime<Utc>>)>(
+        let row = sqlx::query(
             r"
             WITH crate_stats AS (
                 SELECT 
@@ -932,20 +927,22 @@ impl CrateQueries {
         .fetch_one(pool)
         .await?;
 
-        let (total_crates, active_crates, total_docs, last_update) = row;
+        let total_crates: i64 = row.get("total_crates");
+        let active_crates: i64 = row.get("active_crates");
+        let total_docs: i64 = row.get("total_docs");
+        let last_update: Option<DateTime<Utc>> = row.get("last_update");
 
         // Get total tokens separately with proper type handling
-        let total_tokens = sqlx::query_scalar::<_, Option<i64>>(
+        let total_tokens = sqlx::query_scalar::<_, i64>(
             r"
-            SELECT COALESCE(SUM(CAST(token_count AS BIGINT))::BIGINT, 0) 
+            SELECT COALESCE(SUM(CAST(token_count AS BIGINT)), 0)::bigint
             FROM documents 
             WHERE doc_type = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
             ",
         )
         .fetch_one(pool)
-        .await?
-        .unwrap_or(0);
+        .await?;
 
         let average_docs_per_crate = if total_crates > 0 {
             #[allow(clippy::cast_precision_loss)] // Acceptable precision loss for statistics
@@ -975,13 +972,13 @@ impl CrateQueries {
         pool: &PgPool,
         crate_name: &str,
     ) -> Result<Option<crate::models::CrateInfo>> {
-        let row = sqlx::query_as::<_, (String, String, i64, i64, DateTime<Utc>)>(
+        let row = sqlx::query(
             r"
             SELECT 
                 COALESCE(metadata->>'crate_name', 'unknown') as name,
                 COALESCE(metadata->>'crate_version', 'latest') as version,
                 COUNT(*) as total_docs,
-                COALESCE(SUM(CAST(token_count AS BIGINT))::BIGINT, 0) as total_tokens,
+                COALESCE(SUM(CAST(token_count AS BIGINT)), 0)::bigint as total_tokens,
                 MAX(created_at) as last_updated
             FROM documents 
             WHERE doc_type = 'rust' 
@@ -994,7 +991,13 @@ impl CrateQueries {
         .fetch_optional(pool)
         .await?;
 
-        if let Some((name, version, total_docs, total_tokens, last_updated)) = row {
+        if let Some(row) = row {
+            let name: String = row.get("name");
+            let version: String = row.get("version");
+            let total_docs: i64 = row.get("total_docs");
+            let total_tokens: i64 = row.get("total_tokens");
+            let last_updated: DateTime<Utc> = row.get("last_updated");
+
             Ok(Some(crate::models::CrateInfo {
                 name,
                 version,

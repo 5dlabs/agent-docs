@@ -69,6 +69,7 @@ impl DatabaseTestFixture {
                 r"
                 INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
                 VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
+                ON CONFLICT (doc_type, source_name, doc_path) DO NOTHING
                 ",
             )
             .bind(doc_id)
@@ -386,6 +387,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
             r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
             VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
+            ON CONFLICT (doc_type, source_name, doc_path) DO NOTHING
             ",
         )
         .bind(*doc_id)
