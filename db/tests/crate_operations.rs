@@ -255,11 +255,17 @@ async fn test_list_crates_from_documents() -> Result<()> {
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    
+
     if found_crate.is_none() {
-        eprintln!("Expected crate '{}' not found in results:", fixture.test_crate_name);
+        eprintln!(
+            "Expected crate '{}' not found in results:",
+            fixture.test_crate_name
+        );
         for (i, crate_info) in result.items.iter().enumerate() {
-            eprintln!("  {}: '{}' (version: {})", i, crate_info.name, crate_info.version);
+            eprintln!(
+                "  {}: '{}' (version: {})",
+                i, crate_info.name, crate_info.version
+            );
         }
         panic!("Test crate not found in list_crates result");
     }
@@ -294,11 +300,17 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    
+
     if found_crate.is_none() {
-        eprintln!("Expected crate '{}' not found with pattern '{}'. Results:", fixture.test_crate_name, pattern);
+        eprintln!(
+            "Expected crate '{}' not found with pattern '{}'. Results:",
+            fixture.test_crate_name, pattern
+        );
         for (i, crate_info) in result.items.iter().enumerate() {
-            eprintln!("  {}: '{}' (version: {})", i, crate_info.name, crate_info.version);
+            eprintln!(
+                "  {}: '{}' (version: {})",
+                i, crate_info.name, crate_info.version
+            );
         }
         panic!("Test crate not found in filtered list_crates result");
     }
@@ -400,7 +412,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         (doc1_id, metadata1, "test/struct_doc"),
         (doc2_id, metadata2, "test/function_doc"),
     ];
-    
+
     for (doc_id, metadata, doc_path) in docs_data {
         sqlx::query(
             r"
