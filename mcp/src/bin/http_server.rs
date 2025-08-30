@@ -425,7 +425,86 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         checksum: calculate_checksum(partitioning_sql),
     });
 
-    // Migration 8: Create archival policies and procedures
+    // Migration 8: Create crate_jobs table for background job tracking
+    let crate_jobs_sql = r"
+        -- Create job_status enum for crate operations
+        DO $$ BEGIN
+            CREATE TYPE job_status AS ENUM ('queued', 'running', 'completed', 'failed', 'cancelled');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        -- Create crate_jobs table for background job tracking
+        CREATE TABLE IF NOT EXISTS crate_jobs (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            crate_name VARCHAR(255) NOT NULL,
+            operation VARCHAR(50) NOT NULL CHECK (operation IN ('add_crate', 'remove_crate')),
+            status job_status DEFAULT 'queued',
+            progress INTEGER CHECK (progress >= 0 AND progress <= 100),
+            error TEXT,
+            started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            finished_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Add indexes for performance
+        CREATE INDEX IF NOT EXISTS idx_crate_jobs_crate_name ON crate_jobs(crate_name);
+        CREATE INDEX IF NOT EXISTS idx_crate_jobs_status ON crate_jobs(status);
+        CREATE INDEX IF NOT EXISTS idx_crate_jobs_operation ON crate_jobs(operation);
+        CREATE INDEX IF NOT EXISTS idx_crate_jobs_started_at ON crate_jobs(started_at DESC);
+
+        -- Create function to update updated_at column
+        CREATE OR REPLACE FUNCTION update_updated_at_column()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            NEW.updated_at = CURRENT_TIMESTAMP;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+
+        -- Add trigger to update updated_at columns
+        DROP TRIGGER IF EXISTS update_crate_jobs_updated_at ON crate_jobs;
+        CREATE TRIGGER update_crate_jobs_updated_at 
+            BEFORE UPDATE ON crate_jobs 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+        -- Create function to clean up old completed jobs (older than 30 days)
+        CREATE OR REPLACE FUNCTION cleanup_old_crate_jobs()
+        RETURNS INTEGER AS $$
+        DECLARE
+            deleted_count INTEGER;
+        BEGIN
+            DELETE FROM crate_jobs 
+            WHERE status IN ('completed', 'failed', 'cancelled') 
+            AND finished_at < CURRENT_TIMESTAMP - INTERVAL '30 days';
+            
+            GET DIAGNOSTICS deleted_count = ROW_COUNT;
+            
+            RETURN deleted_count;
+        END;
+        $$ LANGUAGE plpgsql;
+    ";
+    migration_manager.register_migration(MigrationInfo {
+        id: "008_crate_jobs_table".to_string(),
+        version: "1.3.0".to_string(),
+        description: "Create crate_jobs table for tracking background crate operations with persistent job state".to_string(),
+        up_sql: crate_jobs_sql.to_string(),
+        down_sql: Some(
+            r"
+            DROP FUNCTION IF EXISTS cleanup_old_crate_jobs();
+            DROP TRIGGER IF EXISTS update_crate_jobs_updated_at ON crate_jobs;
+            DROP FUNCTION IF EXISTS update_updated_at_column();
+            DROP TABLE IF EXISTS crate_jobs;
+            DROP TYPE IF EXISTS job_status;
+        "
+            .to_string(),
+        ),
+        dependencies: vec!["005_core_indexes".to_string()],
+        checksum: calculate_checksum(crate_jobs_sql),
+    });
+
+    // Migration 9: Create archival policies and procedures
     let archival_sql = r"
         -- Create archived_documents table for long-term storage
         CREATE TABLE IF NOT EXISTS archived_documents (
@@ -482,8 +561,8 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         CREATE INDEX IF NOT EXISTS idx_archived_documents_doc_type ON archived_documents(doc_type);
     ";
     migration_manager.register_migration(MigrationInfo {
-        id: "008_archival_policy".to_string(),
-        version: "1.2.0".to_string(),
+        id: "009_archival_policy".to_string(),
+        version: "1.4.0".to_string(),
         description: "Create archival system for old documents (>1 year) with automated procedures"
             .to_string(),
         up_sql: archival_sql.to_string(),

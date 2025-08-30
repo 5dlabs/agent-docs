@@ -16,11 +16,8 @@ use db::{
     DatabasePool,
 };
 use embed::client::EmbeddingClient;
-use loader::loaders::RustLoader;
 use serde_json::{json, Value};
-use sqlx;
 use std::{fmt::Write as _, sync::Arc};
-// use tokio::task; // Commented out for MVP - not using background tasks
 use uuid::Uuid;
 
 use crate::tools::Tool;
@@ -28,23 +25,16 @@ use crate::tools::Tool;
 /// Add Rust crate tool - enqueues background job and returns 202 + job ID
 pub struct AddRustCrateTool {
     job_processor: CrateJobProcessor,
-    #[allow(dead_code)] // Will be used when background processing is fully implemented
-    rust_loader: RustLoader,
-    embedding_client: Arc<dyn EmbeddingClient + Send + Sync>,
-    db_pool: DatabasePool,
 }
 
 impl AddRustCrateTool {
-    /// Create a new add crate tool
+    /// Create a new add crate tool with background job processing
     pub fn new(
         db_pool: DatabasePool,
         embedding_client: Arc<dyn EmbeddingClient + Send + Sync>,
     ) -> Self {
         Self {
-            job_processor: CrateJobProcessor::new(db_pool.clone()),
-            rust_loader: RustLoader::new(),
-            embedding_client,
-            db_pool,
+            job_processor: CrateJobProcessor::new_with_worker(db_pool, embedding_client),
         }
     }
 }
@@ -87,7 +77,8 @@ impl Tool for AddRustCrateTool {
 
         // Check if crate already exists by looking at documents
         if let Some(existing_crate) =
-            CrateQueries::find_crate_by_name(self.db_pool.pool(), crate_name).await?
+            CrateQueries::find_crate_by_name(self.job_processor.db_pool().pool(), crate_name)
+                .await?
         {
             return Ok(format!(
                 "Crate '{}' already exists in the system (version: {}). Use remove_rust_crate first if you want to re-add it.",
@@ -95,189 +86,16 @@ impl Tool for AddRustCrateTool {
             ));
         }
 
-        // For MVP, run synchronously to avoid Send/Sync complexity with scraper
-        // Enqueue the job first
-        let job_id = self.job_processor.enqueue_add_crate_job(crate_name).await?;
-
-        // Process immediately for MVP
-        let mut rust_loader = RustLoader::new();
-        match Self::process_crate_ingestion(
-            &self.job_processor,
-            &mut rust_loader,
-            &self.embedding_client,
-            &self.db_pool,
-            job_id,
-            crate_name,
-            version,
-        )
-        .await
-        {
-            Ok(()) => Ok(format!(
-                "Crate '{}' ingestion completed successfully. Job ID: {}",
-                crate_name, job_id
-            )),
-            Err(e) => {
-                tracing::error!("Crate ingestion failed: {}", e);
-                // Update job status to failed
-                if let Err(update_err) = self
-                    .job_processor
-                    .update_job_status(job_id, JobStatus::Failed, Some(0), Some(&e.to_string()))
-                    .await
-                {
-                    tracing::error!("Failed to update job status to failed: {}", update_err);
-                }
-                Err(e)
-            }
-        }
-    }
-}
-
-impl AddRustCrateTool {
-    /// Process crate ingestion in background
-    #[allow(clippy::too_many_arguments)]
-    async fn process_crate_ingestion(
-        job_processor: &CrateJobProcessor,
-        rust_loader: &mut RustLoader,
-        embedding_client: &Arc<dyn EmbeddingClient + Send + Sync>,
-        db_pool: &DatabasePool,
-        job_id: Uuid,
-        crate_name: &str,
-        version: Option<&str>,
-    ) -> Result<()> {
-        // Update job status to running
-        job_processor
-            .update_job_status(job_id, JobStatus::Running, Some(0), None)
+        // Enqueue the background job and return 202 + job ID immediately
+        let job_id = self
+            .job_processor
+            .enqueue_add_crate_job(crate_name, version)
             .await?;
 
-        // Load crate documentation
-        tracing::info!("Starting ingestion for crate: {}", crate_name);
-        let (crate_info, doc_pages) = rust_loader
-            .load_crate_docs(crate_name, version)
-            .await
-            .map_err(|e| anyhow!("Failed to load crate documentation: {}", e))?;
-
-        // Update progress
-        job_processor
-            .update_job_status(job_id, JobStatus::Running, Some(25), None)
-            .await?;
-
-        // No separate crate record - we use document metadata instead
-        tracing::info!(
-            "Processing {} documentation pages for crate {}",
-            doc_pages.len(),
-            crate_name
-        );
-
-        // Update progress
-        job_processor
-            .update_job_status(job_id, JobStatus::Running, Some(50), None)
-            .await?;
-
-        let mut total_docs = 0;
-        let mut total_tokens = 0i64;
-        let batch_size = 10;
-
-        // Process documents in batches
-        for (batch_idx, chunk) in doc_pages.chunks(batch_size).enumerate() {
-            let mut tx = db_pool.pool().begin().await?;
-
-            for doc_page in chunk {
-                // Create document record
-                let document_id = uuid::Uuid::new_v4();
-                let metadata = json!({
-                    "crate_name": crate_info.name,
-                    "crate_version": crate_info.newest_version,
-                    "item_type": doc_page.item_type,
-                    "module_path": doc_page.module_path,
-                    "extracted_at": doc_page.extracted_at,
-                    "source_url": doc_page.url
-                });
-
-                // Calculate token count (approximation)
-                let token_count = doc_page.content.len() / 4; // Rough approximation
-                #[allow(clippy::cast_possible_wrap)]
-                let token_count_i32 = token_count as i32;
-
-                // Insert document
-                sqlx::query(
-                    r"
-                    INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
-                    VALUES ($1, 'rust', $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    "
-                )
-                .bind(document_id)
-                .bind(&crate_info.name)
-                .bind(&doc_page.url)
-                .bind(&doc_page.content)
-                .bind(&metadata)
-                .bind(token_count_i32)
-                .execute(&mut *tx)
-                .await?;
-
-                // Generate and store embedding
-                if !doc_page.content.is_empty() {
-                    match embedding_client.embed(&doc_page.content).await {
-                        Ok(embedding) => {
-                            let embedding_vector = pgvector::Vector::from(embedding);
-
-                            // Update document with embedding
-                            sqlx::query("UPDATE documents SET embedding = $1 WHERE id = $2")
-                                .bind(embedding_vector)
-                                .bind(document_id)
-                                .execute(&mut *tx)
-                                .await?;
-                        }
-                        Err(e) => {
-                            tracing::warn!(
-                                "Failed to generate embedding for document {}: {}",
-                                document_id,
-                                e
-                            );
-                        }
-                    }
-                }
-
-                total_docs += 1;
-                #[allow(clippy::cast_possible_wrap)]
-                let token_count_i64 = token_count as i64;
-                total_tokens += token_count_i64;
-            }
-
-            // Commit batch
-            tx.commit().await?;
-
-            // Update progress
-            let total_batches = doc_pages.len().div_ceil(batch_size);
-            let progress = 50 + ((batch_idx + 1) * 40 / total_batches);
-            #[allow(clippy::cast_possible_wrap)]
-            let progress_i32 = progress as i32;
-            job_processor
-                .update_job_status(job_id, JobStatus::Running, Some(progress_i32), None)
-                .await?;
-
-            tracing::info!(
-                "Processed batch {} of {} for crate {}",
-                batch_idx + 1,
-                total_batches,
-                crate_name
-            );
-        }
-
-        // No separate crate statistics table - stats are calculated from document metadata
-
-        // Mark job as completed
-        job_processor
-            .update_job_status(job_id, JobStatus::Completed, Some(100), None)
-            .await?;
-
-        tracing::info!(
-            "Successfully completed ingestion for crate {}: {} documents, {} tokens",
-            crate_name,
-            total_docs,
-            total_tokens
-        );
-
-        Ok(())
+        Ok(format!(
+            "{{\"status\": \"accepted\", \"job_id\": \"{}\", \"message\": \"Crate '{}' ingestion job queued successfully. Use check_rust_status with job_id to track progress.\"}}",
+            job_id, crate_name
+        ))
     }
 }
 
