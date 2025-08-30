@@ -377,7 +377,10 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
     });
 
     // Insert documents
-    for (i, (doc_id, metadata)) in [(doc1_id, metadata1), (doc2_id, metadata2)].iter().enumerate() {
+    for (i, (doc_id, metadata)) in [(doc1_id, metadata1), (doc2_id, metadata2)]
+        .iter()
+        .enumerate()
+    {
         sqlx::query(
             r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
