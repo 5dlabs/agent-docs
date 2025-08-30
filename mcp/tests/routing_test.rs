@@ -47,13 +47,21 @@ fn create_mock_router() -> Router {
     };
     use mcp::headers::set_standard_headers;
 
-    async fn mock_post_handler() -> impl IntoResponse {
-        let mut headers = HeaderMap::new();
-        set_standard_headers(&mut headers, None);
-        (headers, Json(json!({"message": "mock response"}))).into_response()
+    async fn mock_post_handler(headers: HeaderMap) -> impl IntoResponse {
+        // Validate protocol version first, like the real server
+        if headers.get("MCP-Protocol-Version").is_none() {
+            return (StatusCode::BAD_REQUEST, "Missing MCP-Protocol-Version header").into_response();
+        }
+        let mut response_headers = HeaderMap::new();
+        set_standard_headers(&mut response_headers, None);
+        (response_headers, Json(json!({"message": "mock response"}))).into_response()
     }
 
-    async fn mock_get_handler() -> impl IntoResponse {
+    async fn mock_get_handler(headers: HeaderMap) -> impl IntoResponse {
+        // Validate protocol version first, like the real server
+        if headers.get("MCP-Protocol-Version").is_none() {
+            return (StatusCode::BAD_REQUEST, "Missing MCP-Protocol-Version header");
+        }
         (StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed")
     }
 
@@ -78,6 +86,7 @@ async fn test_get_mcp_returns_405() {
     let request = Request::builder()
         .method(Method::GET)
         .uri("/mcp")
+        .header("MCP-Protocol-Version", "2024-11-05")
         .body(Body::empty())
         .unwrap();
 
@@ -99,6 +108,7 @@ async fn test_post_mcp_includes_protocol_header() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
+        .header("MCP-Protocol-Version", "2024-11-05")
         .body(Body::from(request_body.to_string()))
         .unwrap();
 
@@ -136,6 +146,7 @@ async fn test_post_mcp_successful_response() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
+        .header("MCP-Protocol-Version", "2024-11-05")
         .body(Body::from(request_body.to_string()))
         .unwrap();
 
@@ -178,6 +189,7 @@ async fn test_routing_integration() {
     let get_request = Request::builder()
         .method(Method::GET)
         .uri("/mcp")
+        .header("MCP-Protocol-Version", "2024-11-05")
         .body(Body::empty())
         .unwrap();
 
@@ -190,6 +202,7 @@ async fn test_routing_integration() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
+        .header("MCP-Protocol-Version", "2024-11-05")
         .body(Body::from(post_request_body.to_string()))
         .unwrap();
 
