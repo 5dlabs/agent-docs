@@ -111,7 +111,7 @@ async fn test_add_rust_crate_tool() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -162,7 +162,7 @@ async fn test_add_rust_crate_invalid_input() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -191,7 +191,7 @@ async fn test_remove_rust_crate_tool() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -232,7 +232,7 @@ async fn test_remove_rust_crate_soft_delete() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -262,7 +262,7 @@ async fn test_list_rust_crates_tool() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -305,7 +305,7 @@ async fn test_list_rust_crates_pagination() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -337,7 +337,7 @@ async fn test_list_rust_crates_name_filter() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -369,7 +369,7 @@ async fn test_check_rust_status_tool() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -432,7 +432,7 @@ async fn test_check_rust_status_with_crate_filter() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -467,7 +467,7 @@ async fn test_concurrent_operations() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -498,7 +498,7 @@ async fn test_error_handling() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -532,7 +532,7 @@ async fn test_tool_metadata() -> Result<()> {
     let pool = match sqlx::PgPool::connect(&database_url).await {
         Ok(pool) => DatabasePool::from_pool(pool),
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
@@ -578,7 +578,7 @@ async fn test_complete_crate_lifecycle() -> Result<()> {
     let fixture = match CrateManagementTestFixture::new().await {
         Ok(fixture) => fixture,
         Err(e) => {
-            println!("⚠️ Database not available, skipping test: {}", e);
+            println!("⚠️ Database not available, skipping test: {e}");
             return Ok(());
         }
     };
