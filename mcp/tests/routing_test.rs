@@ -50,7 +50,11 @@ fn create_mock_router() -> Router {
     async fn mock_post_handler(headers: HeaderMap) -> impl IntoResponse {
         // Validate protocol version first, like the real server
         if headers.get("MCP-Protocol-Version").is_none() {
-            return (StatusCode::BAD_REQUEST, "Missing MCP-Protocol-Version header").into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                "Missing MCP-Protocol-Version header",
+            )
+                .into_response();
         }
         let mut response_headers = HeaderMap::new();
         set_standard_headers(&mut response_headers, None);
@@ -60,7 +64,10 @@ fn create_mock_router() -> Router {
     async fn mock_get_handler(headers: HeaderMap) -> impl IntoResponse {
         // Validate protocol version first, like the real server
         if headers.get("MCP-Protocol-Version").is_none() {
-            return (StatusCode::BAD_REQUEST, "Missing MCP-Protocol-Version header");
+            return (
+                StatusCode::BAD_REQUEST,
+                "Missing MCP-Protocol-Version header",
+            );
         }
         (StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed")
     }
