@@ -452,16 +452,16 @@ async fn test_error_handling() -> Result<()> {
 #[tokio::test]
 async fn test_tool_metadata() -> Result<()> {
     // Skip this test if no database is available (e.g., in CI without database service)
-    let database_url = match std::env::var("TEST_DATABASE_URL")
-        .or_else(|_| std::env::var("DATABASE_URL")) {
-        Ok(url) => url,
-        Err(_) => {
-            // If no database URL is available, skip the test
-            println!("No database URL available, skipping test_tool_metadata");
-            return Ok(());
-        }
-    };
-    
+    let database_url =
+        match std::env::var("TEST_DATABASE_URL").or_else(|_| std::env::var("DATABASE_URL")) {
+            Ok(url) => url,
+            Err(_) => {
+                // If no database URL is available, skip the test
+                println!("No database URL available, skipping test_tool_metadata");
+                return Ok(());
+            }
+        };
+
     let pool_result = sqlx::PgPool::connect(&database_url).await;
     let pool = match pool_result {
         Ok(p) => DatabasePool::from_pool(p),
@@ -511,9 +511,10 @@ async fn test_tool_metadata() -> Result<()> {
 fn test_tool_definitions_without_db() {
     // Test that we can create tool definitions without database connection
     use serde_json::Value;
-    
+
     // Test schema validation for add_rust_crate
-    let add_schema: Value = serde_json::from_str(r#"{
+    let add_schema: Value = serde_json::from_str(
+        r#"{
         "type": "object",
         "properties": {
             "name": {
@@ -528,12 +529,14 @@ fn test_tool_definitions_without_db() {
             }
         },
         "required": ["name"]
-    }"#).unwrap();
-    
+    }"#,
+    )
+    .unwrap();
+
     assert!(add_schema.is_object());
     assert!(add_schema.get("properties").is_some());
     assert!(add_schema.get("required").is_some());
-    
+
     // Test that required fields are properly defined
     let properties = add_schema.get("properties").unwrap().as_object().unwrap();
     assert!(properties.contains_key("name"));
