@@ -1,6 +1,7 @@
+---
 name: Build and Push Server (Prebuilt Binary)
 
-on:
+'on':
   workflow_dispatch:
     inputs:
       tag:
@@ -78,10 +79,10 @@ jobs:
           workspaces: . -> target
       - name: Set test DB env (self-hosted runner)
         run: |
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then 
-            echo "TEST_DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV; 
-          else 
-            echo "TEST_DATABASE_URL=mock" >> $GITHUB_ENV; 
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            echo "TEST_DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
+          else
+            echo "TEST_DATABASE_URL=mock" >> $GITHUB_ENV
           fi
           echo "APP_NAME=doc-server-ci" >> $GITHUB_ENV
           echo "POOL_MIN_CONNECTIONS=1" >> $GITHUB_ENV
@@ -90,7 +91,9 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
       - name: Clippy (warnings + pedantic)
-        run: cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic
+        run: >
+          cargo clippy --all-targets --all-features
+          -- -D warnings -W clippy::pedantic
       - name: Test suite (exclude live embeddings)
         run: cargo test --workspace --all-features --exclude embed
 
@@ -112,8 +115,9 @@ jobs:
           POSTGRES_DB: docs_test
         ports:
           - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d docs_test" --health-interval 10s --health-timeout 5s --health-retries 12
+        options: >
+          --health-cmd "pg_isready -U postgres -d docs_test"
+          --health-interval 10s --health-timeout 5s --health-retries 12
     steps:
       - name: Skip (no secrets)
         if: env.OPENAI_API_KEY == ''
@@ -149,8 +153,8 @@ jobs:
         if: env.OPENAI_API_KEY != ''
         run: |
           # Fallback to CI postgres service if DATABASE_URL secret isn't set
-          if [ -z "$DATABASE_URL" ]; then export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/docs_test; fi
-          # Allow override via workflow/repo env; default to 15 minutes to accommodate OpenAI batch latency
+#          # Fallback to CI postgres service if DATABASE_URL secret is not set
+#          # Allow override via workflow/repo env; default to 15 min
           export EMBEDDINGS_TEST_MAX_WAIT_SECS=${EMBEDDINGS_TEST_MAX_WAIT_SECS:-900}
           export EMBEDDINGS_TEST_POLL_SECS=${EMBEDDINGS_TEST_POLL_SECS:-5}
           cargo test -p embed -- --nocapture
@@ -312,22 +316,28 @@ jobs:
           EXIT_ON_VIOLATION: 0
         run: |
           docker pull "$IMAGE_NAME"
-          
+
           # Create security reports directory
           mkdir -p security-reports
-          
+
           # Run Trivy vulnerability scan
           echo "Running Trivy vulnerability scan on $IMAGE_NAME..."
-          trivy image --format json --output security-reports/vulnerability-report.json "$IMAGE_NAME" || true
-          
+          trivy image --format json \
+            --output security-reports/vulnerability-report.json \
+            "$IMAGE_NAME" || true
+
           # Run Trivy config scan
           echo "Running Trivy config scan on $IMAGE_NAME..."
-          trivy config --format json --output security-reports/config-report.json "$IMAGE_NAME" || true
-          
+          trivy config --format json \
+            --output security-reports/config-report.json \
+            "$IMAGE_NAME" || true
+
           # Generate SARIF report for GitHub security tab
           echo "Generating SARIF report..."
-          trivy image --format sarif --output security-reports/results.sarif "$IMAGE_NAME" || true
-          
+          trivy image --format sarif \
+            --output security-reports/results.sarif \
+            "$IMAGE_NAME" || true
+
           # Display summary
           echo "Security scan completed. Reports saved to security-reports/"
           if [ -f security-reports/vulnerability-report.json ]; then
@@ -396,33 +406,33 @@ jobs:
 
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           **Commit**: \
-          
+
           - Version: \
             \
             \
           - Short SHA: \
             \
             \
-          
+
           **Container Image**: \
-          
+
           - Name: \
             \
             \
-          
+
           **Job Status**:
-          
+
           | Stage | Status |
           |---|---|
           | Format + Clippy + Tests | ${TEST_STATUS} |
           | Embeddings (live) | ${EMB_STATUS} |
           | Build & Push Image | ${BUILD_STATUS} |
           | Security Scan | ${SEC_STATUS} |
-          
+
           **Security Summary**: ${SEC_SUMMARY}
-          
+
           - Artifacts: security-reports-${SHORT_SHA}
-          
+
           EOF
 
           # Fill inline values escaped above

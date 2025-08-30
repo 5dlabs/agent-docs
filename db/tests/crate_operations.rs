@@ -240,11 +240,14 @@ async fn test_cleanup_old_jobs() -> Result<()> {
 async fn test_list_crates_from_documents() -> Result<()> {
     let fixture = DatabaseTestFixture::new().await?;
 
+    // Clean up any previous test data first
+    fixture.cleanup().await?;
+
     // Insert test documents
     fixture.insert_test_documents(5).await?;
 
-    // List crates with default pagination
-    let pagination = PaginationParams::new(Some(1), Some(20));
+    // List crates with higher page limit to find our test crate
+    let pagination = PaginationParams::new(Some(1), Some(100));
     let result = CrateQueries::list_crates(&fixture.pool, &pagination, None).await?;
 
     // Should find our test crate
@@ -252,12 +255,19 @@ async fn test_list_crates_from_documents() -> Result<()> {
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    assert!(found_crate.is_some());
+    
+    if found_crate.is_none() {
+        eprintln!("Expected crate '{}' not found in results:", fixture.test_crate_name);
+        for (i, crate_info) in result.items.iter().enumerate() {
+            eprintln!("  {}: '{}' (version: {})", i, crate_info.name, crate_info.version);
+        }
+        panic!("Test crate not found in list_crates result");
+    }
 
     let crate_info = found_crate.unwrap();
     assert_eq!(crate_info.total_docs, 5);
     assert_eq!(crate_info.version, "0.1.0");
-    assert_eq!(crate_info.total_tokens, 250 + 10); // 50+1 + 50+2 + ... + 50+5 = 250 + 15 = 265? Let me recalculate: 51+52+53+54+55 = 265
+    assert_eq!(crate_info.total_tokens, 260); // 50+51+52+53+54 = 260
 
     fixture.cleanup().await?;
     Ok(())
@@ -267,11 +277,14 @@ async fn test_list_crates_from_documents() -> Result<()> {
 async fn test_list_crates_with_name_filter() -> Result<()> {
     let fixture = DatabaseTestFixture::new().await?;
 
+    // Clean up any previous test data first
+    fixture.cleanup().await?;
+
     // Insert test documents
     fixture.insert_test_documents(3).await?;
 
     // List crates with name pattern
-    let pagination = PaginationParams::new(Some(1), Some(20));
+    let pagination = PaginationParams::new(Some(1), Some(100));
     let pattern = &fixture.test_crate_name[..10]; // Use partial name
     let result = CrateQueries::list_crates(&fixture.pool, &pagination, Some(pattern)).await?;
 
@@ -281,7 +294,14 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    assert!(found_crate.is_some());
+    
+    if found_crate.is_none() {
+        eprintln!("Expected crate '{}' not found with pattern '{}'. Results:", fixture.test_crate_name, pattern);
+        for (i, crate_info) in result.items.iter().enumerate() {
+            eprintln!("  {}: '{}' (version: {})", i, crate_info.name, crate_info.version);
+        }
+        panic!("Test crate not found in filtered list_crates result");
+    }
 
     fixture.cleanup().await?;
     Ok(())
@@ -375,8 +395,13 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         "module_path": format!("{}::my_function", fixture.test_crate_name)
     });
 
-    // Insert documents
-    for (doc_id, metadata) in [(doc1_id, metadata1), (doc2_id, metadata2)] {
+    // Insert documents with unique doc_paths
+    let docs_data = [
+        (doc1_id, metadata1, "test/struct_doc"),
+        (doc2_id, metadata2, "test/function_doc"),
+    ];
+    
+    for (doc_id, metadata, doc_path) in docs_data {
         sqlx::query(
             r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
@@ -385,7 +410,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         )
         .bind(doc_id)
         .bind(&fixture.test_crate_name)
-        .bind("test/doc")
+        .bind(doc_path)
         .bind("Test content")
         .bind(metadata)
         .bind(100)

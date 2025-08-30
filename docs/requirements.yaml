@@ -1,3 +1,4 @@
+---
 # Example requirements.yaml for doc server tasks
 # Place this file at: {docs_project_directory}/task-{TASK_ID}/requirements.yaml
 

@@ -1,6 +1,7 @@
+---
 name: Auto Format (cargo fmt)
 
-on:
+'on':
   push:
     branches: ["**"]
 
@@ -9,7 +10,9 @@ permissions:
 
 jobs:
   format:
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') && github.actor != 'github-actions[bot]' }}
+    if: >
+      ${{ !contains(github.event.head_commit.message, '[skip ci]') &&
+      github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
