@@ -30,7 +30,11 @@ impl DatabaseTestFixture {
         config.min_connections = 1;
         config.max_connections = 5;
         let pool = DatabasePool::with_config(config).await?.pool().clone();
-        let test_crate_name = format!("db-test-crate-{}", Uuid::new_v4());
+        let test_crate_name = format!(
+            "db-test-crate-{}-{}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0),
+            Uuid::new_v4()
+        );
 
         Ok(Self {
             pool,
