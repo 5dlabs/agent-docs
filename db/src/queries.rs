@@ -933,17 +933,16 @@ impl CrateQueries {
         let last_update: Option<DateTime<Utc>> = row.get("last_update");
 
         // Get total tokens separately with proper type handling
-        let total_tokens = sqlx::query_scalar::<_, Option<i64>>(
+        let total_tokens = sqlx::query_scalar::<_, i64>(
             r"
-            SELECT COALESCE(SUM(CAST(token_count AS BIGINT)), 0) 
+            SELECT COALESCE(SUM(CAST(token_count AS BIGINT)), 0)::bigint
             FROM documents 
             WHERE doc_type = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
             ",
         )
         .fetch_one(pool)
-        .await?
-        .unwrap_or(0);
+        .await?;
 
         let average_docs_per_crate = if total_crates > 0 {
             #[allow(clippy::cast_precision_loss)] // Acceptable precision loss for statistics
@@ -979,7 +978,7 @@ impl CrateQueries {
                 COALESCE(metadata->>'crate_name', 'unknown') as name,
                 COALESCE(metadata->>'crate_version', 'latest') as version,
                 COUNT(*) as total_docs,
-                COALESCE(SUM(CAST(token_count AS BIGINT)), 0) as total_tokens,
+                COALESCE(SUM(CAST(token_count AS BIGINT)), 0)::bigint as total_tokens,
                 MAX(created_at) as last_updated
             FROM documents 
             WHERE doc_type = 'rust' 
