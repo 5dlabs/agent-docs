@@ -1,13 +1,15 @@
 //! Task 11 Acceptance Criteria Tests
-//! 
+//!
 //! These tests verify that the Rust Crate Management implementation meets ALL
 //! acceptance criteria from Task 11. Any failures here are CRITICAL VIOLATIONS.
 
 use anyhow::Result;
 use db::DatabasePool;
-use mcp::crate_tools::{AddRustCrateTool, CheckRustStatusTool, ListRustCratesTool, RemoveRustCrateTool};
-use mcp::tools::Tool;
 use embed::client::OpenAIEmbeddingClient;
+use mcp::crate_tools::{
+    AddRustCrateTool, CheckRustStatusTool, ListRustCratesTool, RemoveRustCrateTool,
+};
+use mcp::tools::Tool;
 use serde_json::json;
 use std::{env, sync::Arc, time::Instant};
 use tokio::time::{timeout, Duration};
@@ -17,12 +19,13 @@ async fn create_test_pool() -> Option<DatabasePool> {
     let database_url = env::var("TEST_DATABASE_URL")
         .or_else(|_| env::var("DATABASE_URL"))
         .ok()?;
-    
+
     DatabasePool::new(&database_url).await.ok()
 }
 
 /// Helper to create embedding client (mock if no API key)
-async fn create_embedding_client() -> Result<Arc<dyn embed::client::EmbeddingClient + Send + Sync>> {
+async fn create_embedding_client() -> Result<Arc<dyn embed::client::EmbeddingClient + Send + Sync>>
+{
     if env::var("OPENAI_API_KEY").is_ok() {
         Ok(Arc::new(OpenAIEmbeddingClient::new()?))
     } else {
@@ -33,8 +36,10 @@ async fn create_embedding_client() -> Result<Arc<dyn embed::client::EmbeddingCli
 
 #[tokio::test]
 async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
-    println!("🔍 Testing Acceptance Criterion 1: add_rust_crate returns 202 + job ID and doesn't block");
-    
+    println!(
+        "🔍 Testing Acceptance Criterion 1: add_rust_crate returns 202 + job ID and doesn't block"
+    );
+
     let Some(pool) = create_test_pool().await else {
         println!("⚠️ Database not available, skipping database-dependent test");
         return;
@@ -53,8 +58,9 @@ async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
         Duration::from_secs(5), // Should return within 5 seconds
         tool.execute(json!({
             "name": "test-crate-acceptance"
-        }))
-    ).await;
+        })),
+    )
+    .await;
 
     let duration = start_time.elapsed();
 
@@ -62,15 +68,18 @@ async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
         Ok(Ok(response)) => {
             // CRITICAL: Response should indicate job was enqueued, not completed
             // Current implementation FAILS this by processing synchronously
-            
+
             if response.contains("completed successfully") {
                 panic!("❌ CRITICAL FAILURE: add_rust_crate processed synchronously instead of enqueueing background job! 
                        Response: {}", response);
             }
 
             if !response.contains("Job ID:") && !response.contains("job") {
-                panic!("❌ CRITICAL FAILURE: add_rust_crate didn't return a job ID!
-                       Response: {}", response);
+                panic!(
+                    "❌ CRITICAL FAILURE: add_rust_crate didn't return a job ID!
+                       Response: {}",
+                    response
+                );
             }
 
             // Should return quickly (under 2 seconds for just enqueueing)
@@ -82,7 +91,10 @@ async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
             println!("✅ add_rust_crate returned quickly with job reference");
         }
         Ok(Err(e)) => {
-            println!("⚠️ Tool execution failed (may be expected in test env): {}", e);
+            println!(
+                "⚠️ Tool execution failed (may be expected in test env): {}",
+                e
+            );
         }
         Err(_) => {
             panic!("❌ CRITICAL FAILURE: add_rust_crate timed out (took > 5s), indicating synchronous processing");
@@ -93,7 +105,7 @@ async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
 #[tokio::test]
 async fn test_acceptance_criterion_2_check_rust_status_reports_job_states() {
     println!("🔍 Testing Acceptance Criterion 2: check_rust_status reports job states and counts");
-    
+
     let Some(pool) = create_test_pool().await else {
         println!("⚠️ Database not available, skipping database-dependent test");
         return;
@@ -117,9 +129,11 @@ async fn test_acceptance_criterion_2_check_rust_status_reports_job_states() {
     }
 
     // Test with specific job ID (using a fake UUID)
-    let result = tool.execute(json!({
-        "job_id": "550e8400-e29b-41d4-a716-446655440000"
-    })).await;
+    let result = tool
+        .execute(json!({
+            "job_id": "550e8400-e29b-41d4-a716-446655440000"
+        }))
+        .await;
 
     match result {
         Ok(response) => {
@@ -131,7 +145,10 @@ async fn test_acceptance_criterion_2_check_rust_status_reports_job_states() {
             }
         }
         Err(e) => {
-            println!("⚠️ check_rust_status with job ID failed (may be expected): {}", e);
+            println!(
+                "⚠️ check_rust_status with job ID failed (may be expected): {}",
+                e
+            );
         }
     }
 }
@@ -139,7 +156,7 @@ async fn test_acceptance_criterion_2_check_rust_status_reports_job_states() {
 #[tokio::test]
 async fn test_acceptance_criterion_3_remove_rust_crate_cascade_delete() {
     println!("🔍 Testing Acceptance Criterion 3: remove_rust_crate performs cascade delete");
-    
+
     let Some(pool) = create_test_pool().await else {
         println!("⚠️ Database not available, skipping database-dependent test");
         return;
@@ -148,9 +165,11 @@ async fn test_acceptance_criterion_3_remove_rust_crate_cascade_delete() {
     let tool = RemoveRustCrateTool::new(pool);
 
     // Test with non-existent crate
-    let result = tool.execute(json!({
-        "name": "non-existent-test-crate"
-    })).await;
+    let result = tool
+        .execute(json!({
+            "name": "non-existent-test-crate"
+        }))
+        .await;
 
     match result {
         Ok(response) => {
@@ -166,10 +185,12 @@ async fn test_acceptance_criterion_3_remove_rust_crate_cascade_delete() {
     }
 
     // Test soft delete option
-    let result = tool.execute(json!({
-        "name": "test-crate",
-        "soft_delete": true
-    })).await;
+    let result = tool
+        .execute(json!({
+            "name": "test-crate",
+            "soft_delete": true
+        }))
+        .await;
 
     match result {
         Ok(response) => {
@@ -180,15 +201,18 @@ async fn test_acceptance_criterion_3_remove_rust_crate_cascade_delete() {
             }
         }
         Err(e) => {
-            println!("⚠️ remove_rust_crate with soft_delete failed (may be expected): {}", e);
+            println!(
+                "⚠️ remove_rust_crate with soft_delete failed (may be expected): {}",
+                e
+            );
         }
     }
 }
 
-#[tokio::test] 
+#[tokio::test]
 async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
     println!("🔍 Testing Acceptance Criterion 4: list_rust_crates paginates with stats");
-    
+
     let Some(pool) = create_test_pool().await else {
         println!("⚠️ Database not available, skipping database-dependent test");
         return;
@@ -212,11 +236,13 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
     }
 
     // Test pagination parameters
-    let result = tool.execute(json!({
-        "page": 1,
-        "limit": 5,
-        "include_stats": true
-    })).await;
+    let result = tool
+        .execute(json!({
+            "page": 1,
+            "limit": 5,
+            "include_stats": true
+        }))
+        .await;
 
     match result {
         Ok(response) => {
@@ -226,21 +252,29 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
             }
         }
         Err(e) => {
-            println!("⚠️ list_rust_crates with parameters failed (may be expected): {}", e);
+            println!(
+                "⚠️ list_rust_crates with parameters failed (may be expected): {}",
+                e
+            );
         }
     }
 
     // Test name pattern filtering
-    let result = tool.execute(json!({
-        "name_pattern": "serde"
-    })).await;
+    let result = tool
+        .execute(json!({
+            "name_pattern": "serde"
+        }))
+        .await;
 
     match result {
         Ok(_) => {
             println!("✅ list_rust_crates supports name pattern filtering");
         }
         Err(e) => {
-            println!("⚠️ list_rust_crates with name pattern failed (may be expected): {}", e);
+            println!(
+                "⚠️ list_rust_crates with name pattern failed (may be expected): {}",
+                e
+            );
         }
     }
 }
@@ -248,7 +282,7 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
 #[tokio::test]
 async fn test_acceptance_criterion_5_crate_jobs_table_persistence() {
     println!("🔍 Testing Acceptance Criterion 5: crate_jobs table persists job state");
-    
+
     let Some(pool) = create_test_pool().await else {
         println!("⚠️ Database not available, skipping database-dependent test");
         return;
@@ -264,7 +298,10 @@ async fn test_acceptance_criterion_5_crate_jobs_table_persistence() {
             println!("✅ crate_jobs table exists and is queryable");
         }
         Err(e) => {
-            panic!("❌ CRITICAL FAILURE: crate_jobs table doesn't exist or isn't accessible: {}", e);
+            panic!(
+                "❌ CRITICAL FAILURE: crate_jobs table doesn't exist or isn't accessible: {}",
+                e
+            );
         }
     }
 
@@ -278,7 +315,10 @@ async fn test_acceptance_criterion_5_crate_jobs_table_persistence() {
             println!("✅ crate_jobs table has all required columns");
         }
         Err(e) => {
-            panic!("❌ CRITICAL FAILURE: crate_jobs table missing required columns: {}", e);
+            panic!(
+                "❌ CRITICAL FAILURE: crate_jobs table missing required columns: {}",
+                e
+            );
         }
     }
 }
@@ -289,71 +329,96 @@ fn test_tool_definitions_schema_compliance() {
 
     // Test that all tools have proper MCP schema definitions
     let tools = vec![
-        ("add_rust_crate", json!({
-            "name": "add_rust_crate",
-            "description": "Add a new Rust crate to the documentation system",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "version": {"type": "string"}
-                },
-                "required": ["name"]
-            }
-        })),
-        ("remove_rust_crate", json!({
-            "name": "remove_rust_crate", 
-            "description": "Remove a Rust crate from the documentation system",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "soft_delete": {"type": "boolean"}
-                },
-                "required": ["name"]
-            }
-        })),
-        ("list_rust_crates", json!({
-            "name": "list_rust_crates",
-            "description": "List all Rust crates with pagination",
-            "inputSchema": {
-                "type": "object", 
-                "properties": {
-                    "page": {"type": "integer"},
-                    "limit": {"type": "integer"}
+        (
+            "add_rust_crate",
+            json!({
+                "name": "add_rust_crate",
+                "description": "Add a new Rust crate to the documentation system",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "version": {"type": "string"}
+                    },
+                    "required": ["name"]
                 }
-            }
-        })),
-        ("check_rust_status", json!({
-            "name": "check_rust_status",
-            "description": "Check the status of Rust crate operations",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "job_id": {"type": "string"}
+            }),
+        ),
+        (
+            "remove_rust_crate",
+            json!({
+                "name": "remove_rust_crate",
+                "description": "Remove a Rust crate from the documentation system",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "soft_delete": {"type": "boolean"}
+                    },
+                    "required": ["name"]
                 }
-            }
-        }))
+            }),
+        ),
+        (
+            "list_rust_crates",
+            json!({
+                "name": "list_rust_crates",
+                "description": "List all Rust crates with pagination",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "page": {"type": "integer"},
+                        "limit": {"type": "integer"}
+                    }
+                }
+            }),
+        ),
+        (
+            "check_rust_status",
+            json!({
+                "name": "check_rust_status",
+                "description": "Check the status of Rust crate operations",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "job_id": {"type": "string"}
+                    }
+                }
+            }),
+        ),
     ];
 
     for (name, expected_structure) in tools {
         // Validate that expected fields exist
-        assert!(expected_structure.get("name").is_some(), 
-                "Tool {} missing name field", name);
-        assert!(expected_structure.get("description").is_some(),
-                "Tool {} missing description field", name);
-        assert!(expected_structure.get("inputSchema").is_some(),
-                "Tool {} missing inputSchema field", name);
-        
+        assert!(
+            expected_structure.get("name").is_some(),
+            "Tool {} missing name field",
+            name
+        );
+        assert!(
+            expected_structure.get("description").is_some(),
+            "Tool {} missing description field",
+            name
+        );
+        assert!(
+            expected_structure.get("inputSchema").is_some(),
+            "Tool {} missing inputSchema field",
+            name
+        );
+
         let input_schema = expected_structure.get("inputSchema").unwrap();
-        assert_eq!(input_schema.get("type").unwrap().as_str().unwrap(), "object",
-                   "Tool {} inputSchema must be object type", name);
-        
+        assert_eq!(
+            input_schema.get("type").unwrap().as_str().unwrap(),
+            "object",
+            "Tool {} inputSchema must be object type",
+            name
+        );
+
         println!("✅ Tool {} has valid MCP schema structure", name);
     }
 }
 
-#[test] 
+#[test]
 fn test_acceptance_criterion_validation_patterns() {
     println!("🔍 Testing Input Validation Patterns");
 
@@ -361,27 +426,29 @@ fn test_acceptance_criterion_validation_patterns() {
     // Valid crate names should contain only alphanumeric, hyphens, and underscores
     let valid_names = ["serde", "tokio", "serde-json", "rust_decimal"];
     let invalid_names = ["invalid.name", "name with spaces", "", "invalid@version"];
-    
+
     for name in &valid_names {
         assert!(!name.is_empty());
-        assert!(name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
+        assert!(name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
     }
     println!("✅ Crate name validation accepts valid names");
-    
+
     for name in &invalid_names {
         assert!(name.is_empty() || name.contains('.') || name.contains(' ') || name.contains('@'));
     }
     println!("✅ Crate name validation rejects invalid names");
-    
+
     // Test version validation patterns
     let valid_versions = ["1.0.0", "0.12.34", "2.1.0-alpha"];
     let invalid_versions = ["1.0", "latest"];
-    
+
     for version in &valid_versions {
         assert!(version.chars().any(|c| c.is_ascii_digit()));
         assert!(version.contains('.'));
     }
-    
+
     for version in &invalid_versions {
         // These are valid for our system but not semver-strict
         assert!(!version.is_empty());
@@ -407,9 +474,15 @@ async fn test_performance_requirements() {
     match result {
         Ok(_) => {
             if duration > Duration::from_secs(5) {
-                panic!("❌ PERFORMANCE FAILURE: list_rust_crates took {:?}, should be under 5s", duration);
+                panic!(
+                    "❌ PERFORMANCE FAILURE: list_rust_crates took {:?}, should be under 5s",
+                    duration
+                );
             }
-            println!("✅ list_rust_crates performs within acceptable time ({:?})", duration);
+            println!(
+                "✅ list_rust_crates performs within acceptable time ({:?})",
+                duration
+            );
         }
         Err(e) => {
             println!("⚠️ Performance test skipped due to error: {}", e);
@@ -425,9 +498,15 @@ async fn test_performance_requirements() {
     match result {
         Ok(_) => {
             if duration > Duration::from_secs(3) {
-                panic!("❌ PERFORMANCE FAILURE: check_rust_status took {:?}, should be under 3s", duration);
+                panic!(
+                    "❌ PERFORMANCE FAILURE: check_rust_status took {:?}, should be under 3s",
+                    duration
+                );
             }
-            println!("✅ check_rust_status performs within acceptable time ({:?})", duration);
+            println!(
+                "✅ check_rust_status performs within acceptable time ({:?})",
+                duration
+            );
         }
         Err(e) => {
             println!("⚠️ Performance test skipped due to error: {}", e);

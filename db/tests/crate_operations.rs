@@ -378,7 +378,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
     // Insert documents with unique doc_paths
     let docs = [
         (doc1_id, metadata1, "test/struct_doc"),
-        (doc2_id, metadata2, "test/function_doc")
+        (doc2_id, metadata2, "test/function_doc"),
     ];
     for (doc_id, metadata, doc_path) in docs {
         sqlx::query(
