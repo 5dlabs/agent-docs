@@ -777,6 +777,7 @@ impl CrateQueries {
     /// # Errors
     ///
     /// Returns an error if the database query fails.
+    #[allow(clippy::too_many_lines)]
     pub async fn list_crates(
         pool: &PgPool,
         pagination: &crate::models::PaginationParams,
@@ -807,14 +808,15 @@ impl CrateQueries {
                 GROUP BY metadata->>'crate_name', metadata->>'crate_version'
             )
             SELECT 
-                crate_name as name,
-                crate_version as version,
+                COALESCE(crate_name, 'unknown') as name,
+                COALESCE(crate_version, 'latest') as version,
                 '' as description,
                 '' as documentation_url,
                 total_docs::int as total_docs,
                 total_tokens,
                 last_updated
             FROM crate_stats
+            WHERE crate_name IS NOT NULL
             ORDER BY crate_name
             LIMIT $1 OFFSET $2
         "
@@ -912,7 +914,7 @@ impl CrateQueries {
                 SELECT 
                     metadata->>'crate_name' as crate_name,
                     COUNT(*) as docs_count,
-                    COALESCE(SUM(token_count), 0) as tokens_count,
+                    COALESCE(SUM(CAST(token_count AS BIGINT)), 0) as tokens_count,
                     MAX(created_at) as last_updated
                 FROM documents 
                 WHERE doc_type = 'rust' 
@@ -920,9 +922,9 @@ impl CrateQueries {
                 GROUP BY metadata->>'crate_name'
             )
             SELECT 
-                COUNT(*) as total_crates,
-                COUNT(*) as active_crates,
-                COALESCE(SUM(docs_count), 0) as total_docs,
+                COUNT(*)::bigint as total_crates,
+                COUNT(*)::bigint as active_crates,
+                COALESCE(SUM(docs_count), 0)::bigint as total_docs,
                 MAX(last_updated) as last_update
             FROM crate_stats
             ",
@@ -932,10 +934,10 @@ impl CrateQueries {
 
         let (total_crates, active_crates, total_docs, last_update) = row;
 
-        // Get total tokens separately
+        // Get total tokens separately with proper type handling
         let total_tokens = sqlx::query_scalar::<_, Option<i64>>(
             r"
-            SELECT COALESCE(SUM(token_count), 0) 
+            SELECT COALESCE(SUM(CAST(token_count AS BIGINT)), 0) 
             FROM documents 
             WHERE doc_type = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
@@ -976,10 +978,10 @@ impl CrateQueries {
         let row = sqlx::query_as::<_, (String, String, i64, i64, DateTime<Utc>)>(
             r"
             SELECT 
-                metadata->>'crate_name' as name,
-                metadata->>'crate_version' as version,
+                COALESCE(metadata->>'crate_name', 'unknown') as name,
+                COALESCE(metadata->>'crate_version', 'latest') as version,
                 COUNT(*) as total_docs,
-                COALESCE(SUM(token_count), 0) as total_tokens,
+                COALESCE(SUM(CAST(token_count AS BIGINT)), 0) as total_tokens,
                 MAX(created_at) as last_updated
             FROM documents 
             WHERE doc_type = 'rust' 
