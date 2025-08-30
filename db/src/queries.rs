@@ -827,8 +827,8 @@ impl CrateQueries {
 
         // Execute main query
         let mut query = sqlx::query(&query_str)
-        .bind(pagination.limit)
-        .bind(pagination.offset);
+            .bind(pagination.limit)
+            .bind(pagination.offset);
 
         if let Some(pattern) = name_pattern {
             query = query.bind(format!("%{pattern}%"));
@@ -862,32 +862,32 @@ impl CrateQueries {
         let items = rows
             .into_iter()
             .map(|row| {
-                    let name: String = row.get("name");
-                    let version: String = row.get("version");
-                    let description: String = row.get("description");
-                    let documentation_url: String = row.get("documentation_url");
-                    let total_docs: i32 = row.get("total_docs");
-                    let total_tokens: i64 = row.get("total_tokens");
-                    let last_updated: DateTime<Utc> = row.get("last_updated");
-                    
-                    crate::models::CrateInfo {
-                        name,
-                        version,
-                        description: if description.is_empty() {
-                            None
-                        } else {
-                            Some(description)
-                        },
-                        documentation_url: if documentation_url.is_empty() {
-                            None
-                        } else {
-                            Some(documentation_url)
-                        },
-                        total_docs,
-                        total_tokens,
-                        last_updated,
-                    }
-                })
+                let name: String = row.get("name");
+                let version: String = row.get("version");
+                let description: String = row.get("description");
+                let documentation_url: String = row.get("documentation_url");
+                let total_docs: i32 = row.get("total_docs");
+                let total_tokens: i64 = row.get("total_tokens");
+                let last_updated: DateTime<Utc> = row.get("last_updated");
+
+                crate::models::CrateInfo {
+                    name,
+                    version,
+                    description: if description.is_empty() {
+                        None
+                    } else {
+                        Some(description)
+                    },
+                    documentation_url: if documentation_url.is_empty() {
+                        None
+                    } else {
+                        Some(documentation_url)
+                    },
+                    total_docs,
+                    total_tokens,
+                    last_updated,
+                }
+            })
             .collect();
 
         Ok(crate::models::PaginatedResponse::new(
@@ -998,7 +998,7 @@ impl CrateQueries {
             let total_docs: i64 = row.get("total_docs");
             let total_tokens: i64 = row.get("total_tokens");
             let last_updated: DateTime<Utc> = row.get("last_updated");
-            
+
             Ok(Some(crate::models::CrateInfo {
                 name,
                 version,
