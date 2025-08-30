@@ -132,7 +132,7 @@ async fn test_dynamic_tools_registration() {
 }
 
 #[tokio::test]
-#[ignore = "Integration test that requires specific database content - fails in CI"]  
+#[ignore = "Integration test that requires specific database content - fails in CI"]
 async fn test_dynamic_tool_invocation() {
     let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
 
