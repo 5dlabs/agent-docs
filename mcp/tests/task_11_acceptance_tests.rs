@@ -24,8 +24,7 @@ async fn create_test_pool() -> Option<DatabasePool> {
 }
 
 /// Helper to create embedding client (mock if no API key)
-async fn create_embedding_client() -> Result<Arc<dyn embed::client::EmbeddingClient + Send + Sync>>
-{
+fn create_embedding_client() -> Result<Arc<dyn embed::client::EmbeddingClient + Send + Sync>> {
     if env::var("OPENAI_API_KEY").is_ok() {
         Ok(Arc::new(OpenAIEmbeddingClient::new()?))
     } else {
@@ -35,6 +34,7 @@ async fn create_embedding_client() -> Result<Arc<dyn embed::client::EmbeddingCli
 }
 
 #[tokio::test]
+#[allow(clippy::match_wild_err_arm)] // Test code with expected timeout scenarios
 async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
     println!(
         "🔍 Testing Acceptance Criterion 1: add_rust_crate returns 202 + job ID and doesn't block"
@@ -45,7 +45,7 @@ async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
         return;
     };
 
-    let Ok(client) = create_embedding_client().await else {
+    let Ok(client) = create_embedding_client() else {
         println!("⚠️ Embedding client not available, skipping test");
         return;
     };
@@ -69,34 +69,24 @@ async fn test_acceptance_criterion_1_add_rust_crate_returns_202_with_job_id() {
             // CRITICAL: Response should indicate job was enqueued, not completed
             // Current implementation FAILS this by processing synchronously
 
-            if response.contains("completed successfully") {
-                panic!("❌ CRITICAL FAILURE: add_rust_crate processed synchronously instead of enqueueing background job! 
-                       Response: {}", response);
-            }
+            assert!(!response.contains("completed successfully"), 
+                    "❌ CRITICAL FAILURE: add_rust_crate processed synchronously instead of enqueueing background job! 
+                     Response: {response}");
 
-            if !response.contains("Job ID:") && !response.contains("job") {
-                panic!(
+            assert!(response.contains("Job ID:") || response.contains("job"), 
                     "❌ CRITICAL FAILURE: add_rust_crate didn't return a job ID!
-                       Response: {}",
-                    response
-                );
-            }
+                     Response: {response}");
 
             // Should return quickly (under 2 seconds for just enqueueing)
-            if duration > Duration::from_secs(2) {
-                panic!("❌ CRITICAL FAILURE: add_rust_crate took too long ({:?}), should return immediately after enqueueing", 
-                       duration);
-            }
+            assert!(duration <= Duration::from_secs(2), 
+                    "❌ CRITICAL FAILURE: add_rust_crate took too long ({duration:?}), should return immediately after enqueueing");
 
             println!("✅ add_rust_crate returned quickly with job reference");
         }
         Ok(Err(e)) => {
-            println!(
-                "⚠️ Tool execution failed (may be expected in test env): {}",
-                e
-            );
+            println!("⚠️ Tool execution failed (may be expected in test env): {e}");
         }
-        Err(_) => {
+        Err(_) => { // Timeout error - acceptable in tests
             panic!("❌ CRITICAL FAILURE: add_rust_crate timed out (took > 5s), indicating synchronous processing");
         }
     }
@@ -118,13 +108,12 @@ async fn test_acceptance_criterion_2_check_rust_status_reports_job_states() {
     match result {
         Ok(response) => {
             // Should include system statistics
-            if !response.contains("System Statistics") && !response.contains("Total Crates") {
-                panic!("❌ FAILURE: check_rust_status doesn't provide system statistics");
-            }
+            assert!(response.contains("System Statistics") || response.contains("Total Crates"), 
+                    "❌ FAILURE: check_rust_status doesn't provide system statistics");
             println!("✅ check_rust_status provides system overview");
         }
         Err(e) => {
-            println!("⚠️ check_rust_status failed (may be expected): {}", e);
+            println!("⚠️ check_rust_status failed (may be expected): {e}");
         }
     }
 
@@ -138,17 +127,12 @@ async fn test_acceptance_criterion_2_check_rust_status_reports_job_states() {
     match result {
         Ok(response) => {
             // Should handle job lookup gracefully
-            if response.contains("not found") || response.contains("Job Status") {
-                println!("✅ check_rust_status handles job ID lookup");
-            } else {
-                panic!("❌ FAILURE: check_rust_status doesn't handle job ID parameter correctly");
-            }
+            assert!(response.contains("not found") || response.contains("Job Status"), 
+                    "❌ FAILURE: check_rust_status doesn't handle job ID parameter correctly");
+            println!("✅ check_rust_status handles job ID lookup");
         }
         Err(e) => {
-            println!(
-                "⚠️ check_rust_status with job ID failed (may be expected): {}",
-                e
-            );
+            println!("⚠️ check_rust_status with job ID failed (may be expected): {e}");
         }
     }
 }
@@ -173,14 +157,12 @@ async fn test_acceptance_criterion_3_remove_rust_crate_cascade_delete() {
 
     match result {
         Ok(response) => {
-            if response.contains("not found") {
-                println!("✅ remove_rust_crate handles non-existent crates gracefully");
-            } else {
-                panic!("❌ FAILURE: remove_rust_crate should report when crate not found");
-            }
+            assert!(response.contains("not found"), 
+                    "❌ FAILURE: remove_rust_crate should report when crate not found");
+            println!("✅ remove_rust_crate handles non-existent crates gracefully");
         }
         Err(e) => {
-            println!("⚠️ remove_rust_crate failed (may be expected): {}", e);
+            println!("⚠️ remove_rust_crate failed (may be expected): {e}");
         }
     }
 
@@ -197,13 +179,12 @@ async fn test_acceptance_criterion_3_remove_rust_crate_cascade_delete() {
             println!("✅ remove_rust_crate supports soft_delete parameter");
             if !response.contains("not found") {
                 // If crate exists, should mention soft delete
-                println!("📝 Soft delete response: {}", response);
+                println!("📝 Soft delete response: {response}");
             }
         }
         Err(e) => {
             println!(
-                "⚠️ remove_rust_crate with soft_delete failed (may be expected): {}",
-                e
+                "⚠️ remove_rust_crate with soft_delete failed (may be expected): {e}"
             );
         }
     }
@@ -225,13 +206,12 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
     match result {
         Ok(response) => {
             // Should include some stats or formatting
-            if response.is_empty() {
-                panic!("❌ FAILURE: list_rust_crates returns empty response");
-            }
+            assert!(!response.is_empty(), 
+                    "❌ FAILURE: list_rust_crates returns empty response");
             println!("✅ list_rust_crates returns formatted response");
         }
         Err(e) => {
-            println!("⚠️ list_rust_crates failed (may be expected): {}", e);
+            println!("⚠️ list_rust_crates failed (may be expected): {e}");
         }
     }
 
@@ -253,8 +233,7 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
         }
         Err(e) => {
             println!(
-                "⚠️ list_rust_crates with parameters failed (may be expected): {}",
-                e
+                "⚠️ list_rust_crates with parameters failed (may be expected): {e}"
             );
         }
     }
@@ -272,8 +251,7 @@ async fn test_acceptance_criterion_4_list_rust_crates_pagination() {
         }
         Err(e) => {
             println!(
-                "⚠️ list_rust_crates with name pattern failed (may be expected): {}",
-                e
+                "⚠️ list_rust_crates with name pattern failed (may be expected): {e}"
             );
         }
     }
@@ -299,8 +277,7 @@ async fn test_acceptance_criterion_5_crate_jobs_table_persistence() {
         }
         Err(e) => {
             panic!(
-                "❌ CRITICAL FAILURE: crate_jobs table doesn't exist or isn't accessible: {}",
-                e
+                "❌ CRITICAL FAILURE: crate_jobs table doesn't exist or isn't accessible: {e}"
             );
         }
     }
@@ -316,8 +293,7 @@ async fn test_acceptance_criterion_5_crate_jobs_table_persistence() {
         }
         Err(e) => {
             panic!(
-                "❌ CRITICAL FAILURE: crate_jobs table missing required columns: {}",
-                e
+                "❌ CRITICAL FAILURE: crate_jobs table missing required columns: {e}"
             );
         }
     }
@@ -392,29 +368,25 @@ fn test_tool_definitions_schema_compliance() {
         // Validate that expected fields exist
         assert!(
             expected_structure.get("name").is_some(),
-            "Tool {} missing name field",
-            name
+            "Tool {name} missing name field"
         );
         assert!(
             expected_structure.get("description").is_some(),
-            "Tool {} missing description field",
-            name
+            "Tool {name} missing description field"
         );
         assert!(
             expected_structure.get("inputSchema").is_some(),
-            "Tool {} missing inputSchema field",
-            name
+            "Tool {name} missing inputSchema field"
         );
 
         let input_schema = expected_structure.get("inputSchema").unwrap();
         assert_eq!(
             input_schema.get("type").unwrap().as_str().unwrap(),
             "object",
-            "Tool {} inputSchema must be object type",
-            name
+            "Tool {name} inputSchema must be object type"
         );
 
-        println!("✅ Tool {} has valid MCP schema structure", name);
+        println!("✅ Tool {name} has valid MCP schema structure");
     }
 }
 
@@ -473,19 +445,14 @@ async fn test_performance_requirements() {
 
     match result {
         Ok(_) => {
-            if duration > Duration::from_secs(5) {
-                panic!(
-                    "❌ PERFORMANCE FAILURE: list_rust_crates took {:?}, should be under 5s",
-                    duration
-                );
-            }
+            assert!(duration <= Duration::from_secs(5), 
+                    "❌ PERFORMANCE FAILURE: list_rust_crates took {duration:?}, should be under 5s");
             println!(
-                "✅ list_rust_crates performs within acceptable time ({:?})",
-                duration
+                "✅ list_rust_crates performs within acceptable time ({duration:?})"
             );
         }
         Err(e) => {
-            println!("⚠️ Performance test skipped due to error: {}", e);
+            println!("⚠️ Performance test skipped due to error: {e}");
         }
     }
 
@@ -497,19 +464,14 @@ async fn test_performance_requirements() {
 
     match result {
         Ok(_) => {
-            if duration > Duration::from_secs(3) {
-                panic!(
-                    "❌ PERFORMANCE FAILURE: check_rust_status took {:?}, should be under 3s",
-                    duration
-                );
-            }
+            assert!(duration <= Duration::from_secs(3), 
+                    "❌ PERFORMANCE FAILURE: check_rust_status took {duration:?}, should be under 3s");
             println!(
-                "✅ check_rust_status performs within acceptable time ({:?})",
-                duration
+                "✅ check_rust_status performs within acceptable time ({duration:?})"
             );
         }
         Err(e) => {
-            println!("⚠️ Performance test skipped due to error: {}", e);
+            println!("⚠️ Performance test skipped due to error: {e}");
         }
     }
 }
