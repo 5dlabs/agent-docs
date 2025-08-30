@@ -452,15 +452,17 @@ async fn test_error_handling() -> Result<()> {
 #[tokio::test]
 async fn test_tool_metadata() -> Result<()> {
     // Skip this test if no database is available (e.g., in CI without database service)
-    let Ok(database_url) = std::env::var("TEST_DATABASE_URL").or_else(|_| std::env::var("DATABASE_URL")) else {
+    let Ok(database_url) =
+        std::env::var("TEST_DATABASE_URL").or_else(|_| std::env::var("DATABASE_URL"))
+    else {
         // If no database URL is available, skip the test
         println!("No database URL available, skipping test_tool_metadata");
         return Ok(());
     };
 
     let pool_result = sqlx::PgPool::connect(&database_url).await;
-    let pool = if let Ok(p) = pool_result { 
-        DatabasePool::from_pool(p) 
+    let pool = if let Ok(p) = pool_result {
+        DatabasePool::from_pool(p)
     } else {
         // Database not available, skip test
         println!("Database not available, skipping test_tool_metadata");
