@@ -253,12 +253,13 @@ async fn test_list_crates_from_documents() -> Result<()> {
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    assert!(found_crate.is_some());
+    assert!(found_crate.is_some(), "Could not find test crate '{}' in {} results", fixture.test_crate_name, result.items.len());
 
     let crate_info = found_crate.unwrap();
     assert_eq!(crate_info.total_docs, 5);
     assert_eq!(crate_info.version, "0.1.0");
-    assert_eq!(crate_info.total_tokens, 250 + 10); // 50+1 + 50+2 + ... + 50+5 = 250 + 15 = 265? Let me recalculate: 51+52+53+54+55 = 265
+    // Correct calculation: 50+0 + 50+1 + 50+2 + 50+3 + 50+4 = 50+51+52+53+54 = 260
+    assert_eq!(crate_info.total_tokens, 260);
 
     fixture.cleanup().await?;
     Ok(())
