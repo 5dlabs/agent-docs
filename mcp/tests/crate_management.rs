@@ -470,8 +470,11 @@ async fn test_error_handling() -> Result<()> {
 
 #[tokio::test]
 async fn test_tool_metadata() -> Result<()> {
+    let database_url = std::env::var("TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "postgresql://vector_user:EFwiPWDXMoOI2VKNF4eO3eSm8n3hzmjognKytNk2ndskgOAZgEBGDQULE6ryDc7z@vector-postgres.databases.svc.cluster.local:5432/vector_db".to_string());
+    
     let pool = DatabasePool::from_pool(
-        sqlx::PgPool::connect("postgresql://test:test@localhost:5433/test_docs")
+        sqlx::PgPool::connect(&database_url)
             .await
             .unwrap_or_else(|_| panic!("Failed to connect to test database")),
     );
