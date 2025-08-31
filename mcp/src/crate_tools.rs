@@ -1286,7 +1286,9 @@ impl CheckRustStatusTool {
             with_embeddings,
             if query_test > 0 {
                 #[allow(clippy::cast_precision_loss)]
-                { (with_embeddings as f64 / query_test as f64) * 100.0 }
+                {
+                    (with_embeddings as f64 / query_test as f64) * 100.0
+                }
             } else {
                 0.0
             }

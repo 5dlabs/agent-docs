@@ -104,10 +104,11 @@ impl ConfigLoader {
 
             // Validate tool name format - allow both query tools and management tools
             let is_query_tool = tool.name.ends_with("_query");
-            let is_crate_management_tool = matches!(tool.name.as_str(), 
+            let is_crate_management_tool = matches!(
+                tool.name.as_str(),
                 "add_rust_crate" | "remove_rust_crate" | "list_rust_crates" | "check_rust_status"
             );
-            
+
             if !is_query_tool && !is_crate_management_tool {
                 return Err(anyhow!(
                     "Tool name '{}' must either end with '_query' or be a valid crate management tool (add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status)", 
@@ -154,11 +155,19 @@ mod tests {
 
         // Check that all tools have valid names (either query tools or crate management tools)
         for tool in &config.tools {
-            let is_valid_name = tool.name.ends_with("_query") || 
-                matches!(tool.name.as_str(), 
-                    "add_rust_crate" | "remove_rust_crate" | "list_rust_crates" | "check_rust_status"
+            let is_valid_name = tool.name.ends_with("_query")
+                || matches!(
+                    tool.name.as_str(),
+                    "add_rust_crate"
+                        | "remove_rust_crate"
+                        | "list_rust_crates"
+                        | "check_rust_status"
                 );
-            assert!(is_valid_name, "Tool '{}' has invalid name format", tool.name);
+            assert!(
+                is_valid_name,
+                "Tool '{}' has invalid name format",
+                tool.name
+            );
             assert!(!tool.name.is_empty());
             assert!(!tool.doc_type.is_empty());
             assert!(!tool.title.is_empty());

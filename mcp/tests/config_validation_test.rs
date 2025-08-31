@@ -32,8 +32,9 @@ async fn test_configuration_validation() {
             !tool.description.is_empty(),
             "Description should not be empty: {tool:?}"
         );
-        let is_valid_name = tool.name.ends_with("_query") || 
-            matches!(tool.name.as_str(), 
+        let is_valid_name = tool.name.ends_with("_query")
+            || matches!(
+                tool.name.as_str(),
                 "add_rust_crate" | "remove_rust_crate" | "list_rust_crates" | "check_rust_status"
             );
         assert!(
@@ -209,10 +210,15 @@ fn test_doctype_to_tool_name_mapping() {
             "rust" => {
                 // Rust doc_type supports multiple tools - both query and management
                 assert!(
-                    matches!(tool.name.as_str(), 
-                        "add_rust_crate" | "remove_rust_crate" | "list_rust_crates" | "check_rust_status"
+                    matches!(
+                        tool.name.as_str(),
+                        "add_rust_crate"
+                            | "remove_rust_crate"
+                            | "list_rust_crates"
+                            | "check_rust_status"
                     ),
-                    "Unexpected rust tool name: {}", tool.name
+                    "Unexpected rust tool name: {}",
+                    tool.name
                 );
             }
             _ => panic!("Unexpected doc_type: {}", tool.doc_type),
