@@ -286,7 +286,10 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
     let result = CrateQueries::list_crates(&fixture.pool, &pagination, Some(pattern)).await?;
 
     // Should find our test crate with the unique pattern
-    assert!(!result.items.is_empty(), "No items found with pattern '{pattern}'");
+    assert!(
+        !result.items.is_empty(),
+        "No items found with pattern '{pattern}'"
+    );
     let found_crate = result
         .items
         .iter()
