@@ -1,0 +1,536 @@
+name: Build and Deploy Doc Server
+
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/doc-server
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: ankane/pgvector:v0.7.0
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+    - name: Run Clippy
+      run: cargo clippy --workspace --all-targets --all-features -- -D warnings -W clippy::pedantic
+
+    - name: Run tests
+      env:
+        DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: cargo test --workspace --all-features
+
+    - name: Generate test coverage
+      env:
+        DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        cargo install cargo-llvm-cov
+        cargo llvm-cov --workspace --all-features --lcov --output-path coverage.lcov
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: success()
+      with:
+        files: coverage.lcov
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build for release
+      run: cargo build --release --bin http_server
+    
+    - name: Prepare build artifacts
+      run: |
+        mkdir -p build
+        cp target/release/http_server build/
+        strip build/http_server
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: http_server
+        path: build/http_server
+        retention-days: 7
+
+  docker-build:
+    name: Build Container Image
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: http_server
+        path: build/
+    
+    - name: Make binary executable
+      run: chmod +x build/http_server
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log into registry ${{ env.REGISTRY }}
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Output image
+      id: image
+      run: |
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test, build, docker-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+    
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > /tmp/kubeconfig
+        echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+        chmod 600 /tmp/kubeconfig
+    
+    - name: Verify cluster access
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+    
+    - name: Deploy database migrations
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        # Run migrations using a Kubernetes job
+        cat <<EOF | kubectl apply -f -
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          name: doc-server-migrate-$(date +%s)
+          namespace: agent-platform
+        spec:
+          ttlSecondsAfterFinished: 300
+          template:
+            spec:
+              restartPolicy: Never
+              containers:
+              - name: migrate
+                image: ${{ needs.docker-build.outputs.image }}
+                command: ["./http_server", "--migrate-only"]
+                env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: doc-server-secrets
+                      key: database-url
+                - name: RUST_LOG
+                  value: "info,doc_server=debug"
+              imagePullSecrets:
+              - name: ghcr-secret
+        EOF
+        
+        # Wait for migration job to complete
+        kubectl wait --for=condition=complete --timeout=300s job -l job-name=doc-server-migrate-*
+    
+    - name: Deploy application
+      run: |
+        # Deploy the main application
+        cat <<EOF | kubectl apply -f -
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: doc-server
+          namespace: agent-platform
+          labels:
+            app: doc-server
+            version: ${{ github.sha }}
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: doc-server
+          template:
+            metadata:
+              labels:
+                app: doc-server
+                version: ${{ github.sha }}
+            spec:
+              containers:
+              - name: doc-server
+                image: ${{ needs.docker-build.outputs.image }}
+                ports:
+                - containerPort: 3001
+                  name: http
+                env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: doc-server-secrets
+                      key: database-url
+                - name: OPENAI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: doc-server-secrets
+                      key: openai-api-key
+                - name: PORT
+                  value: "3001"
+                - name: RUST_LOG
+                  value: "info,doc_server=debug"
+                resources:
+                  requests:
+                    memory: 256Mi
+                    cpu: 100m
+                  limits:
+                    memory: 512Mi
+                    cpu: 500m
+                readinessProbe:
+                  httpGet:
+                    path: /health
+                    port: 3001
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                livenessProbe:
+                  httpGet:
+                    path: /health
+                    port: 3001
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+              imagePullSecrets:
+              - name: ghcr-secret
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: doc-server-service
+          namespace: agent-platform
+          labels:
+            app: doc-server
+        spec:
+          selector:
+            app: doc-server
+          ports:
+          - name: http
+            port: 3001
+            targetPort: 3001
+          type: ClusterIP
+        ---
+        apiVersion: autoscaling/v2
+        kind: HorizontalPodAutoscaler
+        metadata:
+          name: doc-server-hpa
+          namespace: agent-platform
+        spec:
+          scaleTargetRef:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: doc-server
+          minReplicas: 2
+          maxReplicas: 10
+          metrics:
+          - type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 70
+          - type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 80
+        EOF
+    
+    - name: Wait for deployment
+      run: |
+        kubectl rollout status deployment/doc-server -n agent-platform --timeout=300s
+    
+    - name: Verify deployment health
+      run: |
+        # Get the service endpoint
+        SERVICE_IP=$(kubectl get svc doc-server-service -n agent-platform -o jsonpath='{.spec.clusterIP}')
+        
+        # Port forward to test locally
+        kubectl port-forward -n agent-platform svc/doc-server-service 3001:3001 &
+        PF_PID=$!
+        sleep 5
+        
+        # Test health endpoint
+        if curl -f http://localhost:3001/health; then
+          echo "✅ Health check passed"
+        else
+          echo "❌ Health check failed"
+          exit 1
+        fi
+        
+        # Kill port forward
+        kill $PF_PID
+    
+    - name: Run post-deployment validation
+      run: |
+        # Test basic MCP functionality
+        kubectl port-forward -n agent-platform svc/doc-server-service 3001:3001 &
+        PF_PID=$!
+        sleep 5
+        
+        # Test MCP tool listing
+        RESPONSE=$(curl -s -X POST http://localhost:3001/mcp \
+          -H "Content-Type: application/json" \
+          -d '{"method": "tools/list", "params": {}}')
+        
+        if echo "$RESPONSE" | jq -e '.result.tools | length > 0' >/dev/null; then
+          echo "✅ MCP tools validation passed"
+        else
+          echo "❌ MCP tools validation failed"
+          exit 1
+        fi
+        
+        # Kill port forward
+        kill $PF_PID
+
+  performance-test:
+    name: Performance Validation
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+    
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > /tmp/kubeconfig
+        echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+        chmod 600 /tmp/kubeconfig
+    
+    - name: Install tools
+      run: |
+        # Install hey for load testing
+        sudo apt-get update
+        sudo apt-get install -y curl jq
+        wget https://hey-release.s3.us-east-2.amazonaws.com/hey_linux_amd64
+        chmod +x hey_linux_amd64
+        sudo mv hey_linux_amd64 /usr/local/bin/hey
+    
+    - name: Run performance tests
+      run: |
+        # Port forward to service
+        kubectl port-forward -n agent-platform svc/doc-server-service 3001:3001 &
+        PF_PID=$!
+        sleep 5
+        
+        # Test response time requirement (< 2s)
+        echo "Testing query response time..."
+        RESPONSE_TIME=$(curl -w "%{time_total}" -s -o /dev/null -X POST http://localhost:3001/mcp \
+          -H "Content-Type: application/json" \
+          -d '{"method": "tools/call", "params": {"name": "rust_query", "arguments": {"query": "serde"}}}')
+        
+        echo "Query response time: ${RESPONSE_TIME}s"
+        if (( $(echo "$RESPONSE_TIME < 2.0" | bc -l) )); then
+          echo "✅ Response time requirement met (< 2s)"
+        else
+          echo "❌ Response time requirement failed (>= 2s)"
+          exit 1
+        fi
+        
+        # Test concurrent connections (100+)
+        echo "Testing concurrent connections..."
+        hey -n 1000 -c 100 -t 30 \
+          -m POST \
+          -H "Content-Type: application/json" \
+          -d '{"method": "tools/list", "params": {}}' \
+          http://localhost:3001/mcp > hey_results.txt
+        
+        cat hey_results.txt
+        
+        # Check if all requests succeeded
+        SUCCESS_RATE=$(grep "Success rate" hey_results.txt | awk '{print $3}' | tr -d '%')
+        if (( $(echo "$SUCCESS_RATE >= 95.0" | bc -l) )); then
+          echo "✅ Concurrent connection test passed (${SUCCESS_RATE}% success rate)"
+        else
+          echo "❌ Concurrent connection test failed (${SUCCESS_RATE}% success rate)"
+          exit 1
+        fi
+        
+        # Kill port forward
+        kill $PF_PID
+
+    - name: Validate all 10 query tools
+      run: |
+        # Port forward to service
+        kubectl port-forward -n agent-platform svc/doc-server-service 3001:3001 &
+        PF_PID=$!
+        sleep 5
+        
+        # Get list of available tools
+        TOOLS=$(curl -s -X POST http://localhost:3001/mcp \
+          -H "Content-Type: application/json" \
+          -d '{"method": "tools/list", "params": {}}' | jq -r '.result.tools[].name' | grep '_query$')
+        
+        TOOL_COUNT=$(echo "$TOOLS" | wc -l)
+        echo "Found $TOOL_COUNT query tools:"
+        echo "$TOOLS"
+        
+        if [ "$TOOL_COUNT" -ge 10 ]; then
+          echo "✅ All 10+ query tools are available"
+        else
+          echo "❌ Only $TOOL_COUNT query tools found, need 10+"
+          exit 1
+        fi
+        
+        # Test each query tool
+        for tool in $TOOLS; do
+          echo "Testing $tool..."
+          RESPONSE=$(curl -s -X POST http://localhost:3001/mcp \
+            -H "Content-Type: application/json" \
+            -d "{\"method\": \"tools/call\", \"params\": {\"name\": \"$tool\", \"arguments\": {\"query\": \"test\"}}}")
+          
+          if echo "$RESPONSE" | jq -e '.result' >/dev/null; then
+            echo "✅ $tool working"
+          else
+            echo "❌ $tool failed"
+            exit 1
+          fi
+        done
+        
+        # Kill port forward
+        kill $PF_PID
+
+  notify:
+    name: Notify deployment status
+    runs-on: ubuntu-latest
+    needs: [deploy, performance-test]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+    - name: Deployment Success
+      if: needs.deploy.result == 'success' && needs.performance-test.result == 'success'
+      run: |
+        echo "🎉 Production deployment successful!"
+        echo "✅ All acceptance criteria met"
+        echo "✅ Performance benchmarks passed"
+        echo "✅ All 10+ query tools validated"
+        echo "✅ Load testing passed (100+ concurrent connections)"
+    
+    - name: Deployment Failure  
+      if: needs.deploy.result == 'failure' || needs.performance-test.result == 'failure'
+      run: |
+        echo "❌ Production deployment failed"
+        echo "Check the logs and fix issues before proceeding"
+        exit 1

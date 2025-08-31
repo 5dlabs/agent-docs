@@ -1,41 +1,35 @@
-# Task 12: Rust Crate Management Tools Enhancement
+# Task 20: Production Deployment and Validation
 
 ## Overview
 
-Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`) with improved functionality and integration. Tools must be dynamically discovered from the root `tools.json` config (no hardcoded registration in handlers).
+Execute final production deployment with comprehensive validation ensuring all acceptance criteria are met in the live environment.
 
 ## Implementation Guide
 
-- Enhance add_rust_crate with version management and feature selection
-- Improve remove_rust_crate with cleanup verification
-- Add comprehensive status reporting to check_rust_status
-- Implement atomic operations for crate management
-- Add progress tracking and user feedback
+- Execute production deployment using GitHub Actions
+- Validate all 10 query tools with real-world queries
+- Test Rust crate management operations
+- Verify Streamable HTTP transport with client integration
+- Confirm cost reduction through batch processing
+- Validate performance benchmarks and scaling
 
 ## Technical Requirements
 
-- Atomic crate operations with rollback capability
-- Enhanced error handling and validation
-- Progress tracking for long-running operations
-- Comprehensive status reporting
-- Integration with batch embedding processing (Task 7)
-- Dynamic tools discovery from `tools.json`; toggling `enabled` controls exposure
+- GitHub Actions deployment workflow
+- Comprehensive acceptance testing suite
+- Performance validation (< 2s query response)
+- Load testing (100+ concurrent connections)
+- Cost reduction validation (70% savings)
+- Stakeholder acceptance testing
 
 ## Success Metrics
 
-- Atomic crate operations with zero data corruption
-- Enhanced user experience with progress feedback
-- Comprehensive error handling and recovery
-- Integration with new embedding batch processing (Task 7)
-- Improved performance for crate management operations
-
-## Dynamic Tools Configuration
-
-- Ensure entries for the enhanced tools exist in `tools.json` at repo root
-- Each entry should include `name`, `docType`, `title`, `description`, `enabled`
-- Server should read config on startup to register tools
-
-## CI/CD and Code Quality Requirements
+- All 10 query tools functional in production
+- Streamable HTTP transport working with all clients
+- 70% cost reduction achieved and validated
+- Query response times < 2 seconds under load
+- 100+ concurrent connections supported
+- Zero critical issues in production environment## CI/CD and Code Quality Requirements
 
 - Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
 - Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.

@@ -1,0 +1,374 @@
+# Kubernetes monitoring configuration for Doc Server
+# Includes ServiceMonitor for Prometheus, PodMonitor, and alerting rules
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doc-server-monitoring-config
+  namespace: agent-platform
+  labels:
+    app: doc-server
+    component: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    rule_files:
+      - "doc_server_alerts.yml"
+    
+    scrape_configs:
+      - job_name: 'doc-server'
+        static_configs:
+          - targets: ['doc-server-service:3001']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+        scrape_timeout: 5s
+
+  doc_server_alerts.yml: |
+    groups:
+      - name: doc-server-alerts
+        rules:
+          # High-level service availability
+          - alert: DocServerDown
+            expr: up{job="doc-server"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              service: doc-server
+            annotations:
+              summary: "Doc Server is down"
+              description: "Doc Server has been down for more than 1 minute"
+
+          # Response time performance
+          - alert: HighResponseTime
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="doc-server"}[5m])) > 2
+            for: 2m
+            labels:
+              severity: warning
+              service: doc-server
+            annotations:
+              summary: "High response time detected"
+              description: "95th percentile response time is {{ $value }}s (>2s threshold)"
+
+          # Error rate monitoring
+          - alert: HighErrorRate
+            expr: rate(http_requests_total{job="doc-server",status=~"5.."}[5m]) / rate(http_requests_total{job="doc-server"}[5m]) > 0.05
+            for: 3m
+            labels:
+              severity: warning
+              service: doc-server
+            annotations:
+              summary: "High error rate detected"
+              description: "Error rate is {{ $value | humanizePercentage }} (>5% threshold)"
+
+          # Memory usage
+          - alert: HighMemoryUsage
+            expr: container_memory_usage_bytes{pod=~"doc-server-.*"} / container_spec_memory_limit_bytes{pod=~"doc-server-.*"} > 0.8
+            for: 5m
+            labels:
+              severity: warning
+              service: doc-server
+            annotations:
+              summary: "High memory usage"
+              description: "Memory usage is {{ $value | humanizePercentage }} (>80% of limit)"
+
+          # CPU usage
+          - alert: HighCPUUsage
+            expr: rate(container_cpu_usage_seconds_total{pod=~"doc-server-.*"}[5m]) > 0.8
+            for: 5m
+            labels:
+              severity: warning
+              service: doc-server
+            annotations:
+              summary: "High CPU usage"
+              description: "CPU usage is {{ $value | humanizePercentage }} (>80%)"
+
+          # Database connection issues
+          - alert: DatabaseConnectionFailure
+            expr: increase(database_connection_errors_total{job="doc-server"}[5m]) > 5
+            for: 1m
+            labels:
+              severity: critical
+              service: doc-server
+            annotations:
+              summary: "Database connection failures"
+              description: "{{ $value }} database connection failures in the last 5 minutes"
+
+          # Tool execution failures
+          - alert: ToolExecutionFailures
+            expr: increase(mcp_tool_execution_errors_total{job="doc-server"}[5m]) > 10
+            for: 2m
+            labels:
+              severity: warning
+              service: doc-server
+            annotations:
+              summary: "High tool execution failure rate"
+              description: "{{ $value }} tool execution failures in the last 5 minutes"
+
+          # Protocol version errors
+          - alert: ProtocolVersionErrors
+            expr: increase(mcp_protocol_version_errors_total{job="doc-server"}[10m]) > 5
+            for: 1m
+            labels:
+              severity: warning
+              service: doc-server
+            annotations:
+              summary: "Protocol version compatibility issues"
+              description: "{{ $value }} protocol version errors in the last 10 minutes"
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: doc-server-monitor
+  namespace: agent-platform
+  labels:
+    app: doc-server
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: doc-server
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 10s
+    scrapeTimeout: 5s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: doc-server-pod-monitor
+  namespace: agent-platform
+  labels:
+    app: doc-server
+spec:
+  selector:
+    matchLabels:
+      app: doc-server
+  podMetricsEndpoints:
+  - port: http
+    path: /metrics
+    interval: 10s
+
+---
+# Grafana Dashboard ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doc-server-dashboard
+  namespace: agent-platform
+  labels:
+    app: doc-server
+    grafana_dashboard: "true"
+data:
+  doc-server-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Doc Server Monitoring",
+        "tags": ["doc-server", "mcp", "production"],
+        "timezone": "browser",
+        "refresh": "30s",
+        "schemaVersion": 27,
+        "version": 1,
+        "panels": [
+          {
+            "id": 1,
+            "title": "Service Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "up{job=\"doc-server\"}",
+                "legendFormat": "Service Up"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Response Time (95th percentile)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"doc-server\"}[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"doc-server\"}[5m]))",
+                "legendFormat": "50th percentile"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "seconds",
+                "max": 5,
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"doc-server\"}[5m])",
+                "legendFormat": "Requests/sec"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "requests/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"doc-server\",status=~\"4..\"}[5m])",
+                "legendFormat": "4xx errors/sec"
+              },
+              {
+                "expr": "rate(http_requests_total{job=\"doc-server\",status=~\"5..\"}[5m])",
+                "legendFormat": "5xx errors/sec"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "errors/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{pod=~\"doc-server-.*\"}",
+                "legendFormat": "Memory Usage"
+              },
+              {
+                "expr": "container_spec_memory_limit_bytes{pod=~\"doc-server-.*\"}",
+                "legendFormat": "Memory Limit"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "bytes",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{pod=~\"doc-server-.*\"}[5m])",
+                "legendFormat": "CPU Usage"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "cores",
+                "min": 0,
+                "max": 1
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          },
+          {
+            "id": 7,
+            "title": "Tool Execution Success Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(mcp_tool_executions_total{job=\"doc-server\",status=\"success\"}[5m]) / rate(mcp_tool_executions_total{job=\"doc-server\"}[5m])",
+                "legendFormat": "Success Rate"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "success rate",
+                "min": 0,
+                "max": 1
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "timepicker": {
+          "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"],
+          "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+        }
+      }
+    }
+
+---
+# Network Policy for monitoring traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: doc-server-monitoring
+  namespace: agent-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: doc-server
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow Prometheus scraping
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 3001
+  # Allow Grafana dashboard access
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 3001
