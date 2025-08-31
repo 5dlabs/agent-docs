@@ -8,8 +8,19 @@
       "sourceBranch": "main"
     },
     "intake": {
-      "model": "claude-opus-4-20250514",
-      "githubApp": "5DLabs-Morgan"
+      "githubApp": "5DLabs-Morgan",
+      "primary": {
+        "model": "opus",
+        "provider": "claude-code"
+      },
+      "research": {
+        "model": "opus",
+        "provider": "claude-code"
+      },
+      "fallback": {
+        "model": "gpt-5",
+        "provider": "openai"
+      }
     },
     "code": {
       "model": "claude-opus-4-1-20250805",
@@ -17,8 +28,8 @@
       "continueSession": false,
       "workingDirectory": ".",
       "overwriteMemory": false,
-      "repository": "5dlabs/cto",
-      "docsRepository": "5dlabs/cto",
+      "repository": "5dlabs/agent-docs",
+      "docsRepository": "5dlabs/agent-docs",
       "docsProjectDirectory": "docs",
       "service": "agent-docs"
     },
