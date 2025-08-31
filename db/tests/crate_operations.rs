@@ -78,9 +78,7 @@ impl DatabaseTestFixture {
 
     async fn check_connection_health(&self) -> Result<()> {
         // Test basic connectivity
-        sqlx::query("SELECT 1")
-            .fetch_one(&self.pool)
-            .await?;
+        sqlx::query("SELECT 1").fetch_one(&self.pool).await?;
 
         // Test that we can acquire a connection
         let mut conn = self.pool.acquire().await?;
