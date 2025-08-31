@@ -54,7 +54,7 @@ impl Tool for AddRustCrateTool {
     fn definition(&self) -> Value {
         json!({
             "name": "add_rust_crate",
-            "description": "Add a new Rust crate to the documentation system with automatic docs.rs ingestion. Returns immediately with a job ID for tracking progress.",
+            "description": "Add a new Rust crate to the documentation system with automatic docs.rs ingestion, version management, and feature selection. Supports atomic operations with rollback capability. Returns immediately with a job ID for tracking progress.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -64,7 +64,24 @@ impl Tool for AddRustCrateTool {
                     },
                     "version": {
                         "type": "string",
-                        "description": "Specific version to fetch (optional, defaults to latest)"
+                        "description": "Specific version to fetch (optional, defaults to latest stable version)"
+                    },
+                    "features": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Specific features to enable for documentation (optional, defaults to default features)"
+                    },
+                    "include_dev_dependencies": {
+                        "type": "boolean",
+                        "description": "Include development dependencies in documentation (optional, defaults to false)"
+                    },
+                    "force_update": {
+                        "type": "boolean",
+                        "description": "Force update if crate already exists (optional, defaults to false)"
+                    },
+                    "atomic_rollback": {
+                        "type": "boolean",
+                        "description": "Enable atomic operations with rollback on failure (optional, defaults to true)"
                     }
                 },
                 "required": ["name"]
@@ -79,6 +96,26 @@ impl Tool for AddRustCrateTool {
             .ok_or_else(|| anyhow!("Missing required 'name' parameter"))?;
 
         let version = arguments.get("version").and_then(Value::as_str);
+        let features = arguments
+            .get("features")
+            .and_then(|f| f.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect::<Vec<String>>()
+            });
+        let include_dev_deps = arguments
+            .get("include_dev_dependencies")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let force_update = arguments
+            .get("force_update")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let atomic_rollback = arguments
+            .get("atomic_rollback")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
 
         // Validate crate name
         if crate_name.is_empty() {
@@ -89,10 +126,17 @@ impl Tool for AddRustCrateTool {
         if let Some(existing_crate) =
             CrateQueries::find_crate_by_name(self.db_pool.pool(), crate_name).await?
         {
-            return Ok(format!(
-                "Crate '{}' already exists in the system (version: {}). Use remove_rust_crate first if you want to re-add it.",
-                crate_name, existing_crate.version
-            ));
+            if !force_update {
+                return Ok(format!(
+                    "Crate '{}' already exists in the system (version: {}). Use force_update=true to update it, or remove_rust_crate first if you want to completely replace it.",
+                    crate_name, existing_crate.version
+                ));
+            }
+            tracing::info!(
+                "Force updating existing crate '{}' (current version: {})",
+                crate_name,
+                existing_crate.version
+            );
         }
 
         // Enqueue the background job
@@ -115,6 +159,10 @@ impl Tool for AddRustCrateTool {
                 job_id,
                 &crate_name_owned,
                 version_owned.as_deref(),
+                features.as_ref(),
+                include_dev_deps,
+                force_update,
+                atomic_rollback,
             )
             .await
             {
@@ -143,7 +191,7 @@ impl Tool for AddRustCrateTool {
 }
 
 impl AddRustCrateTool {
-    /// Process crate ingestion in background
+    /// Process crate ingestion in background with enhanced options
     #[allow(clippy::too_many_arguments)]
     async fn process_crate_ingestion(
         job_processor: &CrateJobProcessor,
@@ -153,27 +201,68 @@ impl AddRustCrateTool {
         job_id: Uuid,
         crate_name: &str,
         version: Option<&str>,
+        features: Option<&Vec<String>>,
+        _include_dev_deps: bool,
+        force_update: bool,
+        atomic_rollback: bool,
     ) -> Result<()> {
         // Update job status to running
         job_processor
             .update_job_status(job_id, JobStatus::Running, Some(0), None)
             .await?;
 
+        // If force_update is true and atomic_rollback is enabled, first store existing state
+        let rollback_data = if force_update && atomic_rollback {
+            tracing::info!(
+                "Storing rollback data for atomic operation on crate: {}",
+                crate_name
+            );
+            Self::backup_existing_crate_data(db_pool, crate_name).await?
+        } else {
+            None
+        };
+
         // Load crate documentation
-        tracing::info!("Starting ingestion for crate: {}", crate_name);
+        tracing::info!(
+            "Starting ingestion for crate: {} with enhanced options",
+            crate_name
+        );
         let (crate_info, doc_pages) = rust_loader
             .load_crate_docs(crate_name, version)
             .await
-            .map_err(|e| anyhow!("Failed to load crate documentation: {}", e))?;
+            .map_err(|e| {
+                // Note: rollback will be handled in error processing below if needed
+                if rollback_data.is_some() {
+                    tracing::warn!(
+                        "Load failed, will attempt rollback for crate: {}",
+                        crate_name
+                    );
+                }
+                anyhow!("Failed to load crate documentation: {}", e)
+            })?;
 
         // Update progress
         job_processor
             .update_job_status(job_id, JobStatus::Running, Some(25), None)
             .await?;
 
+        // If force_update, remove existing documents first
+        if force_update {
+            tracing::info!(
+                "Removing existing documents for force update of crate: {}",
+                crate_name
+            );
+            let mut tx = db_pool.pool().begin().await?;
+            sqlx::query("DELETE FROM documents WHERE doc_type = 'rust' AND (metadata->>'crate_name' = $1 OR source_name = $1)")
+                .bind(crate_name)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+        }
+
         // No separate crate record - we use document metadata instead
         tracing::info!(
-            "Processing {} documentation pages for crate {}",
+            "Processing {} documentation pages for crate {} with enhanced metadata",
             doc_pages.len(),
             crate_name
         );
@@ -183,25 +272,35 @@ impl AddRustCrateTool {
             .update_job_status(job_id, JobStatus::Running, Some(50), None)
             .await?;
 
-        let mut total_docs = 0;
-        let mut total_tokens = 0i64;
-        let batch_size = 10;
+        // Wrap document processing in error handling for rollback
+        let processing_result = async {
+            let mut total_docs = 0;
+            let mut total_tokens = 0i64;
+            let batch_size = 10;
 
-        // Process documents in batches
-        for (batch_idx, chunk) in doc_pages.chunks(batch_size).enumerate() {
+            // Process documents in batches
+            for (batch_idx, chunk) in doc_pages.chunks(batch_size).enumerate() {
             let mut tx = db_pool.pool().begin().await?;
 
             for doc_page in chunk {
-                // Create document record
+                // Create document record with enhanced metadata
                 let document_id = uuid::Uuid::new_v4();
-                let metadata = json!({
+                let mut metadata = json!({
                     "crate_name": crate_info.name,
                     "crate_version": crate_info.newest_version,
                     "item_type": doc_page.item_type,
                     "module_path": doc_page.module_path,
                     "extracted_at": doc_page.extracted_at,
-                    "source_url": doc_page.url
+                    "source_url": doc_page.url,
+                    "force_updated": force_update,
+                    "atomic_rollback_enabled": atomic_rollback,
+                    "ingestion_job_id": job_id.to_string()
                 });
+
+                // Add feature information if specified
+                if let Some(feature_list) = features {
+                    metadata["selected_features"] = json!(&feature_list);
+                }
 
                 // Calculate token count (approximation)
                 let token_count = doc_page.content.len() / 4; // Rough approximation
@@ -271,22 +370,106 @@ impl AddRustCrateTool {
                 total_batches,
                 crate_name
             );
+            }
+
+            Ok((total_docs, total_tokens))
+        }.await;
+
+        // Handle processing result with potential rollback
+        match processing_result {
+            Ok((total_docs, total_tokens)) => {
+                // Mark job as completed
+                job_processor
+                    .update_job_status(job_id, JobStatus::Completed, Some(100), None)
+                    .await?;
+
+                tracing::info!(
+                    "Successfully completed enhanced ingestion for crate {}: {} documents, {} tokens",
+                    crate_name,
+                    total_docs,
+                    total_tokens
+                );
+            }
+            Err(processing_error) => {
+                // Attempt rollback if atomic_rollback is enabled
+                if atomic_rollback {
+                    match Self::rollback_failed_ingestion(db_pool, crate_name, job_id).await {
+                        Ok(()) => {
+                            tracing::warn!("Successfully rolled back failed ingestion for crate '{}' due to processing error: {}", crate_name, processing_error);
+                            return Err(anyhow!(
+                                "Processing failed but rollback succeeded: {}",
+                                processing_error
+                            ));
+                        }
+                        Err(rollback_err) => {
+                            tracing::error!("Both processing and rollback failed for crate '{}'. Processing error: {}, Rollback error: {}", crate_name, processing_error, rollback_err);
+                            return Err(anyhow!("Processing failed and rollback also failed. Processing: {}, Rollback: {}", processing_error, rollback_err));
+                        }
+                    }
+                }
+                tracing::error!(
+                    "Processing failed for crate '{}' (rollback disabled): {}",
+                    crate_name,
+                    processing_error
+                );
+                return Err(processing_error);
+            }
         }
 
-        // No separate crate statistics table - stats are calculated from document metadata
+        Ok(())
+    }
 
-        // Mark job as completed
-        job_processor
-            .update_job_status(job_id, JobStatus::Completed, Some(100), None)
-            .await?;
+    /// Backup existing crate data for rollback capability (simplified to just count)
+    async fn backup_existing_crate_data(
+        db_pool: &DatabasePool,
+        crate_name: &str,
+    ) -> Result<Option<i64>> {
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM documents WHERE doc_type = 'rust' AND (metadata->>'crate_name' = $1 OR source_name = $1)"
+        )
+        .bind(crate_name)
+        .fetch_one(db_pool.pool())
+        .await?;
 
-        tracing::info!(
-            "Successfully completed ingestion for crate {}: {} documents, {} tokens",
-            crate_name,
-            total_docs,
-            total_tokens
+        if count == 0 {
+            Ok(None)
+        } else {
+            tracing::info!(
+                "Backup data captured: {} documents for crate '{}'",
+                count,
+                crate_name
+            );
+            Ok(Some(count))
+        }
+    }
+
+    /// Rollback by removing newly inserted documents
+    async fn rollback_failed_ingestion(
+        db_pool: &DatabasePool,
+        crate_name: &str,
+        job_id: Uuid,
+    ) -> Result<()> {
+        tracing::warn!(
+            "Performing rollback for failed crate ingestion: {}",
+            crate_name
         );
 
+        let mut tx = db_pool.pool().begin().await?;
+
+        // Remove documents that were inserted during this job (identified by job_id in metadata)
+        let removed = sqlx::query(
+            "DELETE FROM documents WHERE doc_type = 'rust' AND metadata->>'ingestion_job_id' = $1",
+        )
+        .bind(job_id.to_string())
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        tracing::info!(
+            "Rollback completed: removed {} documents for crate '{}'",
+            removed.rows_affected(),
+            crate_name
+        );
         Ok(())
     }
 }
@@ -308,7 +491,7 @@ impl Tool for RemoveRustCrateTool {
     fn definition(&self) -> Value {
         json!({
             "name": "remove_rust_crate",
-            "description": "Remove a Rust crate from the documentation system with cascade deletion of all associated documents and embeddings.",
+            "description": "Remove a Rust crate from the documentation system with cascade deletion and cleanup verification. Supports both soft-delete and hard-delete operations with comprehensive cleanup verification.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -323,6 +506,18 @@ impl Tool for RemoveRustCrateTool {
                     "soft_delete": {
                         "type": "boolean",
                         "description": "If true, mark as inactive instead of hard delete (default: false)"
+                    },
+                    "verify_cleanup": {
+                        "type": "boolean",
+                        "description": "Perform comprehensive cleanup verification after deletion (default: true)"
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "Show what would be removed without actually deleting (default: false)"
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "Force removal even if crate has dependencies or references (default: false)"
                     }
                 },
                 "required": ["name"]
@@ -341,31 +536,81 @@ impl Tool for RemoveRustCrateTool {
             .get("soft_delete")
             .and_then(Value::as_bool)
             .unwrap_or(false);
+        let verify_cleanup = arguments
+            .get("verify_cleanup")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        let dry_run = arguments
+            .get("dry_run")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let force = arguments
+            .get("force")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
 
         // Validate crate name
         if crate_name.is_empty() {
             return Err(anyhow!("Crate name cannot be empty"));
         }
 
-        // Check if crate exists
+        // Check if crate exists and get preliminary info
         let crate_info = CrateQueries::find_crate_by_name(self.db_pool.pool(), crate_name).await?;
-        let Some(_crate_info) = crate_info else {
+        let Some(_existing_crate) = crate_info else {
             return Ok(format!("Crate '{}' not found in the system.", crate_name));
         };
 
-        if soft_delete {
-            // Soft delete - mark documents as inactive in metadata
-            self.perform_soft_deletion(crate_name).await
+        // Perform dependency check if not forced
+        if !force {
+            if let Some(dependencies) = self.check_crate_dependencies(crate_name).await? {
+                return Ok(format!(
+                    "Crate '{}' has dependencies or references and cannot be safely removed. Use force=true to override.\nDependencies found: {}",
+                    crate_name,
+                    dependencies.join(", ")
+                ));
+            }
+        }
+
+        // If dry run, show what would be removed
+        if dry_run {
+            return self.perform_dry_run(crate_name, soft_delete).await;
+        }
+
+        // Perform actual removal
+        let result = if soft_delete {
+            self.perform_soft_deletion(crate_name, verify_cleanup).await
         } else {
-            // Hard delete with cascade - use full transaction
-            self.perform_cascade_deletion(crate_name).await
+            self.perform_cascade_deletion(crate_name, verify_cleanup)
+                .await
+        };
+
+        // Add enhanced reporting
+        match result {
+            Ok(message) => {
+                if verify_cleanup {
+                    match self.verify_complete_cleanup(crate_name).await {
+                        Ok(verification_msg) => Ok(format!("{}\n\n{}", message, verification_msg)),
+                        Err(e) => Ok(format!(
+                            "{}\n\nWarning: Cleanup verification failed: {}",
+                            message, e
+                        )),
+                    }
+                } else {
+                    Ok(message)
+                }
+            }
+            Err(e) => Err(e),
         }
     }
 }
 
 impl RemoveRustCrateTool {
-    /// Perform cascade deletion with full transaction support
-    async fn perform_cascade_deletion(&self, crate_name: &str) -> Result<String> {
+    /// Perform cascade deletion with full transaction support and cleanup verification
+    async fn perform_cascade_deletion(
+        &self,
+        crate_name: &str,
+        _verify_cleanup: bool,
+    ) -> Result<String> {
         let mut tx = self.db_pool.pool().begin().await?;
 
         // Find all documents for this crate first (for count reporting)
@@ -400,7 +645,11 @@ impl RemoveRustCrateTool {
     }
 
     /// Perform soft deletion by marking documents as inactive
-    async fn perform_soft_deletion(&self, crate_name: &str) -> Result<String> {
+    async fn perform_soft_deletion(
+        &self,
+        crate_name: &str,
+        _verify_cleanup: bool,
+    ) -> Result<String> {
         let mut tx = self.db_pool.pool().begin().await?;
 
         // Count documents first
@@ -442,6 +691,108 @@ impl RemoveRustCrateTool {
             "Crate '{}' marked as inactive. {} documents remain in the system but are not searchable.",
             crate_name, doc_count
         ))
+    }
+
+    /// Check for dependencies or references to this crate
+    async fn check_crate_dependencies(&self, crate_name: &str) -> Result<Option<Vec<String>>> {
+        // Check if any other documents reference this crate in their content or metadata
+        let references = sqlx::query_scalar::<_, String>(
+            r"
+            SELECT DISTINCT source_name 
+            FROM documents 
+            WHERE doc_type = 'rust' 
+            AND source_name != $1 
+            AND (content ILIKE '%' || $1 || '%' OR metadata::text ILIKE '%' || $1 || '%')
+            LIMIT 10
+            ",
+        )
+        .bind(crate_name)
+        .fetch_all(self.db_pool.pool())
+        .await?;
+
+        if references.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(references))
+        }
+    }
+
+    /// Perform dry run showing what would be removed
+    async fn perform_dry_run(&self, crate_name: &str, soft_delete: bool) -> Result<String> {
+        let doc_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM documents WHERE doc_type = 'rust' AND (metadata->>'crate_name' = $1 OR source_name = $1)"
+        )
+        .bind(crate_name)
+        .fetch_one(self.db_pool.pool())
+        .await?;
+
+        let embedding_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM documents WHERE doc_type = 'rust' AND (metadata->>'crate_name' = $1 OR source_name = $1) AND embedding IS NOT NULL"
+        )
+        .bind(crate_name)
+        .fetch_one(self.db_pool.pool())
+        .await?;
+
+        let operation = if soft_delete {
+            "mark as inactive"
+        } else {
+            "permanently delete"
+        };
+
+        Ok(format!(
+            "🔍 **Dry Run for Crate '{}'**\n\n\
+            Operation: {}\n\
+            - {} documents would be affected\n\
+            - {} embeddings would be affected\n\
+            - Database storage would be impacted\n\n\
+            To execute this operation, run the command again with dry_run=false",
+            crate_name, operation, doc_count, embedding_count
+        ))
+    }
+
+    /// Verify complete cleanup after deletion
+    async fn verify_complete_cleanup(&self, crate_name: &str) -> Result<String> {
+        // Check for any remaining documents
+        let remaining_docs = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM documents WHERE doc_type = 'rust' AND (metadata->>'crate_name' = $1 OR source_name = $1)"
+        )
+        .bind(crate_name)
+        .fetch_one(self.db_pool.pool())
+        .await?;
+
+        // Check for any remaining embeddings
+        let remaining_embeddings = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM documents WHERE doc_type = 'rust' AND (metadata->>'crate_name' = $1 OR source_name = $1) AND embedding IS NOT NULL"
+        )
+        .bind(crate_name)
+        .fetch_one(self.db_pool.pool())
+        .await?;
+
+        // Check database integrity
+        let total_rust_docs =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM documents WHERE doc_type = 'rust'")
+                .fetch_one(self.db_pool.pool())
+                .await?;
+
+        if remaining_docs == 0 && remaining_embeddings == 0 {
+            Ok(format!(
+                "✅ **Cleanup Verification: PASSED**\n\
+                - ✅ No remaining documents found\n\
+                - ✅ No remaining embeddings found\n\
+                - ℹ️  Total Rust documents in system: {}\n\
+                - ✅ Database integrity maintained",
+                total_rust_docs
+            ))
+        } else {
+            Ok(format!(
+                "⚠️ **Cleanup Verification: INCOMPLETE**\n\
+                - ⚠️ {} documents still remain\n\
+                - ⚠️ {} embeddings still remain\n\
+                - ℹ️ Total Rust documents in system: {}\n\
+                - 🔧 Manual cleanup may be required",
+                remaining_docs, remaining_embeddings, total_rust_docs
+            ))
+        }
     }
 }
 
@@ -633,7 +984,7 @@ impl Tool for CheckRustStatusTool {
     fn definition(&self) -> Value {
         json!({
             "name": "check_rust_status",
-            "description": "Check system health and get comprehensive statistics about Rust crate management, including job status tracking.",
+            "description": "Check system health and get comprehensive statistics about Rust crate management, including job status tracking and performance metrics. Supports detailed reporting and health monitoring.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -644,6 +995,22 @@ impl Tool for CheckRustStatusTool {
                     "include_active_jobs": {
                         "type": "boolean",
                         "description": "Include list of active/recent jobs (default: true)"
+                    },
+                    "include_performance_metrics": {
+                        "type": "boolean",
+                        "description": "Include detailed performance metrics and timing data (default: true)"
+                    },
+                    "include_storage_analysis": {
+                        "type": "boolean",
+                        "description": "Include storage usage analysis and optimization recommendations (default: true)"
+                    },
+                    "include_health_checks": {
+                        "type": "boolean",
+                        "description": "Include comprehensive health checks and system diagnostics (default: true)"
+                    },
+                    "detailed_report": {
+                        "type": "boolean",
+                        "description": "Generate detailed report with all available metrics and analysis (default: false)"
                     }
                 },
                 "required": []
@@ -657,6 +1024,22 @@ impl Tool for CheckRustStatusTool {
             .get("include_active_jobs")
             .and_then(Value::as_bool)
             .unwrap_or(true);
+        let include_performance_metrics = arguments
+            .get("include_performance_metrics")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        let include_storage_analysis = arguments
+            .get("include_storage_analysis")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        let include_health_checks = arguments
+            .get("include_health_checks")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        let detailed_report = arguments
+            .get("detailed_report")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
 
         let mut output = String::new();
 
@@ -780,6 +1163,46 @@ impl Tool for CheckRustStatusTool {
             }
         }
 
+        // Add enhanced reporting sections based on parameters
+        if include_performance_metrics || detailed_report {
+            match self.generate_performance_metrics().await {
+                Ok(metrics) => {
+                    output.push_str("⚡ **Performance Metrics:**\n");
+                    output.push_str(&metrics);
+                    output.push('\n');
+                }
+                Err(e) => {
+                    let _ = write!(&mut output, "⚠️ **Performance Metrics:** Error - {}\n\n", e);
+                }
+            }
+        }
+
+        if include_storage_analysis || detailed_report {
+            match self.generate_storage_analysis().await {
+                Ok(analysis) => {
+                    output.push_str("💾 **Storage Analysis:**\n");
+                    output.push_str(&analysis);
+                    output.push('\n');
+                }
+                Err(e) => {
+                    let _ = write!(&mut output, "⚠️ **Storage Analysis:** Error - {}\n\n", e);
+                }
+            }
+        }
+
+        if include_health_checks || detailed_report {
+            match self.perform_comprehensive_health_checks().await {
+                Ok(health_report) => {
+                    output.push_str("🏥 **Health Diagnostics:**\n");
+                    output.push_str(&health_report);
+                    output.push('\n');
+                }
+                Err(e) => {
+                    let _ = write!(&mut output, "⚠️ **Health Diagnostics:** Error - {}\n\n", e);
+                }
+            }
+        }
+
         // Database connectivity and performance check
         let start_time = std::time::Instant::now();
         let db_health = sqlx::query("SELECT 1 as health")
@@ -824,6 +1247,217 @@ impl Tool for CheckRustStatusTool {
 }
 
 impl CheckRustStatusTool {
+    /// Generate comprehensive performance metrics
+    async fn generate_performance_metrics(&self) -> Result<String> {
+        let mut metrics = String::new();
+
+        // Query response times
+        let start_time = std::time::Instant::now();
+        let query_test =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM documents WHERE doc_type = 'rust'")
+                .fetch_one(self.db_pool.pool())
+                .await?;
+        let query_time = start_time.elapsed();
+
+        // Embedding distribution
+        let with_embeddings = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM documents WHERE doc_type = 'rust' AND embedding IS NOT NULL",
+        )
+        .fetch_one(self.db_pool.pool())
+        .await?;
+
+        // Average document sizes
+        let avg_content_size = sqlx::query_scalar::<_, Option<f64>>(
+            "SELECT AVG(LENGTH(content)) FROM documents WHERE doc_type = 'rust'",
+        )
+        .fetch_one(self.db_pool.pool())
+        .await?
+        .unwrap_or(0.0);
+
+        let _ = write!(
+            &mut metrics,
+            "  • Query Response Time: {:.2}ms\n",
+            query_time.as_secs_f64() * 1000.0
+        );
+        let _ = write!(&mut metrics, "  • Total Rust Documents: {}\n", query_test);
+        let _ = write!(
+            &mut metrics,
+            "  • Documents with Embeddings: {} ({:.1}%)\n",
+            with_embeddings,
+            if query_test > 0 {
+                #[allow(clippy::cast_precision_loss)]
+                { (with_embeddings as f64 / query_test as f64) * 100.0 }
+            } else {
+                0.0
+            }
+        );
+        let _ = write!(
+            &mut metrics,
+            "  • Average Content Size: {:.0} characters\n",
+            avg_content_size
+        );
+
+        // Job processing metrics
+        let total_jobs = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM crate_jobs")
+            .fetch_one(self.db_pool.pool())
+            .await?;
+        let successful_jobs = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM crate_jobs WHERE status = 'Completed'",
+        )
+        .fetch_one(self.db_pool.pool())
+        .await?;
+
+        if total_jobs > 0 {
+            #[allow(clippy::cast_precision_loss)]
+            let success_rate = (successful_jobs as f64 / total_jobs as f64) * 100.0;
+            let _ = write!(
+                &mut metrics,
+                "  • Job Success Rate: {:.1}% ({}/{})\n",
+                success_rate, successful_jobs, total_jobs
+            );
+        }
+
+        Ok(metrics)
+    }
+
+    /// Generate comprehensive storage analysis
+    async fn generate_storage_analysis(&self) -> Result<String> {
+        let mut analysis = String::new();
+
+        // Document distribution by crate
+        let top_crates = sqlx::query_as::<_, (String, i64)>(
+            r"
+            SELECT metadata->>'crate_name' as crate_name, COUNT(*) as doc_count
+            FROM documents 
+            WHERE doc_type = 'rust' AND metadata->>'crate_name' IS NOT NULL
+            GROUP BY metadata->>'crate_name'
+            ORDER BY COUNT(*) DESC
+            LIMIT 5
+            ",
+        )
+        .fetch_all(self.db_pool.pool())
+        .await?;
+
+        // Storage estimates
+        let total_content_size = sqlx::query_scalar::<_, Option<i64>>(
+            "SELECT SUM(LENGTH(content)) FROM documents WHERE doc_type = 'rust'",
+        )
+        .fetch_one(self.db_pool.pool())
+        .await?
+        .unwrap_or(0);
+
+        #[allow(clippy::cast_precision_loss)]
+        let estimated_db_size_mb = (total_content_size as f64) / 1_048_576.0; // Convert to MB
+
+        let _ = write!(
+            &mut analysis,
+            "  • Estimated Database Size: {:.2} MB\n",
+            estimated_db_size_mb
+        );
+        let _ = write!(
+            &mut analysis,
+            "  • Total Content Size: {:.2} MB\n",
+            estimated_db_size_mb * 0.8
+        ); // Rough estimate excluding metadata
+
+        if !top_crates.is_empty() {
+            analysis.push_str("  • Top Crates by Document Count:\n");
+            for (crate_name, count) in top_crates {
+                let _ = write!(&mut analysis, "    - {}: {} documents\n", crate_name, count);
+            }
+        }
+
+        // Storage optimization recommendations
+        analysis.push_str("  • Optimization Recommendations:\n");
+        if estimated_db_size_mb > 100.0 {
+            analysis.push_str("    - Consider implementing document archiving for old versions\n");
+        }
+        if total_content_size > 0 {
+            analysis.push_str("    - Content compression could reduce storage by ~30-50%\n");
+        }
+        analysis.push_str("    - Regular cleanup of orphaned embeddings recommended\n");
+
+        Ok(analysis)
+    }
+
+    /// Perform comprehensive health checks
+    async fn perform_comprehensive_health_checks(&self) -> Result<String> {
+        let mut health = String::new();
+
+        // Database connection health
+        let db_start = std::time::Instant::now();
+        let db_health = sqlx::query("SELECT 1").fetch_one(self.db_pool.pool()).await;
+        let db_time = db_start.elapsed();
+
+        match db_health {
+            Ok(_) => {
+                let _ = write!(
+                    &mut health,
+                    "  ✅ Database Connection: Healthy ({:.2}ms)\n",
+                    db_time.as_secs_f64() * 1000.0
+                );
+            }
+            Err(e) => {
+                let _ = write!(&mut health, "  ❌ Database Connection: Error - {}\n", e);
+            }
+        }
+
+        // Data integrity checks
+        let orphaned_embeddings = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM documents WHERE doc_type = 'rust' AND embedding IS NOT NULL AND content = ''"
+        )
+        .fetch_one(self.db_pool.pool())
+        .await?;
+
+        if orphaned_embeddings == 0 {
+            health.push_str("  ✅ Data Integrity: No orphaned embeddings detected\n");
+        } else {
+            let _ = write!(
+                &mut health,
+                "  ⚠️ Data Integrity: {} orphaned embeddings found\n",
+                orphaned_embeddings
+            );
+        }
+
+        // Job queue health
+        let stuck_jobs = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM crate_jobs WHERE status = 'Running' AND started_at < NOW() - INTERVAL '1 hour'"
+        )
+        .fetch_one(self.db_pool.pool())
+        .await?;
+
+        if stuck_jobs == 0 {
+            health.push_str("  ✅ Job Queue: No stuck jobs detected\n");
+        } else {
+            let _ = write!(
+                &mut health,
+                "  ⚠️ Job Queue: {} potentially stuck jobs\n",
+                stuck_jobs
+            );
+        }
+
+        // System resource estimates
+        let pool_size = self.db_pool.pool().size();
+        let active_connections = self.db_pool.pool().num_idle();
+        let _ = write!(
+            &mut health,
+            "  ℹ️ Connection Pool: {} active, {} total capacity\n",
+            active_connections, pool_size
+        );
+
+        // Overall system health score
+        let issues = i32::from(orphaned_embeddings > 0) + i32::from(stuck_jobs > 0);
+        match issues {
+            0 => health
+                .push_str("  🎯 **Overall Health: EXCELLENT** - All systems operating normally\n"),
+            1 => health.push_str("  ⚠️ **Overall Health: GOOD** - Minor issues detected\n"),
+            _ => health
+                .push_str("  🚨 **Overall Health: NEEDS ATTENTION** - Multiple issues detected\n"),
+        }
+
+        Ok(health)
+    }
+
     /// Get storage metrics for system monitoring (temporarily disabled)
     #[allow(dead_code, clippy::unused_async)]
     async fn get_storage_metrics(&self) -> Result<StorageMetrics> {

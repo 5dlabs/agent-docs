@@ -1,72 +1,115 @@
-# Acceptance Criteria: Task 11 - Rust Crate Management with Background Ingestion
+# Acceptance Criteria: Task 12 - Rust Crate Management Tools Enhancement
 
 ## Functional Requirements
 
-### 1. Tools and Job Queue
+### 1. Tool Enhancements
 
-- [ ] `add_rust_crate` enqueues background ingestion and returns 202 + job id
-- [ ] `check_rust_status` reports job state (queued, running, failed, complete) and counts
-- [ ] `remove_rust_crate` performs cascade delete with soft-delete option
-- [ ] `list_rust_crates` paginates with stats (doc/embedding counts, last updated)
+- [ ] `add_rust_crate` supports version/feature selection and rollback on failure
+- [ ] `remove_rust_crate` performs cascade deletion with soft-delete option
+- [ ] `list_rust_crates` supports pagination, filtering, and stats
+- [ ] `check_rust_status` reports health, counts, update status, and basic performance
 
-### 2. Database and Storage
+### 2. Robustness and Integration
 
-- [ ] No new `crates` table added; we use existing `documents` and `document_sources`
-- [ ] Documents and embeddings written with crate metadata (e.g., `metadata.crate_name`, `metadata.version`)
-- [ ] Deletions remove related docs/embeddings without orphans
-- [ ] Audit logs for add/remove/status
-- [ ] `crate_jobs` table persists job state and history (UUID id, crate_name, operation, status, progress, started_at, finished_at, error) so job IDs survive restarts
+- [ ] Tools are discovered and registered dynamically from `tools.json` (no hardcoded registration in handlers)
+- [ ] Atomic DB transactions with proper error handling
+- [ ] Rate limiting for external calls (docs.rs)
+- [ ] Integration with embedding batch processing (Task 7)
 
-### 3. Performance and Reliability
+### 3. Performance Targets
 
-- [ ] Ingestion completes within reasonable time bounds
-- [ ] Rate limits respected for docs.rs (10 req/min) with retries
-- [ ] Proper error handling and idempotency for repeated requests
+- [ ] `add_rust_crate` completes within reasonable time for typical crates
+- [ ] `list_rust_crates` and `check_rust_status` respond < 2s
 
 ## Non-Functional Requirements
 
-- [ ] Shared utilities used across implementations
-- [ ] Thread-safe operations; no data races
-- [ ] Minimal duplication; utilities reduce copy-paste
+- [ ] Consistent error handling and logging
+- [ ] Zero data corruption on failures (rollback)
+- [ ] Tests for core operations and edge cases
+
+### 2. Code Quality and Consistency
+
+- [ ] All tools follow identical patterns from RustQueryTool
+- [ ] Shared utilities used consistently across implementations
+- [ ] Comprehensive error handling with informative messages
+- [ ] Proper documentation comments for all public functions
+- [ ] Zero clippy warnings and proper rustfmt formatting
+
+### 3. Reliability and Robustness
+
+- [ ] Graceful handling of missing or malformed metadata
+- [ ] Proper fallback behavior for unsupported content types
+- [ ] Thread safety for concurrent query operations
+- [ ] Resilient to database connection issues
+- [ ] Consistent behavior across all documentation types
 
 ## Test Cases
 
-- [ ] Each tool returns relevant results with correct metadata
-- [ ] Bad inputs handled gracefully with clear errors
-- [ ] Response formatting consistent across tools
-- [ ] Performance under light concurrency (5–6 agents) within target
+- [ ] Add popular crate (tokio) end-to-end succeeds
+- [ ] Remove crate cascades and soft-delete works
+- [ ] List with pagination and filters returns expected data
+- [ ] Status reports accurate metrics and detects updates
 
 ## Deliverables
 
-- [ ] Four management tools implemented and registered
-- [ ] Job queue/runner code with tests
-- [ ] Database schema and queries for crate ops
-- [ ] Integration tests for add/remove/list/status
+- [ ] Updated tools with docs and tests
+- [ ] Database helpers and migrations if needed
+- [ ] Updated `tools.json` entries for all seven tools with correct `docType`, descriptions, and enabled flags
+
+### Testing Suite
+
+- [ ] Unit tests for all utility functions
+- [ ] Individual tool functionality tests
+- [ ] Integration tests for complete workflows
+- [ ] Performance benchmark tests
+- [ ] Error handling and edge case tests
+- [ ] Concurrent usage tests
+
+### Documentation and Quality
+
+- [ ] Code documentation comments
+- [ ] Usage examples for each tool
+- [ ] Performance optimization notes
+- [ ] Error handling documentation
+- [ ] Metadata schema definitions
 
 ## Validation
 
-### Automated
-
 ```bash
-cargo test --package mcp --test crate_management
-cargo test --package database --test crate_operations
+cargo test --package mcp crate_management
+cargo test --package database crate_operations
 cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-### Manual
+### Dynamic Registration Validation
 
-1. Tools visible via MCP tools list (add/remove/list/check)
-2. Add crate returns 202 and job id; status shows progress; docs appear on completion
-3. Remove crate deletes docs/embeddings; list reflects changes
+- [ ] Toggling a tool's `enabled` flag in `tools.json` adds/removes it from the server's advertised tools without code changes
+- [ ] Adding a new tool entry in `tools.json` (with valid `name` and `docType`) exposes the tool via MCP after restart/reload
 
-## Deployment Validation (4-step)
+## Definition of Done
 
-1. Push to GitHub → CI build/tests
-2. Image built and published
-3. Helm deploy to cluster
-4. Real-world queries via MCP client confirm functionality### NFR-0: Code Quality and Automation
+Task 11 is complete when:
 
+1. **Complete Implementation**: All seven query tools fully implemented and functional
+2. **Shared Utilities**: Common functionality extracted to reusable module
+3. **Database Integration**: Optimized queries for each documentation type
+4. **Testing Complete**: Comprehensive test coverage with all tests passing
+5. **Performance Validated**: All response time targets consistently met
+6. **Caching Working**: Performance improvement demonstrated for repeated queries
+7. **Quality Gates**: All clippy warnings resolved and code properly formatted
+8. **Documentation Updated**: Code properly documented with usage examples
+
+## Success Metrics
+
+- 100% of query tools respond within 2-second target
+- Shared utilities reduce code duplication by 80%
+- Caching improves repeated query performance by 50%
+- Zero critical errors in comprehensive test suite
+- All metadata fields properly parsed and displayed
+- Consistent formatting across all seven tools
+- Thread-safe operations under concurrent load
+- Error handling covers 95% of edge cases identified### NFR-0: Code Quality and Automation
 - [ ] After adding any new function, run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and fix all warnings before continuing
 - [ ] Prior to submission, ensure `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` all pass locally
 - [ ] All changes pushed to a feature branch; GitHub Actions must complete successfully (including deployment) before opening a PR

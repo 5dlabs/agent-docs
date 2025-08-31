@@ -102,9 +102,17 @@ impl ConfigLoader {
                 return Err(anyhow!("Duplicate tool name: {}", tool.name));
             }
 
-            // Validate tool name format
-            if !tool.name.ends_with("_query") {
-                return Err(anyhow!("Tool name '{}' must end with '_query'", tool.name));
+            // Validate tool name format - allow both query tools and management tools
+            let is_query_tool = tool.name.ends_with("_query");
+            let is_crate_management_tool = matches!(tool.name.as_str(), 
+                "add_rust_crate" | "remove_rust_crate" | "list_rust_crates" | "check_rust_status"
+            );
+            
+            if !is_query_tool && !is_crate_management_tool {
+                return Err(anyhow!(
+                    "Tool name '{}' must either end with '_query' or be a valid crate management tool (add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status)", 
+                    tool.name
+                ));
             }
 
             // Validate doc_type
@@ -144,9 +152,13 @@ mod tests {
         let config = ConfigLoader::load_default().expect("Default config should be valid");
         assert!(!config.tools.is_empty());
 
-        // Check that all tools have valid names ending with "_query"
+        // Check that all tools have valid names (either query tools or crate management tools)
         for tool in &config.tools {
-            assert!(tool.name.ends_with("_query"));
+            let is_valid_name = tool.name.ends_with("_query") || 
+                matches!(tool.name.as_str(), 
+                    "add_rust_crate" | "remove_rust_crate" | "list_rust_crates" | "check_rust_status"
+                );
+            assert!(is_valid_name, "Tool '{}' has invalid name format", tool.name);
             assert!(!tool.name.is_empty());
             assert!(!tool.doc_type.is_empty());
             assert!(!tool.title.is_empty());
@@ -205,7 +217,7 @@ mod tests {
         assert!(result
             .unwrap_err()
             .to_string()
-            .contains("must end with '_query'"));
+            .contains("must either end with '_query' or be a valid crate management tool"));
     }
 
     #[test]

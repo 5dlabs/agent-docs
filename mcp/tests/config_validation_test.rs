@@ -32,9 +32,13 @@ async fn test_configuration_validation() {
             !tool.description.is_empty(),
             "Description should not be empty: {tool:?}"
         );
+        let is_valid_name = tool.name.ends_with("_query") || 
+            matches!(tool.name.as_str(), 
+                "add_rust_crate" | "remove_rust_crate" | "list_rust_crates" | "check_rust_status"
+            );
         assert!(
-            tool.name.ends_with("_query"),
-            "Tool name should end with '_query': {}",
+            is_valid_name,
+            "Tool name should end with '_query' or be a valid crate management tool: {}",
             tool.name
         );
     }
@@ -50,6 +54,10 @@ async fn test_configuration_validation() {
         "raydium_query",
         "ebpf_query",
         "rust_best_practices_query",
+        "add_rust_crate",
+        "remove_rust_crate",
+        "list_rust_crates",
+        "check_rust_status",
     ];
 
     for expected_tool in &expected_tools {
@@ -198,6 +206,15 @@ fn test_doctype_to_tool_name_mapping() {
             "raydium" => assert_eq!(tool.name, "raydium_query"),
             "ebpf" => assert_eq!(tool.name, "ebpf_query"),
             "rust_best_practices" => assert_eq!(tool.name, "rust_best_practices_query"),
+            "rust" => {
+                // Rust doc_type supports multiple tools - both query and management
+                assert!(
+                    matches!(tool.name.as_str(), 
+                        "add_rust_crate" | "remove_rust_crate" | "list_rust_crates" | "check_rust_status"
+                    ),
+                    "Unexpected rust tool name: {}", tool.name
+                );
+            }
             _ => panic!("Unexpected doc_type: {}", tool.doc_type),
         }
     }
@@ -228,6 +245,7 @@ fn test_tool_description_quality() {
             "raydium" => vec!["raydium", "dex", "amm"],
             "ebpf" => vec!["ebpf", "kernel", "filter"],
             "rust_best_practices" => vec!["rust", "practices", "patterns"],
+            "rust" => vec!["rust", "crate", "documentation", "management"],
             _ => vec![],
         };
 
