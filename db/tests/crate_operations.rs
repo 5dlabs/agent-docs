@@ -69,6 +69,7 @@ impl DatabaseTestFixture {
                 r"
                 INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
                 VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
+                ON CONFLICT (doc_type, source_name, doc_path) DO NOTHING
                 ",
             )
             .bind(doc_id)
@@ -243,21 +244,30 @@ async fn test_list_crates_from_documents() -> Result<()> {
     // Insert test documents
     fixture.insert_test_documents(5).await?;
 
-    // List crates with default pagination
+    // List crates with name filter to find our specific test crate
+    // This is more robust than relying on pagination in a polluted database
     let pagination = PaginationParams::new(Some(1), Some(20));
-    let result = CrateQueries::list_crates(&fixture.pool, &pagination, None).await?;
+    let result =
+        CrateQueries::list_crates(&fixture.pool, &pagination, Some(&fixture.test_crate_name))
+            .await?;
 
-    // Should find our test crate
+    // Should find our test crate when filtering by name
     let found_crate = result
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    assert!(found_crate.is_some());
+    assert!(
+        found_crate.is_some(),
+        "Could not find test crate '{}' in {} results",
+        fixture.test_crate_name,
+        result.items.len()
+    );
 
     let crate_info = found_crate.unwrap();
     assert_eq!(crate_info.total_docs, 5);
     assert_eq!(crate_info.version, "0.1.0");
-    assert_eq!(crate_info.total_tokens, 250 + 10); // 50+1 + 50+2 + ... + 50+5 = 250 + 15 = 265? Let me recalculate: 51+52+53+54+55 = 265
+    // Correct calculation: 50+0 + 50+1 + 50+2 + 50+3 + 50+4 = 50+51+52+53+54 = 260
+    assert_eq!(crate_info.total_tokens, 260);
 
     fixture.cleanup().await?;
     Ok(())
@@ -270,18 +280,25 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
     // Insert test documents
     fixture.insert_test_documents(3).await?;
 
-    // List crates with name pattern
-    let pagination = PaginationParams::new(Some(1), Some(20));
-    let pattern = &fixture.test_crate_name[..10]; // Use partial name
+    // List crates with partial name filter - use unique suffix to avoid pagination issues
+    let pagination = PaginationParams::new(Some(1), Some(50)); // Increase page size to handle database pollution
+    let pattern = &fixture.test_crate_name[13..]; // Use UUID part which should be unique
     let result = CrateQueries::list_crates(&fixture.pool, &pagination, Some(pattern)).await?;
 
-    // Should find our test crate
-    assert!(!result.items.is_empty());
+    // Should find our test crate with the unique pattern
+    assert!(
+        !result.items.is_empty(),
+        "No items found with pattern '{pattern}'"
+    );
     let found_crate = result
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    assert!(found_crate.is_some());
+    assert!(
+        found_crate.is_some(),
+        "Could not find test crate '{}' with pattern '{pattern}'",
+        fixture.test_crate_name
+    );
 
     fixture.cleanup().await?;
     Ok(())
@@ -376,16 +393,20 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
     });
 
     // Insert documents
-    for (doc_id, metadata) in [(doc1_id, metadata1), (doc2_id, metadata2)] {
+    for (i, (doc_id, metadata)) in [(doc1_id, metadata1), (doc2_id, metadata2)]
+        .iter()
+        .enumerate()
+    {
         sqlx::query(
             r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
             VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
+            ON CONFLICT (doc_type, source_name, doc_path) DO NOTHING
             ",
         )
         .bind(doc_id)
         .bind(&fixture.test_crate_name)
-        .bind("test/doc")
+        .bind(format!("test/doc/{i}"))  // Make paths unique
         .bind("Test content")
         .bind(metadata)
         .bind(100)
