@@ -321,16 +321,16 @@ impl PoolConfig {
         }
     }
 
-    /// Configuration for testing with minimal resources
+    /// Configuration for testing with concurrent workload support
     #[must_use]
     pub fn testing() -> Self {
         Self {
-            min_connections: 1,
-            max_connections: 5,
-            acquire_timeout_seconds: 5,
+            min_connections: 2,
+            max_connections: 15,
+            acquire_timeout_seconds: 30,
             max_lifetime_seconds: Some(300), // 5 minutes
             idle_timeout_seconds: Some(60),  // 1 minute
-            test_before_acquire: false,      // Faster for tests
+            test_before_acquire: true,       // Health checks for reliability
             ..Default::default()
         }
     }
@@ -388,7 +388,7 @@ mod tests {
         assert_eq!(prod_config.max_connections, 100);
 
         let test_config = PoolConfig::testing();
-        assert_eq!(test_config.min_connections, 1);
-        assert_eq!(test_config.max_connections, 5);
+        assert_eq!(test_config.min_connections, 2);
+        assert_eq!(test_config.max_connections, 15);
     }
 }

@@ -10,7 +10,7 @@ use chrono::Utc;
 use db::models::{JobStatus, PaginationParams};
 use db::{CrateJobQueries, CrateQueries, DatabasePool, PoolConfig, Row};
 use serde_json::json;
-use sqlx::PgPool;
+use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
 /// Test fixture for database operations
@@ -24,18 +24,41 @@ impl DatabaseTestFixture {
         let database_url = std::env::var("TEST_DATABASE_URL")
             .unwrap_or_else(|_| "postgresql://vector_user:EFwiPWDXMoOI2VKNF4eO3eSm8n3hzmjognKytNk2ndskgOAZgEBGDQULE6ryDc7z@vector-postgres.databases.svc.cluster.local:5432/vector_db".to_string());
 
-        // Use a leaner pool config for tests to avoid exhausting DB connections in CI
+        // Allow environment variables to override pool configuration for CI flexibility
+        let min_connections = std::env::var("TEST_POOL_MIN_CONNECTIONS")
+            .ok()
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(2);
+
+        let max_connections = std::env::var("TEST_POOL_MAX_CONNECTIONS")
+            .ok()
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(15);
+
+        let acquire_timeout = std::env::var("TEST_POOL_ACQUIRE_TIMEOUT")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(30);
+
+        // Use optimized pool config for concurrent testing
         let mut config = PoolConfig::testing();
         config.database_url = database_url;
-        config.min_connections = 1;
-        config.max_connections = 5;
+        config.min_connections = min_connections;
+        config.max_connections = max_connections;
+        config.acquire_timeout_seconds = acquire_timeout;
+        config.test_before_acquire = true;
         let pool = DatabasePool::with_config(config).await?.pool().clone();
         let test_crate_name = format!("db-test-crate-{}", Uuid::new_v4());
 
-        Ok(Self {
-            pool,
-            test_crate_name,
-        })
+        // Verify connection pool is healthy before proceeding
+        let fixture = Self {
+            pool: pool.clone(),
+            test_crate_name: test_crate_name.clone(),
+        };
+
+        fixture.check_connection_health().await?;
+
+        Ok(fixture)
     }
 
     async fn cleanup(&self) -> Result<()> {
@@ -49,6 +72,20 @@ impl DatabaseTestFixture {
             .bind(&self.test_crate_name)
             .execute(&self.pool)
             .await?;
+
+        Ok(())
+    }
+
+    async fn check_connection_health(&self) -> Result<()> {
+        // Test basic connectivity
+        sqlx::query("SELECT 1")
+            .fetch_one(&self.pool)
+            .await?;
+
+        // Test that we can acquire a connection
+        let mut conn = self.pool.acquire().await?;
+        conn.ping().await?;
+        drop(conn); // Release connection back to pool
 
         Ok(())
     }
