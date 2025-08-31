@@ -247,7 +247,9 @@ async fn test_list_crates_from_documents() -> Result<()> {
     // List crates with name filter to find our specific test crate
     // This is more robust than relying on pagination in a polluted database
     let pagination = PaginationParams::new(Some(1), Some(20));
-    let result = CrateQueries::list_crates(&fixture.pool, &pagination, Some(&fixture.test_crate_name)).await?;
+    let result =
+        CrateQueries::list_crates(&fixture.pool, &pagination, Some(&fixture.test_crate_name))
+            .await?;
 
     // Should find our test crate when filtering by name
     let found_crate = result
