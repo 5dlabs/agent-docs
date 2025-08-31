@@ -280,18 +280,18 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
     // Insert test documents
     fixture.insert_test_documents(3).await?;
 
-    // List crates with name pattern
-    let pagination = PaginationParams::new(Some(1), Some(20));
-    let pattern = &fixture.test_crate_name[..10]; // Use partial name
+    // List crates with partial name filter - use unique suffix to avoid pagination issues
+    let pagination = PaginationParams::new(Some(1), Some(50)); // Increase page size to handle database pollution
+    let pattern = &fixture.test_crate_name[13..]; // Use UUID part which should be unique
     let result = CrateQueries::list_crates(&fixture.pool, &pagination, Some(pattern)).await?;
 
-    // Should find our test crate
-    assert!(!result.items.is_empty());
+    // Should find our test crate with the unique pattern
+    assert!(!result.items.is_empty(), "No items found with pattern '{}'", pattern);
     let found_crate = result
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    assert!(found_crate.is_some());
+    assert!(found_crate.is_some(), "Could not find test crate '{}' with pattern '{}'", fixture.test_crate_name, pattern);
 
     fixture.cleanup().await?;
     Ok(())
