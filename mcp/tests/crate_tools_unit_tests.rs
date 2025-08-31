@@ -1,5 +1,5 @@
 //! Comprehensive unit tests for Task 11 crate management tools
-//! 
+//!
 //! These tests target 95%+ coverage of crate_tools.rs to meet QA requirements.
 //! All tests are designed to run quickly without external dependencies.
 
@@ -7,7 +7,8 @@ use anyhow::Result;
 use db::DatabasePool;
 use embed::client::EmbeddingClient;
 use embed::models::{
-    BatchResponse, BatchStatus, EmbeddingRequest, EmbeddingResponse, FileUploadResponse, JsonlResponseLine, JsonlResponse, JsonlResponseBody, EmbeddingData, EmbeddingUsage
+    BatchResponse, BatchStatus, EmbeddingData, EmbeddingRequest, EmbeddingResponse, EmbeddingUsage,
+    FileUploadResponse, JsonlResponse, JsonlResponseBody, JsonlResponseLine,
 };
 use mcp::crate_tools::{
     AddRustCrateTool, CheckRustStatusTool, ListRustCratesTool, RemoveRustCrateTool,
@@ -32,7 +33,11 @@ impl EmbeddingClient for MockEmbeddingClient {
         })
     }
 
-    async fn upload_batch_file(&self, _content: &str, _filename: &str) -> Result<FileUploadResponse> {
+    async fn upload_batch_file(
+        &self,
+        _content: &str,
+        _filename: &str,
+    ) -> Result<FileUploadResponse> {
         Ok(FileUploadResponse {
             id: "mock-file-id".to_string(),
             object: "file".to_string(),
@@ -168,7 +173,7 @@ async fn test_add_rust_crate_tool_creation() {
 
     if let Some(pool) = create_test_pool().await {
         let _tool = AddRustCrateTool::new(pool, client);
-        
+
         // Tool should be created successfully
         // This tests the constructor path in crate_tools.rs
         // Tool creation succeeded if we get here without panic
@@ -211,7 +216,11 @@ async fn test_add_rust_crate_invalid_input_validation() {
         let result = tool.execute(json!({"version": "1.0.0"})).await;
         match result {
             Ok(response) => {
-                assert!(response.contains("Error") || response.contains("required") || response.contains("name"));
+                assert!(
+                    response.contains("Error")
+                        || response.contains("required")
+                        || response.contains("name")
+                );
             }
             Err(_) => {
                 // Error is acceptable for missing required field
@@ -232,17 +241,18 @@ async fn test_add_rust_crate_valid_input() {
         // Test with valid crate name
         let result = timeout(
             Duration::from_secs(5), // Should return quickly for background job
-            tool.execute(json!({"name": "test-crate-unit"}))
-        ).await;
+            tool.execute(json!({"name": "test-crate-unit"})),
+        )
+        .await;
 
         match result {
             Ok(Ok(response)) => {
                 // Should return job ID or indicate job was enqueued
                 assert!(
-                    response.contains("Job") || 
-                    response.contains("enqueued") ||
-                    response.contains("started") ||
-                    !response.contains("completed successfully"), // Should NOT complete synchronously
+                    response.contains("Job")
+                        || response.contains("enqueued")
+                        || response.contains("started")
+                        || !response.contains("completed successfully"), // Should NOT complete synchronously
                 );
             }
             Ok(Err(_)) => {
@@ -257,8 +267,9 @@ async fn test_add_rust_crate_valid_input() {
         // Test with version specified
         let result = timeout(
             Duration::from_secs(5),
-            tool.execute(json!({"name": "serde", "version": "1.0.0"}))
-        ).await;
+            tool.execute(json!({"name": "serde", "version": "1.0.0"})),
+        )
+        .await;
 
         match result {
             Ok(Ok(response)) => {
@@ -280,7 +291,7 @@ async fn test_add_rust_crate_valid_input() {
 async fn test_check_rust_status_tool_creation() {
     if let Some(pool) = create_test_pool().await {
         let _tool = CheckRustStatusTool::new(pool);
-        
+
         // Tool should be created successfully
         // Tool creation succeeded if we get here without panic
         assert!(true);
@@ -301,10 +312,10 @@ async fn test_check_rust_status_general_status() {
             Ok(response) => {
                 // Should return system status information
                 assert!(
-                    response.contains("Statistics") || 
-                    response.contains("Total") ||
-                    response.contains("Status") ||
-                    response.contains("Crates")
+                    response.contains("Statistics")
+                        || response.contains("Total")
+                        || response.contains("Status")
+                        || response.contains("Crates")
                 );
             }
             Err(_) => {
@@ -329,9 +340,9 @@ async fn test_check_rust_status_with_job_id() {
             Ok(response) => {
                 // Should handle job ID lookup gracefully
                 assert!(
-                    response.contains("not found") || 
-                    response.contains("Job") ||
-                    response.contains("Status")
+                    response.contains("not found")
+                        || response.contains("Job")
+                        || response.contains("Status")
                 );
             }
             Err(_) => {
@@ -345,9 +356,9 @@ async fn test_check_rust_status_with_job_id() {
         match result {
             Ok(response) => {
                 assert!(
-                    response.contains("Error") || 
-                    response.contains("invalid") ||
-                    response.contains("not found")
+                    response.contains("Error")
+                        || response.contains("invalid")
+                        || response.contains("not found")
                 );
             }
             Err(_) => {
@@ -363,7 +374,7 @@ async fn test_check_rust_status_with_job_id() {
 async fn test_remove_rust_crate_tool_creation() {
     if let Some(pool) = create_test_pool().await {
         let _tool = RemoveRustCrateTool::new(pool);
-        
+
         // Tool should be created successfully
         // Tool creation succeeded if we get here without panic
         assert!(true);
@@ -392,7 +403,11 @@ async fn test_remove_rust_crate_invalid_input() {
         let result = tool.execute(json!({"soft_delete": true})).await;
         match result {
             Ok(response) => {
-                assert!(response.contains("Error") || response.contains("required") || response.contains("name"));
+                assert!(
+                    response.contains("Error")
+                        || response.contains("required")
+                        || response.contains("name")
+                );
             }
             Err(_) => {
                 // Error is acceptable for missing required field
@@ -409,7 +424,9 @@ async fn test_remove_rust_crate_nonexistent_crate() {
         let tool = RemoveRustCrateTool::new(pool);
 
         // Test removing non-existent crate
-        let result = tool.execute(json!({"name": "non-existent-test-crate-12345"})).await;
+        let result = tool
+            .execute(json!({"name": "non-existent-test-crate-12345"}))
+            .await;
 
         match result {
             Ok(response) => {
@@ -430,7 +447,9 @@ async fn test_remove_rust_crate_soft_delete_option() {
         let tool = RemoveRustCrateTool::new(pool);
 
         // Test soft delete option
-        let result = tool.execute(json!({"name": "test-crate", "soft_delete": true})).await;
+        let result = tool
+            .execute(json!({"name": "test-crate", "soft_delete": true}))
+            .await;
 
         match result {
             Ok(response) => {
@@ -446,7 +465,9 @@ async fn test_remove_rust_crate_soft_delete_option() {
         }
 
         // Test hard delete (default behavior)
-        let result = tool.execute(json!({"name": "test-crate", "soft_delete": false})).await;
+        let result = tool
+            .execute(json!({"name": "test-crate", "soft_delete": false}))
+            .await;
 
         match result {
             Ok(response) => {
@@ -465,7 +486,7 @@ async fn test_remove_rust_crate_soft_delete_option() {
 async fn test_list_rust_crates_tool_creation() {
     if let Some(pool) = create_test_pool().await {
         let _tool = ListRustCratesTool::new(pool);
-        
+
         // Tool should be created successfully
         // Tool creation succeeded if we get here without panic
         assert!(true);
@@ -502,11 +523,13 @@ async fn test_list_rust_crates_pagination_parameters() {
         let tool = ListRustCratesTool::new(pool);
 
         // Test with pagination parameters
-        let result = tool.execute(json!({
-            "page": 1,
-            "limit": 5,
-            "include_stats": true
-        })).await;
+        let result = tool
+            .execute(json!({
+                "page": 1,
+                "limit": 5,
+                "include_stats": true
+            }))
+            .await;
 
         match result {
             Ok(response) => {
@@ -534,10 +557,12 @@ async fn test_list_rust_crates_pagination_parameters() {
         }
 
         // Test edge cases for pagination
-        let result = tool.execute(json!({
-            "page": 0,  // Invalid page number
-            "limit": -1  // Invalid limit
-        })).await;
+        let result = tool
+            .execute(json!({
+                "page": 0,  // Invalid page number
+                "limit": -1  // Invalid limit
+            }))
+            .await;
 
         match result {
             Ok(response) => {
@@ -587,7 +612,7 @@ async fn test_tool_performance_requirements() {
     // Test that all tools respond within reasonable time limits
     if let Some(pool) = create_test_pool().await {
         let _client = create_mock_embedding_client();
-        
+
         // Test ListRustCratesTool performance (should be fastest)
         let tool = ListRustCratesTool::new(pool.clone());
         let start = std::time::Instant::now();

@@ -253,7 +253,12 @@ async fn test_list_crates_from_documents() -> Result<()> {
         .items
         .iter()
         .find(|c| c.name == fixture.test_crate_name);
-    assert!(found_crate.is_some(), "Could not find test crate '{}' in {} results", fixture.test_crate_name, result.items.len());
+    assert!(
+        found_crate.is_some(),
+        "Could not find test crate '{}' in {} results",
+        fixture.test_crate_name,
+        result.items.len()
+    );
 
     let crate_info = found_crate.unwrap();
     assert_eq!(crate_info.total_docs, 5);
