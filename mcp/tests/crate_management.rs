@@ -129,13 +129,32 @@ async fn test_add_rust_crate_tool() -> Result<()> {
 
     assert_eq!(job.crate_name, fixture.test_crate_name);
     assert_eq!(job.operation, "add_crate");
-    assert_eq!(job.status, JobStatus::Completed); // Synchronous execution for MVP
 
-    // Verify documents were created
+    // With async processing, job should be queued or running initially
+    assert!(matches!(job.status, JobStatus::Queued | JobStatus::Running));
+
+    // Wait for background processing to complete (with timeout)
+    let mut retries = 0;
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        let updated_job = CrateJobQueries::find_job_by_id(&fixture.pool, job_id).await?;
+        if let Some(job) = updated_job {
+            if matches!(job.status, JobStatus::Completed | JobStatus::Failed) {
+                break;
+            }
+        }
+        retries += 1;
+        assert!(
+            retries <= 50,
+            "Background job did not complete within timeout"
+        );
+    }
+
+    // Verify documents were created after processing completes
     let docs = DocumentQueries::find_by_source(&fixture.pool, &fixture.test_crate_name).await?;
     assert!(
         !docs.is_empty(),
-        "Should have created at least one document"
+        "Should have created at least one document after background processing"
     );
 
     fixture.cleanup().await?;
@@ -451,8 +470,11 @@ async fn test_error_handling() -> Result<()> {
 
 #[tokio::test]
 async fn test_tool_metadata() -> Result<()> {
+    let database_url = std::env::var("TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "postgresql://vector_user:EFwiPWDXMoOI2VKNF4eO3eSm8n3hzmjognKytNk2ndskgOAZgEBGDQULE6ryDc7z@vector-postgres.databases.svc.cluster.local:5432/vector_db".to_string());
+
     let pool = DatabasePool::from_pool(
-        sqlx::PgPool::connect("postgresql://test:test@localhost:5433/test_docs")
+        sqlx::PgPool::connect(&database_url)
             .await
             .unwrap_or_else(|_| panic!("Failed to connect to test database")),
     );

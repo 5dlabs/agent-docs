@@ -51,6 +51,9 @@ temp/
 # Docker
 .dockerignore.bak
 
+# Build artifacts (for Docker preparation)
+build/
+
 # Node.js (if using any JS tooling)
 node_modules/
 npm-debug.log*

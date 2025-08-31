@@ -95,40 +95,50 @@ impl Tool for AddRustCrateTool {
             ));
         }
 
-        // For MVP, run synchronously to avoid Send/Sync complexity with scraper
-        // Enqueue the job first
+        // Enqueue the background job
         let job_id = self.job_processor.enqueue_add_crate_job(crate_name).await?;
 
-        // Process immediately for MVP
-        let mut rust_loader = RustLoader::new();
-        match Self::process_crate_ingestion(
-            &self.job_processor,
-            &mut rust_loader,
-            &self.embedding_client,
-            &self.db_pool,
-            job_id,
-            crate_name,
-            version,
-        )
-        .await
-        {
-            Ok(()) => Ok(format!(
-                "Crate '{}' ingestion completed successfully. Job ID: {}",
-                crate_name, job_id
-            )),
-            Err(e) => {
-                tracing::error!("Crate ingestion failed: {}", e);
+        // Start async processing in background
+        let job_processor = self.job_processor.clone();
+        let embedding_client = self.embedding_client.clone();
+        let db_pool = self.db_pool.clone();
+        let crate_name_owned = crate_name.to_string();
+        let version_owned = version.map(String::from);
+
+        tokio::spawn(async move {
+            let mut rust_loader = RustLoader::new();
+            if let Err(e) = Self::process_crate_ingestion(
+                &job_processor,
+                &mut rust_loader,
+                &embedding_client,
+                &db_pool,
+                job_id,
+                &crate_name_owned,
+                version_owned.as_deref(),
+            )
+            .await
+            {
+                tracing::error!(
+                    "Background crate ingestion failed for {}: {}",
+                    crate_name_owned,
+                    e
+                );
                 // Update job status to failed
-                if let Err(update_err) = self
-                    .job_processor
+                if let Err(update_err) = job_processor
                     .update_job_status(job_id, JobStatus::Failed, Some(0), Some(&e.to_string()))
                     .await
                 {
                     tracing::error!("Failed to update job status to failed: {}", update_err);
                 }
-                Err(e)
             }
-        }
+        });
+
+        // Return 202 Accepted with job ID immediately
+        Ok(json!({
+            "status": "accepted",
+            "job_id": job_id.to_string(),
+            "message": format!("Crate '{}' ingestion job queued successfully. Use check_rust_status with job_id to track progress.", crate_name)
+        }).to_string())
     }
 }
 

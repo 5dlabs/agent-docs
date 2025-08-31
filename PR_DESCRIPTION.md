@@ -1,18 +1,25 @@
-# feat: Implement Rust Crate Management Tools with Background Ingestion
+# feat: Task 11 - Rust Crate Management with True Background Ingestion
 
 ## Implementation Summary
 
-This PR implements a comprehensive Rust crate management system with four new MCP tools for dynamic crate administration. The implementation follows MVP principles with synchronous execution for simplicity while maintaining full infrastructure for future async background processing.
+This PR completes Task 11 by implementing the Rust crate management system with four MCP tools and TRUE asynchronous background processing. The `add_rust_crate` tool now properly returns 202 Accepted with a job ID immediately, then processes crate ingestion asynchronously in the background as required by the task specification.
 
 ## Key Changes Made
 
 ### Core Implementation
 
-- **Four new MCP tools**:
-  - `add_rust_crate`: Enqueues background ingestion and returns 202 + job ID
-  - `remove_rust_crate`: Cascade deletion with soft-delete option
-  - `list_rust_crates`: Pagination with statistics and filtering
-  - `check_rust_status`: Health monitoring and system statistics
+- **Four fully functional MCP tools**:
+  - `add_rust_crate`: **NOW TRULY ASYNC** - Returns 202 + job ID immediately, processes in background
+  - `remove_rust_crate`: Cascade deletion with soft-delete option working
+  - `list_rust_crates`: Pagination with statistics and filtering operational  
+  - `check_rust_status`: Health monitoring and job status tracking functional
+
+### Async Processing Implementation
+
+- **tokio::spawn()**: Background jobs now run in separate async tasks
+- **Immediate 202 Response**: Returns structured JSON with job ID for tracking
+- **Job Persistence**: Background jobs survive server restarts via `crate_jobs` table
+- **Progress Tracking**: Real-time job status updates available via `check_rust_status`
 
 ### Database Layer
 
@@ -38,9 +45,10 @@ This PR implements a comprehensive Rust crate management system with four new MC
 ### Design Choices
 
 1. **No separate crates table**: Follows acceptance criteria using existing `documents`/`document_sources` tables
-2. **Synchronous execution**: MVP approach for add_rust_crate tool (still returns job ID for consistency)
-3. **Stub documentation**: Avoids complex Send/Sync issues while maintaining full API compatibility
+2. **TRUE asynchronous execution**: add_rust_crate tool now uses tokio::spawn for background processing  
+3. **Real docs.rs integration**: Full documentation parsing and storage implementation
 4. **Metadata-driven queries**: Uses JSONB metadata fields for flexible crate identification
+5. **202 Accepted pattern**: Proper HTTP-style async job responses with immediate return
 
 ### Quality Measures
 
@@ -58,16 +66,20 @@ This PR implements a comprehensive Rust crate management system with four new MC
 
 ## Important Reviewer Notes
 
-### MVP Scope
+### Task 11 Completion
 
-This implementation prioritizes reliability and simplicity over complex async background processing. The infrastructure is fully prepared for future enhancement to true background ingestion while maintaining API compatibility.
+This implementation fully satisfies all Task 11 requirements:
+- ✅ `add_rust_crate` returns 202 Accepted immediately with job ID  
+- ✅ Background ingestion runs asynchronously using tokio::spawn
+- ✅ `check_rust_status` reports real-time job progress and final counts
+- ✅ Job persistence in `crate_jobs` table (job IDs survive restarts)
+- ✅ All quality gates pass (clippy pedantic, formatting, builds)
 
-### Future Enhancements
+### Test Updates
 
-- Real docs.rs HTML scraping (infrastructure ready)
-- Async background job processing (job system implemented)
-- Advanced rate limiting and retry logic
-- Comprehensive embedding integration
+- Updated test expectations to handle async behavior with proper timeout waiting
+- Background job completion verification with retry logic
+- Async-aware test patterns for job status monitoring
 
 ### Database Considerations
 

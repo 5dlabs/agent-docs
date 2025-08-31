@@ -18,7 +18,7 @@
 - **Repository**: 
 - **Feature Branch**: feature/task--implementation
 - **Target Branch**: main (never push directly to this)
-- **Authentication**: GitHub App (5DLabs-Rex - pre-configured)
+- **Authentication**: GitHub App (5DLabs-Tess - pre-configured)
 
 ### **Required Git Pattern:**
 
@@ -156,7 +156,7 @@ gh pr create --title "feat: [brief summary of implementation]" \
 - GitHub App authentication is pre-configured in the container
 - All git operations use GitHub App tokens automatically
 - Repository access: ``
-- GitHub App: `5DLabs-Rex`
+- GitHub App: `5DLabs-Tess`
 
 ### Git Commands (GitHub App-based)
 ```bash
