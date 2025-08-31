@@ -1,30 +1,41 @@
-# Task 11: Rust Crate Management (MCP add/remove/list/status with Background Ingestion)
+# Task 12: Rust Crate Management Tools Enhancement
 
 ## Overview
 
-Implement Rust crate management via MCP tools with non-blocking ingestion: `add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`. Calling `add_rust_crate` MUST enqueue a background job that fetches from docs.rs, parses, chunks, embeds, and stores docs in the existing `documents` table with `doc_type='rust'` and crate-specific metadata. The request returns 202 Accepted with a job ID; progress is available via `check_rust_status`. Persist job state in a `crate_jobs` table so job IDs survive restarts.
+Enhance existing Rust crate management tools (`add_rust_crate`, `remove_rust_crate`, `list_rust_crates`, `check_rust_status`) with improved functionality and integration. Tools must be dynamically discovered from the root `tools.json` config (no hardcoded registration in handlers).
 
 ## Implementation Guide
 
-- Create crate management tools (MCP) and background ingestion pipeline
-- `add_rust_crate` enqueues job; returns 202 + job id; job performs fetch→parse→chunk→embed→store
-- `check_rust_status` reports job states (queued, running, failed, complete) and counts
-- `remove_rust_crate` supports cascade delete (docs + embeddings) with soft-delete option
-- `list_rust_crates` paginates with stats (doc/embedding counts, last updated)
+- Enhance add_rust_crate with version management and feature selection
+- Improve remove_rust_crate with cleanup verification
+- Add comprehensive status reporting to check_rust_status
+- Implement atomic operations for crate management
+- Add progress tracking and user feedback
 
 ## Technical Requirements
 
-- Background job runner (tokio task/queue) with retry and rate limiting (docs.rs)
-- Persisted jobs table with fields: id (UUID), crate_name, operation (ingest/remove), status (queued|running|failed|complete), progress (0-100), started_at, finished_at, error (TEXT)
-- Atomic DB operations with transactions for writes/deletes
-- Consistent error handling and audit logs
-- Performance limits (end-to-end ingestion within reasonable time)
+- Atomic crate operations with rollback capability
+- Enhanced error handling and validation
+- Progress tracking for long-running operations
+- Comprehensive status reporting
+- Integration with batch embedding processing (Task 7)
+- Dynamic tools discovery from `tools.json`; toggling `enabled` controls exposure
 
 ## Success Metrics
 
-- `add_rust_crate` returns 202 + job id and does not block
-- `check_rust_status` reports real-time progress and final counts
-- Ingestion produces documents + embeddings linked to crate metadata## CI/CD and Code Quality Requirements
+- Atomic crate operations with zero data corruption
+- Enhanced user experience with progress feedback
+- Comprehensive error handling and recovery
+- Integration with new embedding batch processing (Task 7)
+- Improved performance for crate management operations
+
+## Dynamic Tools Configuration
+
+- Ensure entries for the enhanced tools exist in `tools.json` at repo root
+- Each entry should include `name`, `docType`, `title`, `description`, `enabled`
+- Server should read config on startup to register tools
+
+## CI/CD and Code Quality Requirements
 
 - Per-function linting: After creating any new function, immediately run `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` and resolve all warnings.
 - Pre-commit checks: `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic`, and `cargo test --all-features` must pass locally.

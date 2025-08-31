@@ -3,6 +3,13 @@
 //! These tests target 95%+ coverage of crate_tools.rs to meet QA requirements.
 //! All tests are designed to run quickly without external dependencies.
 
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::single_match_else)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::assertions_on_constants)]
+#![allow(clippy::match_same_arms)]
+#![allow(clippy::doc_markdown)]
+
 use anyhow::Result;
 use db::DatabasePool;
 use embed::client::EmbeddingClient;

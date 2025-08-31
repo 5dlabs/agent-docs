@@ -87,6 +87,57 @@
       "title": "Rust Best Practices Query",
       "description": "Search curated Rust best practices, patterns, and guidelines for idiomatic and performant code.",
       "enabled": true
+    },
+    {
+      "name": "add_rust_crate",
+      "docType": "rust",
+      "title": "Add Rust Crate",
+      "description": "Add a new Rust crate to the documentation system with automatic docs.rs ingestion, version management, and feature selection. Supports atomic operations with rollback capability.",
+      "enabled": true,
+      "metadataHints": {
+        "supports_version_selection": true,
+        "supports_feature_selection": true,
+        "supports_rollback": true,
+        "batch_processing": true
+      }
+    },
+    {
+      "name": "remove_rust_crate",
+      "docType": "rust",
+      "title": "Remove Rust Crate",
+      "description": "Remove a Rust crate from the documentation system with cascade deletion and cleanup verification. Supports both soft-delete and hard-delete operations.",
+      "enabled": true,
+      "metadataHints": {
+        "supports_soft_delete": true,
+        "supports_cascade_delete": true,
+        "cleanup_verification": true
+      }
+    },
+    {
+      "name": "list_rust_crates",
+      "docType": "rust", 
+      "title": "List Rust Crates",
+      "description": "List all Rust crates in the documentation system with pagination, filtering, and comprehensive statistics.",
+      "enabled": true,
+      "metadataHints": {
+        "supports_pagination": true,
+        "supports_filtering": true,
+        "supports_statistics": true,
+        "status_filtering": ["active", "inactive", "updating", "failed"]
+      }
+    },
+    {
+      "name": "check_rust_status",
+      "docType": "rust",
+      "title": "Check Rust System Status",
+      "description": "Check system health and get comprehensive statistics about Rust crate management, including job status tracking and performance metrics.",
+      "enabled": true,
+      "metadataHints": {
+        "health_monitoring": true,
+        "job_tracking": true,
+        "performance_metrics": true,
+        "storage_analysis": true
+      }
     }
   ]
 }

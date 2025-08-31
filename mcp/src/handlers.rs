@@ -33,9 +33,6 @@ impl McpHandler {
         tools.insert("rust_query".to_string(), Box::new(rust_query_tool));
         debug!("Registered hardcoded rust_query tool");
 
-        // Register crate management tools
-        Self::register_crate_management_tools(&mut tools, db_pool)?;
-
         // Load and register dynamic tools from configuration
         match Self::register_dynamic_tools(&mut tools, db_pool) {
             Ok(count) => {
@@ -90,14 +87,14 @@ impl McpHandler {
                 continue;
             }
 
-            // Create and register the dynamic tool
-            match DynamicQueryTool::new(tool_config.clone(), db_pool.clone()) {
-                Ok(dynamic_tool) => {
+            // Create and register the tool based on tool name
+            match Self::create_tool_from_config(&tool_config, db_pool) {
+                Ok(tool) => {
                     debug!(
                         "Created dynamic tool '{}' for doc_type '{}'",
                         tool_config.name, tool_config.doc_type
                     );
-                    tools.insert(tool_config.name.clone(), Box::new(dynamic_tool));
+                    tools.insert(tool_config.name.clone(), tool);
                     registered_count += 1;
                 }
                 Err(e) => {
@@ -112,41 +109,34 @@ impl McpHandler {
         Ok(registered_count)
     }
 
-    /// Register crate management tools
+    /// Create a tool instance from configuration
     ///
     /// # Errors
     ///
-    /// Returns an error if tool initialization fails.
-    fn register_crate_management_tools(
-        tools: &mut HashMap<String, Box<dyn Tool + Send + Sync>>,
+    /// Returns an error if tool creation fails.
+    fn create_tool_from_config(
+        tool_config: &db::models::ToolConfig,
         db_pool: &DatabasePool,
-    ) -> Result<()> {
-        // Create embedding client for add_rust_crate tool
-        let embedding_client: Arc<dyn embed::client::EmbeddingClient + Send + Sync> =
-            Arc::new(OpenAIEmbeddingClient::new()?);
-
-        // Register add_rust_crate tool
-        let add_crate_tool = AddRustCrateTool::new(db_pool.clone(), embedding_client);
-        tools.insert("add_rust_crate".to_string(), Box::new(add_crate_tool));
-        debug!("Registered add_rust_crate tool");
-
-        // Register remove_rust_crate tool
-        let remove_crate_tool = RemoveRustCrateTool::new(db_pool.clone());
-        tools.insert("remove_rust_crate".to_string(), Box::new(remove_crate_tool));
-        debug!("Registered remove_rust_crate tool");
-
-        // Register list_rust_crates tool
-        let list_crates_tool = ListRustCratesTool::new(db_pool.clone());
-        tools.insert("list_rust_crates".to_string(), Box::new(list_crates_tool));
-        debug!("Registered list_rust_crates tool");
-
-        // Register check_rust_status tool
-        let status_tool = CheckRustStatusTool::new(db_pool.clone());
-        tools.insert("check_rust_status".to_string(), Box::new(status_tool));
-        debug!("Registered check_rust_status tool");
-
-        info!("Successfully registered 4 crate management tools");
-        Ok(())
+    ) -> Result<Box<dyn Tool + Send + Sync>> {
+        match tool_config.name.as_str() {
+            // Crate management tools
+            "add_rust_crate" => {
+                let embedding_client: Arc<dyn embed::client::EmbeddingClient + Send + Sync> =
+                    Arc::new(OpenAIEmbeddingClient::new()?);
+                Ok(Box::new(AddRustCrateTool::new(
+                    db_pool.clone(),
+                    embedding_client,
+                )))
+            }
+            "remove_rust_crate" => Ok(Box::new(RemoveRustCrateTool::new(db_pool.clone()))),
+            "list_rust_crates" => Ok(Box::new(ListRustCratesTool::new(db_pool.clone()))),
+            "check_rust_status" => Ok(Box::new(CheckRustStatusTool::new(db_pool.clone()))),
+            // Query tools - use the existing dynamic pattern
+            _ => Ok(Box::new(DynamicQueryTool::new(
+                tool_config.clone(),
+                db_pool.clone(),
+            )?)),
+        }
     }
 
     /// Handle an MCP request

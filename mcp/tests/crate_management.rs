@@ -6,6 +6,9 @@
 //! - `list_rust_crates`: Pagination with stats and filtering
 //! - `check_rust_status`: Health monitoring and statistics
 
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::single_match_else)]
+
 use anyhow::Result;
 use chrono::Utc;
 use db::models::JobStatus;
