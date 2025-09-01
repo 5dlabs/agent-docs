@@ -461,9 +461,11 @@ jobs:
 
   # Deploy to Kubernetes (restart deployment after image push)
   deploy:
-    needs: [docker-build, changes]
+    needs: [test-rust, test-coverage, docker-build, changes]
     if: |
       always() && !cancelled() &&
+      needs.test-rust.result == 'success' &&
+      needs.test-coverage.result == 'success' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       (needs.changes.outputs.rust == 'true' || needs.changes.outputs.docker == 'true')
@@ -480,13 +482,13 @@ jobs:
 
           # Restart the deployment (triggers rolling restart)
           echo "🔄 Triggering deployment restart..."
-          kubectl rollout restart deployment/doc-server-agent-docs-server -n agent-platform
+          kubectl rollout restart deployment/doc-server-agent-docs-server -n MCP
 
           # Wait for rollout to complete
           echo "⏳ Waiting for deployment rollout to complete..."
-          kubectl rollout status deployment/doc-server-agent-docs-server -n agent-platform --timeout=300s
+          kubectl rollout status deployment/doc-server-agent-docs-server -n MCP --timeout=300s
 
           echo "✅ Deployment restarted successfully"
           echo "📊 Checking deployment status:"
-          kubectl get pods -n agent-platform -l app=doc-server-agent-docs-server
-          kubectl get deployment doc-server-agent-docs-server -n agent-platform
+          kubectl get pods -n MCP -l app=doc-server-agent-docs-server
+          kubectl get deployment doc-server-agent-docs-server -n MCP
