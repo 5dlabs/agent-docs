@@ -1,5 +1,5 @@
 ---
-name: CI
+name: CICD
 
 # This CI workflow uses the live PostgreSQL database available from K8s runners
 # instead of spinning up Docker containers. This provides better performance and
