@@ -726,13 +726,8 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         Err(e) => return Err(e),
     };
 
-    // Clean up any existing test documents first
-    sqlx::query("DELETE FROM documents WHERE source_name = $1 AND doc_path LIKE 'test/doc/%'")
-        .bind(&fixture.test_crate_name)
-        .execute(&fixture.pool)
-        .await?;
-
-    // Insert documents with different metadata
+    // Insert documents with unique identifiers to avoid conflicts
+    let test_run_id = Uuid::new_v4();
     let doc1_id = Uuid::new_v4();
     let doc2_id = Uuid::new_v4();
 
@@ -740,28 +735,34 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         "crate_name": fixture.test_crate_name,
         "crate_version": "1.0.0",
         "item_type": "struct",
-        "module_path": format!("{}::MyStruct", fixture.test_crate_name)
+        "module_path": format!("{}::MyStruct", fixture.test_crate_name),
+        "test_run_id": test_run_id
     });
 
     let metadata2 = json!({
         "crate_name": fixture.test_crate_name,
         "crate_version": "1.0.0",
         "item_type": "function",
-        "module_path": format!("{}::my_function", fixture.test_crate_name)
+        "module_path": format!("{}::my_function", fixture.test_crate_name),
+        "test_run_id": test_run_id
     });
 
-    // Insert documents
-    for (i, (doc_id, metadata)) in [(doc1_id, metadata1), (doc2_id, metadata2)]
+    // Insert documents with unique paths to avoid conflicts
+    let mut inserted_count = 0;
+    for (i, (doc_id, metadata)) in [(doc1_id, metadata1.clone()), (doc2_id, metadata2.clone())]
         .iter()
         .enumerate()
     {
+        // Use unique path to avoid conflicts
+        let unique_path = format!("test/{}/doc/{i}", test_run_id);
+
         // Check if document already exists before inserting
         let exists = sqlx::query(
             "SELECT 1 FROM documents WHERE doc_type = $1::doc_type AND source_name = $2 AND doc_path = $3"
         )
         .bind("rust")
         .bind(&fixture.test_crate_name)
-        .bind(format!("test/doc/{i}"))
+        .bind(&unique_path)
         .fetch_optional(&fixture.pool)
         .await?;
 
@@ -775,7 +776,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
             )
             .bind(doc_id)
             .bind(&fixture.test_crate_name)
-            .bind(format!("test/doc/{i}"))  // Make paths unique
+            .bind(&unique_path)
             .bind("Test content")
             .bind(metadata)
             .bind(100)
@@ -785,7 +786,8 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
 
             match insert_result {
                 Ok(_) => {
-                    // Insert succeeded - continue
+                    // Insert succeeded
+                    inserted_count += 1;
                 }
                 Err(e) => {
                     if e.to_string().contains("unique constraint") ||
@@ -793,30 +795,35 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
                        e.to_string().contains("already exists") ||
                        e.to_string().contains("no unique or exclusion constraint") {
                         // Document was inserted by another test, skip it
-                        eprintln!("⚠️  Document {}/test/doc/{} already exists, skipping", &fixture.test_crate_name, i);
+                        eprintln!("⚠️  Document {}/{} already exists, skipping", &fixture.test_crate_name, unique_path);
                     } else {
                         // Re-raise other errors
                         return Err(anyhow::Error::from(e));
                     }
                 }
             }
+        } else {
+            // Document already exists, count it
+            inserted_count += 1;
         }
     }
 
-    // Query documents by metadata
+    // Query documents by metadata and test_run_id
     let docs_by_crate =
-        sqlx::query("SELECT id, metadata FROM documents WHERE metadata->>'crate_name' = $1")
+        sqlx::query("SELECT id, metadata FROM documents WHERE metadata->>'crate_name' = $1 AND metadata->>'test_run_id' = $2")
             .bind(&fixture.test_crate_name)
+            .bind(test_run_id.to_string())
             .fetch_all(&fixture.pool)
             .await?;
 
-    assert_eq!(docs_by_crate.len(), 2);
+    assert_eq!(docs_by_crate.len(), inserted_count);
 
     // Test metadata filtering
     let struct_docs = sqlx::query(
-        "SELECT id FROM documents WHERE metadata->>'crate_name' = $1 AND metadata->>'item_type' = 'struct'"
+        "SELECT id FROM documents WHERE metadata->>'crate_name' = $1 AND metadata->>'test_run_id' = $2 AND metadata->>'item_type' = 'struct'"
     )
     .bind(&fixture.test_crate_name)
+    .bind(test_run_id.to_string())
     .fetch_all(&fixture.pool)
     .await?;
 
