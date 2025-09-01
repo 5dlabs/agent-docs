@@ -509,7 +509,8 @@ impl MigrationPipeline {
 
     /// Store document in database
     async fn store_document(&self, document: &Document) -> Result<()> {
-        sqlx::query(
+        // Try INSERT with ON CONFLICT first, fallback to regular INSERT
+        let insert_result = sqlx::query(
             r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, embedding, token_count, created_at, updated_at)
             VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -532,7 +533,40 @@ impl MigrationPipeline {
         .bind(document.created_at)
         .bind(document.updated_at)
         .execute(self.db_pool.as_ref())
-        .await?;
+        .await;
+
+        match insert_result {
+            Ok(_) => {
+                // Insert succeeded
+            }
+            Err(e) => {
+                if e.to_string().contains("undefined_object") ||
+                   e.to_string().contains("no unique or exclusion constraint") {
+                    // Constraint doesn't exist, try INSERT without ON CONFLICT (just INSERT, will fail on duplicates)
+                    sqlx::query(
+                        r"
+                        INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, embedding, token_count, created_at, updated_at)
+                        VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $9, $10)
+                        ",
+                    )
+                    .bind(document.id)
+                    .bind(&document.doc_type)
+                    .bind(&document.source_name)
+                    .bind(&document.doc_path)
+                    .bind(&document.content)
+                    .bind(&document.metadata)
+                    .bind(document.embedding.as_ref())
+                    .bind(document.token_count)
+                    .bind(document.created_at)
+                    .bind(document.updated_at)
+                    .execute(self.db_pool.as_ref())
+                    .await?;
+                } else {
+                    // Re-raise other errors
+                    return Err(e.into());
+                }
+            }
+        }
 
         Ok(())
     }

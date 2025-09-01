@@ -309,7 +309,8 @@ impl AddRustCrateTool {
         // Ensure document source exists
         tracing::info!("Ensuring document source exists for crate: {}", crate_name);
         let mut tx = db_pool.pool().begin().await?;
-        sqlx::query(
+        // Try INSERT with ON CONFLICT first, fallback to regular INSERT
+        let insert_result = sqlx::query(
             r"
             INSERT INTO document_sources (doc_type, source_name, config, enabled)
             VALUES ('rust'::doc_type, $1, $2, true)
@@ -319,7 +320,32 @@ impl AddRustCrateTool {
         .bind(crate_name)
         .bind(json!({"auto_ingested": true, "crate_info": crate_info}))
         .execute(&mut *tx)
-        .await?;
+        .await;
+
+        match insert_result {
+            Ok(_) => {
+                // Insert succeeded
+            }
+            Err(e) => {
+                if e.to_string().contains("undefined_object") ||
+                   e.to_string().contains("no unique or exclusion constraint") {
+                    // Constraint doesn't exist, try without ON CONFLICT
+                    sqlx::query(
+                        r"
+                        INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                        VALUES ('rust'::doc_type, $1, $2, true)
+                        ",
+                    )
+                    .bind(crate_name)
+                    .bind(json!({"auto_ingested": true, "crate_info": crate_info}))
+                    .execute(&mut *tx)
+                    .await?;
+                } else {
+                    // Re-raise other errors
+                    return Err(e.into());
+                }
+            }
+        }
         tx.commit().await?;
 
         // No separate crate record - we use document metadata instead
