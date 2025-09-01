@@ -283,7 +283,7 @@ impl IntoResponse for TransportError {
             Self::InvalidSessionId(_) => (StatusCode::BAD_REQUEST, "Invalid Session ID"),
             Self::SessionLockError => (StatusCode::INTERNAL_SERVER_ERROR, "Session Lock Error"),
             Self::MissingContentType => (StatusCode::BAD_REQUEST, "Missing Content-Type"),
-            Self::InvalidContentType(_) => (StatusCode::BAD_REQUEST, "Unsupported Media Type"),
+            Self::InvalidContentType(_) => (StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported Media Type"),
             Self::JsonParseError(_) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
             Self::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
             Self::InternalError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
