@@ -152,6 +152,13 @@ jobs:
           key: "rust-cache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      - name: Set up test database schema
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Setting up test database schema..."
+          psql "${DATABASE_URL}" -f scripts/setup_test_db.sql
+
       - name: Run tests
         env:
           # Use the same database as production for integration tests
