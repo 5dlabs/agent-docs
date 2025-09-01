@@ -194,10 +194,11 @@ impl CrateManagementTestFixture {
                     doc_ids.push(doc_id);
                 }
                 Err(e) => {
-                    if e.to_string().contains("unique constraint") ||
-                       e.to_string().contains("duplicate key") ||
-                       e.to_string().contains("already exists") ||
-                       e.to_string().contains("no unique or exclusion constraint") {
+                    if e.to_string().contains("unique constraint")
+                        || e.to_string().contains("duplicate key")
+                        || e.to_string().contains("already exists")
+                        || e.to_string().contains("no unique or exclusion constraint")
+                    {
                         // Document already exists or constraint missing
                         doc_ids.push(doc_id);
                     } else {
@@ -657,7 +658,9 @@ async fn test_check_rust_status_with_crate_filter() -> Result<()> {
     };
 
     // Test INSERT permission before proceeding
-    if !check_insert_permission_mcp(&fixture.pool, "test_check_rust_status_with_crate_filter").await? {
+    if !check_insert_permission_mcp(&fixture.pool, "test_check_rust_status_with_crate_filter")
+        .await?
+    {
         return Ok(());
     }
 
