@@ -2,6 +2,8 @@
 //!
 //! This crate provides the MCP server functionality including tool definitions,
 //! HTTP transport, and integration with the database and other services.
+//!
+//! Test deployment with namespace fix applied.
 
 pub mod config;
 pub mod crate_tools;
