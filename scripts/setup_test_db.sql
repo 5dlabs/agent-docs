@@ -168,9 +168,23 @@ BEGIN
         BEGIN
             -- Only auto-insert for test-like source names (containing 'test' or 'db-test')
             IF NEW.source_name LIKE '%test%' OR NEW.source_name LIKE 'db-test%' THEN
-                INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true)
-                ON CONFLICT (doc_type, source_name) DO NOTHING;
+                -- Try INSERT with specific constraint first, fallback to generic
+                BEGIN
+                    INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                    VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true)
+                    ON CONFLICT (doc_type, source_name) DO NOTHING;
+                EXCEPTION
+                    WHEN undefined_object THEN
+                        -- Constraint doesn't exist, try without ON CONFLICT
+                        BEGIN
+                            INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                            VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true);
+                        EXCEPTION
+                            WHEN unique_violation THEN
+                                -- Record already exists, do nothing
+                                NULL;
+                        END;
+                END;
             END IF;
 
             RETURN NEW;
