@@ -55,7 +55,7 @@ fn create_mock_router() -> Router {
     };
     use mcp::{
         headers::{set_standard_headers, validate_protocol_version},
-        transport::{SessionManager, TransportConfig, TransportError},
+        transport::{SessionManager, TransportConfig},
     };
 
     #[derive(Clone)]
@@ -67,21 +67,10 @@ fn create_mock_router() -> Router {
         State(state): State<MockState>,
         headers: HeaderMap,
         request: Request<Body>,
-    ) -> Result<Response, TransportError> {
+    ) -> Result<Response, StatusCode> {
         // Validate protocol version
         if let Err(status_code) = validate_protocol_version(&headers) {
-            return match status_code {
-                StatusCode::BAD_REQUEST => Err(TransportError::UnsupportedProtocolVersion(
-                    headers
-                        .get(MCP_PROTOCOL_VERSION)
-                        .and_then(|v| v.to_str().ok())
-                        .unwrap_or("missing")
-                        .to_string(),
-                )),
-                _ => Err(TransportError::InternalError(
-                    "Protocol validation failed".to_string(),
-                )),
-            };
+            return Err(status_code);
         }
 
         match *request.method() {
@@ -89,28 +78,27 @@ fn create_mock_router() -> Router {
                 // Validate Content-Type
                 let content_type = headers
                     .get("content-type")
-                    .ok_or(TransportError::MissingContentType)?
+                    .ok_or(StatusCode::BAD_REQUEST)?
                     .to_str()
-                    .map_err(|_| {
-                        TransportError::InvalidContentType("invalid header value".to_string())
-                    })?;
+                    .map_err(|_| StatusCode::BAD_REQUEST)?;
 
                 if !content_type.starts_with("application/json") {
-                    return Err(TransportError::InvalidContentType(content_type.to_string()));
+                    return Err(StatusCode::UNSUPPORTED_MEDIA_TYPE);
                 }
 
                 // Get or create session
-                let session_id = state.session_manager.get_or_create_session(&headers)?;
+                let session_id = match state.session_manager.get_or_create_session(&headers) {
+                    Ok(id) => id,
+                    Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+                };
 
                 // Parse JSON body to check if it's valid
                 let body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
                     .await
-                    .map_err(|e| {
-                        TransportError::InternalError(format!("Failed to read body: {e}"))
-                    })?;
+                    .map_err(|_| StatusCode::BAD_REQUEST)?;
 
                 let json_request: Value = serde_json::from_slice(&body_bytes)
-                    .map_err(|e| TransportError::JsonParseError(e.to_string()))?;
+                    .map_err(|_| StatusCode::BAD_REQUEST)?;
 
                 // Mock different JSON-RPC responses based on method
                 let method = json_request
@@ -152,7 +140,7 @@ fn create_mock_router() -> Router {
 
                 Ok((StatusCode::OK, response_headers, axum::Json(mock_response)).into_response())
             }
-            _ => Err(TransportError::MethodNotAllowed),
+            _ => Err(StatusCode::METHOD_NOT_ALLOWED),
         }
     }
 
@@ -305,7 +293,7 @@ async fn test_post_mcp_without_content_type_returns_400() {
 }
 
 #[tokio::test]
-async fn test_post_mcp_with_wrong_content_type_returns_400() {
+async fn test_post_mcp_with_wrong_content_type_returns_415() {
     let app = create_test_server().await;
 
     let request_body = create_json_rpc_request("initialize", None);
@@ -320,8 +308,8 @@ async fn test_post_mcp_with_wrong_content_type_returns_400() {
 
     let response = app.oneshot(request).await.unwrap();
 
-    // Should return 400 Bad Request
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    // Should return 415 Unsupported Media Type for wrong content type
+    assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
 }
 
 #[tokio::test]
