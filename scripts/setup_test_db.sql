@@ -58,49 +58,139 @@ BEGIN
 
     -- Try to convert embedding column to vector type if extension is available
     BEGIN
-        ALTER TABLE documents ALTER COLUMN embedding TYPE vector(3072);
+        -- Check if we have ALTER permission on the documents table
+        IF EXISTS (
+            SELECT 1 FROM information_schema.table_privileges
+            WHERE table_name = 'documents'
+            AND table_schema = 'public'
+            AND privilege_type = 'ALTER'
+            AND grantee = current_user
+        ) THEN
+            ALTER TABLE documents ALTER COLUMN embedding TYPE vector(3072);
+            RAISE NOTICE 'Converted embedding column to vector type';
+        ELSE
+            RAISE NOTICE 'No ALTER permission on documents table, skipping vector conversion';
+        END IF;
     EXCEPTION
         WHEN undefined_object THEN
             RAISE NOTICE 'Vector extension not available, keeping TEXT type for embeddings';
+        WHEN insufficient_privilege THEN
+            RAISE NOTICE 'Insufficient privileges to alter documents table';
     END;
 END $$;
 
--- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type);
-CREATE INDEX IF NOT EXISTS idx_documents_source_name ON documents(source_name);
-CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at DESC);
+-- Create indexes for performance (only if we have permissions)
+DO $$
+BEGIN
+    -- Check if we have CREATE privilege on the schema
+    IF EXISTS (
+        SELECT 1 FROM information_schema.schema_privileges
+        WHERE schema_name = 'public'
+        AND privilege_type = 'CREATE'
+        AND grantee = current_user
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type);
+        CREATE INDEX IF NOT EXISTS idx_documents_source_name ON documents(source_name);
+        CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at DESC);
+        RAISE NOTICE 'Created performance indexes on documents table';
+    ELSE
+        RAISE NOTICE 'No CREATE permission on schema, skipping index creation';
+    END IF;
+EXCEPTION
+    WHEN insufficient_privilege THEN
+        RAISE NOTICE 'Insufficient privileges to create indexes on documents table';
+END;
+$$;
 
 -- Insert some test data into document_sources to satisfy foreign key constraints
--- Insert a broader set of test sources for different doc types
-INSERT INTO document_sources (doc_type, source_name, config, enabled)
-VALUES
-    ('rust', 'test_crate', '{"version": "1.0.0"}', true),
-    ('rust', 'test_crate_2', '{"version": "2.0.0"}', true),
-    ('rust', 'db-test-crate-', '{"version": "0.1.0"}', true), -- Prefix for UUID-based tests
-    ('jupyter', 'test_notebook', '{"kernel": "python3"}', true),
-    ('birdeye', 'test_birdeye', '{"api_version": "v1"}', true),
-    ('solana', 'test_solana', '{"network": "mainnet"}', true)
-ON CONFLICT (doc_type, source_name) DO NOTHING;
-
--- Create a function to automatically insert document_sources for test data
-CREATE OR REPLACE FUNCTION ensure_document_source_exists()
-RETURNS TRIGGER AS $$
+-- Insert a broader set of test sources for different doc types (conditional on permissions)
+DO $$
 BEGIN
-    -- Only auto-insert for test-like source names (containing 'test' or 'db-test')
-    IF NEW.source_name LIKE '%test%' OR NEW.source_name LIKE 'db-test%' THEN
-        INSERT INTO document_sources (doc_type, source_name, config, enabled)
-        VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true)
-        ON CONFLICT (doc_type, source_name) DO NOTHING;
+    -- Check if we have INSERT permission and if the constraint exists
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_privileges
+        WHERE table_name = 'document_sources'
+        AND table_schema = 'public'
+        AND privilege_type = 'INSERT'
+        AND grantee = current_user
+    ) THEN
+        -- Try INSERT with ON CONFLICT first (if constraint exists)
+        BEGIN
+            INSERT INTO document_sources (doc_type, source_name, config, enabled)
+            VALUES
+                ('rust', 'test_crate', '{"version": "1.0.0"}', true),
+                ('rust', 'test_crate_2', '{"version": "2.0.0"}', true),
+                ('rust', 'db-test-crate-', '{"version": "0.1.0"}', true),
+                ('jupyter', 'test_notebook', '{"kernel": "python3"}', true),
+                ('birdeye', 'test_birdeye', '{"api_version": "v1"}', true),
+                ('solana', 'test_solana', '{"network": "mainnet"}', true)
+            ON CONFLICT (doc_type, source_name) DO NOTHING;
+            RAISE NOTICE 'Inserted test data into document_sources with ON CONFLICT';
+        EXCEPTION
+            WHEN undefined_object THEN
+                -- Constraint doesn't exist, try INSERT without ON CONFLICT
+                INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                VALUES
+                    ('rust', 'test_crate', '{"version": "1.0.0"}', true),
+                    ('rust', 'test_crate_2', '{"version": "2.0.0"}', true),
+                    ('rust', 'db-test-crate-', '{"version": "0.1.0"}', true),
+                    ('jupyter', 'test_notebook', '{"kernel": "python3"}', true),
+                    ('birdeye', 'test_birdeye', '{"api_version": "v1"}', true),
+                    ('solana', 'test_solana', '{"network": "mainnet"}', true)
+                ON CONFLICT DO NOTHING; -- Generic conflict handling
+                RAISE NOTICE 'Inserted test data into document_sources with generic ON CONFLICT';
+            WHEN unique_violation THEN
+                -- Handle unique violations gracefully
+                RAISE NOTICE 'Some test data already exists in document_sources, skipping inserts';
+        END;
+    ELSE
+        RAISE NOTICE 'No INSERT permission on document_sources table, skipping test data insertion';
     END IF;
-
-    RETURN NEW;
+EXCEPTION
+    WHEN insufficient_privilege THEN
+        RAISE NOTICE 'Insufficient privileges to insert into document_sources table';
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Create trigger to auto-insert document sources for test data
-CREATE TRIGGER ensure_document_source_trigger
-    BEFORE INSERT ON documents
-    FOR EACH ROW EXECUTE FUNCTION ensure_document_source_exists();
+-- Create a function to automatically insert document_sources for test data (conditional on permissions)
+DO $$
+BEGIN
+    -- Check if we have CREATE privilege on the schema
+    IF EXISTS (
+        SELECT 1 FROM information_schema.schema_privileges
+        WHERE schema_name = 'public'
+        AND privilege_type = 'CREATE'
+        AND grantee = current_user
+    ) THEN
+        -- Create the function
+        CREATE OR REPLACE FUNCTION ensure_document_source_exists()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            -- Only auto-insert for test-like source names (containing 'test' or 'db-test')
+            IF NEW.source_name LIKE '%test%' OR NEW.source_name LIKE 'db-test%' THEN
+                INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true)
+                ON CONFLICT (doc_type, source_name) DO NOTHING;
+            END IF;
+
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+
+        -- Create trigger to auto-insert document sources for test data
+        CREATE TRIGGER ensure_document_source_trigger
+            BEFORE INSERT ON documents
+            FOR EACH ROW EXECUTE FUNCTION ensure_document_source_exists();
+
+        RAISE NOTICE 'Created function and trigger for document source auto-insertion';
+    ELSE
+        RAISE NOTICE 'No CREATE permission on schema, skipping function and trigger creation';
+    END IF;
+EXCEPTION
+    WHEN insufficient_privilege THEN
+        RAISE NOTICE 'Insufficient privileges to create function and trigger';
+END;
+$$;
 
 -- Create job_status enum if it doesn't exist
 DO $$
