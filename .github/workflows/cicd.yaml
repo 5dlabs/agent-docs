@@ -154,8 +154,8 @@ jobs:
 
       - name: Run tests
         env:
-          # Use mock database for tests to avoid dependency on live database
-          TEST_DATABASE_URL: mock
+          # Use the same database as production for integration tests
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: cargo test --workspace --all-features --all-targets
@@ -239,8 +239,8 @@ jobs:
 
       - name: Generate test coverage
         env:
-          # Use mock database for tests to avoid dependency on live database
-          TEST_DATABASE_URL: mock
+          # Use the same database as production for integration tests
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -313,8 +313,8 @@ jobs:
           CARGO_INCREMENTAL: "0"  # Disable for cleaner builds
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: "sparse"
-          # Set test environment to mock to avoid any test dependencies during build
-          TEST_DATABASE_URL: mock
+          # Use real database for any build-time tests
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           echo "🔨 Building optimized release binary..."
 

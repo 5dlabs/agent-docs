@@ -32,10 +32,10 @@ struct DatabaseTestFixture {
 
 impl DatabaseTestFixture {
     async fn new() -> Result<Self> {
-        // Check if we should use mock instead of real database
+        // Check if we should skip database tests (only in mock mode)
         if std::env::var("TEST_DATABASE_URL")
-            .map(|v| v.trim().is_empty() || v.trim().eq_ignore_ascii_case("mock"))
-            .unwrap_or(true)
+            .map(|v| v.trim().eq_ignore_ascii_case("mock"))
+            .unwrap_or(false)
         {
             return Err(anyhow!(
                 "Mock mode: skipping database tests (TEST_DATABASE_URL=mock)"
