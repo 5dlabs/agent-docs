@@ -37,7 +37,7 @@ async fn create_test_server() -> Router {
             Ok(server) => {
                 println!("Successfully created MCP server with real database");
                 server.create_router()
-            },
+            }
             Err(e) => {
                 println!("Failed to create MCP server: {e}. Falling back to mock.");
                 create_mock_router()
