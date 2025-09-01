@@ -97,8 +97,8 @@ fn create_mock_router() -> Router {
                     .await
                     .map_err(|_| StatusCode::BAD_REQUEST)?;
 
-                let json_request: Value = serde_json::from_slice(&body_bytes)
-                    .map_err(|_| StatusCode::BAD_REQUEST)?;
+                let json_request: Value =
+                    serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
                 // Mock different JSON-RPC responses based on method
                 let method = json_request
