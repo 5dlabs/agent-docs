@@ -93,13 +93,18 @@ impl DatabaseTestFixture {
             .unwrap_or_else(|_| "postgresql://vector_user:EFwiPWDXMoOI2VKNF4eO3eSm8n3hzmjognKytNk2ndskgOAZgEBGDQULE6ryDc7z@vector-postgres.databases.svc.cluster.local:5432/vector_db".to_string());
 
         // Debug: Show which database URL we're using
+        let is_ci = std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok();
+        let is_kubernetes_url = database_url.contains("vector-postgres.databases.svc.cluster.local");
+
         eprintln!(
-            "🔍 Using database URL: {}",
+            "🔍 Using database URL: {} (CI: {}, Kubernetes: {})",
             if database_url.contains("vector-postgres") {
                 "Kubernetes cluster (vector-postgres)"
             } else {
                 "External database"
-            }
+            },
+            is_ci,
+            is_kubernetes_url
         );
         eprintln!(
             "🔗 Database: {}",
