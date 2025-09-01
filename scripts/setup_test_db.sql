@@ -82,14 +82,25 @@ VALUES
     ('solana', 'test_solana', '{"network": "mainnet"}', true)
 ON CONFLICT (doc_type, source_name) DO NOTHING;
 
--- Insert additional sources with common prefixes that tests might use
-INSERT INTO document_sources (doc_type, source_name, config, enabled)
-SELECT
-    'rust'::doc_type,
-    'db-test-crate-' || generate_series(1, 10)::text,
-    '{"version": "0.1.0"}'::jsonb,
-    true
-ON CONFLICT (doc_type, source_name) DO NOTHING;
+-- Create a function to automatically insert document_sources for test data
+CREATE OR REPLACE FUNCTION ensure_document_source_exists()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only auto-insert for test-like source names (containing 'test' or 'db-test')
+    IF NEW.source_name LIKE '%test%' OR NEW.source_name LIKE 'db-test%' THEN
+        INSERT INTO document_sources (doc_type, source_name, config, enabled)
+        VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true)
+        ON CONFLICT (doc_type, source_name) DO NOTHING;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to auto-insert document sources for test data
+CREATE TRIGGER ensure_document_source_trigger
+    BEFORE INSERT ON documents
+    FOR EACH ROW EXECUTE FUNCTION ensure_document_source_exists();
 
 -- Create job_status enum if it doesn't exist
 DO $$
