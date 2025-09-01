@@ -726,11 +726,14 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         Err(e) => return Err(e),
     };
 
-    // Clean up any existing test documents first (ignore permission errors)
-    let _ = sqlx::query("DELETE FROM documents WHERE source_name = $1 AND (doc_path LIKE 'test/%' OR doc_path LIKE 'test/doc/%')")
+    // Clean up any existing test documents first (be aggressive)
+    match sqlx::query("DELETE FROM documents WHERE source_name = $1")
         .bind(&fixture.test_crate_name)
         .execute(&fixture.pool)
-        .await;
+        .await {
+        Ok(result) => eprintln!("🧹 Cleaned up {} existing test documents", result.rows_affected()),
+        Err(e) => eprintln!("⚠️  Cleanup failed (expected in CI): {}", e),
+    }
 
     // Insert documents with unique identifiers to avoid conflicts
     let test_run_id = Uuid::new_v4();
