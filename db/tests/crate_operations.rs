@@ -128,7 +128,8 @@ impl DatabaseTestFixture {
 
         // Debug: Show which database URL we're using
         let is_ci = std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok();
-        let is_kubernetes_url = database_url.contains("vector-postgres.databases.svc.cluster.local");
+        let is_kubernetes_url =
+            database_url.contains("vector-postgres.databases.svc.cluster.local");
 
         eprintln!(
             "🔍 Using database URL: {} (CI: {}, Kubernetes: {})",
@@ -788,7 +789,8 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
     // Check database permissions first
     let can_modify = match sqlx::query("SELECT 1 FROM documents LIMIT 1")
         .fetch_optional(&fixture.pool)
-        .await {
+        .await
+    {
         Ok(_) => {
             eprintln!("✅ Database SELECT permission confirmed");
             true
@@ -804,8 +806,12 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         match sqlx::query("DELETE FROM documents WHERE source_name = $1")
             .bind(&fixture.test_crate_name)
             .execute(&fixture.pool)
-            .await {
-            Ok(result) => eprintln!("🧹 Cleaned up {} existing test documents", result.rows_affected()),
+            .await
+        {
+            Ok(result) => eprintln!(
+                "🧹 Cleaned up {} existing test documents",
+                result.rows_affected()
+            ),
             Err(e) => eprintln!("⚠️  Cleanup failed: {}", e),
         }
     } else {
@@ -893,22 +899,29 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
             .execute(&fixture.pool)
             .await;
 
-        match insert_result {
-            Ok(_) => {
-                // Insert succeeded
-                inserted_count += 1;
-                eprintln!("✅ Inserted document {}/{}", &fixture.test_crate_name, unique_path);
-            }
-            Err(e) => {
-                if e.to_string().contains("unique constraint") ||
-                   e.to_string().contains("duplicate key") ||
-                   e.to_string().contains("already exists") {
-                    // Document already exists from another test
+            match insert_result {
+                Ok(_) => {
+                    // Insert succeeded
                     inserted_count += 1;
-                    eprintln!("⚠️  Document {}/{} already exists (counting as inserted)", &fixture.test_crate_name, unique_path);
-                } else if e.to_string().contains("no unique or exclusion constraint") {
-                    // Constraint is missing, try to check if document actually exists
-                    let exists_check = sqlx::query(
+                    eprintln!(
+                        "✅ Inserted document {}/{}",
+                        &fixture.test_crate_name, unique_path
+                    );
+                }
+                Err(e) => {
+                    if e.to_string().contains("unique constraint")
+                        || e.to_string().contains("duplicate key")
+                        || e.to_string().contains("already exists")
+                    {
+                        // Document already exists from another test
+                        inserted_count += 1;
+                        eprintln!(
+                            "⚠️  Document {}/{} already exists (counting as inserted)",
+                            &fixture.test_crate_name, unique_path
+                        );
+                    } else if e.to_string().contains("no unique or exclusion constraint") {
+                        // Constraint is missing, try to check if document actually exists
+                        let exists_check = sqlx::query(
                         "SELECT 1 FROM documents WHERE doc_type = $1::doc_type AND source_name = $2 AND doc_path = $3"
                     )
                     .bind("rust")
@@ -917,15 +930,15 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
                     .fetch_optional(&fixture.pool)
                     .await;
 
-                    match exists_check {
-                        Ok(Some(_)) => {
-                            // Document actually exists
-                            inserted_count += 1;
-                            eprintln!("⚠️  Document {}/{} exists despite missing constraint (counting as inserted)", &fixture.test_crate_name, unique_path);
-                        }
-                        _ => {
-                            // Document doesn't exist, try inserting without constraints
-                            let fallback_insert = sqlx::query(
+                        match exists_check {
+                            Ok(Some(_)) => {
+                                // Document actually exists
+                                inserted_count += 1;
+                                eprintln!("⚠️  Document {}/{} exists despite missing constraint (counting as inserted)", &fixture.test_crate_name, unique_path);
+                            }
+                            _ => {
+                                // Document doesn't exist, try inserting without constraints
+                                let fallback_insert = sqlx::query(
                                 "INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
                                  VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
                                  ON CONFLICT DO NOTHING"
@@ -940,25 +953,31 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
                             .execute(&fixture.pool)
                             .await;
 
-                            match fallback_insert {
-                                Ok(_) => {
-                                    inserted_count += 1;
-                                    eprintln!("✅ Inserted document {}/{} with fallback", &fixture.test_crate_name, unique_path);
-                                }
-                                _ => {
-                                    eprintln!("❌ Failed to insert document {}/{} even with fallback", &fixture.test_crate_name, unique_path);
+                                match fallback_insert {
+                                    Ok(_) => {
+                                        inserted_count += 1;
+                                        eprintln!(
+                                            "✅ Inserted document {}/{} with fallback",
+                                            &fixture.test_crate_name, unique_path
+                                        );
+                                    }
+                                    _ => {
+                                        eprintln!(
+                                            "❌ Failed to insert document {}/{} even with fallback",
+                                            &fixture.test_crate_name, unique_path
+                                        );
+                                    }
                                 }
                             }
                         }
+                    } else {
+                        // Re-raise other errors
+                        eprintln!("❌ Unexpected error inserting document: {}", e);
+                        return Err(anyhow::Error::from(e));
                     }
-                } else {
-                    // Re-raise other errors
-                    eprintln!("❌ Unexpected error inserting document: {}", e);
-                    return Err(anyhow::Error::from(e));
                 }
             }
         }
-    }
     }
 
     // Debug: Check what documents actually exist (only if we have permissions)
@@ -977,13 +996,20 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         let id: Uuid = doc.get("id");
         let path: String = doc.get("doc_path");
         let metadata: serde_json::Value = doc.get("metadata");
-        eprintln!("   - {}: {} (test_run_id: {})",
-                  id, path,
-                  metadata.get("test_run_id").and_then(|v| v.as_str()).unwrap_or("NONE"));
+        eprintln!(
+            "   - {}: {} (test_run_id: {})",
+            id,
+            path,
+            metadata
+                .get("test_run_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("NONE")
+        );
     }
 
     // Filter by test_run_id
-    let filtered_docs: Vec<_> = all_docs.iter()
+    let filtered_docs: Vec<_> = all_docs
+        .iter()
         .filter(|row| {
             let metadata: serde_json::Value = row.get("metadata");
             if let Some(run_id) = metadata.get("test_run_id") {
@@ -994,8 +1020,11 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         })
         .collect();
 
-    eprintln!("📊 Found {} docs with correct test_run_id, inserted_count: {}",
-              filtered_docs.len(), inserted_count);
+    eprintln!(
+        "📊 Found {} docs with correct test_run_id, inserted_count: {}",
+        filtered_docs.len(),
+        inserted_count
+    );
 
     if can_insert {
         assert_eq!(filtered_docs.len(), inserted_count);
@@ -1005,25 +1034,27 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
 
     // Test metadata filtering - filter in application code (only if we have permissions)
     let all_docs = if can_insert {
-        sqlx::query(
-            "SELECT id, metadata FROM documents WHERE metadata->>'crate_name' = $1"
-        )
-        .bind(&fixture.test_crate_name)
-        .fetch_all(&fixture.pool)
-        .await?
+        sqlx::query("SELECT id, metadata FROM documents WHERE metadata->>'crate_name' = $1")
+            .bind(&fixture.test_crate_name)
+            .fetch_all(&fixture.pool)
+            .await?
     } else {
         Vec::new()
     };
 
-    let struct_docs: Vec<_> = all_docs.iter()
+    let struct_docs: Vec<_> = all_docs
+        .iter()
         .filter(|row| {
             let metadata: serde_json::Value = row.get("metadata");
-            metadata.get("test_run_id").and_then(|v| v.as_str()) == Some(&test_run_id.to_string()) &&
-            metadata.get("item_type").and_then(|v| v.as_str()) == Some("struct")
+            metadata.get("test_run_id").and_then(|v| v.as_str()) == Some(&test_run_id.to_string())
+                && metadata.get("item_type").and_then(|v| v.as_str()) == Some("struct")
         })
         .collect();
 
-    eprintln!("🔍 Found {} struct docs with correct test_run_id", struct_docs.len());
+    eprintln!(
+        "🔍 Found {} struct docs with correct test_run_id",
+        struct_docs.len()
+    );
 
     if can_insert {
         assert_eq!(struct_docs.len(), 1);

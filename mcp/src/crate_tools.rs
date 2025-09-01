@@ -327,8 +327,9 @@ impl AddRustCrateTool {
                 // Insert succeeded
             }
             Err(e) => {
-                if e.to_string().contains("undefined_object") ||
-                   e.to_string().contains("no unique or exclusion constraint") {
+                if e.to_string().contains("undefined_object")
+                    || e.to_string().contains("no unique or exclusion constraint")
+                {
                     // Constraint doesn't exist, try without ON CONFLICT
                     sqlx::query(
                         r"
