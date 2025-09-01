@@ -82,8 +82,8 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
-            WHERE doc_type::text = $1
+            FROM documents
+            WHERE doc_type = $1::doc_type
             ORDER BY created_at DESC
             ",
         )
@@ -293,8 +293,8 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
-            WHERE doc_type = $1
+            FROM documents
+            WHERE doc_type = $1::doc_type
             ORDER BY created_at DESC
             LIMIT $2
             ",
@@ -338,7 +338,7 @@ impl DocumentQueries {
         filters: &MetadataFilters,
     ) -> Result<Vec<Document>> {
         // Build dynamic WHERE clause based on provided filters
-        let mut query_parts = vec!["doc_type = $1".to_string()];
+        let mut query_parts = vec!["doc_type = $1::doc_type".to_string()];
         let mut bind_count = 2;
 
         // Add metadata filters using JSONB operators
