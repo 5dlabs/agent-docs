@@ -301,11 +301,15 @@ impl DatabaseTestFixture {
                         doc_ids.push(doc_id);
                     }
                     Err(e) => {
-                        if e.to_string().contains("unique constraint") ||
-                           e.to_string().contains("duplicate key") ||
-                           e.to_string().contains("already exists") {
+                        if e.to_string().contains("unique constraint")
+                            || e.to_string().contains("duplicate key")
+                            || e.to_string().contains("already exists")
+                        {
                             // Document was inserted by another test, skip it
-                            eprintln!("⚠️  Document {}/doc/{} already exists, skipping", &self.test_crate_name, i);
+                            eprintln!(
+                                "⚠️  Document {}/doc/{} already exists, skipping",
+                                &self.test_crate_name, i
+                            );
                         } else {
                             // Re-raise other errors
                             return Err(anyhow::Error::from(e));
@@ -751,8 +755,8 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         .await?;
 
         if exists.is_none() {
-            // Only insert if it doesn't exist
-            sqlx::query(
+            // Try to insert, handle constraint violations gracefully
+            let insert_result = sqlx::query(
                 r"
                 INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
                 VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
@@ -766,7 +770,24 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
             .bind(100)
             .bind(Utc::now())
             .execute(&fixture.pool)
-            .await?;
+            .await;
+
+            match insert_result {
+                Ok(_) => {
+                    // Insert succeeded - continue
+                }
+                Err(e) => {
+                    if e.to_string().contains("unique constraint") ||
+                       e.to_string().contains("duplicate key") ||
+                       e.to_string().contains("already exists") {
+                        // Document was inserted by another test, skip it
+                        eprintln!("⚠️  Document {}/test/doc/{} already exists, skipping", &fixture.test_crate_name, i);
+                    } else {
+                        // Re-raise other errors
+                        return Err(anyhow::Error::from(e));
+                    }
+                }
+            }
         }
     }
 
