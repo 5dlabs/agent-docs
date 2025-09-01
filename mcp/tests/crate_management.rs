@@ -45,7 +45,8 @@ impl CrateManagementTestFixture {
 
         // If we're not in CI but trying to connect to Kubernetes URL, skip immediately
         let is_ci = std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok();
-        let is_kubernetes_url = database_url.contains("vector-postgres.databases.svc.cluster.local");
+        let is_kubernetes_url =
+            database_url.contains("vector-postgres.databases.svc.cluster.local");
 
         if !is_ci && is_kubernetes_url {
             eprintln!("🧪 Skipping database tests - detected problematic Kubernetes URL in local environment");
@@ -53,7 +54,9 @@ impl CrateManagementTestFixture {
             eprintln!("   1. Start local database: ./test-db-setup.sh start");
             eprintln!("   2. Set TEST_DATABASE_URL: export TEST_DATABASE_URL='postgresql://test_user:test_password@localhost:5433/test_db'");
             eprintln!("   3. Run tests: cargo test -p mcp --test crate_management");
-            return Err(anyhow!("Local environment: skipping database tests (use local database setup)"));
+            return Err(anyhow!(
+                "Local environment: skipping database tests (use local database setup)"
+            ));
         }
 
         let db_pool = DatabasePool::connect(&database_url).await?;
