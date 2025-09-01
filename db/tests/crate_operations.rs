@@ -278,8 +278,8 @@ impl DatabaseTestFixture {
             .await?;
 
             if exists.is_none() {
-                // Only insert if it doesn't exist
-                sqlx::query(
+                // Try to insert, handle constraint violations gracefully
+                let insert_result = sqlx::query(
                     r"
                     INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
                     VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
@@ -293,10 +293,29 @@ impl DatabaseTestFixture {
                 .bind(50 + i) // token count
                 .bind(Utc::now())
                 .execute(&self.pool)
-                .await?;
-            }
+                .await;
 
-            doc_ids.push(doc_id);
+                match insert_result {
+                    Ok(_) => {
+                        // Insert succeeded
+                        doc_ids.push(doc_id);
+                    }
+                    Err(e) => {
+                        if e.to_string().contains("unique constraint") ||
+                           e.to_string().contains("duplicate key") ||
+                           e.to_string().contains("already exists") {
+                            // Document was inserted by another test, skip it
+                            eprintln!("⚠️  Document {}/doc/{} already exists, skipping", &self.test_crate_name, i);
+                        } else {
+                            // Re-raise other errors
+                            return Err(e);
+                        }
+                    }
+                }
+            } else {
+                // Document already exists, still count it
+                doc_ids.push(doc_id);
+            }
         }
 
         Ok(doc_ids)
