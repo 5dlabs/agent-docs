@@ -85,10 +85,9 @@ fn create_mock_router() -> Router {
                 }
 
                 // Get or create session
-                let Ok(session_id) = state.session_manager.get_or_create_session(&headers)
-                    else {
-                        return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                    };
+                let Ok(session_id) = state.session_manager.get_or_create_session(&headers) else {
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                };
 
                 // Parse JSON body to check if it's valid
                 let body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
