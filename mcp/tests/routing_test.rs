@@ -35,10 +35,10 @@ async fn create_test_server() -> Router {
     {
         Ok(Ok(db_pool)) => match McpServer::new(db_pool).await {
             Ok(server) => server.create_router(),
-                            Err(e) => {
-                    eprintln!("Failed to create MCP server: {e}. Falling back to mock.");
-                    create_mock_router()
-                }
+            Err(e) => {
+                eprintln!("Failed to create MCP server: {e}. Falling back to mock.");
+                create_mock_router()
+            }
         },
         Ok(Err(e)) => {
             eprintln!("Failed to create database pool: {e}. Falling back to mock.");
