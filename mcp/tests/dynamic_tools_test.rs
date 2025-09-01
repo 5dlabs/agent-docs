@@ -6,6 +6,7 @@ use serde_json::json;
 use tokio::time::{timeout, Duration};
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn test_dynamic_tools_registration() {
     // Create a mock database pool
     // Fast path for CI/unit tests: skip DB unless explicitly requested
