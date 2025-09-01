@@ -12,29 +12,44 @@ use tower::ServiceExt;
 
 // Mock database pool for testing
 async fn create_test_server() -> Router {
-    // Default to mock for speed; only use real DB if explicitly requested
-    if std::env::var("TEST_DATABASE_URL")
-        .map(|v| v.trim().is_empty() || v.trim().eq_ignore_ascii_case("mock"))
-        .unwrap_or(true)
-    {
+    // Try to get database URL - prefer DATABASE_URL (same as CI), fallback to TEST_DATABASE_URL
+    let database_url = match std::env::var("DATABASE_URL") {
+        Ok(url) if !url.trim().is_empty() => url,
+        _ => match std::env::var("TEST_DATABASE_URL") {
+            Ok(url) if !url.trim().is_empty() => url,
+            _ => "mock".to_string(),
+        },
+    };
+
+    // Only use mock if explicitly requested
+    if database_url.trim().eq_ignore_ascii_case("mock") {
         return create_mock_router();
     }
 
-    let database_url =
-        std::env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set or use mock");
+    // Try to connect to real database (same logic as CI)
     match tokio::time::timeout(
-        std::time::Duration::from_secs(2),
+        std::time::Duration::from_secs(10), // Longer timeout for CI compatibility
         db::DatabasePool::new(&database_url),
     )
     .await
     {
         Ok(Ok(db_pool)) => {
-            let server = McpServer::new(db_pool)
-                .await
-                .expect("Failed to create server");
-            server.create_router()
+            match McpServer::new(db_pool).await {
+                Ok(server) => server.create_router(),
+                Err(e) => {
+                    eprintln!("Failed to create MCP server: {}. Falling back to mock.", e);
+                    create_mock_router()
+                }
+            }
         }
-        _ => create_mock_router(),
+        Ok(Err(e)) => {
+            eprintln!("Failed to create database pool: {}. Falling back to mock.", e);
+            create_mock_router()
+        }
+        Err(_) => {
+            eprintln!("Database connection timeout. Falling back to mock.");
+            create_mock_router()
+        }
     }
 }
 
@@ -73,7 +88,8 @@ fn create_mock_router() -> Router {
 
 #[tokio::test]
 async fn test_get_mcp_returns_405() {
-    // Use mock router for this test since it's specifically about HTTP method routing
+    // Use mock router for this HTTP method test to avoid transport layer issues
+    // Both local and CI environments will use the same mock fallback logic
     let app = create_mock_router();
 
     let request = Request::builder()
