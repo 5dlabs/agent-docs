@@ -582,10 +582,8 @@ fn handle_delete_session_request(
             ))
         }
     } else {
-        warn!("Missing session ID in DELETE request");
-        Err(TransportError::InvalidSessionId(
-            "missing session header".to_string(),
-        ))
+        warn!("Missing session ID in DELETE request - treating as unsupported method");
+        Err(TransportError::MethodNotAllowed)
     }
 }
 

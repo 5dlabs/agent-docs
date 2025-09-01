@@ -473,7 +473,6 @@ async fn test_unsupported_http_methods() {
         .unwrap();
 
     let response = app.clone().oneshot(request).await.unwrap();
-    eprintln!("PUT request status: {}", response.status());
     assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
 
     // Test DELETE method
@@ -485,7 +484,6 @@ async fn test_unsupported_http_methods() {
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
-    eprintln!("DELETE request status: {}", response.status());
     assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
 }
 
