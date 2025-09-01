@@ -308,7 +308,7 @@ impl DatabaseTestFixture {
                             eprintln!("⚠️  Document {}/doc/{} already exists, skipping", &self.test_crate_name, i);
                         } else {
                             // Re-raise other errors
-                            return Err(e);
+                            return Err(anyhow::Error::from(e));
                         }
                     }
                 }
