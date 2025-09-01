@@ -133,13 +133,11 @@ async fn test_dynamic_tools_registration() {
             if tool_name.ends_with("_query") {
                 assert!(
                     properties.get("query").is_some(),
-                    "Query tool '{}' should have query parameter",
-                    tool_name
+                    "Query tool '{tool_name}' should have query parameter"
                 );
                 assert!(
                     properties.get("limit").is_some(),
-                    "Query tool '{}' should have limit parameter",
-                    tool_name
+                    "Query tool '{tool_name}' should have limit parameter"
                 );
             }
         }

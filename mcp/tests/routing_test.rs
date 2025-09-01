@@ -78,6 +78,7 @@ async fn test_get_mcp_returns_405() {
     let request = Request::builder()
         .method(Method::GET)
         .uri("/mcp")
+        .header("accept", "application/json")
         .body(Body::empty())
         .unwrap();
 
@@ -136,6 +137,7 @@ async fn test_post_mcp_successful_response() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
+        .header("accept", "application/json")
         .body(Body::from(request_body.to_string()))
         .unwrap();
 
@@ -178,6 +180,7 @@ async fn test_routing_integration() {
     let get_request = Request::builder()
         .method(Method::GET)
         .uri("/mcp")
+        .header("accept", "application/json")
         .body(Body::empty())
         .unwrap();
 
@@ -190,6 +193,7 @@ async fn test_routing_integration() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
+        .header("accept", "application/json")
         .body(Body::from(post_request_body.to_string()))
         .unwrap();
 
