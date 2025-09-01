@@ -643,13 +643,15 @@ async fn test_tool_performance_requirements() {
         let tool = CheckRustStatusTool::new(pool.clone());
         let start = std::time::Instant::now();
         // Use minimal parameters for performance testing
-        let result = tool.execute(json!({
-            "include_active_jobs": false,
-            "include_performance_metrics": false,
-            "include_storage_analysis": false,
-            "include_health_checks": false,
-            "detailed_report": false
-        })).await;
+        let result = tool
+            .execute(json!({
+                "include_active_jobs": false,
+                "include_performance_metrics": false,
+                "include_storage_analysis": false,
+                "include_health_checks": false,
+                "detailed_report": false
+            }))
+            .await;
         let duration = start.elapsed();
 
         match result {
@@ -664,7 +666,8 @@ async fn test_tool_performance_requirements() {
                 assert!(
                     duration <= max_duration,
                     "CheckRustStatusTool took {:?}, should be under {:?}",
-                    duration, max_duration
+                    duration,
+                    max_duration
                 );
             }
             Err(_) => {
