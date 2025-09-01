@@ -182,12 +182,25 @@ jobs:
           echo "TEST_DATABASE_URL is set: $(if [ -n "${TEST_DATABASE_URL}" ]; then echo 'YES'; else echo 'NO'; fi)"
 
           # Test database connection before running tests
-          if psql "${DATABASE_URL}" -c "SELECT 1;" >/dev/null 2>&1; then
+          echo "Testing database connection..."
+          if psql "${DATABASE_URL}" -c "SELECT 1;" 2>/dev/null; then
             echo "✅ Database connection successful"
+            echo "Running schema check..."
+            if psql "${DATABASE_URL}" -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('documents', 'crate_jobs');" 2>/dev/null | grep -q "documents\|crate_jobs"; then
+              echo "✅ Required tables exist"
+            else
+              echo "❌ Required tables missing - running schema setup..."
+              psql "${DATABASE_URL}" -f scripts/setup_test_db.sql
+            fi
           else
             echo "❌ Database connection failed"
-            echo "Testing with a simple query..."
-            psql "${DATABASE_URL}" -c "SELECT version();"
+            echo "Connection error details:"
+            psql "${DATABASE_URL}" -c "SELECT version();" 2>&1 || echo "Failed to get version info"
+            echo "This might indicate:"
+            echo "  - Database service not running"
+            echo "  - Network connectivity issues"
+            echo "  - Authentication problems"
+            echo "  - Wrong DATABASE_URL"
           fi
 
           echo "🚀 Running tests..."
