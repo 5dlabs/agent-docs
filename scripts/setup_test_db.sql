@@ -82,23 +82,16 @@ END $$;
 -- Create indexes for performance (only if we have permissions)
 DO $$
 BEGIN
-    -- Check if we have CREATE privilege on the schema
-    IF EXISTS (
-        SELECT 1 FROM information_schema.schema_privileges
-        WHERE schema_name = 'public'
-        AND privilege_type = 'CREATE'
-        AND grantee = current_user
-    ) THEN
+    -- Try to create indexes, handle permission errors gracefully
+    BEGIN
         CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type);
         CREATE INDEX IF NOT EXISTS idx_documents_source_name ON documents(source_name);
         CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at DESC);
         RAISE NOTICE 'Created performance indexes on documents table';
-    ELSE
-        RAISE NOTICE 'No CREATE permission on schema, skipping index creation';
-    END IF;
-EXCEPTION
-    WHEN insufficient_privilege THEN
-        RAISE NOTICE 'Insufficient privileges to create indexes on documents table';
+    EXCEPTION
+        WHEN insufficient_privilege THEN
+            RAISE NOTICE 'Insufficient privileges to create indexes on documents table';
+    END;
 END;
 $$;
 
@@ -152,38 +145,25 @@ EXCEPTION
 END;
 $$;
 
--- Create a function to automatically insert document_sources for test data (conditional on permissions)
+-- Create a function to automatically insert document_sources for test data
+-- Handle permission errors gracefully
 DO $$
 BEGIN
-    -- Check if we have CREATE privilege on the schema
-    IF EXISTS (
-        SELECT 1 FROM information_schema.schema_privileges
-        WHERE schema_name = 'public'
-        AND privilege_type = 'CREATE'
-        AND grantee = current_user
-    ) THEN
-        -- Create the function
+    -- Try to create the function and trigger
+    BEGIN
         CREATE OR REPLACE FUNCTION ensure_document_source_exists()
         RETURNS TRIGGER AS $$
         BEGIN
             -- Only auto-insert for test-like source names (containing 'test' or 'db-test')
             IF NEW.source_name LIKE '%test%' OR NEW.source_name LIKE 'db-test%' THEN
-                -- Try INSERT with specific constraint first, fallback to generic
+                -- Try to insert, handle all constraint issues
                 BEGIN
                     INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                    VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true)
-                    ON CONFLICT (doc_type, source_name) DO NOTHING;
+                    VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true);
                 EXCEPTION
-                    WHEN undefined_object THEN
-                        -- Constraint doesn't exist, try without ON CONFLICT
-                        BEGIN
-                            INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                            VALUES (NEW.doc_type, NEW.source_name, '{"auto_created": true}', true);
-                        EXCEPTION
-                            WHEN unique_violation THEN
-                                -- Record already exists, do nothing
-                                NULL;
-                        END;
+                    WHEN unique_violation THEN
+                        -- Record already exists, do nothing
+                        NULL;
                 END;
             END IF;
 
@@ -192,17 +172,16 @@ BEGIN
         $$ LANGUAGE plpgsql;
 
         -- Create trigger to auto-insert document sources for test data
+        DROP TRIGGER IF EXISTS ensure_document_source_trigger ON documents;
         CREATE TRIGGER ensure_document_source_trigger
             BEFORE INSERT ON documents
             FOR EACH ROW EXECUTE FUNCTION ensure_document_source_exists();
 
         RAISE NOTICE 'Created function and trigger for document source auto-insertion';
-    ELSE
-        RAISE NOTICE 'No CREATE permission on schema, skipping function and trigger creation';
-    END IF;
-EXCEPTION
-    WHEN insufficient_privilege THEN
-        RAISE NOTICE 'Insufficient privileges to create function and trigger';
+    EXCEPTION
+        WHEN insufficient_privilege THEN
+            RAISE NOTICE 'Insufficient privileges to create function and trigger';
+    END;
 END;
 $$;
 
