@@ -69,9 +69,7 @@ fn create_mock_router() -> Router {
         request: Request<Body>,
     ) -> Result<Response, StatusCode> {
         // Validate protocol version
-        if let Err(status_code) = validate_protocol_version(&headers) {
-            return Err(status_code);
-        }
+        validate_protocol_version(&headers)?;
 
         match *request.method() {
             Method::POST => {
@@ -87,10 +85,10 @@ fn create_mock_router() -> Router {
                 }
 
                 // Get or create session
-                let session_id = match state.session_manager.get_or_create_session(&headers) {
-                    Ok(id) => id,
-                    Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-                };
+                let Ok(session_id) = state.session_manager.get_or_create_session(&headers)
+                    else {
+                        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                    };
 
                 // Parse JSON body to check if it's valid
                 let body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
