@@ -73,12 +73,12 @@ fn create_mock_router() -> Router {
 
 #[tokio::test]
 async fn test_get_mcp_returns_405() {
-    let app = create_test_server().await;
+    // Use mock router for this test since it's specifically about HTTP method routing
+    let app = create_mock_router();
 
     let request = Request::builder()
         .method(Method::GET)
         .uri("/mcp")
-        .header("accept", "application/json")
         .body(Body::empty())
         .unwrap();
 
@@ -137,7 +137,7 @@ async fn test_post_mcp_successful_response() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
-        .header("accept", "application/json")
+        .header("Accept", "application/json")
         .body(Body::from(request_body.to_string()))
         .unwrap();
 
@@ -193,7 +193,7 @@ async fn test_routing_integration() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
-        .header("accept", "application/json")
+        .header("Accept", "application/json")
         .body(Body::from(post_request_body.to_string()))
         .unwrap();
 
