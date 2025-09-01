@@ -337,10 +337,12 @@ pub fn validate_protocol_version(headers: &HeaderMap) -> Result<(), StatusCode> 
                 Err(StatusCode::BAD_REQUEST)
             },
             |version_str| {
+                debug!("Validating protocol version: '{}' against supported versions", version_str);
                 if registry.is_version_string_supported(version_str) {
+                    debug!("Protocol version '{}' is supported", version_str);
                     Ok(())
                 } else {
-                    debug!("Unsupported protocol version: {}", version_str);
+                    warn!("Unsupported protocol version: '{}' - supported versions: {}", version_str, SUPPORTED_PROTOCOL_VERSION);
                     Err(StatusCode::BAD_REQUEST)
                 }
             },
