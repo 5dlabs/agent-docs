@@ -26,12 +26,16 @@ async fn create_test_fixture() -> Result<DatabaseTestFixture> {
 
     // If we're not in CI but trying to connect to Kubernetes URL, skip immediately
     if !is_ci && is_kubernetes_url {
-        eprintln!("🧪 Skipping database tests - detected problematic Kubernetes URL in local environment");
+        eprintln!(
+            "🧪 Skipping database tests - detected problematic Kubernetes URL in local environment"
+        );
         eprintln!("💡 To run database tests locally:");
         eprintln!("   1. Start local database: ./test-db-setup.sh start");
         eprintln!("   2. Set TEST_DATABASE_URL: export TEST_DATABASE_URL='postgresql://test_user:test_password@localhost:5433/test_db'");
         eprintln!("   3. Run tests: cargo test -p db --test crate_operations");
-        return Err(anyhow!("Local environment: skipping database tests (use local database setup)"));
+        return Err(anyhow!(
+            "Local environment: skipping database tests (use local database setup)"
+        ));
     }
 
     match DatabaseTestFixture::new().await {
@@ -39,9 +43,9 @@ async fn create_test_fixture() -> Result<DatabaseTestFixture> {
         Err(e) if e.to_string().contains("Mock mode") => {
             Err(anyhow!("Mock mode detected - tests should be skipped"))
         }
-        Err(e) if e.to_string().contains("Local environment") => {
-            Err(anyhow!("Local environment: skipping database tests (use local database setup)"))
-        }
+        Err(e) if e.to_string().contains("Local environment") => Err(anyhow!(
+            "Local environment: skipping database tests (use local database setup)"
+        )),
         Err(e) => Err(e),
     }
 }
@@ -62,7 +66,9 @@ impl DatabaseTestFixture {
                 if e.to_string().contains("ON CONFLICT") {
                     eprintln!("⚠️  ON CONFLICT error detected during fixture creation");
                     eprintln!("🧪 Skipping database tests due to schema incompatibility");
-                    Err(anyhow!("Database schema issue: skipping database tests (ON CONFLICT detected)"))
+                    Err(anyhow!(
+                        "Database schema issue: skipping database tests (ON CONFLICT detected)"
+                    ))
                 } else {
                     Err(e)
                 }
@@ -141,9 +147,13 @@ impl DatabaseTestFixture {
                         eprintln!("📊 Found {table_count} required tables");
 
                         if table_count >= 2 {
-                            eprintln!("✅ Required tables exist - database appears ready for testing");
+                            eprintln!(
+                                "✅ Required tables exist - database appears ready for testing"
+                            );
                         } else {
-                            eprintln!("⚠️  Missing some required tables - schema may be incomplete");
+                            eprintln!(
+                                "⚠️  Missing some required tables - schema may be incomplete"
+                            );
                         }
                     }
                     Err(e) => {
@@ -155,7 +165,8 @@ impl DatabaseTestFixture {
             }
             Err(e) => {
                 let is_ci = std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok();
-                let is_kubernetes_url = database_url.contains("vector-postgres.databases.svc.cluster.local");
+                let is_kubernetes_url =
+                    database_url.contains("vector-postgres.databases.svc.cluster.local");
 
                 eprintln!("❌ Database connection failed: {e}");
 
@@ -166,7 +177,9 @@ impl DatabaseTestFixture {
                     eprintln!("   1. Start local database: ./test-db-setup.sh start");
                     eprintln!("   2. Set TEST_DATABASE_URL: export TEST_DATABASE_URL='postgresql://test_user:test_password@localhost:5433/test_db'");
                     eprintln!("   3. Run tests: cargo test -p db --test crate_operations");
-                    return Err(anyhow!("Local environment: skipping database tests (use local database setup)"));
+                    return Err(anyhow!(
+                        "Local environment: skipping database tests (use local database setup)"
+                    ));
                 }
 
                 eprintln!("💡 This could be because:");
@@ -295,7 +308,9 @@ async fn test_crate_job_lifecycle() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -356,7 +371,9 @@ async fn test_crate_job_error_handling() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -392,7 +409,9 @@ async fn test_find_active_jobs() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -443,7 +462,9 @@ async fn test_cleanup_old_jobs() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -479,7 +500,9 @@ async fn test_list_crates_from_documents() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -524,7 +547,9 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -564,7 +589,9 @@ async fn test_list_crates_pagination() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -593,7 +620,9 @@ async fn test_get_crate_statistics() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -623,7 +652,9 @@ async fn test_find_crate_by_name() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -657,7 +688,9 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -746,7 +779,9 @@ async fn test_concurrent_database_operations() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -794,7 +829,9 @@ async fn test_transaction_rollback_simulation() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
@@ -830,7 +867,9 @@ async fn test_database_connection() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
         Err(e)
-            if e.to_string().contains("Mock mode") || e.to_string().contains("CI environment") || e.to_string().contains("Local environment") =>
+            if e.to_string().contains("Mock mode")
+                || e.to_string().contains("CI environment")
+                || e.to_string().contains("Local environment") =>
         {
             println!("🧪 Skipping test: {}", e);
             return Ok(());
