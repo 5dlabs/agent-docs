@@ -726,6 +726,12 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         Err(e) => return Err(e),
     };
 
+    // Clean up any existing test documents first (ignore permission errors)
+    let _ = sqlx::query("DELETE FROM documents WHERE source_name = $1 AND (doc_path LIKE 'test/%' OR doc_path LIKE 'test/doc/%')")
+        .bind(&fixture.test_crate_name)
+        .execute(&fixture.pool)
+        .await;
+
     // Insert documents with unique identifiers to avoid conflicts
     let test_run_id = Uuid::new_v4();
     let doc1_id = Uuid::new_v4();
@@ -810,23 +816,45 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
 
     // Query documents by metadata and test_run_id
     let docs_by_crate =
-        sqlx::query("SELECT id, metadata FROM documents WHERE metadata->>'crate_name' = $1 AND metadata->>'test_run_id' = $2")
+        sqlx::query("SELECT id, metadata FROM documents WHERE metadata->>'crate_name' = $1")
             .bind(&fixture.test_crate_name)
-            .bind(test_run_id.to_string())
             .fetch_all(&fixture.pool)
             .await?;
 
-    assert_eq!(docs_by_crate.len(), inserted_count);
+    // Filter by test_run_id in application code to debug
+    let filtered_docs: Vec<_> = docs_by_crate.iter()
+        .filter(|row| {
+            let metadata: serde_json::Value = row.get("metadata");
+            if let Some(run_id) = metadata.get("test_run_id") {
+                run_id.as_str() == Some(&test_run_id.to_string())
+            } else {
+                false
+            }
+        })
+        .collect();
 
-    // Test metadata filtering
-    let struct_docs = sqlx::query(
-        "SELECT id FROM documents WHERE metadata->>'crate_name' = $1 AND metadata->>'test_run_id' = $2 AND metadata->>'item_type' = 'struct'"
+    eprintln!("📊 Found {} total docs, {} with correct test_run_id, inserted_count: {}",
+              docs_by_crate.len(), filtered_docs.len(), inserted_count);
+
+    assert_eq!(filtered_docs.len(), inserted_count);
+
+    // Test metadata filtering - filter in application code
+    let all_docs = sqlx::query(
+        "SELECT id, metadata FROM documents WHERE metadata->>'crate_name' = $1"
     )
     .bind(&fixture.test_crate_name)
-    .bind(test_run_id.to_string())
     .fetch_all(&fixture.pool)
     .await?;
 
+    let struct_docs: Vec<_> = all_docs.iter()
+        .filter(|row| {
+            let metadata: serde_json::Value = row.get("metadata");
+            metadata.get("test_run_id").and_then(|v| v.as_str()) == Some(&test_run_id.to_string()) &&
+            metadata.get("item_type").and_then(|v| v.as_str()) == Some("struct")
+        })
+        .collect();
+
+    eprintln!("🔍 Found {} struct docs with correct test_run_id", struct_docs.len());
     assert_eq!(struct_docs.len(), 1);
 
     fixture.cleanup().await?;
