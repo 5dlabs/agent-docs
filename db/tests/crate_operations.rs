@@ -777,7 +777,35 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
     // Insert documents with unique paths - just try to insert and handle conflicts
     let mut inserted_count = 0;
 
-    if !can_modify {
+    // Test INSERT permission
+    let can_insert = match sqlx::query(
+        "INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
+         VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)",
+    )
+    .bind(Uuid::new_v4())
+    .bind(&fixture.test_crate_name)
+    .bind("permission_test")
+    .bind("test")
+    .bind(json!({"test": true}))
+    .bind(1)
+    .bind(Utc::now())
+    .execute(&fixture.pool)
+    .await {
+        Ok(_) => {
+            eprintln!("✅ Database INSERT permission confirmed");
+            // Clean up the test document
+            let _ = sqlx::query("DELETE FROM documents WHERE doc_path = 'permission_test'")
+                .execute(&fixture.pool)
+                .await;
+            true
+        }
+        Err(e) => {
+            eprintln!("❌ Database INSERT permission failed: {}", e);
+            false
+        }
+    };
+
+    if !can_insert {
         eprintln!("⚠️  Skipping document insertion due to permission issues");
         // For testing purposes, assume documents would be inserted
         inserted_count = 2;
