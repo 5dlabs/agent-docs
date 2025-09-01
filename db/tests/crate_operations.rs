@@ -10,7 +10,6 @@ use chrono::Utc;
 use db::models::{JobStatus, PaginationParams};
 use db::{CrateJobQueries, CrateQueries, DatabasePool, PoolConfig, Row};
 use serde_json::json;
-use sqlx::postgres::PgPoolOptions;
 use sqlx::{Connection, PgPool};
 use std::time::Duration;
 use uuid::Uuid;
@@ -33,6 +32,7 @@ struct DatabaseTestFixture {
 }
 
 impl DatabaseTestFixture {
+    #[allow(clippy::too_many_lines)]
     async fn new() -> Result<Self> {
         // Check if we should skip database tests (only in mock mode)
         if std::env::var("TEST_DATABASE_URL")
@@ -59,7 +59,7 @@ impl DatabaseTestFixture {
         );
         eprintln!(
             "🔗 Database: {}",
-            database_url.split('@').last().unwrap_or("unknown")
+            database_url.split('@').next_back().unwrap_or("unknown")
         );
 
         // Test basic connectivity first
@@ -84,7 +84,7 @@ impl DatabaseTestFixture {
                 match table_check {
                     Ok(row) => {
                         let table_count: i64 = row.get("table_count");
-                        eprintln!("📊 Found {} required tables", table_count);
+                        eprintln!("📊 Found {table_count} required tables");
 
                         if table_count < 2 {
                             eprintln!(
@@ -96,15 +96,15 @@ impl DatabaseTestFixture {
                                 Ok(schema_sql) => {
                                     match sqlx::query(&schema_sql).execute(&test_pool).await {
                                         Ok(_) => {
-                                            eprintln!("✅ Schema setup completed successfully")
+                                            eprintln!("✅ Schema setup completed successfully");
                                         }
                                         Err(e) => {
-                                            eprintln!("❌ Schema setup failed: {}", e);
+                                            eprintln!("❌ Schema setup failed: {e}");
                                             eprintln!("💡 The database might already have some schema that conflicts");
                                         }
                                     }
                                 }
-                                Err(e) => eprintln!("❌ Could not read schema file: {}", e),
+                                Err(e) => eprintln!("❌ Could not read schema file: {e}"),
                             }
                         } else {
                             eprintln!("✅ Required tables exist");
@@ -120,12 +120,12 @@ impl DatabaseTestFixture {
                             match constraint_check {
                                 Ok(constraints) => {
                                     eprintln!(
-                                        "🔍 Found {} unique constraints on documents table:",
-                                        constraints.len()
+                                        "🔍 Found {constraint_count} unique constraints on documents table:",
+                                        constraint_count = constraints.len()
                                     );
                                     for constraint in &constraints {
                                         let name: String = constraint.get("constraint_name");
-                                        eprintln!("   - {}", name);
+                                        eprintln!("   - {name}");
                                     }
 
                                     let has_doc_constraint = constraints.iter().any(|row| {
@@ -135,7 +135,13 @@ impl DatabaseTestFixture {
                                             && name.contains("doc_path")
                                     });
 
-                                    if !has_doc_constraint {
+                                    if has_doc_constraint {
+                                        eprintln!("✅ Required unique constraint exists");
+                                        eprintln!("💡 Note: Test user may not have DDL permissions to modify constraints");
+                                        eprintln!(
+                                            "   ON CONFLICT will use column-based resolution"
+                                        );
+                                    } else {
                                         eprintln!("⚠️  Missing unique constraint on documents(doc_type, source_name, doc_path) - attempting to add...");
 
                                         // Try to add the missing constraint
@@ -144,29 +150,23 @@ impl DatabaseTestFixture {
                                              UNIQUE (doc_type, source_name, doc_path)"
                                         ).execute(&test_pool).await {
                                             Ok(_) => eprintln!("✅ Added missing unique constraint"),
-                                            Err(e) => eprintln!("❌ Failed to add constraint: {}", e),
+                                            Err(e) => eprintln!("❌ Failed to add constraint: {e}"),
                                         }
-                                    } else {
-                                        eprintln!("✅ Required unique constraint exists");
-                                        eprintln!("💡 Note: Test user may not have DDL permissions to modify constraints");
-                                        eprintln!(
-                                            "   ON CONFLICT will use column-based resolution"
-                                        );
                                     }
                                 }
-                                Err(e) => eprintln!("❌ Error checking constraints: {}", e),
+                                Err(e) => eprintln!("❌ Error checking constraints: {e}"),
                             }
                         }
                     }
                     Err(e) => {
-                        eprintln!("❌ Error checking tables: {}", e);
+                        eprintln!("❌ Error checking tables: {e}");
                     }
                 }
 
                 test_pool.close().await;
             }
             Err(e) => {
-                eprintln!("❌ Database connection failed: {}", e);
+                eprintln!("❌ Database connection failed: {e}");
                 eprintln!("💡 This could be because:");
                 eprintln!("   - Database service is not running");
                 eprintln!("   - Network connectivity issues in CI");
