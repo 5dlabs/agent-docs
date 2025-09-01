@@ -155,8 +155,10 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           echo "📦 Installing PostgreSQL client..."
-          apt-get update && apt-get install -y postgresql-client
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
           echo "✅ PostgreSQL client installed"
+          which psql || echo "❌ psql not found in PATH"
 
       - name: Set up test database schema
         env:
