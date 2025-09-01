@@ -726,6 +726,12 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         Err(e) => return Err(e),
     };
 
+    // Clean up any existing test documents first
+    sqlx::query("DELETE FROM documents WHERE source_name = $1 AND doc_path LIKE 'test/doc/%'")
+        .bind(&fixture.test_crate_name)
+        .execute(&fixture.pool)
+        .await?;
+
     // Insert documents with different metadata
     let doc1_id = Uuid::new_v4();
     let doc2_id = Uuid::new_v4();
@@ -784,7 +790,8 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
                 Err(e) => {
                     if e.to_string().contains("unique constraint") ||
                        e.to_string().contains("duplicate key") ||
-                       e.to_string().contains("already exists") {
+                       e.to_string().contains("already exists") ||
+                       e.to_string().contains("no unique or exclusion constraint") {
                         // Document was inserted by another test, skip it
                         eprintln!("⚠️  Document {}/test/doc/{} already exists, skipping", &fixture.test_crate_name, i);
                     } else {
