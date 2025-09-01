@@ -107,34 +107,55 @@ BEGIN
         AND privilege_type = 'INSERT'
         AND grantee = current_user
     ) THEN
-        -- Try INSERT with ON CONFLICT first (if constraint exists)
+        -- Insert test data, handle duplicates gracefully
         BEGIN
-            INSERT INTO document_sources (doc_type, source_name, config, enabled)
-            VALUES
-                ('rust', 'test_crate', '{"version": "1.0.0"}', true),
-                ('rust', 'test_crate_2', '{"version": "2.0.0"}', true),
-                ('rust', 'db-test-crate-', '{"version": "0.1.0"}', true),
-                ('jupyter', 'test_notebook', '{"kernel": "python3"}', true),
-                ('birdeye', 'test_birdeye', '{"api_version": "v1"}', true),
-                ('solana', 'test_solana', '{"network": "mainnet"}', true)
-            ON CONFLICT (doc_type, source_name) DO NOTHING;
-            RAISE NOTICE 'Inserted test data into document_sources with ON CONFLICT';
-        EXCEPTION
-            WHEN undefined_object THEN
-                -- Constraint doesn't exist, try INSERT without ON CONFLICT
+            -- Insert each record individually to handle conflicts
+            BEGIN
                 INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                VALUES
-                    ('rust', 'test_crate', '{"version": "1.0.0"}', true),
-                    ('rust', 'test_crate_2', '{"version": "2.0.0"}', true),
-                    ('rust', 'db-test-crate-', '{"version": "0.1.0"}', true),
-                    ('jupyter', 'test_notebook', '{"kernel": "python3"}', true),
-                    ('birdeye', 'test_birdeye', '{"api_version": "v1"}', true),
-                    ('solana', 'test_solana', '{"network": "mainnet"}', true)
-                ON CONFLICT DO NOTHING; -- Generic conflict handling
-                RAISE NOTICE 'Inserted test data into document_sources with generic ON CONFLICT';
-            WHEN unique_violation THEN
-                -- Handle unique violations gracefully
-                RAISE NOTICE 'Some test data already exists in document_sources, skipping inserts';
+                VALUES ('rust', 'test_crate', '{"version": "1.0.0"}', true);
+            EXCEPTION
+                WHEN unique_violation THEN NULL;
+            END;
+
+            BEGIN
+                INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                VALUES ('rust', 'test_crate_2', '{"version": "2.0.0"}', true);
+            EXCEPTION
+                WHEN unique_violation THEN NULL;
+            END;
+
+            BEGIN
+                INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                VALUES ('rust', 'db-test-crate-', '{"version": "0.1.0"}', true);
+            EXCEPTION
+                WHEN unique_violation THEN NULL;
+            END;
+
+            BEGIN
+                INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                VALUES ('jupyter', 'test_notebook', '{"kernel": "python3"}', true);
+            EXCEPTION
+                WHEN unique_violation THEN NULL;
+            END;
+
+            BEGIN
+                INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                VALUES ('birdeye', 'test_birdeye', '{"api_version": "v1"}', true);
+            EXCEPTION
+                WHEN unique_violation THEN NULL;
+            END;
+
+            BEGIN
+                INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                VALUES ('solana', 'test_solana', '{"network": "mainnet"}', true);
+            EXCEPTION
+                WHEN unique_violation THEN NULL;
+            END;
+
+            RAISE NOTICE 'Inserted test data into document_sources';
+        EXCEPTION
+            WHEN OTHERS THEN
+                RAISE NOTICE 'Some test data may already exist in document_sources';
         END;
     ELSE
         RAISE NOTICE 'No INSERT permission on document_sources table, skipping test data insertion';
