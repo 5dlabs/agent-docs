@@ -528,13 +528,13 @@ jobs:
 
           # Restart the deployment (triggers rolling restart)
           echo "🔄 Triggering deployment restart..."
-          kubectl rollout restart deployment/doc-server-agent-docs-server -n MCP
+          kubectl rollout restart deployment/doc-server-agent-docs-server -n mcp
 
           # Wait for rollout to complete
           echo "⏳ Waiting for deployment rollout to complete..."
-          kubectl rollout status deployment/doc-server-agent-docs-server -n MCP --timeout=300s
+          kubectl rollout status deployment/doc-server-agent-docs-server -n mcp --timeout=300s
 
           echo "✅ Deployment restarted successfully"
           echo "📊 Checking deployment status:"
-          kubectl get pods -n MCP -l app=doc-server-agent-docs-server
-          kubectl get deployment doc-server-agent-docs-server -n MCP
+          kubectl get pods -n mcp -l app=doc-server-agent-docs-server
+          kubectl get deployment doc-server-agent-docs-server -n mcp
