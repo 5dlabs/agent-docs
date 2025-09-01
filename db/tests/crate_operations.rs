@@ -11,6 +11,8 @@ use db::models::{JobStatus, PaginationParams};
 use db::{CrateJobQueries, CrateQueries, DatabasePool, PoolConfig, Row};
 use serde_json::json;
 use sqlx::{Connection, PgPool};
+use sqlx::postgres::PgPoolOptions;
+use std::time::Duration;
 use uuid::Uuid;
 
 /// Helper function to create test fixture with mock mode handling
@@ -47,8 +49,121 @@ impl DatabaseTestFixture {
             .unwrap_or_else(|_| "postgresql://vector_user:EFwiPWDXMoOI2VKNF4eO3eSm8n3hzmjognKytNk2ndskgOAZgEBGDQULE6ryDc7z@vector-postgres.databases.svc.cluster.local:5432/vector_db".to_string());
 
         // Debug: Show which database URL we're using
-        eprintln!("🔍 Using database URL: {}", if database_url.contains("vector-postgres") { "Kubernetes cluster (vector-postgres)" } else { "External database" });
-        eprintln!("🔗 Full URL: {}", database_url);
+        eprintln!(
+            "🔍 Using database URL: {}",
+            if database_url.contains("vector-postgres") {
+                "Kubernetes cluster (vector-postgres)"
+            } else {
+                "External database"
+            }
+        );
+        eprintln!(
+            "🔗 Database: {}",
+            database_url.split('@').last().unwrap_or("unknown")
+        );
+
+        // Test basic connectivity first
+        eprintln!("🔌 Testing database connectivity...");
+        match sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(Duration::from_secs(5))
+            .connect(&database_url)
+            .await
+        {
+            Ok(test_pool) => {
+                eprintln!("✅ Database connection successful");
+
+                // Check if required tables exist
+                let table_check = sqlx::query(
+                    "SELECT COUNT(*) as table_count FROM information_schema.tables
+                     WHERE table_schema = 'public' AND table_name IN ('documents', 'crate_jobs')",
+                )
+                .fetch_one(&test_pool)
+                .await;
+
+                match table_check {
+                    Ok(row) => {
+                        let table_count: i64 = row.get("table_count");
+                        eprintln!("📊 Found {} required tables", table_count);
+
+                        if table_count < 2 {
+                            eprintln!("⚠️  Missing required tables - attempting to set up schema...");
+
+                            // Try to set up the schema
+                            match std::fs::read_to_string("scripts/setup_test_db.sql") {
+                                Ok(schema_sql) => {
+                                    match sqlx::query(&schema_sql).execute(&test_pool).await {
+                                        Ok(_) => eprintln!("✅ Schema setup completed successfully"),
+                                        Err(e) => {
+                                            eprintln!("❌ Schema setup failed: {}", e);
+                                            eprintln!("💡 The database might already have some schema that conflicts");
+                                        }
+                                    }
+                                }
+                                Err(e) => eprintln!("❌ Could not read schema file: {}", e),
+                            }
+                        } else {
+                            eprintln!("✅ Required tables exist");
+
+                            // Check for required constraints
+                            let constraint_check = sqlx::query(
+                                "SELECT constraint_name FROM information_schema.table_constraints
+                                 WHERE table_name = 'documents' AND constraint_type = 'UNIQUE'"
+                            )
+                            .fetch_all(&test_pool)
+                            .await;
+
+                            match constraint_check {
+                                Ok(constraints) => {
+                                    eprintln!("🔍 Found {} unique constraints on documents table:", constraints.len());
+                                    for constraint in &constraints {
+                                        let name: String = constraint.get("constraint_name");
+                                        eprintln!("   - {}", name);
+                                    }
+
+                                    let has_doc_constraint = constraints.iter().any(|row| {
+                                        let name: String = row.get("constraint_name");
+                                        name.contains("doc_type") && name.contains("source_name") && name.contains("doc_path")
+                                    });
+
+                                    if !has_doc_constraint {
+                                        eprintln!("⚠️  Missing unique constraint on documents(doc_type, source_name, doc_path) - attempting to add...");
+
+                                        // Try to add the missing constraint
+                                        match sqlx::query(
+                                            "ALTER TABLE documents ADD CONSTRAINT IF NOT EXISTS documents_unique_doc_type_source_name_doc_path
+                                             UNIQUE (doc_type, source_name, doc_path)"
+                                        ).execute(&test_pool).await {
+                                            Ok(_) => eprintln!("✅ Added missing unique constraint"),
+                                            Err(e) => eprintln!("❌ Failed to add constraint: {}", e),
+                                        }
+                                    } else {
+                                        eprintln!("✅ Required unique constraint exists");
+                                        eprintln!("💡 Note: Test user may not have DDL permissions to modify constraints");
+                                        eprintln!("   ON CONFLICT will use column-based resolution");
+                                    }
+                                }
+                                Err(e) => eprintln!("❌ Error checking constraints: {}", e),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Error checking tables: {}", e);
+                    }
+                }
+
+                test_pool.close().await;
+            }
+            Err(e) => {
+                eprintln!("❌ Database connection failed: {}", e);
+                eprintln!("💡 This could be because:");
+                eprintln!("   - Database service is not running");
+                eprintln!("   - Network connectivity issues in CI");
+                eprintln!("   - Authentication credentials are incorrect");
+                eprintln!("   - Database URL is malformed");
+                return Err(anyhow!("Database connection failed: {}", e));
+            }
+        }
 
         // Allow environment variables to override pool configuration for CI flexibility
         let min_connections = std::env::var("TEST_POOL_MIN_CONNECTIONS")
@@ -126,22 +241,34 @@ impl DatabaseTestFixture {
                 "module_path": format!("{}::item{}", self.test_crate_name, i)
             });
 
-            sqlx::query(
-                r"
-                INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
-                VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
-                ON CONFLICT (doc_type, source_name, doc_path) DO NOTHING
-                ",
+            // Check if document already exists before inserting
+            let exists = sqlx::query(
+                "SELECT 1 FROM documents WHERE doc_type = $1::doc_type AND source_name = $2 AND doc_path = $3"
             )
-            .bind(doc_id)
+            .bind("rust")
             .bind(&self.test_crate_name)
             .bind(format!("doc/{i}"))
-            .bind(format!("Test content {i}"))
-            .bind(metadata)
-            .bind(50 + i) // token count
-            .bind(Utc::now())
-            .execute(&self.pool)
+            .fetch_optional(&self.pool)
             .await?;
+
+            if exists.is_none() {
+                // Only insert if it doesn't exist
+                sqlx::query(
+                    r"
+                    INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
+                    VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
+                    ",
+                )
+                .bind(doc_id)
+                .bind(&self.test_crate_name)
+                .bind(format!("doc/{i}"))
+                .bind(format!("Test content {i}"))
+                .bind(metadata)
+                .bind(50 + i) // token count
+                .bind(Utc::now())
+                .execute(&self.pool)
+                .await?;
+            }
 
             doc_ids.push(doc_id);
         }
@@ -548,22 +675,34 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
         .iter()
         .enumerate()
     {
-        sqlx::query(
-            r"
-            INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
-            VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
-            ON CONFLICT (doc_type, source_name, doc_path) DO NOTHING
-            ",
+        // Check if document already exists before inserting
+        let exists = sqlx::query(
+            "SELECT 1 FROM documents WHERE doc_type = $1::doc_type AND source_name = $2 AND doc_path = $3"
         )
-        .bind(doc_id)
+        .bind("rust")
         .bind(&fixture.test_crate_name)
-        .bind(format!("test/doc/{i}"))  // Make paths unique
-        .bind("Test content")
-        .bind(metadata)
-        .bind(100)
-        .bind(Utc::now())
-        .execute(&fixture.pool)
+        .bind(format!("test/doc/{i}"))
+        .fetch_optional(&fixture.pool)
         .await?;
+
+        if exists.is_none() {
+            // Only insert if it doesn't exist
+            sqlx::query(
+                r"
+                INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
+                VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
+                ",
+            )
+            .bind(doc_id)
+            .bind(&fixture.test_crate_name)
+            .bind(format!("test/doc/{i}"))  // Make paths unique
+            .bind("Test content")
+            .bind(metadata)
+            .bind(100)
+            .bind(Utc::now())
+            .execute(&fixture.pool)
+            .await?;
+        }
     }
 
     // Query documents by metadata
