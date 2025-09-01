@@ -10,8 +10,8 @@ use chrono::Utc;
 use db::models::{JobStatus, PaginationParams};
 use db::{CrateJobQueries, CrateQueries, DatabasePool, PoolConfig, Row};
 use serde_json::json;
-use sqlx::{Connection, PgPool};
 use sqlx::postgres::PgPoolOptions;
+use sqlx::{Connection, PgPool};
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -87,13 +87,17 @@ impl DatabaseTestFixture {
                         eprintln!("📊 Found {} required tables", table_count);
 
                         if table_count < 2 {
-                            eprintln!("⚠️  Missing required tables - attempting to set up schema...");
+                            eprintln!(
+                                "⚠️  Missing required tables - attempting to set up schema..."
+                            );
 
                             // Try to set up the schema
                             match std::fs::read_to_string("scripts/setup_test_db.sql") {
                                 Ok(schema_sql) => {
                                     match sqlx::query(&schema_sql).execute(&test_pool).await {
-                                        Ok(_) => eprintln!("✅ Schema setup completed successfully"),
+                                        Ok(_) => {
+                                            eprintln!("✅ Schema setup completed successfully")
+                                        }
                                         Err(e) => {
                                             eprintln!("❌ Schema setup failed: {}", e);
                                             eprintln!("💡 The database might already have some schema that conflicts");
@@ -108,14 +112,17 @@ impl DatabaseTestFixture {
                             // Check for required constraints
                             let constraint_check = sqlx::query(
                                 "SELECT constraint_name FROM information_schema.table_constraints
-                                 WHERE table_name = 'documents' AND constraint_type = 'UNIQUE'"
+                                 WHERE table_name = 'documents' AND constraint_type = 'UNIQUE'",
                             )
                             .fetch_all(&test_pool)
                             .await;
 
                             match constraint_check {
                                 Ok(constraints) => {
-                                    eprintln!("🔍 Found {} unique constraints on documents table:", constraints.len());
+                                    eprintln!(
+                                        "🔍 Found {} unique constraints on documents table:",
+                                        constraints.len()
+                                    );
                                     for constraint in &constraints {
                                         let name: String = constraint.get("constraint_name");
                                         eprintln!("   - {}", name);
@@ -123,7 +130,9 @@ impl DatabaseTestFixture {
 
                                     let has_doc_constraint = constraints.iter().any(|row| {
                                         let name: String = row.get("constraint_name");
-                                        name.contains("doc_type") && name.contains("source_name") && name.contains("doc_path")
+                                        name.contains("doc_type")
+                                            && name.contains("source_name")
+                                            && name.contains("doc_path")
                                     });
 
                                     if !has_doc_constraint {
@@ -140,7 +149,9 @@ impl DatabaseTestFixture {
                                     } else {
                                         eprintln!("✅ Required unique constraint exists");
                                         eprintln!("💡 Note: Test user may not have DDL permissions to modify constraints");
-                                        eprintln!("   ON CONFLICT will use column-based resolution");
+                                        eprintln!(
+                                            "   ON CONFLICT will use column-based resolution"
+                                        );
                                     }
                                 }
                                 Err(e) => eprintln!("❌ Error checking constraints: {}", e),
