@@ -42,7 +42,9 @@ async fn test_dynamic_tools_registration() {
             );
         }
     } else if let Ok(Ok(db_pool)) =
-        timeout(Duration::from_secs(2), DatabasePool::new(&database_url)).await
+        timeout(Duration::from_secs(10), DatabasePool::with_config(
+            PoolConfig::testing().database_url(database_url)
+        )).await
     {
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
@@ -137,7 +139,9 @@ async fn test_dynamic_tool_invocation() {
     if database_url == "mock" {
         eprintln!("Skipping dynamic tool invocation test - no test database available");
     } else if let Ok(Ok(db_pool)) =
-        timeout(Duration::from_secs(2), DatabasePool::new(&database_url)).await
+        timeout(Duration::from_secs(10), DatabasePool::with_config(
+            PoolConfig::testing().database_url(database_url)
+        )).await
     {
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
@@ -189,7 +193,9 @@ async fn test_parameter_validation_dynamic_tools() {
     if database_url == "mock" {
         eprintln!("Skipping parameter validation test - no test database available");
     } else if let Ok(Ok(db_pool)) =
-        timeout(Duration::from_secs(2), DatabasePool::new(&database_url)).await
+        timeout(Duration::from_secs(10), DatabasePool::with_config(
+            PoolConfig::testing().database_url(database_url)
+        )).await
     {
         let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
 
