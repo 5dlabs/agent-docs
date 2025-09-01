@@ -312,7 +312,7 @@ async fn test_crate_job_lifecycle() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -375,7 +375,7 @@ async fn test_crate_job_error_handling() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -413,7 +413,7 @@ async fn test_find_active_jobs() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -466,7 +466,7 @@ async fn test_cleanup_old_jobs() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -504,7 +504,7 @@ async fn test_list_crates_from_documents() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -551,7 +551,7 @@ async fn test_list_crates_with_name_filter() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -593,7 +593,7 @@ async fn test_list_crates_pagination() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -624,7 +624,7 @@ async fn test_get_crate_statistics() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -656,7 +656,7 @@ async fn test_find_crate_by_name() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -692,7 +692,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -783,7 +783,7 @@ async fn test_concurrent_database_operations() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -833,7 +833,7 @@ async fn test_transaction_rollback_simulation() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -871,7 +871,7 @@ async fn test_database_connection() -> Result<()> {
                 || e.to_string().contains("CI environment")
                 || e.to_string().contains("Local environment") =>
         {
-            println!("🧪 Skipping test: {}", e);
+            println!("🧪 Skipping test: {e}");
             return Ok(());
         }
         Err(e) => return Err(e),

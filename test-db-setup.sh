@@ -89,7 +89,14 @@ case "${1:-help}" in
             echo "❌ Database is not running. Run '$0 start' first."
             exit 1
         fi
-        run_tests
+        echo "🧪 Running tests with local database..."
+        TEST_DATABASE_URL="$DB_URL" cargo test -p db --test crate_operations -- --nocapture
+        ;;
+    "test-ci-sim")
+        echo "🧪 Running tests simulating CI environment..."
+        # Simulate CI by not setting TEST_DATABASE_URL, forcing use of default
+        unset TEST_DATABASE_URL
+        cargo test -p db --test crate_operations -- --nocapture
         ;;
     "restart")
         stop_db
@@ -105,12 +112,13 @@ case "${1:-help}" in
         echo "Usage: $0 <command>"
         echo ""
         echo "Commands:"
-        echo "  start   - Start database and setup schema"
-        echo "  stop    - Stop database"
-        echo "  status  - Show database status"
-        echo "  test    - Run database tests"
-        echo "  restart - Restart database and setup schema"
-        echo "  shell   - Connect to database shell"
+        echo "  start     - Start database and setup schema"
+        echo "  stop      - Stop database"
+        echo "  status    - Show database status"
+        echo "  test      - Run database tests with local DB"
+        echo "  test-ci-sim - Run tests simulating CI environment"
+        echo "  restart   - Restart database and setup schema"
+        echo "  shell     - Connect to database shell"
         echo "  help    - Show this help message"
         echo ""
         echo "Examples:"
