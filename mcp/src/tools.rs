@@ -174,20 +174,8 @@ impl DynamicQueryTool {
         // For now, use a simple database search (we'll add real embeddings later)
         let dummy_embedding = vec![0.0; 3072]; // Placeholder embedding
 
-        // Convert config doc_type to snake_case for database enum
-        let db_doc_type = match self.config.doc_type.as_str() {
-            "rust" => "rust",
-            "jupyter" => "jupyter",
-            "birdeye" => "birdeye",
-            "cilium" => "cilium",
-            "talos" => "talos",
-            "meteora" => "meteora",
-            "raydium" => "raydium",
-            "solana" => "solana",
-            "ebpf" => "ebpf",
-            "rust_best_practices" => "rust_best_practices",
-            other => other, // fallback for any other values
-        };
+        // Use config doc_type directly (already in correct format)
+        let db_doc_type = self.config.doc_type.as_str();
 
         // Perform vector similarity search filtered by doc_type and metadata
         let results = if let Some(metadata_filters) = filters {
