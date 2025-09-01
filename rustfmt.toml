@@ -1,0 +1,21 @@
+# Rust formatting configuration for Doc Server
+
+# Edition
+edition = "2021"
+
+# Code style
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+
+# Imports
+reorder_imports = true
+
+# Functions and control flow
+fn_params_layout = "Tall"
+
+# Comments and documentation
+
+# Misc
+newline_style = "Unix"
+use_small_heuristics = "Default"

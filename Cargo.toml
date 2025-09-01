@@ -1,0 +1,90 @@
+[workspace]
+resolver = "2"
+members = [
+    "db",
+    "mcp", 
+    "embed",
+    "loader",
+    "llm",
+]
+
+# Workspace-level dependencies that can be inherited by member crates
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+async-trait = "0.1"
+async-stream = "0.3"
+futures = "0.3"
+tokio-stream = "0.1"
+
+# Database and ORM
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP and web
+axum = "0.7"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+hyper = "1.5"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Configuration and environment
+dotenvy = "0.15"
+config = "0.14"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Random number generation
+rand = "0.8"
+
+# HTTP client
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart"] }
+
+# MCP protocol implementation
+# brk_rmcp = "0.5"  # Temporarily disabled due to edition2024 requirement
+
+# Vector operations (for pgvector compatibility)
+pgvector = { version = "0.4", features = ["serde", "sqlx"] }
+
+# Testing
+mockall = "0.13"
+tokio-test = "0.4"
+assert_matches = "1.5"
+
+# Development tools dependencies
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+
+# Allow some pedantic lints that are too noisy
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+# Release profile optimization for container size
+[profile.release]
+opt-level = "z"        # Optimize for size
+lto = true            # Link-time optimization
+codegen-units = 1     # Better optimization
+panic = "abort"       # Reduce binary size
+strip = true          # Remove debug symbols
