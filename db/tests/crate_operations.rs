@@ -22,7 +22,7 @@ async fn check_insert_permission(pool: &sqlx::PgPool, test_name: &str) -> Result
     )
     .bind(Uuid::new_v4())
     .bind("test_crate")
-    .bind(format!("permission_test_{}", test_name))
+    .bind(format!("permission_test_{test_name}"))
     .bind("test")
     .bind(json!({"test": true}))
     .bind(1)
@@ -32,14 +32,14 @@ async fn check_insert_permission(pool: &sqlx::PgPool, test_name: &str) -> Result
         Ok(_) => {
             // Clean up the test document
             let _ = sqlx::query("DELETE FROM documents WHERE doc_path = $1")
-                .bind(format!("permission_test_{}", test_name))
+                .bind(format!("permission_test_{test_name}"))
                 .execute(pool)
                 .await;
             Ok(true)
         }
         Err(e) => {
             if e.to_string().contains("no unique or exclusion constraint") {
-                println!("🧪 Skipping {}: No INSERT permission", test_name);
+                println!("🧪 Skipping {test_name}: No INSERT permission");
                 Ok(false)
             } else {
                 Err(anyhow::Error::from(e))
@@ -772,6 +772,7 @@ async fn test_find_crate_by_name() -> Result<()> {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn test_crate_document_metadata_queries() -> Result<()> {
     let fixture = match create_test_fixture().await {
         Ok(f) => f,
@@ -796,7 +797,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
             true
         }
         Err(e) => {
-            eprintln!("❌ Database permission check failed: {}", e);
+            eprintln!("❌ Database permission check failed: {e}");
             false
         }
     };
@@ -812,7 +813,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
                 "🧹 Cleaned up {} existing test documents",
                 result.rows_affected()
             ),
-            Err(e) => eprintln!("⚠️  Cleanup failed: {}", e),
+            Err(e) => eprintln!("⚠️  Cleanup failed: {e}"),
         }
     } else {
         eprintln!("⚠️  Skipping cleanup due to permission issues");
@@ -865,22 +866,18 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
             true
         }
         Err(e) => {
-            eprintln!("❌ Database INSERT permission failed: {}", e);
+            eprintln!("❌ Database INSERT permission failed: {e}");
             false
         }
     };
 
-    if !can_insert {
-        eprintln!("⚠️  Skipping document insertion due to permission issues");
-        // For testing purposes, assume documents would be inserted
-        inserted_count = 2;
-    } else {
+    if can_insert {
         for (i, (doc_id, metadata)) in [(doc1_id, metadata1.clone()), (doc2_id, metadata2.clone())]
             .iter()
             .enumerate()
         {
             // Use unique path to avoid conflicts
-            let unique_path = format!("test/{}/doc/{i}", test_run_id);
+            let unique_path = format!("test/{test_run_id}/doc/{i}");
 
             // Try to insert, handle any constraint violations
             let insert_result = sqlx::query(
@@ -930,54 +927,55 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
                     .fetch_optional(&fixture.pool)
                     .await;
 
-                        match exists_check {
-                            Ok(Some(_)) => {
-                                // Document actually exists
-                                inserted_count += 1;
-                                eprintln!("⚠️  Document {}/{} exists despite missing constraint (counting as inserted)", &fixture.test_crate_name, unique_path);
-                            }
-                            _ => {
-                                // Document doesn't exist, try inserting without constraints
-                                let fallback_insert = sqlx::query(
-                                "INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
-                                 VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
-                                 ON CONFLICT DO NOTHING"
-                            )
-                            .bind(doc_id)
-                            .bind(&fixture.test_crate_name)
-                            .bind(&unique_path)
-                            .bind("Test content")
-                            .bind(metadata)
-                            .bind(100)
-                            .bind(Utc::now())
-                            .execute(&fixture.pool)
-                            .await;
+                        if let Ok(Some(_)) = exists_check {
+                            // Document actually exists
+                            inserted_count += 1;
+                            eprintln!("⚠️  Document {}/{} exists despite missing constraint (counting as inserted)", &fixture.test_crate_name, unique_path);
+                        } else {
+                            // Document doesn't exist, try inserting without constraints
+                            let fallback_insert = sqlx::query(
+                            "INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
+                             VALUES ($1, 'rust', $2, $3, $4, $5, $6, $7, $7)
+                             ON CONFLICT DO NOTHING"
+                        )
+                        .bind(doc_id)
+                        .bind(&fixture.test_crate_name)
+                        .bind(&unique_path)
+                        .bind("Test content")
+                        .bind(metadata)
+                        .bind(100)
+                        .bind(Utc::now())
+                        .execute(&fixture.pool)
+                        .await;
 
-                                match fallback_insert {
-                                    Ok(_) => {
-                                        inserted_count += 1;
-                                        eprintln!(
-                                            "✅ Inserted document {}/{} with fallback",
-                                            &fixture.test_crate_name, unique_path
-                                        );
-                                    }
-                                    _ => {
-                                        eprintln!(
-                                            "❌ Failed to insert document {}/{} even with fallback",
-                                            &fixture.test_crate_name, unique_path
-                                        );
-                                    }
+                            match fallback_insert {
+                                Ok(_) => {
+                                    inserted_count += 1;
+                                    eprintln!(
+                                        "✅ Inserted document {}/{} with fallback",
+                                        &fixture.test_crate_name, unique_path
+                                    );
+                                }
+                                _ => {
+                                    eprintln!(
+                                        "❌ Failed to insert document {}/{} even with fallback",
+                                        &fixture.test_crate_name, unique_path
+                                    );
                                 }
                             }
                         }
                     } else {
                         // Re-raise other errors
-                        eprintln!("❌ Unexpected error inserting document: {}", e);
+                        eprintln!("❌ Unexpected error inserting document: {e}");
                         return Err(anyhow::Error::from(e));
                     }
                 }
             }
         }
+    } else {
+        eprintln!("⚠️  Skipping document insertion due to permission issues");
+        // For testing purposes, assume documents would be inserted
+        inserted_count = 2;
     }
 
     // Debug: Check what documents actually exist (only if we have permissions)
