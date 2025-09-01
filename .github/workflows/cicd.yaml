@@ -152,6 +152,12 @@ jobs:
           key: "rust-cache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      - name: Install PostgreSQL client
+        run: |
+          echo "📦 Installing PostgreSQL client..."
+          apt-get update && apt-get install -y postgresql-client
+          echo "✅ PostgreSQL client installed"
+
       - name: Set up test database schema
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
