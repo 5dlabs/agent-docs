@@ -1,14 +1,14 @@
 # Agent Docs MCP Server
 
-A high-performance MCP (Model Context Protocol) server for Rust crate documentation management and AI-powered code assistance.
+A high-performance MCP (Model Context Protocol) server for documentation management and AI-powered assistance with any type of technical documentation.
 
 ## 🚀 Overview
 
-Agent Docs is a comprehensive documentation server that provides AI-powered assistance for Rust development. It combines:
+Agent Docs is a flexible documentation server that provides AI-powered assistance across various technical domains. It combines:
 
 - **MCP Protocol Support** - Standardized AI assistant integration
-- **Vector Search** - Semantic search through documentation using embeddings
-- **Crate Management** - Automated ingestion and management of Rust crates
+- **Vector Search** - Semantic search through any documentation using embeddings
+- **Configurable Tools** - Customizable toolset for different documentation types
 - **Multi-format Support** - JSON-RPC and HTTP transport layers
 - **Production Ready** - Docker containerization and Kubernetes deployment
 
@@ -26,11 +26,12 @@ This project is organized as a Rust workspace with specialized crates:
 
 ### Key Features
 
-- **13 MCP Tools** - Complete toolset for Rust development assistance
-- **Vector Embeddings** - Semantic search through documentation
+- **Configurable MCP Tools** - Extensible toolset for any documentation type
+- **Vector Embeddings** - Semantic search through custom documentation
 - **Batch Processing** - Efficient document processing with cost optimization
 - **Real-time Updates** - Live documentation synchronization
 - **Health Monitoring** - Comprehensive metrics and observability
+- **Multi-Domain Support** - APIs, protocols, frameworks, and technical docs
 
 ## 🛠️ Quick Start
 
@@ -119,30 +120,97 @@ POST /mcp
   "id": 2,
   "method": "tools/call",
   "params": {
-    "name": "rust_query",
+    "name": "your_doc_query",
     "arguments": {
-      "query": "async file operations"
+      "query": "search term or question",
+      "docType": "your_doc_type",
+      "limit": 10
     }
   }
 }
 ```
 
-### Available Tools
+### Tool Configuration
 
-1. **`rust_query`** - Search Rust documentation
-2. **`birdeye_query`** - BirdEye protocol documentation
-3. **`solana_query`** - Solana blockchain documentation
-4. **`jupyter_query`** - Jupyter notebook documentation
-5. **`cilium_query`** - Cilium networking documentation
-6. **`talos_query`** - Talos OS documentation
-7. **`meteora_query`** - Meteora DEX documentation
-8. **`raydium_query`** - Raydium DEX documentation
-9. **`ebpf_query`** - eBPF documentation
-10. **`rust_best_practices_query`** - Rust best practices
-11. **`add_rust_crate`** - Add new crate to index
-12. **`remove_rust_crate`** - Remove crate from index
-13. **`list_rust_crates`** - List available crates
-14. **`check_rust_status`** - System health check
+The system is highly configurable and can work with **any type of documentation**. Tools are defined in the `tools.json` configuration file, allowing you to:
+
+- **Query Tools**: Search and retrieve information from documentation
+- **Management Tools**: Add, remove, and manage documentation sources
+- **Custom Documentation Types**: Support any documentation format or source
+
+#### Configuring Tools
+
+Tools are configured in `tools.json` with the following structure:
+
+```json
+{
+  "tools": [
+    {
+      "name": "your_doc_query",
+      "docType": "your_doc_type",
+      "title": "Your Documentation Query",
+      "description": "Search your custom documentation...",
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "html", "pdf"],
+        "supported_categories": ["api", "guides", "examples"],
+        "custom_metadata": "any additional configuration"
+      }
+    }
+  ]
+}
+```
+
+#### Example Tool Types
+
+The system supports various documentation sources:
+
+- **API Documentation** (OpenAPI, GraphQL, REST APIs)
+- **Code Documentation** (Rust crates, libraries, frameworks)
+- **Technical Documentation** (architecture, deployment, operations)
+- **Protocol Documentation** (blockchain, networking, standards)
+- **Educational Content** (tutorials, guides, best practices)
+
+#### Built-in Tool Categories
+
+1. **Query Tools** (`*_query`) - Search documentation by type
+2. **Management Tools** (`add_*`, `remove_*`, `list_*`) - Manage content
+3. **Status Tools** (`check_*_status`) - System health and statistics
+
+Each tool can be:
+- ✅ **Enabled/Disabled** individually
+- ✅ **Configured** with custom metadata hints
+- ✅ **Extended** with new documentation types
+- ✅ **Monitored** for performance and usage
+
+### Adding Custom Documentation Types
+
+To add support for new documentation types:
+
+1. **Define the tool** in `tools.json`:
+```json
+{
+  "name": "kubernetes_query",
+  "docType": "kubernetes",
+  "title": "Kubernetes Documentation Query",
+  "description": "Search Kubernetes documentation and best practices",
+  "enabled": true,
+  "metadataHints": {
+    "supported_formats": ["markdown", "yaml"],
+    "supported_categories": ["pods", "services", "deployments", "configmaps"],
+    "supported_versions": ["v1.24+", "latest"]
+  }
+}
+```
+
+2. **Configure data ingestion** for your documentation source
+3. **Restart the server** to load the new configuration
+4. **Test the new tool** via MCP protocol
+
+The system automatically creates:
+- Query tool: `kubernetes_query`
+- Management tools: `add_kubernetes`, `remove_kubernetes`, `list_kubernetes`
+- Status tool: `check_kubernetes_status`
 
 ## 🚢 Deployment
 
