@@ -474,7 +474,7 @@ impl DocumentQueries {
         // For now, use text-based search with relevance scoring
         // We'll add proper embeddings later
 
-        // First, let's try without the enum cast to see if that's the issue
+        // Use proper enum casting for doc_type comparison
         let rows = sqlx::query(
             r"
             SELECT
@@ -491,7 +491,7 @@ impl DocumentQueries {
                 LENGTH(content) as content_length,
                 EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) as age_seconds
             FROM documents
-            WHERE doc_type = $1
+            WHERE doc_type = $1::doc_type
             ORDER BY LENGTH(content) DESC, created_at DESC
             LIMIT $2
             ",
