@@ -52,6 +52,201 @@ impl RowCountable for String {
 pub struct DocumentQueries;
 
 impl DocumentQueries {
+    /// Ensure document source exists
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub async fn ensure_document_source(
+        pool: &PgPool,
+        doc_type: &str,
+        source_name: &str,
+    ) -> Result<()> {
+        sqlx::query(
+            r#"
+            INSERT INTO document_sources (doc_type, source_name, config, enabled)
+            VALUES ($1::doc_type, $2, '{"auto_created": true}', true)
+            ON CONFLICT (doc_type, source_name) DO NOTHING
+            "#,
+        )
+        .bind(doc_type)
+        .bind(source_name)
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Insert a single document
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database insertion fails.
+    pub async fn insert_document(
+        pool: &PgPool,
+        document: &crate::models::Document,
+    ) -> Result<crate::models::Document> {
+        let row = sqlx::query(
+            r"
+            INSERT INTO documents (
+                id,
+                doc_type,
+                source_name,
+                doc_path,
+                content,
+                metadata,
+                token_count,
+                created_at,
+                updated_at
+            )
+            VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
+            ON CONFLICT (id) DO UPDATE SET
+                content = EXCLUDED.content,
+                metadata = EXCLUDED.metadata,
+                token_count = EXCLUDED.token_count,
+                updated_at = EXCLUDED.updated_at
+            RETURNING
+                id,
+                doc_type::text as doc_type,
+                source_name,
+                doc_path,
+                content,
+                metadata,
+                token_count,
+                created_at,
+                updated_at
+            ",
+        )
+        .bind(document.id)
+        .bind(&document.doc_type)
+        .bind(&document.source_name)
+        .bind(&document.doc_path)
+        .bind(&document.content)
+        .bind(&document.metadata)
+        .bind(document.token_count)
+        .bind(document.created_at.unwrap_or_else(chrono::Utc::now))
+        .fetch_one(pool)
+        .await?;
+
+        let doc = crate::models::Document {
+            id: row.get("id"),
+            doc_type: row.get("doc_type"),
+            source_name: row.get("source_name"),
+            doc_path: row.get("doc_path"),
+            content: row.get("content"),
+            metadata: row.get("metadata"),
+            embedding: None, // Skip embedding for now
+            token_count: row.get("token_count"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        };
+
+        Ok(doc)
+    }
+
+    /// Batch insert multiple documents with transaction support
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database batch insertion fails.
+    pub async fn batch_insert_documents(
+        pool: &PgPool,
+        documents: &[crate::models::Document],
+    ) -> Result<Vec<crate::models::Document>> {
+        if documents.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Ensure document sources exist for all documents
+        let mut sources_to_create = std::collections::HashSet::new();
+        for doc in documents {
+            sources_to_create.insert((doc.doc_type.clone(), doc.source_name.clone()));
+        }
+
+        for (doc_type, source_name) in sources_to_create {
+            Self::ensure_document_source(pool, &doc_type, &source_name).await?;
+        }
+
+        let mut transaction = pool.begin().await?;
+        let mut inserted_docs = Vec::new();
+
+        for doc in documents {
+            let row = sqlx::query(
+                r"
+                INSERT INTO documents (
+                    id,
+                    doc_type,
+                    source_name,
+                    doc_path,
+                    content,
+                    metadata,
+                    token_count,
+                    created_at,
+                    updated_at
+                )
+                VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
+                ON CONFLICT (id) DO UPDATE SET
+                    content = EXCLUDED.content,
+                    metadata = EXCLUDED.metadata,
+                    token_count = EXCLUDED.token_count,
+                    updated_at = EXCLUDED.updated_at
+                RETURNING
+                    id,
+                    doc_type::text as doc_type,
+                    source_name,
+                    doc_path,
+                    content,
+                    metadata,
+                    token_count,
+                    created_at,
+                    updated_at
+                ",
+            )
+            .bind(doc.id)
+            .bind(&doc.doc_type)
+            .bind(&doc.source_name)
+            .bind(&doc.doc_path)
+            .bind(&doc.content)
+            .bind(&doc.metadata)
+            .bind(doc.token_count)
+            .bind(doc.created_at.unwrap_or_else(chrono::Utc::now))
+            .fetch_one(&mut *transaction)
+            .await?;
+
+            let inserted_doc = crate::models::Document {
+                id: row.get("id"),
+                doc_type: row.get("doc_type"),
+                source_name: row.get("source_name"),
+                doc_path: row.get("doc_path"),
+                content: row.get("content"),
+                metadata: row.get("metadata"),
+                embedding: None, // Skip embedding for now
+                token_count: row.get("token_count"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+            };
+
+            inserted_docs.push(inserted_doc);
+        }
+
+        transaction.commit().await?;
+        Ok(inserted_docs)
+    }
+
+    /// Delete documents by source name
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database deletion fails.
+    pub async fn delete_by_source(pool: &PgPool, source_name: &str) -> Result<i64> {
+        let result = sqlx::query("DELETE FROM documents WHERE source_name = $1")
+            .bind(source_name)
+            .execute(pool)
+            .await?;
+
+        Ok(result.rows_affected() as i64)
+    }
+
     /// Find documents by type
     ///
     /// # Errors

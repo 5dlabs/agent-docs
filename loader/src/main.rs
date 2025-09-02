@@ -6,12 +6,18 @@
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use tracing::{info, Level};
+use tracing::{info, warn, Level};
 use tracing_subscriber::fmt;
 
 use loader::intelligent::{ClaudeIntelligentLoader, DocumentSource, IntelligentLoader};
 use loader::loaders::RateLimiter;
 use loader::parsers::UniversalParser;
+
+// Database dependencies
+use db::DatabasePool;
+use db::models::Document;
+use db::queries::DocumentQueries;
+use uuid::Uuid;
 
 /// AI-enabled Document Ingestion CLI
 #[derive(Parser)]
@@ -109,6 +115,29 @@ enum Commands {
         #[arg(short, long, default_value = "./output")]
         output: PathBuf,
     },
+
+    /// Load processed documents into the database
+    Database {
+        /// Directory containing JSON files to load
+        #[arg(short, long)]
+        input_dir: PathBuf,
+
+        /// Document type for all files in the directory
+        #[arg(long, default_value = "cilium")]
+        doc_type: String,
+
+        /// Source name for the documents
+        #[arg(long, default_value = "cilium-repository")]
+        source_name: String,
+
+        /// Batch size for database insertions
+        #[arg(long, default_value = "100")]
+        batch_size: usize,
+
+        /// Skip confirmation prompt
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 #[tokio::main]
@@ -186,6 +215,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Interactive { config, output } => {
             handle_interactive_command(&mut loader, config.as_deref(), output.as_path());
+        }
+        Commands::Database {
+            input_dir,
+            doc_type,
+            source_name,
+            batch_size,
+            yes,
+        } => {
+            handle_database_command(
+                input_dir.as_path(),
+                &doc_type,
+                &source_name,
+                batch_size,
+                yes,
+            )
+            .await?;
         }
     }
 
@@ -411,8 +456,8 @@ async fn process_prioritized_files(
         );
 
         // Read the file content
-        let content = tokio::fs::read_to_string(file_path).await?;
-        let file_name = file_path.file_name().unwrap_or_default().to_string_lossy();
+        let _content = tokio::fs::read_to_string(file_path).await?;
+        let _file_name = file_path.file_name().unwrap_or_default().to_string_lossy();
 
         // Create document source
         let source = DocumentSource::LocalFile {
@@ -490,4 +535,180 @@ fn sanitize_filename(name: &str) -> String {
         .collect::<String>()
         .trim_end_matches('_')
         .to_lowercase()
+}
+
+async fn handle_database_command(
+    input_dir: &std::path::Path,
+    doc_type: &str,
+    source_name: &str,
+    batch_size: usize,
+    skip_confirmation: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    info!("🗄️ Loading documents from database");
+    info!("  📂 Input directory: {:?}", input_dir);
+    info!("  📄 Document type: {}", doc_type);
+    info!("  🏷️ Source name: {}", source_name);
+    info!("  📦 Batch size: {}", batch_size);
+
+    // Check if input directory exists
+    if !input_dir.exists() {
+        return Err(format!("Input directory does not exist: {:?}", input_dir).into());
+    }
+
+    // Initialize database connection
+    let pool = DatabasePool::from_env().await?;
+    info!("✅ Connected to database");
+
+    // Collect all JSON files from the directory
+    let mut json_files = Vec::new();
+    let mut entries = tokio::fs::read_dir(input_dir).await?;
+
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) == Some("json") {
+            json_files.push(path);
+        }
+    }
+
+    if json_files.is_empty() {
+        return Err(format!("No JSON files found in {:?}", input_dir).into());
+    }
+
+    info!("📄 Found {} JSON files to process", json_files.len());
+
+    // Load and parse JSON files
+    let mut documents = Vec::new();
+    for file_path in &json_files {
+        info!("📖 Loading: {}", file_path.display());
+
+        let content = tokio::fs::read_to_string(file_path).await?;
+        let parsed_doc: serde_json::Value = serde_json::from_str(&content)?;
+
+        // Convert to Document struct
+        let doc = create_document_from_json(&parsed_doc, doc_type, source_name)?;
+        documents.push(doc);
+    }
+
+    info!("✅ Loaded {} documents from JSON files", documents.len());
+
+    // Confirmation prompt unless skipped
+    if !skip_confirmation {
+        println!();
+        println!("🔍 SUMMARY:");
+        println!("  📄 Documents to insert: {}", documents.len());
+        println!("  📁 Source directory: {:?}", input_dir);
+        println!("  🏷️ Document type: {}", doc_type);
+        println!("  🏷️ Source name: {}", source_name);
+        println!();
+        println!("⚠️ This will insert all documents into the database.");
+        println!("Do you want to continue? (y/N): ");
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        let input = input.trim().to_lowercase();
+
+        if input != "y" && input != "yes" {
+            info!("❌ Database insertion cancelled by user");
+            return Ok(());
+        }
+    }
+
+    // Insert documents in batches
+    let mut inserted_count = 0;
+    let mut failed_count = 0;
+
+    for (i, batch) in documents.chunks(batch_size).enumerate() {
+        info!("📦 Processing batch {} of {} (size: {})",
+              i + 1,
+              (documents.len() + batch_size - 1) / batch_size,
+              batch.len());
+
+        match DocumentQueries::batch_insert_documents(pool.pool(), batch).await {
+            Ok(inserted_docs) => {
+                inserted_count += inserted_docs.len();
+                info!("  ✅ Inserted {} documents in batch", inserted_docs.len());
+            }
+            Err(e) => {
+                failed_count += batch.len();
+                warn!("  ❌ Failed to insert batch: {}", e);
+            }
+        }
+    }
+
+    // Final summary
+    println!();
+    println!("📊 DATABASE INSERTION COMPLETE:");
+    println!("  ✅ Documents inserted: {}", inserted_count);
+    if failed_count > 0 {
+        println!("  ❌ Documents failed: {}", failed_count);
+    }
+    println!("  📄 Total processed: {}", documents.len());
+    println!("  🏷️ Source: {}", source_name);
+
+    if failed_count == 0 {
+        info!("🎉 All documents successfully inserted into database!");
+    } else {
+        warn!("⚠️ Some documents failed to insert. Check logs for details.");
+    }
+
+    Ok(())
+}
+
+fn create_document_from_json(
+    json_doc: &serde_json::Value,
+    doc_type: &str,
+    source_name: &str,
+) -> Result<Document, Box<dyn std::error::Error>> {
+    // Extract fields from JSON, with defaults for missing fields
+    let id = Uuid::new_v4(); // Generate new ID for database
+    let doc_type = doc_type.to_string();
+    let source_name = source_name.to_string();
+
+    // Try to extract path from various possible fields
+    let doc_path = json_doc
+        .get("module_path")
+        .or_else(|| json_doc.get("path"))
+        .or_else(|| json_doc.get("file_path"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown")
+        .to_string();
+
+    // Extract content
+    let content = json_doc
+        .get("content")
+        .or_else(|| json_doc.get("text"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    // Extract metadata (use the entire JSON as metadata, or empty object)
+    let metadata = if let Some(meta) = json_doc.get("metadata") {
+        meta.clone()
+    } else {
+        // Create basic metadata from the document
+        serde_json::json!({
+            "original_doc_type": doc_type,
+            "source": source_name,
+            "imported_at": chrono::Utc::now().to_rfc3339()
+        })
+    };
+
+    // Extract token count if available
+    let token_count = json_doc
+        .get("token_count")
+        .and_then(|v| v.as_i64())
+        .map(|v| v as i32);
+
+    Ok(Document {
+        id,
+        doc_type,
+        source_name,
+        doc_path,
+        content,
+        metadata,
+        embedding: None,
+        token_count,
+        created_at: Some(chrono::Utc::now()),
+        updated_at: Some(chrono::Utc::now()),
+    })
 }
