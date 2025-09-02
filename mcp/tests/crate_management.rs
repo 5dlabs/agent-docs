@@ -879,7 +879,7 @@ async fn test_tool_metadata() -> Result<()> {
     eprintln!(
         "🔍 Testing database connectivity to: {}",
         database_url.replace(
-            |c: char| c.is_ascii_alphanumeric() == false
+            |c: char| !c.is_ascii_alphanumeric()
                 && c != ':'
                 && c != '/'
                 && c != '.'
