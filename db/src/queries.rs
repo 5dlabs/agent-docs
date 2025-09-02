@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use std::time::{Duration, Instant};
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use crate::models::{DocType, Document};
 
@@ -184,12 +184,8 @@ impl DocumentQueries {
                     created_at,
                     updated_at
                 )
-                VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
-                ON CONFLICT (id) DO UPDATE SET
-                    content = EXCLUDED.content,
-                    metadata = EXCLUDED.metadata,
-                    token_count = EXCLUDED.token_count,
-                    updated_at = EXCLUDED.updated_at
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+
                 RETURNING
                     id,
                     doc_type::text as doc_type,
@@ -420,10 +416,10 @@ impl DocumentQueries {
         _embedding: &[f32],
         limit: i64,
     ) -> Result<Vec<Document>> {
-        // For now, return Rust documents ordered by relevance
+        // For now, return Rust documents with basic relevance scoring
         let rows = sqlx::query(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -433,9 +429,9 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
+            FROM documents
             WHERE doc_type = 'rust'
-            ORDER BY created_at DESC
+            ORDER BY LENGTH(content) DESC, created_at DESC
             LIMIT $1
             ",
         )
@@ -475,10 +471,13 @@ impl DocumentQueries {
         _embedding: &[f32],
         limit: i64,
     ) -> Result<Vec<Document>> {
-        // For now, return documents of specified type ordered by relevance
+        // For now, use text-based search with relevance scoring
+        // We'll add proper embeddings later
+
+        // First, let's try without the enum cast to see if that's the issue
         let rows = sqlx::query(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -487,10 +486,13 @@ impl DocumentQueries {
                 metadata,
                 token_count,
                 created_at,
-                updated_at
+                updated_at,
+                -- Simple relevance scoring based on content length and recency
+                LENGTH(content) as content_length,
+                EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) as age_seconds
             FROM documents
-            WHERE doc_type = $1::doc_type
-            ORDER BY created_at DESC
+            WHERE doc_type = $1
+            ORDER BY LENGTH(content) DESC, created_at DESC
             LIMIT $2
             ",
         )
@@ -498,6 +500,9 @@ impl DocumentQueries {
         .bind(limit)
         .fetch_all(pool)
         .await?;
+
+        // Debug logging
+        info!("doc_type_vector_search: Found {} documents for doc_type '{}'", rows.len(), doc_type);
 
         let docs = rows
             .into_iter()
@@ -563,7 +568,7 @@ impl DocumentQueries {
 
         let query_str = format!(
             r"
-            SELECT 
+            SELECT
                 id,
                 doc_type::text as doc_type,
                 source_name,
@@ -573,9 +578,9 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at
-            FROM documents 
+            FROM documents
             WHERE {where_clause}
-            ORDER BY created_at DESC
+            ORDER BY LENGTH(content) DESC, created_at DESC
             LIMIT ${final_bind_count}
             "
         );
