@@ -8,7 +8,6 @@ use anyhow::{anyhow, Result};
 use chrono::Utc;
 use octocrab::Octocrab;
 
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -354,10 +353,6 @@ Return your analysis in JSON format with the following structure:
 
         Ok(tree)
     }
-
-
-
-
 }
 
 impl Default for ClaudeIntelligentLoader {
@@ -521,7 +516,8 @@ impl ClaudeIntelligentLoader {
     async fn extract_local_file(&mut self, path: &PathBuf) -> Result<Vec<DocPage>> {
         use tokio::fs;
 
-        let content = fs::read_to_string(path).await
+        let content = fs::read_to_string(path)
+            .await
             .map_err(|e| anyhow!("Failed to read local file {}: {}", path.display(), e))?;
 
         // Use UniversalParser to parse the content

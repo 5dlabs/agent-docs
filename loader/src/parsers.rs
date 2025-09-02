@@ -13,8 +13,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use tracing::{debug, info, warn};
 
-
-
 /// Supported document formats
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DocumentFormat {
@@ -251,8 +249,14 @@ impl UniversalParser {
 
         let metadata = HashMap::from([
             ("format".to_string(), "markdown".to_string()),
-            ("has_code_blocks".to_string(), structured.code_blocks.len().to_string()),
-            ("sections_count".to_string(), structured.sections.len().to_string()),
+            (
+                "has_code_blocks".to_string(),
+                structured.code_blocks.len().to_string(),
+            ),
+            (
+                "sections_count".to_string(),
+                structured.sections.len().to_string(),
+            ),
         ]);
 
         let estimated_tokens = Self::estimate_tokens(&text_content);
@@ -291,8 +295,8 @@ impl UniversalParser {
     async fn parse_json(&self, content: &str, path: &str) -> Result<ParsedContent> {
         debug!("Parsing JSON content from: {}", path);
 
-        let json_value: Value = serde_json::from_str(content)
-            .map_err(|e| anyhow!("Failed to parse JSON: {}", e))?;
+        let json_value: Value =
+            serde_json::from_str(content).map_err(|e| anyhow!("Failed to parse JSON: {}", e))?;
 
         let text_content = Self::json_to_text(&json_value);
         let metadata = HashMap::from([
@@ -315,8 +319,8 @@ impl UniversalParser {
     async fn parse_yaml(&self, content: &str, path: &str) -> Result<ParsedContent> {
         debug!("Parsing YAML content from: {}", path);
 
-        let yaml_value: Value = serde_yaml::from_str(content)
-            .map_err(|e| anyhow!("Failed to parse YAML: {}", e))?;
+        let yaml_value: Value =
+            serde_yaml::from_str(content).map_err(|e| anyhow!("Failed to parse YAML: {}", e))?;
 
         let text_content = Self::yaml_to_text(&yaml_value);
         let metadata = HashMap::from([
@@ -339,8 +343,8 @@ impl UniversalParser {
     async fn parse_toml(&self, content: &str, path: &str) -> Result<ParsedContent> {
         debug!("Parsing TOML content from: {}", path);
 
-        let toml_value: Value = toml::from_str(content)
-            .map_err(|e| anyhow!("Failed to parse TOML: {}", e))?;
+        let toml_value: Value =
+            toml::from_str(content).map_err(|e| anyhow!("Failed to parse TOML: {}", e))?;
 
         let text_content = Self::toml_to_text(&toml_value);
         let metadata = HashMap::from([
@@ -407,7 +411,10 @@ impl UniversalParser {
         let metadata = HashMap::from([
             ("format".to_string(), "code".to_string()),
             ("language".to_string(), language.clone()),
-            ("lines_count".to_string(), content.lines().count().to_string()),
+            (
+                "lines_count".to_string(),
+                content.lines().count().to_string(),
+            ),
         ]);
         let estimated_tokens = Self::estimate_tokens(content);
 
@@ -431,9 +438,7 @@ impl UniversalParser {
             format: DocumentFormat::PlainText,
             text_content: content.to_string(),
             structured_content: None,
-            metadata: HashMap::from([
-                ("format".to_string(), "plain_text".to_string()),
-            ]),
+            metadata: HashMap::from([("format".to_string(), "plain_text".to_string())]),
             estimated_tokens: Some(estimated_tokens),
         })
     }
@@ -449,9 +454,7 @@ impl UniversalParser {
             format: DocumentFormat::Unknown,
             text_content: content.to_string(),
             structured_content: None,
-            metadata: HashMap::from([
-                ("format".to_string(), "unknown".to_string()),
-            ]),
+            metadata: HashMap::from([("format".to_string(), "unknown".to_string())]),
             estimated_tokens: Some(estimated_tokens),
         })
     }
@@ -601,7 +604,10 @@ impl UniversalParser {
         if let Ok(meta_selector) = Selector::parse("meta") {
             for element in document.select(&meta_selector) {
                 if let (Some(name), Some(content)) = (
-                    element.value().attr("name").or_else(|| element.value().attr("property")),
+                    element
+                        .value()
+                        .attr("name")
+                        .or_else(|| element.value().attr("property")),
                     element.value().attr("content"),
                 ) {
                     metadata.insert(name.to_string(), content.to_string());
@@ -662,15 +668,27 @@ impl UniversalParser {
         let mut result = String::new();
 
         // Extract basic info
-        if let Some(title) = value.get("info").and_then(|i| i.get("title")).and_then(|t| t.as_str()) {
+        if let Some(title) = value
+            .get("info")
+            .and_then(|i| i.get("title"))
+            .and_then(|t| t.as_str())
+        {
             result.push_str(&format!("API Title: {title}\n"));
         }
 
-        if let Some(description) = value.get("info").and_then(|i| i.get("description")).and_then(|d| d.as_str()) {
+        if let Some(description) = value
+            .get("info")
+            .and_then(|i| i.get("description"))
+            .and_then(|d| d.as_str())
+        {
             result.push_str(&format!("Description: {description}\n"));
         }
 
-        if let Some(version) = value.get("info").and_then(|i| i.get("version")).and_then(|v| v.as_str()) {
+        if let Some(version) = value
+            .get("info")
+            .and_then(|i| i.get("version"))
+            .and_then(|v| v.as_str())
+        {
             result.push_str(&format!("Version: {version}\n"));
         }
 
@@ -698,11 +716,19 @@ impl UniversalParser {
 
         metadata.insert("format".to_string(), "api_spec".to_string());
 
-        if let Some(spec_version) = value.get("openapi").or_else(|| value.get("swagger")).and_then(|v| v.as_str()) {
+        if let Some(spec_version) = value
+            .get("openapi")
+            .or_else(|| value.get("swagger"))
+            .and_then(|v| v.as_str())
+        {
             metadata.insert("spec_version".to_string(), spec_version.to_string());
         }
 
-        if let Some(title) = value.get("info").and_then(|i| i.get("title")).and_then(|t| t.as_str()) {
+        if let Some(title) = value
+            .get("info")
+            .and_then(|i| i.get("title"))
+            .and_then(|t| t.as_str())
+        {
             metadata.insert("title".to_string(), title.to_string());
         }
 
@@ -783,7 +809,13 @@ impl UniversalParser {
                     source_path: source_path.to_string(),
                     position: code_block.line_start.unwrap_or(0),
                     metadata: HashMap::from([
-                        ("language".to_string(), code_block.language.clone().unwrap_or_else(|| "unknown".to_string())),
+                        (
+                            "language".to_string(),
+                            code_block
+                                .language
+                                .clone()
+                                .unwrap_or_else(|| "unknown".to_string()),
+                        ),
                         ("is_code".to_string(), "true".to_string()),
                     ]),
                 };
