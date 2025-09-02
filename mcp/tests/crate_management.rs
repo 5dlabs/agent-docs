@@ -876,7 +876,17 @@ async fn test_tool_metadata() -> Result<()> {
     };
 
     // Test database connectivity for CI debugging
-    eprintln!("🔍 Testing database connectivity to: {}", database_url.replace(|c: char| c.is_ascii_alphanumeric() == false && c != ':' && c != '/' && c != '.' && c != '-', "X"));
+    eprintln!(
+        "🔍 Testing database connectivity to: {}",
+        database_url.replace(
+            |c: char| c.is_ascii_alphanumeric() == false
+                && c != ':'
+                && c != '/'
+                && c != '.'
+                && c != '-',
+            "X"
+        )
+    );
     let pool = match sqlx::PgPool::connect(&database_url).await {
         Ok(pool) => {
             eprintln!("✅ Database connection successful");
