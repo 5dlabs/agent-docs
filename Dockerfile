@@ -41,4 +41,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 3001
 
 # Run the MCP server
-CMD ["./http_server"]
+CMD ["./http_server"]# Force rebuild 1756778676
