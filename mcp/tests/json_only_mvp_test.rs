@@ -231,7 +231,7 @@ async fn test_post_with_json_succeeds() {
 }
 
 #[tokio::test]
-async fn test_post_without_protocol_version_fails() {
+async fn test_post_without_protocol_version_backwards_compatible() {
     let app = create_test_server().await;
 
     let request_body = json!({
@@ -245,16 +245,16 @@ async fn test_post_without_protocol_version_fails() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
-        // Missing MCP-Protocol-Version header
+        // Missing MCP-Protocol-Version header - should default to 2025-03-26 for backwards compatibility
         .body(Body::from(request_body.to_string()))
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
 
-    // Should return 400 Bad Request for missing protocol version
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    // Should return 200 OK for backwards compatibility (defaults to 2025-03-26)
+    assert_eq!(response.status(), StatusCode::OK);
 
-    // Even error responses should include protocol headers
+    // Response should include protocol headers
     let headers = response.headers();
     assert!(headers.contains_key("MCP-Protocol-Version"));
 }
@@ -408,13 +408,13 @@ async fn test_metrics_tracking_get_request() {
 }
 
 #[tokio::test]
-async fn test_metrics_tracking_protocol_version_error() {
+async fn test_metrics_tracking_successful_request() {
     let app = create_test_server().await;
 
     // Get initial metrics snapshot
     let initial_metrics = metrics().snapshot();
 
-    // Make a POST request without protocol version header
+    // Make a POST request without protocol version header (backwards compatible)
     let request_body = json!({
         "jsonrpc": "2.0",
         "method": "initialize",
@@ -426,22 +426,27 @@ async fn test_metrics_tracking_protocol_version_error() {
         .method(Method::POST)
         .uri("/mcp")
         .header("content-type", "application/json")
-        // Missing MCP-Protocol-Version header intentionally
+        // Missing MCP-Protocol-Version header - should default to 2025-03-26
         .body(Body::from(request_body.to_string()))
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(response.status(), StatusCode::OK);
 
-    // Check that metrics were incremented
+    // Check that metrics were incremented appropriately
     let final_metrics = metrics().snapshot();
     assert!(
         final_metrics.requests_total > initial_metrics.requests_total,
         "Total requests should be incremented"
     );
     assert!(
-        final_metrics.protocol_version_errors > initial_metrics.protocol_version_errors,
-        "Protocol version errors should be incremented"
+        final_metrics.post_requests_success > initial_metrics.post_requests_success,
+        "Successful POST requests should be incremented"
+    );
+    // Protocol version errors should NOT be incremented since missing header is now handled gracefully
+    assert_eq!(
+        final_metrics.protocol_version_errors, initial_metrics.protocol_version_errors,
+        "Protocol version errors should NOT be incremented for backwards compatible requests"
     );
 }
 
