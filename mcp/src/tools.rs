@@ -182,6 +182,7 @@ impl DynamicQueryTool {
             DocumentQueries::doc_type_vector_search_with_filters(
                 self.db_pool.pool(),
                 db_doc_type,
+                query,
                 &dummy_embedding,
                 limit.unwrap_or(5),
                 &metadata_filters,
@@ -191,6 +192,7 @@ impl DynamicQueryTool {
             DocumentQueries::doc_type_vector_search(
                 self.db_pool.pool(),
                 db_doc_type,
+                query,
                 &dummy_embedding,
                 limit.unwrap_or(5),
             )

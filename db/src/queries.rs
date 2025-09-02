@@ -468,6 +468,7 @@ impl DocumentQueries {
     pub async fn doc_type_vector_search(
         pool: &PgPool,
         doc_type: &str,
+        query: &str,
         _embedding: &[f32],
         limit: i64,
     ) -> Result<Vec<Document>> {
@@ -492,11 +493,16 @@ impl DocumentQueries {
                 EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) as age_seconds
             FROM documents
             WHERE doc_type = $1::doc_type
-            ORDER BY LENGTH(content) DESC, created_at DESC
-            LIMIT $2
+              AND (content ILIKE $2 OR doc_path ILIKE $2)
+            ORDER BY 
+              CASE WHEN source_name ILIKE 'cilium-repository%' THEN 0 ELSE 1 END ASC,
+              LENGTH(content) DESC, 
+              created_at DESC
+            LIMIT $3
             ",
         )
         .bind(doc_type)
+        .bind(format!("%{query}%"))
         .bind(limit)
         .fetch_all(pool)
         .await?;
@@ -537,13 +543,14 @@ impl DocumentQueries {
     pub async fn doc_type_vector_search_with_filters(
         pool: &PgPool,
         doc_type: &str,
+        query: &str,
         _embedding: &[f32],
         limit: i64,
         filters: &MetadataFilters,
     ) -> Result<Vec<Document>> {
         // Build dynamic WHERE clause based on provided filters
-        let mut query_parts = vec!["doc_type = $1::doc_type".to_string()];
-        let mut bind_count = 2;
+        let mut query_parts = vec!["doc_type = $1::doc_type".to_string(), "(content ILIKE $2 OR doc_path ILIKE $2)".to_string()];
+        let mut bind_count = 3;
 
         // Add metadata filters using JSONB operators
         if filters.format.is_some() {
@@ -584,13 +591,18 @@ impl DocumentQueries {
                 updated_at
             FROM documents
             WHERE {where_clause}
-            ORDER BY LENGTH(content) DESC, created_at DESC
+            ORDER BY 
+              CASE WHEN source_name ILIKE 'cilium-repository%' THEN 0 ELSE 1 END ASC,
+              LENGTH(content) DESC, 
+              created_at DESC
             LIMIT ${final_bind_count}
             "
         );
 
         // Build query with dynamic binding
-        let mut query = sqlx::query(&query_str).bind(doc_type);
+        let mut query = sqlx::query(&query_str)
+            .bind(doc_type)
+            .bind(format!("%{query}%"));
 
         // Bind filter values in order
         if let Some(format_val) = &filters.format {
