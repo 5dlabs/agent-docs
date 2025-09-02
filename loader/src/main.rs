@@ -5,6 +5,7 @@
 //! and provides an interactive mode for batch processing.
 
 use clap::{Parser, Subcommand};
+use std::fmt::Write;
 use std::path::PathBuf;
 use tracing::{info, warn, Level};
 use tracing_subscriber::fmt;
@@ -18,6 +19,32 @@ use db::models::Document;
 use db::queries::DocumentQueries;
 use db::DatabasePool;
 use uuid::Uuid;
+
+/// Helper function to scan a directory for files with specific extensions
+fn scan_dir(
+    dir: &std::path::Path,
+    extensions: &[&str],
+    recursive: bool,
+    files: &mut Vec<std::path::PathBuf>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            if recursive && !path.ends_with(".git") {
+                scan_dir(&path, extensions, recursive, files)?;
+            }
+        } else if let Some(ext) = path.extension() {
+            if let Some(ext_str) = ext.to_str() {
+                if extensions.contains(&ext_str) {
+                    files.push(path);
+                }
+            }
+        }
+    }
+    Ok(())
+}
 
 /// AI-enabled Document Ingestion CLI
 #[derive(Parser)]
@@ -337,31 +364,6 @@ fn scan_local_repository(
     let extensions: Vec<&str> = extensions.split(',').map(str::trim).collect();
     let mut doc_files = Vec::new();
 
-    fn scan_dir(
-        dir: &std::path::Path,
-        extensions: &[&str],
-        recursive: bool,
-        files: &mut Vec<std::path::PathBuf>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        for entry in std::fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-
-            if path.is_dir() {
-                if recursive && !path.ends_with(".git") {
-                    scan_dir(&path, extensions, recursive, files)?;
-                }
-            } else if let Some(ext) = path.extension() {
-                if let Some(ext_str) = ext.to_str() {
-                    if extensions.contains(&ext_str) {
-                        files.push(path);
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
     scan_dir(path, &extensions, recursive, &mut doc_files)?;
     Ok(doc_files)
 }
@@ -380,12 +382,13 @@ async fn analyze_local_files_with_claude(
     for (i, file_path) in doc_files.iter().enumerate() {
         if let Some(file_name) = file_path.file_name() {
             if let Some(parent) = file_path.parent() {
-                file_summary.push_str(&format!(
-                    "{}. {} (in {})\n",
+                let _ = writeln!(
+                    file_summary,
+                    "{}. {} (in {})",
                     i + 1,
                     file_name.to_string_lossy(),
                     parent.display()
-                ));
+                );
             }
         }
         if file_summary.len() > 10000 {
@@ -551,7 +554,7 @@ async fn handle_database_command(
 
     // Check if input directory exists
     if !input_dir.exists() {
-        return Err(format!("Input directory does not exist: {input_dir:?}").into());
+        return Err(format!("Input directory does not exist: {}", input_dir.display()).into());
     }
 
     // Initialize database connection
@@ -570,7 +573,7 @@ async fn handle_database_command(
     }
 
     if json_files.is_empty() {
-        return Err(format!("No JSON files found in {input_dir:?}").into());
+        return Err(format!("No JSON files found in {}", input_dir.display()).into());
     }
 
     info!("📄 Found {} JSON files to process", json_files.len());
@@ -584,7 +587,7 @@ async fn handle_database_command(
         let parsed_doc: serde_json::Value = serde_json::from_str(&content)?;
 
         // Convert to Document struct
-        let doc = create_document_from_json(&parsed_doc, doc_type, source_name)?;
+        let doc = create_document_from_json(&parsed_doc, doc_type, source_name);
         documents.push(doc);
     }
 
@@ -595,7 +598,7 @@ async fn handle_database_command(
         println!();
         println!("🔍 SUMMARY:");
         println!("  📄 Documents to insert: {}", documents.len());
-        println!("  📁 Source directory: {input_dir:?}");
+        println!("  📁 Source directory: {}", input_dir.display());
         println!("  🏷️ Document type: {doc_type}");
         println!("  🏷️ Source name: {source_name}");
         println!();
@@ -659,7 +662,7 @@ fn create_document_from_json(
     json_doc: &serde_json::Value,
     doc_type: &str,
     source_name: &str,
-) -> Result<Document, Box<dyn std::error::Error>> {
+) -> Document {
     // Extract fields from JSON, with defaults for missing fields
     let id = Uuid::new_v4(); // Generate new ID for database
     let doc_type = doc_type.to_string();
@@ -697,10 +700,10 @@ fn create_document_from_json(
     // Extract token count if available
     let token_count = json_doc
         .get("token_count")
-        .and_then(|v| v.as_i64())
-        .map(|v| v as i32);
+        .and_then(serde_json::Value::as_i64)
+        .and_then(|v| i32::try_from(v).ok());
 
-    Ok(Document {
+    Document {
         id,
         doc_type,
         source_name,
@@ -711,5 +714,5 @@ fn create_document_from_json(
         token_count,
         created_at: Some(chrono::Utc::now()),
         updated_at: Some(chrono::Utc::now()),
-    })
+    }
 }

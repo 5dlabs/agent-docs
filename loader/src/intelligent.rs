@@ -176,7 +176,7 @@ impl ClaudeIntelligentLoader {
 
         // Get repository structure
         let repo_info = self.github_client.repos(&owner, &repo).get().await?;
-        let repo_tree = self.get_repository_tree(&owner, &repo).await?;
+        let repo_tree = self.get_repository_tree(&owner, &repo);
 
         // Use Claude to analyze the repository
         let analysis_prompt = Self::build_analysis_prompt(&repo_info, &repo_tree);
@@ -342,11 +342,12 @@ Return your analysis in JSON format with the following structure:
     }
 
     /// Get repository file tree
-    async fn get_repository_tree(&self, _owner: &str, _repo: &str) -> Result<Vec<String>> {
+    #[allow(clippy::unused_self)]
+    fn get_repository_tree(&self, _owner: &str, _repo: &str) -> Vec<String> {
         // For now, return empty vec - we'll implement local filesystem scanning instead
         // This method is deprecated in favor of local file system scanning
         warn!("get_repository_tree is deprecated - use local filesystem scanning instead");
-        Ok(Vec::new())
+        Vec::new()
     }
 }
 
@@ -545,7 +546,7 @@ impl ClaudeIntelligentLoader {
         let (owner, repo) = Self::parse_github_url(url)?;
 
         // Get repository tree
-        let repo_tree = self.get_repository_tree(&owner, &repo).await?;
+        let repo_tree = self.get_repository_tree(&owner, &repo);
         let mut docs = Vec::new();
 
         for file_path in &repo_tree {

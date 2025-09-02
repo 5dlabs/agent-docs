@@ -244,7 +244,7 @@ impl DocumentQueries {
             .execute(pool)
             .await?;
 
-        Ok(result.rows_affected() as i64)
+        Ok(result.rows_affected().try_into().unwrap_or(i64::MAX))
     }
 
     /// Find documents by type

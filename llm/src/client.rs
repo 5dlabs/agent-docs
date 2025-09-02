@@ -41,7 +41,7 @@ impl LlmClient {
     ///
     /// # Errors
     ///
-    /// Returns an error if the ANTHROPIC_API_KEY environment variable is not set.
+    /// Returns an error if the `ANTHROPIC_API_KEY` environment variable is not set.
     pub fn new() -> Result<Self> {
         let api_key = env::var("ANTHROPIC_API_KEY")
             .map_err(|_| anyhow!("ANTHROPIC_API_KEY environment variable not set"))?;
@@ -96,8 +96,7 @@ impl LlmClient {
         let summary = claude_response
             .content
             .first()
-            .map(|c| c.text.clone())
-            .unwrap_or_else(|| "No summary available".to_string());
+            .map_or_else(|| "No summary available".to_string(), |c| c.text.clone());
 
         Ok(summary)
     }
