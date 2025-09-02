@@ -14,7 +14,9 @@ pub const SUPPORTED_PROTOCOL_VERSION: &str = "2025-06-18";
 /// MCP Protocol Version enum for type-safe version handling
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProtocolVersion {
-    /// MCP Protocol Version 2025-06-18 (the only supported version in MVP)
+    /// MCP Protocol Version 2025-03-26 (backwards compatibility)
+    V2025_03_26,
+    /// MCP Protocol Version 2025-06-18 (current supported version)
     V2025_06_18,
 }
 
@@ -23,14 +25,15 @@ impl ProtocolVersion {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::V2025_03_26 => "2025-03-26",
             Self::V2025_06_18 => "2025-06-18",
         }
     }
 
-    /// Check if this is the supported protocol version
+    /// Check if this is a supported protocol version (including backwards compatibility)
     #[must_use]
     pub const fn is_supported(self) -> bool {
-        matches!(self, Self::V2025_06_18)
+        matches!(self, Self::V2025_03_26 | Self::V2025_06_18)
     }
 
     /// Get the current/supported protocol version
@@ -51,6 +54,7 @@ impl FromStr for ProtocolVersion {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim() {
+            "2025-03-26" => Ok(Self::V2025_03_26),
             "2025-06-18" => Ok(Self::V2025_06_18),
             other => Err(ProtocolVersionParseError::UnsupportedVersion(
                 other.to_string(),
@@ -170,8 +174,19 @@ mod tests {
 
     #[test]
     fn test_protocol_version_from_str_valid() {
+        // Test current version
         let version = ProtocolVersion::from_str("2025-06-18").unwrap();
         assert_eq!(version, ProtocolVersion::V2025_06_18);
+        assert_eq!(version.as_str(), "2025-06-18");
+        assert_eq!(version.to_string(), "2025-06-18");
+        assert!(version.is_supported());
+
+        // Test backwards compatible version
+        let version_old = ProtocolVersion::from_str("2025-03-26").unwrap();
+        assert_eq!(version_old, ProtocolVersion::V2025_03_26);
+        assert_eq!(version_old.as_str(), "2025-03-26");
+        assert_eq!(version_old.to_string(), "2025-03-26");
+        assert!(version_old.is_supported());
     }
 
     #[test]
@@ -208,12 +223,14 @@ mod tests {
     fn test_protocol_registry_is_version_supported() {
         let registry = ProtocolRegistry::new();
         assert!(registry.is_version_supported(ProtocolVersion::V2025_06_18));
+        assert!(registry.is_version_supported(ProtocolVersion::V2025_03_26));
     }
 
     #[test]
     fn test_protocol_registry_is_version_string_supported() {
         let registry = ProtocolRegistry::new();
         assert!(registry.is_version_string_supported("2025-06-18"));
+        assert!(registry.is_version_string_supported("2025-03-26"));
         assert!(!registry.is_version_string_supported("2024-11-05"));
         assert!(!registry.is_version_string_supported("invalid-version"));
     }

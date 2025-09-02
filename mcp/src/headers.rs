@@ -320,13 +320,14 @@ where
 
 /// Validate that incoming request headers include the supported MCP protocol version.
 ///
-/// This function validates the MCP-Protocol-Version header using the protocol registry
-/// to ensure only the supported version (2025-06-18) is accepted.
+/// This function validates the MCP-Protocol-Version header using the protocol registry.
+/// For backwards compatibility, if no header is present, it defaults to 2025-03-26
+/// as specified in the MCP Streamable HTTP specification.
 ///
 /// # Errors
 ///
-/// Returns `Err(StatusCode::BAD_REQUEST)` if the header is missing or has an
-/// unsupported value.
+/// Returns `Err(StatusCode::BAD_REQUEST)` if the header has an unsupported value.
+/// Returns `Ok(())` if the header is missing (defaults to backwards compatible version).
 pub fn validate_protocol_version(headers: &HeaderMap) -> Result<(), StatusCode> {
     let registry = ProtocolRegistry::new();
 
@@ -346,7 +347,7 @@ pub fn validate_protocol_version(headers: &HeaderMap) -> Result<(), StatusCode> 
                     Ok(())
                 } else {
                     warn!(
-                        "Unsupported protocol version: '{}' - supported versions: {}",
+                        "Unsupported protocol version: '{}' - supported versions: 2025-03-26, {}",
                         version_str, SUPPORTED_PROTOCOL_VERSION
                     );
                     Err(StatusCode::BAD_REQUEST)
@@ -354,8 +355,10 @@ pub fn validate_protocol_version(headers: &HeaderMap) -> Result<(), StatusCode> 
             },
         )
     } else {
-        warn!("Missing MCP-Protocol-Version header");
-        Err(StatusCode::BAD_REQUEST)
+        // Backwards compatibility: assume 2025-03-26 when header is missing
+        // as specified in MCP Streamable HTTP specification
+        debug!("Missing MCP-Protocol-Version header - defaulting to 2025-03-26 for backwards compatibility");
+        Ok(())
     }
 }
 
