@@ -37,7 +37,7 @@ impl RateLimiter {
     }
 
     /// Make a rate-limited HTTP GET request
-    async fn get(&mut self, url: &str) -> Result<reqwest::Response> {
+    pub async fn get(&mut self, url: &str) -> Result<reqwest::Response> {
         // Enforce rate limiting
         if let Some(last) = self.last_request {
             let elapsed = last.elapsed();

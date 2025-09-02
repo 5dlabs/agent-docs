@@ -4,6 +4,7 @@
 //! types including Rust crates, Jupyter notebooks, and API documentation.
 
 pub mod extractors;
+pub mod intelligent;
 pub mod loaders;
 pub mod migration;
 pub mod parsers;

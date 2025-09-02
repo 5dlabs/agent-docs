@@ -30,9 +30,31 @@ html5ever = "0.27"
 # URL handling
 url = "2.5"
 
+# Async traits
+async-trait = { workspace = true }
+
 # Internal dependencies
 db = { path = "../db" }
 embed = { path = "../embed" }
+llm = { path = "../llm" }
+
+# Octocrab for GitHub API integration
+octocrab = "0.41"
+
+# Markdown parsing
+pulldown-cmark = "0.12"
+
+# Additional HTTP client features (using workspace reqwest with additional features)
+# reqwest features are inherited from workspace
+
+# JSON schema validation
+jsonschema = "0.28"
+
+# Base64 encoding for API calls
+base64 = "0.22"
+
+# Git repository parsing
+git2 = "0.20"
 
 [dev-dependencies]
 tokio-test = { workspace = true }
