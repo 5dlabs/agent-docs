@@ -43,7 +43,7 @@ struct Cli {
 enum Commands {
     /// Ingest documents from a GitHub repository
     Github {
-        /// GitHub repository URL (e.g., https://github.com/user/repo)
+        /// GitHub repository URL (e.g., <https://github.com/user/repo>)
         url: String,
 
         /// Specific path within the repository (optional)
@@ -174,7 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
         }
         Commands::Interactive { config, output } => {
-            handle_interactive_command(&mut loader, config.as_deref(), output.as_path()).await?;
+            handle_interactive_command(&mut loader, config.as_deref(), output.as_path());
         }
     }
 
@@ -247,11 +247,11 @@ async fn handle_local_command(
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("💾 Processing local files from: {:?}", path);
 
-    let extensions: Vec<&str> = extensions.split(',').map(|s| s.trim()).collect();
+    let extensions: Vec<&str> = extensions.split(',').map(str::trim).collect();
 
     let source = DocumentSource::LocalFile {
         path: path.to_path_buf(),
-        extensions: extensions.iter().map(|s| s.to_string()).collect(),
+        extensions: extensions.iter().map(ToString::to_string).collect(),
         recursive,
     };
 
@@ -263,11 +263,11 @@ async fn handle_local_command(
     Ok(())
 }
 
-async fn handle_interactive_command(
+fn handle_interactive_command(
     _loader: &mut ClaudeIntelligentLoader,
     _config: Option<&std::path::Path>,
     _output: &std::path::Path,
-) -> Result<(), Box<dyn std::error::Error>> {
+) {
     info!("🎯 Starting interactive mode");
 
     // TODO: Implement interactive mode
@@ -277,8 +277,6 @@ async fn handle_interactive_command(
     println!("  github <url>    Ingest GitHub repository");
     println!("  web <url>       Ingest web page");
     println!("  local <path>    Ingest local files");
-
-    Ok(())
 }
 
 async fn process_and_save_documents(

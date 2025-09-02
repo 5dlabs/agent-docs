@@ -51,9 +51,9 @@ impl DocumentSource {
     #[must_use]
     pub fn url(&self) -> String {
         match self {
-            DocumentSource::GithubRepo { url, .. } => url.clone(),
-            DocumentSource::GithubFile { url, .. } => url.clone(),
-            DocumentSource::WebPage { url, .. } => url.clone(),
+            DocumentSource::GithubRepo { url, .. }
+            | DocumentSource::GithubFile { url, .. }
+            | DocumentSource::WebPage { url, .. } => url.clone(),
             DocumentSource::ApiDocs { base_url, .. } => base_url.clone(),
             DocumentSource::LocalFile { path, .. } => format!("file://{}", path.display()),
             DocumentSource::RawMarkdown { source, .. } => source.clone(),
@@ -637,7 +637,7 @@ impl ClaudeIntelligentLoader {
         docs: &mut Vec<DocPage>,
     ) -> Result<()> {
         if path.is_file() {
-            if self.should_process_file(path, extensions) {
+            if Self::should_process_file(path, extensions) {
                 match tokio::fs::read_to_string(path).await {
                     Ok(content) => {
                         let parsed = self.parser.parse(&content, &path.to_string_lossy()).await?;
@@ -671,7 +671,7 @@ impl ClaudeIntelligentLoader {
     }
 
     /// Check if file should be processed based on extensions
-    fn should_process_file(&self, path: &std::path::Path, extensions: &[String]) -> bool {
+    fn should_process_file(path: &std::path::Path, extensions: &[String]) -> bool {
         if let Some(ext) = path.extension() {
             let ext_str = ext.to_string_lossy().to_lowercase();
             extensions.iter().any(|e| e == &ext_str)
