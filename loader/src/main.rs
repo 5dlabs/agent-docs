@@ -383,8 +383,9 @@ Only include the top 20-30 most important files, focusing on quality over quanti
     let analysis_response = loader.llm_client.summarize(&analysis_prompt).await?;
     info!("Claude analysis response: {}", analysis_response);
 
-    // For now, return first 10 files as prioritized (we'll parse Claude's response later)
-    let prioritized_count = std::cmp::min(10, doc_files.len());
+    // For now, return first 50 files as prioritized (we'll parse Claude's response later)
+    // This provides a good balance between quality and quantity
+    let prioritized_count = std::cmp::min(50, doc_files.len());
     Ok(doc_files[..prioritized_count].to_vec())
 }
 
