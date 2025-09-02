@@ -200,10 +200,13 @@ async fn test_dynamic_tool_invocation() {
 
                     // In CI, database might not be available - this is acceptable
                     // Skip the test if we get a database-related error
-                    if err.to_string().contains("database") ||
-                       err.to_string().contains("connection") ||
-                       err.to_string().contains("pool") {
-                        eprintln!("DEBUG: Database error detected - skipping test as expected in CI");
+                    if err.to_string().contains("database")
+                        || err.to_string().contains("connection")
+                        || err.to_string().contains("pool")
+                    {
+                        eprintln!(
+                            "DEBUG: Database error detected - skipping test as expected in CI"
+                        );
                         return; // Skip test gracefully
                     }
 
