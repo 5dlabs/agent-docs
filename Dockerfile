@@ -40,6 +40,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Expose port
 EXPOSE 3001
 
-# Run the MCP server
-CMD ["./http_server"]# Force rebuild 1756778676
-RUN echo "Build timestamp: 1756779025"
+# Cache-bust marker (safe to keep with no-cache build)
+RUN echo "Build timestamp: 1756780123"
+
+# Run the MCP server (exec form, absolute path)
+CMD ["/app/http_server"]
