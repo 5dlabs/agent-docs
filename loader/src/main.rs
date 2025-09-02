@@ -160,7 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut loader = match ClaudeIntelligentLoader::new() {
         Ok(loader) => loader,
         Err(e) => {
-            eprintln!("Failed to initialize Claude loader: {}", e);
+            eprintln!("Failed to initialize Claude loader: {e}");
             eprintln!("Make sure ANTHROPIC_API_KEY environment variable is set");
             std::process::exit(1);
         }
@@ -399,7 +399,7 @@ async fn analyze_local_files_with_claude(
         r#"Analyze this list of documentation files from a repository and prioritize the most important ones for ingestion:
 
 Files found:
-{}
+{file_summary}
 
 Please prioritize files based on:
 1. README files (highest priority)
@@ -420,8 +420,7 @@ Return your analysis in JSON format with the following structure:
     ]
 }}
 
-Only include the top 20-30 most important files, focusing on quality over quantity."#,
-        file_summary
+Only include the top 20-30 most important files, focusing on quality over quantity."#
     );
 
     // Use Claude to analyze
@@ -552,7 +551,7 @@ async fn handle_database_command(
 
     // Check if input directory exists
     if !input_dir.exists() {
-        return Err(format!("Input directory does not exist: {:?}", input_dir).into());
+        return Err(format!("Input directory does not exist: {input_dir:?}").into());
     }
 
     // Initialize database connection
@@ -571,7 +570,7 @@ async fn handle_database_command(
     }
 
     if json_files.is_empty() {
-        return Err(format!("No JSON files found in {:?}", input_dir).into());
+        return Err(format!("No JSON files found in {input_dir:?}").into());
     }
 
     info!("📄 Found {} JSON files to process", json_files.len());
@@ -596,9 +595,9 @@ async fn handle_database_command(
         println!();
         println!("🔍 SUMMARY:");
         println!("  📄 Documents to insert: {}", documents.len());
-        println!("  📁 Source directory: {:?}", input_dir);
-        println!("  🏷️ Document type: {}", doc_type);
-        println!("  🏷️ Source name: {}", source_name);
+        println!("  📁 Source directory: {input_dir:?}");
+        println!("  🏷️ Document type: {doc_type}");
+        println!("  🏷️ Source name: {source_name}");
         println!();
         println!("⚠️ This will insert all documents into the database.");
         println!("Do you want to continue? (y/N): ");
@@ -620,7 +619,7 @@ async fn handle_database_command(
     for (i, batch) in documents.chunks(batch_size).enumerate() {
         info!("📦 Processing batch {} of {} (size: {})",
               i + 1,
-              (documents.len() + batch_size - 1) / batch_size,
+              documents.len().div_ceil(batch_size),
               batch.len());
 
         match DocumentQueries::batch_insert_documents(pool.pool(), batch).await {
@@ -638,12 +637,12 @@ async fn handle_database_command(
     // Final summary
     println!();
     println!("📊 DATABASE INSERTION COMPLETE:");
-    println!("  ✅ Documents inserted: {}", inserted_count);
+    println!("  ✅ Documents inserted: {inserted_count}");
     if failed_count > 0 {
-        println!("  ❌ Documents failed: {}", failed_count);
+        println!("  ❌ Documents failed: {failed_count}");
     }
     println!("  📄 Total processed: {}", documents.len());
-    println!("  🏷️ Source: {}", source_name);
+    println!("  🏷️ Source: {source_name}");
 
     if failed_count == 0 {
         info!("🎉 All documents successfully inserted into database!");
