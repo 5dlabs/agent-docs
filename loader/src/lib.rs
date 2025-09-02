@@ -11,6 +11,7 @@ pub mod parsers;
 
 pub use loaders::*;
 pub use migration::*;
+pub use parsers::*;
 
 /// Re-export commonly used types
 pub use url::Url;

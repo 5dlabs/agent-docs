@@ -2,9 +2,7 @@
 //!
 //! This module provides comprehensive header handling for the MCP protocol,
 //! including Axum extractors for validation and standardized response header management.
-
 use axum::{
-    async_trait,
     extract::FromRequestParts,
     http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
@@ -81,7 +79,6 @@ pub struct McpProtocolVersionHeader {
     pub version: String,
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for McpProtocolVersionHeader
 where
     S: Send + Sync,
@@ -210,7 +207,6 @@ pub struct ContentTypeValidator {
     pub content_type: String,
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ContentTypeValidator
 where
     S: Send + Sync,
@@ -261,7 +257,6 @@ pub struct AcceptHeaderValidator {
     pub accept_types: Vec<String>,
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for AcceptHeaderValidator
 where
     S: Send + Sync,

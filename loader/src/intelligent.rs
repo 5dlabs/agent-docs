@@ -7,7 +7,7 @@
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use octocrab::Octocrab;
-use pulldown_cmark::{html, Options, Parser};
+
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,6 +17,7 @@ use tracing::{info, warn};
 use url::Url;
 
 use crate::loaders::{DocPage, RateLimiter};
+use crate::parsers::UniversalParser;
 
 /// Document source types for intelligent discovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,7 +29,10 @@ pub enum DocumentSource {
     /// Web page with URL
     WebPage { url: String },
     /// API documentation with base URL and optional spec URL
-    ApiDocs { base_url: String, spec_url: Option<String> },
+    ApiDocs {
+        base_url: String,
+        spec_url: Option<String>,
+    },
     /// Local file path
     LocalFile { path: PathBuf },
     /// Raw markdown content
@@ -128,6 +132,8 @@ pub struct ClaudeIntelligentLoader {
     rate_limiter: RateLimiter,
     /// GitHub API client
     github_client: Octocrab,
+    /// Universal parser for multiple document formats
+    parser: UniversalParser,
 }
 
 impl ClaudeIntelligentLoader {
@@ -145,6 +151,7 @@ impl ClaudeIntelligentLoader {
                 warn!("Failed to create GitHub client, using anonymous access");
                 Octocrab::default()
             }),
+            parser: UniversalParser::new(2000, 200),
         }
     }
 
@@ -173,7 +180,10 @@ impl ClaudeIntelligentLoader {
     }
 
     /// Build the analysis prompt for Claude
-    fn build_analysis_prompt(repo_info: &octocrab::models::Repository, repo_tree: &[String]) -> String {
+    fn build_analysis_prompt(
+        repo_info: &octocrab::models::Repository,
+        repo_tree: &[String],
+    ) -> String {
         format!(
             r#"Analyze this GitHub repository and identify all relevant documentation:
 
@@ -224,12 +234,15 @@ Return your analysis in JSON format with the following structure:
             repo_info.name.clone(),
             repo_info.description.as_deref().unwrap_or("No description"),
             repo_info.topics.clone().unwrap_or_default().join(", "),
-            repo_info.language
+            repo_info
+                .language
                 .as_ref()
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unknown"),
             repo_info.stargazers_count.unwrap_or(0),
-            repo_info.updated_at.map_or("Unknown".to_string(), |dt| dt.format("%Y-%m-%d").to_string()),
+            repo_info.updated_at.map_or("Unknown".to_string(), |dt| dt
+                .format("%Y-%m-%d")
+                .to_string()),
             repo_tree.join("\n")
         )
     }
@@ -237,7 +250,9 @@ Return your analysis in JSON format with the following structure:
     /// Parse Claude's analysis response
     fn parse_analysis_response(response: &str) -> Result<AnalysisResult> {
         // Try to extract JSON from Claude's response
-        let json_start = response.find('{').ok_or_else(|| anyhow!("No JSON found in response"))?;
+        let json_start = response
+            .find('{')
+            .ok_or_else(|| anyhow!("No JSON found in response"))?;
         let json_content = &response[json_start..];
 
         let analysis: serde_json::Value = serde_json::from_str(json_content)
@@ -270,11 +285,17 @@ Return your analysis in JSON format with the following structure:
             .collect();
 
         let strategy = IngestionStrategy {
-            use_ai_extraction: analysis["strategy"]["use_ai_extraction"].as_bool().unwrap_or(true),
+            use_ai_extraction: analysis["strategy"]["use_ai_extraction"]
+                .as_bool()
+                .unwrap_or(true),
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             batch_size: analysis["strategy"]["batch_size"].as_i64().unwrap_or(10) as usize,
-            include_examples: analysis["strategy"]["include_examples"].as_bool().unwrap_or(true),
-            include_api_refs: analysis["strategy"]["include_api_refs"].as_bool().unwrap_or(true),
+            include_examples: analysis["strategy"]["include_examples"]
+                .as_bool()
+                .unwrap_or(true),
+            include_api_refs: analysis["strategy"]["include_api_refs"]
+                .as_bool()
+                .unwrap_or(true),
             instructions: analysis["strategy"]["instructions"]
                 .as_array()
                 .unwrap_or(&vec![])
@@ -315,7 +336,8 @@ Return your analysis in JSON format with the following structure:
 
     /// Get repository file tree
     async fn get_repository_tree(&self, owner: &str, repo: &str) -> Result<Vec<String>> {
-        let contents = self.github_client
+        let contents = self
+            .github_client
             .repos(owner, repo)
             .get_content()
             .path("")
@@ -333,35 +355,9 @@ Return your analysis in JSON format with the following structure:
         Ok(tree)
     }
 
-    /// Convert markdown to HTML for processing
-    fn markdown_to_html(markdown: &str) -> String {
-        let mut options = Options::empty();
-        options.insert(Options::ENABLE_TABLES);
-        options.insert(Options::ENABLE_FOOTNOTES);
-        options.insert(Options::ENABLE_STRIKETHROUGH);
-        options.insert(Options::ENABLE_TASKLISTS);
 
-        let parser = Parser::new_ext(markdown, options);
-        let mut html_output = String::new();
-        html::push_html(&mut html_output, parser);
-        html_output
-    }
 
-    /// Extract text content from HTML
-    fn extract_text_from_html(html: &str) -> String {
-        use scraper::{Html, Selector};
 
-        let document = Html::parse_document(html);
-        let selector = Selector::parse("body").unwrap_or_else(|_| Selector::parse("*").unwrap());
-
-        let mut text_content = String::new();
-        for element in document.select(&selector) {
-            text_content.push_str(&element.text().collect::<Vec<_>>().join(" "));
-            text_content.push(' ');
-        }
-
-        text_content.trim().to_string()
-    }
 }
 
 impl Default for ClaudeIntelligentLoader {
@@ -386,15 +382,19 @@ impl IntelligentLoader for ClaudeIntelligentLoader {
             for doc_file in analysis.docs_found {
                 if doc_file.priority >= 5.0 {
                     sources.push(DocumentSource::GitHubFile {
-                        url: format!("https://raw.githubusercontent.com/{owner}/{repo}/HEAD/{path}",
-                                   path = doc_file.path),
+                        url: format!(
+                            "https://raw.githubusercontent.com/{owner}/{repo}/HEAD/{path}",
+                            path = doc_file.path
+                        ),
                         path: doc_file.path,
                     });
                 }
             }
 
             // Always include README if not already found
-            if !sources.iter().any(|s| matches!(s, DocumentSource::GitHubFile { path, .. } if path.contains("README"))) {
+            if !sources.iter().any(
+                |s| matches!(s, DocumentSource::GitHubFile { path, .. } if path.contains("README")),
+            ) {
                 sources.push(DocumentSource::GitHubFile {
                     url: format!("https://raw.githubusercontent.com/{owner}/{repo}/HEAD/README.md"),
                     path: "README.md".to_string(),
@@ -455,15 +455,12 @@ Return your classification in JSON format:
 
     async fn extract_relevant(&mut self, source: DocumentSource) -> Result<Vec<DocPage>> {
         match source {
-            DocumentSource::GitHubFile { url, path } => {
-                self.extract_github_file(&url, &path).await
-            }
-            DocumentSource::WebPage { url } => {
-                self.extract_web_page(&url).await
-            }
+            DocumentSource::GitHubFile { url, path } => self.extract_github_file(&url, &path).await,
+            DocumentSource::WebPage { url } => self.extract_web_page(&url).await,
             DocumentSource::GitHubRepo { owner, repo } => {
                 self.extract_repo_readme(&owner, &repo).await
             }
+            DocumentSource::LocalFile { path } => self.extract_local_file(&path).await,
             _ => Err(anyhow!("Unsupported source type for extraction")),
         }
     }
@@ -487,16 +484,12 @@ impl ClaudeIntelligentLoader {
         let response = self.rate_limiter.get(url).await?;
         let content = response.text().await?;
 
+        // Use UniversalParser to parse the content
+        let parsed = self.parser.parse(&content, path).await?;
+
         let doc_page = DocPage {
             url: url.to_string(),
-            content: if std::path::Path::new(path)
-                .extension()
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("md")) {
-                // Convert markdown to text for better processing
-                Self::extract_text_from_html(&Self::markdown_to_html(&content))
-            } else {
-                content
-            },
+            content: parsed.text_content,
             item_type: Self::determine_file_type(path),
             module_path: path.to_string(),
             extracted_at: Utc::now(),
@@ -509,13 +502,37 @@ impl ClaudeIntelligentLoader {
     async fn extract_web_page(&mut self, url: &str) -> Result<Vec<DocPage>> {
         let response = self.rate_limiter.get(url).await?;
         let html_content = response.text().await?;
-        let text_content = Self::extract_text_from_html(&html_content);
+
+        // Use UniversalParser to parse the HTML
+        let parsed = self.parser.parse(&html_content, url).await?;
 
         let doc_page = DocPage {
             url: url.to_string(),
-            content: text_content,
+            content: parsed.text_content,
             item_type: "web_page".to_string(),
             module_path: Url::parse(url)?.path().to_string(),
+            extracted_at: Utc::now(),
+        };
+
+        Ok(vec![doc_page])
+    }
+
+    /// Extract content from a local file
+    async fn extract_local_file(&mut self, path: &PathBuf) -> Result<Vec<DocPage>> {
+        use tokio::fs;
+
+        let content = fs::read_to_string(path).await
+            .map_err(|e| anyhow!("Failed to read local file {}: {}", path.display(), e))?;
+
+        // Use UniversalParser to parse the content
+        let path_str = path.to_string_lossy();
+        let parsed = self.parser.parse(&content, &path_str).await?;
+
+        let doc_page = DocPage {
+            url: format!("file://{}", path.display()),
+            content: parsed.text_content,
+            item_type: Self::determine_file_type(&path_str),
+            module_path: path_str.to_string(),
             extracted_at: Utc::now(),
         };
 

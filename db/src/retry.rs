@@ -125,8 +125,8 @@ impl RetryConfig {
     /// Add jitter to delay to avoid thundering herd
     fn add_jitter(delay: Duration) -> Duration {
         use rand::Rng;
-        let mut rng = rand::thread_rng();
-        let jitter_factor = rng.gen_range(0.5..=1.0);
+        let mut rng = rand::rng();
+        let jitter_factor = rng.random_range(0.5..=1.0);
         Duration::from_secs_f64(delay.as_secs_f64() * jitter_factor)
     }
 }
