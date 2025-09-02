@@ -263,13 +263,19 @@ async fn handle_local_command(
     info!("Found {} potential documentation files", doc_files.len());
 
     if doc_files.is_empty() {
-        info!("No documentation files found with extensions: {}", extensions);
+        info!(
+            "No documentation files found with extensions: {}",
+            extensions
+        );
         return Ok(());
     }
 
     // Use Claude to analyze and prioritize the documentation files
     let prioritized_files = analyze_local_files_with_claude(loader, &doc_files).await?;
-    info!("Claude prioritized {} files for processing", prioritized_files.len());
+    info!(
+        "Claude prioritized {} files for processing",
+        prioritized_files.len()
+    );
 
     // Process the prioritized files
     process_prioritized_files(loader, &prioritized_files, output).await?;
@@ -329,14 +335,16 @@ async fn analyze_local_files_with_claude(
     for (i, file_path) in doc_files.iter().enumerate() {
         if let Some(file_name) = file_path.file_name() {
             if let Some(parent) = file_path.parent() {
-                file_summary.push_str(&format!("{}. {} (in {})\n",
+                file_summary.push_str(&format!(
+                    "{}. {} (in {})\n",
                     i + 1,
                     file_name.to_string_lossy(),
                     parent.display()
                 ));
             }
         }
-        if file_summary.len() > 10000 { // Limit summary size
+        if file_summary.len() > 10000 {
+            // Limit summary size
             file_summary.push_str("... (truncated)\n");
             break;
         }
@@ -386,12 +394,20 @@ async fn process_prioritized_files(
     prioritized_files: &[std::path::PathBuf],
     output: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    info!("🎯 Processing {} prioritized files", prioritized_files.len());
+    info!(
+        "🎯 Processing {} prioritized files",
+        prioritized_files.len()
+    );
 
     let mut all_documents = Vec::new();
 
     for (i, file_path) in prioritized_files.iter().enumerate() {
-        info!("📄 Processing file {}/{}: {}", i + 1, prioritized_files.len(), file_path.display());
+        info!(
+            "📄 Processing file {}/{}: {}",
+            i + 1,
+            prioritized_files.len(),
+            file_path.display()
+        );
 
         // Read the file content
         let content = tokio::fs::read_to_string(file_path).await?;

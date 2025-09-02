@@ -58,8 +58,12 @@ impl LlmClient {
     ///
     /// Returns an error if the Claude API call fails or returns an invalid response.
     pub async fn summarize(&self, text: &str) -> Result<String> {
-        if text.len() > 50000 { // Claude has token limits
-            return Ok(format!("Text too long ({} chars), truncated analysis", text.len()));
+        if text.len() > 50000 {
+            // Claude has token limits
+            return Ok(format!(
+                "Text too long ({} chars), truncated analysis",
+                text.len()
+            ));
         }
 
         let request = ClaudeRequest {
@@ -67,7 +71,10 @@ impl LlmClient {
             max_tokens: 1000,
             messages: vec![ClaudeMessage {
                 role: "user".to_string(),
-                content: format!("Please analyze this text and provide a concise summary:\n\n{}", text),
+                content: format!(
+                    "Please analyze this text and provide a concise summary:\n\n{}",
+                    text
+                ),
             }],
         };
 
