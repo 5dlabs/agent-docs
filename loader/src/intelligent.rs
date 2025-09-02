@@ -467,9 +467,11 @@ Return your classification in JSON format:
                 let (owner, repo) = Self::parse_github_url(&url)?;
                 self.extract_repo_readme(&owner, &repo).await
             }
-            DocumentSource::LocalFile { path, extensions, recursive } => {
-                self.extract_local_file(&path, &extensions, recursive).await
-            }
+            DocumentSource::LocalFile {
+                path,
+                extensions,
+                recursive,
+            } => self.extract_local_file(&path, &extensions, recursive).await,
             _ => Err(anyhow!("Unsupported source type for extraction")),
         }
     }
@@ -507,10 +509,6 @@ impl ClaudeIntelligentLoader {
         Ok(vec![doc_page])
     }
 
-
-
-
-
     /// Extract README from a GitHub repository
     async fn extract_repo_readme(&mut self, owner: &str, repo: &str) -> Result<Vec<DocPage>> {
         let readme_url = format!("https://raw.githubusercontent.com/{owner}/{repo}/HEAD/README.md");
@@ -527,15 +525,20 @@ impl ClaudeIntelligentLoader {
             DocumentSource::GithubRepo { url, docs_only } => {
                 self.extract_github_repo(&url, docs_only).await
             }
-            DocumentSource::GithubFile { url, path } => {
-                self.extract_github_file(&url, &path).await
+            DocumentSource::GithubFile { url, path } => self.extract_github_file(&url, &path).await,
+            DocumentSource::WebPage {
+                url,
+                max_depth,
+                follow_external,
+            } => {
+                self.extract_web_page(&url, max_depth, follow_external)
+                    .await
             }
-            DocumentSource::WebPage { url, max_depth, follow_external } => {
-                self.extract_web_page(&url, max_depth, follow_external).await
-            }
-            DocumentSource::LocalFile { path, extensions, recursive } => {
-                self.extract_local_file(&path, &extensions, recursive).await
-            }
+            DocumentSource::LocalFile {
+                path,
+                extensions,
+                recursive,
+            } => self.extract_local_file(&path, &extensions, recursive).await,
             DocumentSource::ApiDocs { base_url, spec_url } => {
                 self.extract_api_docs(&base_url, spec_url.as_deref()).await
             }
@@ -547,7 +550,10 @@ impl ClaudeIntelligentLoader {
 
     /// Extract documents from a GitHub repository
     async fn extract_github_repo(&mut self, url: &str, docs_only: bool) -> Result<Vec<DocPage>> {
-        info!("Extracting GitHub repository: {} (docs_only: {})", url, docs_only);
+        info!(
+            "Extracting GitHub repository: {} (docs_only: {})",
+            url, docs_only
+        );
 
         // Parse repository URL
         let (owner, repo) = Self::parse_github_url(url)?;
@@ -574,8 +580,16 @@ impl ClaudeIntelligentLoader {
     }
 
     /// Extract documents from a web page
-    async fn extract_web_page(&mut self, url: &str, max_depth: usize, follow_external: bool) -> Result<Vec<DocPage>> {
-        info!("Extracting web page: {} (max_depth: {}, follow_external: {})", url, max_depth, follow_external);
+    async fn extract_web_page(
+        &mut self,
+        url: &str,
+        max_depth: usize,
+        follow_external: bool,
+    ) -> Result<Vec<DocPage>> {
+        info!(
+            "Extracting web page: {} (max_depth: {}, follow_external: {})",
+            url, max_depth, follow_external
+        );
 
         // For now, just extract the single page
         // TODO: Implement crawling with depth and external link following
@@ -596,11 +610,20 @@ impl ClaudeIntelligentLoader {
     }
 
     /// Extract documents from local files
-    async fn extract_local_file(&mut self, path: &PathBuf, extensions: &[String], recursive: bool) -> Result<Vec<DocPage>> {
-        info!("Extracting local files from: {:?} (recursive: {})", path, recursive);
+    async fn extract_local_file(
+        &mut self,
+        path: &PathBuf,
+        extensions: &[String],
+        recursive: bool,
+    ) -> Result<Vec<DocPage>> {
+        info!(
+            "Extracting local files from: {:?} (recursive: {})",
+            path, recursive
+        );
 
         let mut docs = Vec::new();
-        self.extract_local_files_recursive(path, extensions, recursive, &mut docs).await?;
+        self.extract_local_files_recursive(path, extensions, recursive, &mut docs)
+            .await?;
 
         Ok(docs)
     }
@@ -634,7 +657,13 @@ impl ClaudeIntelligentLoader {
             let mut entries = tokio::fs::read_dir(path).await?;
             while let Some(entry) = entries.next_entry().await? {
                 let entry_path = entry.path();
-                Box::pin(self.extract_local_files_recursive(&entry_path, extensions, recursive, docs)).await?;
+                Box::pin(self.extract_local_files_recursive(
+                    &entry_path,
+                    extensions,
+                    recursive,
+                    docs,
+                ))
+                .await?;
             }
         }
 
@@ -652,7 +681,11 @@ impl ClaudeIntelligentLoader {
     }
 
     /// Extract API documentation
-    async fn extract_api_docs(&mut self, base_url: &str, spec_url: Option<&str>) -> Result<Vec<DocPage>> {
+    async fn extract_api_docs(
+        &mut self,
+        base_url: &str,
+        spec_url: Option<&str>,
+    ) -> Result<Vec<DocPage>> {
         info!("Extracting API docs from: {}", base_url);
 
         let url = spec_url.unwrap_or(base_url);
@@ -692,20 +725,27 @@ impl ClaudeIntelligentLoader {
     /// Check if file is a documentation file
     fn is_documentation_file(path: &str) -> bool {
         let path_lower = path.to_lowercase();
-        path_lower.contains("readme") ||
-        path_lower.contains("docs/") ||
-        path_lower.contains("documentation") ||
-        path_lower.starts_with("docs") ||
-        path_lower.contains("guide") ||
-        path_lower.contains("tutorial") ||
-        matches!(path_lower.as_str(),
-            "license" | "license.md" | "license.txt" |
-            "contributing" | "contributing.md" |
-            "changelog" | "changelog.md" |
-            "changelog.txt" |
-            "api" | "api.md" |
-            "architecture" | "architecture.md"
-        )
+        path_lower.contains("readme")
+            || path_lower.contains("docs/")
+            || path_lower.contains("documentation")
+            || path_lower.starts_with("docs")
+            || path_lower.contains("guide")
+            || path_lower.contains("tutorial")
+            || matches!(
+                path_lower.as_str(),
+                "license"
+                    | "license.md"
+                    | "license.txt"
+                    | "contributing"
+                    | "contributing.md"
+                    | "changelog"
+                    | "changelog.md"
+                    | "changelog.txt"
+                    | "api"
+                    | "api.md"
+                    | "architecture"
+                    | "architecture.md"
+            )
     }
 
     /// Determine file type from path

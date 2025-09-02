@@ -10,8 +10,8 @@ use tracing::{info, Level};
 use tracing_subscriber::fmt;
 
 use loader::intelligent::{ClaudeIntelligentLoader, DocumentSource};
-use loader::parsers::UniversalParser;
 use loader::loaders::RateLimiter;
+use loader::parsers::UniversalParser;
 
 /// AI-enabled Document Ingestion CLI
 #[derive(Parser)]
@@ -112,10 +112,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     // Initialize logging
-    let log_level = if cli.verbose { Level::DEBUG } else { Level::INFO };
-    fmt()
-        .with_max_level(log_level)
-        .init();
+    let log_level = if cli.verbose {
+        Level::DEBUG
+    } else {
+        Level::INFO
+    };
+    fmt().with_max_level(log_level).init();
 
     info!("🚀 Starting AI Document Ingestion CLI");
 
@@ -126,14 +128,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Execute the requested command
     match cli.command {
-        Commands::Github { url, path, docs_only, output } => {
-            handle_github_command(&mut loader, &url, path.as_deref(), docs_only, output.as_path()).await?;
+        Commands::Github {
+            url,
+            path,
+            docs_only,
+            output,
+        } => {
+            handle_github_command(
+                &mut loader,
+                &url,
+                path.as_deref(),
+                docs_only,
+                output.as_path(),
+            )
+            .await?;
         }
-        Commands::Web { url, max_depth, follow_external, output } => {
-            handle_web_command(&mut loader, &url, max_depth, follow_external, output.as_path()).await?;
+        Commands::Web {
+            url,
+            max_depth,
+            follow_external,
+            output,
+        } => {
+            handle_web_command(
+                &mut loader,
+                &url,
+                max_depth,
+                follow_external,
+                output.as_path(),
+            )
+            .await?;
         }
-        Commands::Local { path, extensions, recursive, output } => {
-            handle_local_command(&mut loader, path.as_path(), &extensions, recursive, output.as_path()).await?;
+        Commands::Local {
+            path,
+            extensions,
+            recursive,
+            output,
+        } => {
+            handle_local_command(
+                &mut loader,
+                path.as_path(),
+                &extensions,
+                recursive,
+                output.as_path(),
+            )
+            .await?;
         }
         Commands::Interactive { config, output } => {
             handle_interactive_command(&mut loader, config.as_deref(), output.as_path()).await?;
@@ -250,7 +288,11 @@ async fn process_and_save_documents(
     // Ensure output directory exists
     tokio::fs::create_dir_all(output_dir).await?;
 
-    info!("💾 Saving {} documents to {:?}", documents.len(), output_dir);
+    info!(
+        "💾 Saving {} documents to {:?}",
+        documents.len(),
+        output_dir
+    );
 
     for (i, doc) in documents.iter().enumerate() {
         let filename = format!("{:04}_{}.json", i + 1, sanitize_filename(&doc.module_path));
