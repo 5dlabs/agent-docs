@@ -42,3 +42,4 @@ EXPOSE 3001
 
 # Run the MCP server
 CMD ["./http_server"]# Force rebuild 1756778676
+RUN echo "Build timestamp: 1756779025"
