@@ -152,7 +152,7 @@ async fn test_dynamic_tool_invocation() {
     let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
 
     if database_url == "mock" || database_url.is_empty() {
-        eprintln!("Skipping dynamic tool invocation test - no test database available (database_url: '{}')", database_url);
+        eprintln!("Skipping dynamic tool invocation test - no test database available (database_url: '{database_url}')");
     } else {
         // In CI environments, database might not be accessible - try to connect with shorter timeout
         match timeout(
