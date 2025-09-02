@@ -502,7 +502,11 @@ impl DocumentQueries {
         .await?;
 
         // Debug logging
-        info!("doc_type_vector_search: Found {} documents for doc_type '{}'", rows.len(), doc_type);
+        info!(
+            "doc_type_vector_search: Found {} documents for doc_type '{}'",
+            rows.len(),
+            doc_type
+        );
 
         let docs = rows
             .into_iter()
