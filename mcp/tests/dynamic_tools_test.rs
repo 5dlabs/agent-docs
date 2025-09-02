@@ -194,8 +194,8 @@ async fn test_dynamic_tool_invocation() {
                 }
 
                 // Check if response is ok - if not, this might be expected in CI
-                if !response.is_ok() {
-                    let err = response.as_ref().unwrap_err();
+                if response.is_err() {
+                    let err = response.unwrap_err();
                     eprintln!("DEBUG: Tool returned error: {err}");
 
                     // In CI, database might not be available - this is acceptable
