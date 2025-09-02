@@ -549,7 +549,10 @@ impl DocumentQueries {
         filters: &MetadataFilters,
     ) -> Result<Vec<Document>> {
         // Build dynamic WHERE clause based on provided filters
-        let mut query_parts = vec!["doc_type = $1::doc_type".to_string(), "(content ILIKE $2 OR doc_path ILIKE $2)".to_string()];
+        let mut query_parts = vec![
+            "doc_type = $1::doc_type".to_string(),
+            "(content ILIKE $2 OR doc_path ILIKE $2)".to_string(),
+        ];
         let mut bind_count = 3;
 
         // Add metadata filters using JSONB operators
