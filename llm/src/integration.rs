@@ -2,7 +2,7 @@
 //!
 //! This module provides practical examples of how to integrate the enhanced
 //! LLM client with document processing workflows, combining Claude Code
-//! text generation with OpenAI embeddings.
+//! text generation with `OpenAI` embeddings.
 
 use anyhow::Result;
 use std::collections::HashMap;
@@ -70,10 +70,8 @@ impl EnhancedDocumentProcessor {
 
         // Step 3: Extract keywords and metadata
         let keywords = self.extract_keywords(&content).await?;
-        let metadata = self.extract_metadata(&content).await?;
-
-        // Step 4: Calculate document quality score
-        let quality_score = self.calculate_quality_score(&content, &summary).await?;
+        let metadata = self.extract_metadata(&content)?;
+        let quality_score = self.calculate_quality_score(&content, &summary)?;
 
         // Step 5: Add to search index if available
         if let Some(ref search_engine) = self.search_engine {
@@ -125,8 +123,8 @@ impl EnhancedDocumentProcessor {
 
             // Extract basic metadata
             let keywords = self.extract_keywords(&content).await?;
-            let metadata = self.extract_metadata(&content).await?;
-            let quality_score = self.calculate_quality_score(&content, &summary).await?;
+            let metadata = self.extract_metadata(&content)?;
+            let quality_score = self.calculate_quality_score(&content, &summary)?;
 
             let processed_doc = ProcessedDocument {
                 id: doc_id.clone(),
@@ -238,7 +236,7 @@ impl EnhancedDocumentProcessor {
     }
 
     /// Extract metadata from document
-    async fn extract_metadata(&self, _content: &str) -> Result<HashMap<String, String>> {
+    fn extract_metadata(&self, _content: &str) -> Result<HashMap<String, String>> {
         // This could be enhanced to extract more sophisticated metadata
         let mut metadata = HashMap::new();
         metadata.insert("processed_at".to_string(), chrono::Utc::now().to_rfc3339());
@@ -250,13 +248,15 @@ impl EnhancedDocumentProcessor {
     }
 
     /// Calculate document quality score
-    async fn calculate_quality_score(&self, content: &str, summary: &str) -> Result<f32> {
+    fn calculate_quality_score(&self, content: &str, summary: &str) -> Result<f32> {
         // Simple quality scoring based on content length and summary coherence
+        #[allow(clippy::cast_precision_loss)]
         let content_length_score = (content.len() as f32 / 1000.0).min(1.0);
+        #[allow(clippy::cast_precision_loss)]
         let summary_length_score = (summary.len() as f32 / 200.0).min(1.0);
 
         // Could be enhanced with more sophisticated LLM-based quality assessment
-        Ok((content_length_score + summary_length_score) / 2.0)
+        Ok(f32::midpoint(content_length_score, summary_length_score))
     }
 
     /// Check if content appears to be code
@@ -279,7 +279,7 @@ impl EnhancedDocumentProcessor {
             llm_provider: self.llm_client.config().provider.clone(),
             embedding_service_stats: self.embedding_service.get_stats(),
             search_enabled: self.search_engine.is_some(),
-            search_stats: self.search_engine.as_ref().map(|se| se.get_stats()),
+            search_stats: self.search_engine.as_ref().map(HybridSearchEngine::get_stats),
         }
     }
 }
@@ -333,9 +333,14 @@ pub struct ProcessingStats {
 
 /// Example usage in a document processing pipeline
 pub mod examples {
-    use super::*;
+    use super::{EnhancedDocumentProcessor, ProcessedDocument, Result};
+    use std::collections::HashMap;
 
     /// Example: Process GitHub repository documentation
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if document processing fails.
     pub async fn process_github_repo_example() -> Result<()> {
         let processor = EnhancedDocumentProcessor::new()?;
 
@@ -385,6 +390,10 @@ pub mod examples {
     }
 
     /// Example: Batch processing multiple documents
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if batch processing fails.
     pub async fn batch_processing_example() -> Result<()> {
         let processor = EnhancedDocumentProcessor::new()?;
 
@@ -413,6 +422,10 @@ pub mod examples {
     }
 
     /// Example: Similarity search
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if similarity search fails.
     pub async fn similarity_search_example() -> Result<()> {
         let processor = EnhancedDocumentProcessor::new()?;
 
@@ -456,7 +469,7 @@ pub mod examples {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{EnhancedDocumentProcessor, ProcessedDocument};
 
     #[tokio::test]
     async fn test_document_processing() {

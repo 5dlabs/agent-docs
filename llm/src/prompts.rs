@@ -201,7 +201,7 @@ impl PromptBuilder {
         prompt
     }
 
-    /// Build for OpenAI API format
+    /// Build for `OpenAI` API format
     #[must_use]
     pub fn build_for_openai(&self) -> Vec<Message> {
         self.build()

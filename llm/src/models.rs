@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub enum LlmProvider {
     /// Claude Code (local binary execution)
     ClaudeCode,
-    /// OpenAI models
+    /// `OpenAI` models
     OpenAI,
 }
 
@@ -53,7 +53,7 @@ impl ModelConfig {
         }
     }
 
-    /// Create an OpenAI configuration
+    /// Create an `OpenAI` configuration
     #[must_use]
     pub fn openai(api_key: String) -> Self {
         Self {

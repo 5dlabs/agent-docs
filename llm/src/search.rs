@@ -137,7 +137,7 @@ impl HybridSearchEngine {
         let mut results = Vec::new();
         for (doc_id, semantic_score, keyword_score, combined_score) in combined_results {
             let matched_keywords = self.find_matched_keywords(&doc_id, &query_keywords);
-            let preview = self.generate_preview(&doc_id, query)?;
+            let preview = self.generate_preview(&doc_id, query);
 
             results.push(SearchResult {
                 document_id: doc_id,
@@ -184,7 +184,9 @@ impl HybridSearchEngine {
         // Calculate BM25-style scores for each document
         for keyword in keywords {
             if let Some(doc_ids) = self.inverted_index.get(keyword) {
+                #[allow(clippy::cast_precision_loss)]
                 let df = doc_ids.len() as f32; // Document frequency
+                #[allow(clippy::cast_precision_loss)]
                 let n = self.documents.len() as f32; // Total documents
                 let idf = ((n - df + 0.5) / (df + 0.5) + 1.0).ln(); // IDF
 
@@ -243,8 +245,8 @@ impl HybridSearchEngine {
     }
 
     /// Extract keywords from query text
-    fn extract_keywords(&self, query: &str) -> Vec<String> {
-        query
+    fn extract_keywords(&self, _query: &str) -> Vec<String> {
+        _query
             .to_lowercase()
             .split_whitespace()
             .filter(|word| word.len() > 2) // Filter out short words
@@ -269,7 +271,9 @@ impl HybridSearchEngine {
     /// Calculate term frequency for a document and keyword
     fn term_frequency(&self, doc_id: &str, keyword: &str) -> f32 {
         if let Some(content) = self.document_content.get(doc_id) {
+            #[allow(clippy::cast_precision_loss)]
             let total_words = content.split_whitespace().count() as f32;
+            #[allow(clippy::cast_precision_loss)]
             let keyword_count = content
                 .to_lowercase()
                 .matches(&keyword.to_lowercase())
@@ -300,7 +304,7 @@ impl HybridSearchEngine {
     }
 
     /// Generate preview text around matched content
-    fn generate_preview(&self, doc_id: &str, query: &str) -> Result<String> {
+    fn generate_preview(&self, doc_id: &str, query: &str) -> String {
         if let Some(content) = self.document_content.get(doc_id) {
             // Find first occurrence of query terms
             let query_lower = query.to_lowercase();
@@ -309,18 +313,19 @@ impl HybridSearchEngine {
                 let end = (pos + query.len() + 100).min(content.len());
 
                 let preview = &content[start..end];
-                Ok(format!("...{}...", preview.trim()))
+                format!("...{}...", preview.trim())
             } else {
                 // Fallback to first 200 characters
-                Ok(format!("{}...", &content[..content.len().min(200)]))
+                format!("{}...", &content[..content.len().min(200)])
             }
         } else {
-            Ok("Preview not available".to_string())
+            "Preview not available".to_string()
         }
     }
 
     /// Get search statistics
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn get_stats(&self) -> SearchStats {
         SearchStats {
             total_documents: self.documents.len(),

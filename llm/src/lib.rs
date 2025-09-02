@@ -2,7 +2,7 @@
 //!
 //! This crate provides integration with language models for summarizing
 //! search results and processing user queries. Supports both Claude Code
-//! (local binary execution) and OpenAI API with embedding capabilities.
+//! (local binary execution) and `OpenAI` API with embedding capabilities.
 
 pub mod client;
 pub mod embeddings;

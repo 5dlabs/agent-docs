@@ -12,7 +12,7 @@ use tracing::debug;
 
 use crate::models::{LlmProvider, LlmResponse, Message, ModelConfig, Usage};
 
-/// OpenAI API request structure
+/// `OpenAI` API request structure
 #[derive(Debug, Serialize)]
 struct OpenAiRequest {
     model: String,
@@ -21,7 +21,7 @@ struct OpenAiRequest {
     temperature: Option<f32>,
 }
 
-/// OpenAI Embeddings API request structure
+/// `OpenAI` Embeddings API request structure
 #[derive(Debug, Serialize)]
 struct OpenAiEmbeddingRequest {
     input: String,
@@ -36,14 +36,14 @@ struct OpenAiMessage {
     content: String,
 }
 
-/// OpenAI API response structure
+/// `OpenAI` API response structure
 #[derive(Debug, Deserialize)]
 struct OpenAiResponse {
     choices: Vec<OpenAiChoice>,
     usage: Option<OpenAiUsage>,
 }
 
-/// OpenAI Embeddings API response structure
+/// `OpenAI` Embeddings API response structure
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiEmbeddingResponse {
@@ -53,7 +53,7 @@ struct OpenAiEmbeddingResponse {
     usage: Option<OpenAiEmbeddingUsage>,
 }
 
-/// Embedding data from OpenAI
+/// Embedding data from `OpenAI`
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct EmbeddingData {
@@ -81,13 +81,14 @@ struct OpenAiMessageResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(clippy::struct_field_names)]
 struct OpenAiUsage {
     prompt_tokens: Option<u32>,
     completion_tokens: Option<u32>,
     total_tokens: Option<u32>,
 }
 
-/// LLM client supporting both Claude Code and OpenAI
+/// LLM client supporting both Claude Code and `OpenAI`
 #[derive(Clone)]
 pub struct LlmClient {
     config: ModelConfig,
@@ -186,7 +187,7 @@ impl LlmClient {
         })
     }
 
-    /// Execute using OpenAI API
+    /// Execute using `OpenAI` API
     async fn execute_openai(&self, messages: Vec<Message>) -> Result<LlmResponse> {
         let api_key = self
             .config
@@ -229,8 +230,7 @@ impl LlmClient {
         let content = openai_response
             .choices
             .first()
-            .map(|choice| choice.message.content.clone())
-            .unwrap_or_else(|| "No response from OpenAI".to_string());
+            .map_or_else(|| "No response from `OpenAI`".to_string(), |choice| choice.message.content.clone());
 
         // Convert usage statistics
         let usage = openai_response.usage.map(|u| Usage {
@@ -388,7 +388,7 @@ impl LlmClient {
         &self.config
     }
 
-    /// Generate embeddings for text using OpenAI
+    /// Generate embeddings for text using `OpenAI`
     ///
     /// # Errors
     ///
@@ -406,7 +406,7 @@ impl LlmClient {
         }
     }
 
-    /// Generate embeddings using OpenAI Embeddings API
+    /// Generate embeddings using `OpenAI` Embeddings API
     async fn generate_openai_embedding(&self, text: &str) -> Result<Vec<f32>> {
         let api_key = self
             .config
@@ -422,6 +422,7 @@ impl LlmClient {
         }
 
         // Estimate token count (rough approximation)
+        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
         let estimated_tokens = (text.len() as f64 * 0.25) as u32;
         if estimated_tokens > 8191 {
             return Err(anyhow!(
@@ -578,7 +579,7 @@ impl LlmClient {
         }
     }
 
-    /// Generate optimized embeddings using OpenAI
+    /// Generate optimized embeddings using `OpenAI`
     async fn generate_openai_embedding_optimized(
         &self,
         text: &str,
@@ -593,8 +594,7 @@ impl LlmClient {
 
         let (model, dimensions) = match use_case {
             EmbeddingUseCase::SemanticSearch => ("text-embedding-3-large", Some(3072)),
-            EmbeddingUseCase::CodeSearch => ("text-embedding-3-small", Some(1536)),
-            EmbeddingUseCase::Classification => ("text-embedding-3-small", Some(1536)),
+            EmbeddingUseCase::CodeSearch | EmbeddingUseCase::Classification => ("text-embedding-3-small", Some(1536)),
             EmbeddingUseCase::Clustering => ("text-embedding-3-large", Some(1024)),
         };
 
