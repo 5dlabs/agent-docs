@@ -77,7 +77,10 @@ impl HybridSearchEngine {
     ///
     /// Returns an error if batch processing fails.
     pub async fn add_documents_batch(&mut self, documents: Vec<(String, String)>) -> Result<()> {
-        let contents: Vec<String> = documents.iter().map(|(_, content)| content.clone()).collect();
+        let contents: Vec<String> = documents
+            .iter()
+            .map(|(_, content)| content.clone())
+            .collect();
         let embeddings = self.embedding_service.embed_texts(&contents).await?;
 
         for ((id, content), embedding) in documents.into_iter().zip(embeddings) {
@@ -227,7 +230,8 @@ impl HybridSearchEngine {
         let mut results: Vec<(String, f32, f32, f32)> = combined_scores
             .into_iter()
             .map(|(doc_id, (semantic_score, keyword_score, _))| {
-                let combined_score = semantic_weight * semantic_score + keyword_weight * keyword_score;
+                let combined_score =
+                    semantic_weight * semantic_score + keyword_weight * keyword_score;
                 (doc_id, semantic_score, keyword_score, combined_score)
             })
             .collect();
@@ -324,7 +328,11 @@ impl HybridSearchEngine {
             avg_document_length: if self.documents.is_empty() {
                 0.0
             } else {
-                self.documents.values().map(|d| d.token_count as f64).sum::<f64>() / self.documents.len() as f64
+                self.documents
+                    .values()
+                    .map(|d| d.token_count as f64)
+                    .sum::<f64>()
+                    / self.documents.len() as f64
             },
         }
     }
@@ -396,11 +404,26 @@ mod tests {
         let mut search_engine = HybridSearchEngine::new(embedding_service);
 
         // Add some test documents
-        search_engine.add_document("doc1".to_string(), "This is a test document about machine learning".to_string()).await.unwrap();
-        search_engine.add_document("doc2".to_string(), "Another document discussing artificial intelligence".to_string()).await.unwrap();
+        search_engine
+            .add_document(
+                "doc1".to_string(),
+                "This is a test document about machine learning".to_string(),
+            )
+            .await
+            .unwrap();
+        search_engine
+            .add_document(
+                "doc2".to_string(),
+                "Another document discussing artificial intelligence".to_string(),
+            )
+            .await
+            .unwrap();
 
         // Perform search
-        let results = search_engine.search("machine learning", 5, 0.7, 0.3).await.unwrap();
+        let results = search_engine
+            .search("machine learning", 5, 0.7, 0.3)
+            .await
+            .unwrap();
 
         // Should find results
         assert!(!results.is_empty());

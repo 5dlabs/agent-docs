@@ -90,7 +90,7 @@ impl PromptBuilder {
         // Summarization template
         let summary_template = PromptTemplate::new(
             "summarize",
-            "Please analyze this text and provide a concise summary:\n\n{text}"
+            "Please analyze this text and provide a concise summary:\n\n{text}",
         );
 
         // Code analysis template
@@ -103,13 +103,19 @@ impl PromptBuilder {
         // Documentation template
         let docs_template = PromptTemplate::new(
             "document_analysis",
-            "Analyze this documentation and extract key information:\n\n{content}\n\n{focus}"
+            "Analyze this documentation and extract key information:\n\n{content}\n\n{focus}",
         )
-        .with_default("focus", "Focus on API endpoints, configuration options, and usage examples.");
+        .with_default(
+            "focus",
+            "Focus on API endpoints, configuration options, and usage examples.",
+        );
 
-        self.templates.insert("summarize".to_string(), summary_template);
-        self.templates.insert("analyze_code".to_string(), code_template);
-        self.templates.insert("document_analysis".to_string(), docs_template);
+        self.templates
+            .insert("summarize".to_string(), summary_template);
+        self.templates
+            .insert("analyze_code".to_string(), code_template);
+        self.templates
+            .insert("document_analysis".to_string(), docs_template);
     }
 
     /// Add a custom template

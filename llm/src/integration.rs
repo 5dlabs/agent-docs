@@ -44,19 +44,26 @@ impl EnhancedDocumentProcessor {
     /// # Errors
     ///
     /// Returns an error if document processing fails.
-    pub async fn process_document(&self, doc_id: String, content: String) -> Result<ProcessedDocument> {
+    pub async fn process_document(
+        &self,
+        doc_id: String,
+        content: String,
+    ) -> Result<ProcessedDocument> {
         // Step 1: Use Claude Code to analyze and summarize the document
         let summary = self.llm_client.summarize(&content).await?;
 
         // Step 2: Generate embeddings for different use cases
-        let semantic_embedding = self.embedding_service
+        let semantic_embedding = self
+            .embedding_service
             .embed_text_optimized(&content, EmbeddingUseCase::SemanticSearch)
             .await?;
 
         let code_embedding = if self.is_code_content(&content) {
-            Some(self.embedding_service
-                .embed_text_optimized(&content, EmbeddingUseCase::CodeSearch)
-                .await?)
+            Some(
+                self.embedding_service
+                    .embed_text_optimized(&content, EmbeddingUseCase::CodeSearch)
+                    .await?,
+            )
         } else {
             None
         };
@@ -71,8 +78,8 @@ impl EnhancedDocumentProcessor {
         // Step 5: Add to search index if available
         if let Some(ref search_engine) = self.search_engine {
             let search_engine = search_engine.clone(); // Clone for access
-            // Note: In a real implementation, you'd want to modify the search engine
-            // This is a simplified example
+                                                       // Note: In a real implementation, you'd want to modify the search engine
+                                                       // This is a simplified example
             let _ = search_engine;
         }
 
@@ -94,17 +101,25 @@ impl EnhancedDocumentProcessor {
     /// # Errors
     ///
     /// Returns an error if batch processing fails.
-    pub async fn process_documents_batch(&self, documents: Vec<(String, String)>) -> Result<Vec<ProcessedDocument>> {
+    pub async fn process_documents_batch(
+        &self,
+        documents: Vec<(String, String)>,
+    ) -> Result<Vec<ProcessedDocument>> {
         let mut processed_docs = Vec::new();
 
         // Extract content for batch embedding
-        let contents: Vec<String> = documents.iter().map(|(_, content)| content.clone()).collect();
+        let contents: Vec<String> = documents
+            .iter()
+            .map(|(_, content)| content.clone())
+            .collect();
 
         // Generate embeddings in batch (more efficient)
         let semantic_embeddings = self.embedding_service.embed_texts(&contents).await?;
 
         // Process each document with LLM analysis
-        for ((doc_id, content), semantic_embedding) in documents.into_iter().zip(semantic_embeddings) {
+        for ((doc_id, content), semantic_embedding) in
+            documents.into_iter().zip(semantic_embeddings)
+        {
             // Generate summary using Claude Code
             let summary = self.llm_client.summarize(&content).await?;
 
@@ -143,7 +158,9 @@ impl EnhancedDocumentProcessor {
     ) -> Result<Vec<crate::search::SearchResult>> {
         if let Some(ref search_engine) = self.search_engine {
             let config = SearchConfig::default();
-            search_engine.search(query, limit, config.semantic_weight, config.keyword_weight).await
+            search_engine
+                .search(query, limit, config.semantic_weight, config.keyword_weight)
+                .await
         } else {
             Err(anyhow::anyhow!("Search engine not available"))
         }
@@ -165,7 +182,8 @@ impl EnhancedDocumentProcessor {
         let mut similarities: Vec<(ProcessedDocument, f32)> = documents
             .iter()
             .map(|doc| {
-                let similarity = LlmClient::cosine_similarity(&query_embedding, &doc.semantic_embedding);
+                let similarity =
+                    LlmClient::cosine_similarity(&query_embedding, &doc.semantic_embedding);
                 (doc.clone(), similarity)
             })
             .collect();
@@ -224,7 +242,10 @@ impl EnhancedDocumentProcessor {
         // This could be enhanced to extract more sophisticated metadata
         let mut metadata = HashMap::new();
         metadata.insert("processed_at".to_string(), chrono::Utc::now().to_rfc3339());
-        metadata.insert("processor_version".to_string(), env!("CARGO_PKG_VERSION").to_string());
+        metadata.insert(
+            "processor_version".to_string(),
+            env!("CARGO_PKG_VERSION").to_string(),
+        );
         Ok(metadata)
     }
 
@@ -241,9 +262,14 @@ impl EnhancedDocumentProcessor {
     /// Check if content appears to be code
     fn is_code_content(&self, content: &str) -> bool {
         // Simple heuristic: check for code patterns
-        let code_indicators = ["fn ", "struct ", "impl ", "use ", "mod ", "#[", "```", "let ", "const ", "pub ", "async ", "println!"];
+        let code_indicators = [
+            "fn ", "struct ", "impl ", "use ", "mod ", "#[", "```", "let ", "const ", "pub ",
+            "async ", "println!",
+        ];
 
-        code_indicators.iter().any(|&indicator| content.contains(indicator))
+        code_indicators
+            .iter()
+            .any(|&indicator| content.contains(indicator))
     }
 
     /// Get processing statistics
@@ -363,9 +389,18 @@ pub mod examples {
         let processor = EnhancedDocumentProcessor::new()?;
 
         let documents = vec![
-            ("doc1".to_string(), "This is about artificial intelligence and machine learning.".to_string()),
-            ("doc2".to_string(), "This document covers natural language processing techniques.".to_string()),
-            ("doc3".to_string(), "Here we discuss computer vision and image recognition.".to_string()),
+            (
+                "doc1".to_string(),
+                "This is about artificial intelligence and machine learning.".to_string(),
+            ),
+            (
+                "doc2".to_string(),
+                "This document covers natural language processing techniques.".to_string(),
+            ),
+            (
+                "doc3".to_string(),
+                "Here we discuss computer vision and image recognition.".to_string(),
+            ),
         ];
 
         let processed_docs = processor.process_documents_batch(documents).await?;
@@ -428,7 +463,9 @@ mod tests {
         let processor = EnhancedDocumentProcessor::new().unwrap();
 
         let content = "This is a test document about machine learning and artificial intelligence.";
-        let result = processor.process_document("test".to_string(), content.to_string()).await;
+        let result = processor
+            .process_document("test".to_string(), content.to_string())
+            .await;
 
         // This test will only pass if OpenAI API key is configured
         // Otherwise it will fail gracefully with an error message

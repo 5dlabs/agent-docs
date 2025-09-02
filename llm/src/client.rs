@@ -167,7 +167,10 @@ impl LlmClient {
 
     /// Execute using Claude Code binary
     async fn execute_claude_code(&self, messages: Vec<Message>) -> Result<LlmResponse> {
-        let binary_path = self.config.binary_path.as_ref()
+        let binary_path = self
+            .config
+            .binary_path
+            .as_ref()
             .ok_or_else(|| anyhow!("Claude binary path not configured"))?;
 
         // Convert messages to Claude Code format
@@ -185,7 +188,10 @@ impl LlmClient {
 
     /// Execute using OpenAI API
     async fn execute_openai(&self, messages: Vec<Message>) -> Result<LlmResponse> {
-        let api_key = self.config.api_key.as_ref()
+        let api_key = self
+            .config
+            .api_key
+            .as_ref()
             .ok_or_else(|| anyhow!("OpenAI API key not configured"))?;
 
         // Convert messages to OpenAI format
@@ -251,18 +257,26 @@ impl LlmClient {
             .map_err(|e| anyhow!("Failed to start Claude binary '{}': {}", binary_path, e))?;
 
         // Get stdin handle
-        let mut stdin = child.stdin.take()
+        let mut stdin = child
+            .stdin
+            .take()
             .ok_or_else(|| anyhow!("Failed to get stdin handle"))?;
 
         // Write prompt to stdin
-        stdin.write_all(prompt.as_bytes()).await
+        stdin
+            .write_all(prompt.as_bytes())
+            .await
             .map_err(|e| anyhow!("Failed to write to Claude stdin: {}", e))?;
-        stdin.flush().await
+        stdin
+            .flush()
+            .await
             .map_err(|e| anyhow!("Failed to flush Claude stdin: {}", e))?;
         drop(stdin); // Close stdin to signal end of input
 
         // Read stdout with timeout
-        let stdout = child.stdout.take()
+        let stdout = child
+            .stdout
+            .take()
             .ok_or_else(|| anyhow!("Failed to get stdout handle"))?;
 
         let mut reader = BufReader::new(stdout);
@@ -282,7 +296,9 @@ impl LlmClient {
         }
 
         // Wait for process to complete
-        let status = child.wait().await
+        let status = child
+            .wait()
+            .await
             .map_err(|e| anyhow!("Failed to wait for Claude process: {}", e))?;
 
         if !status.success() {
@@ -383,16 +399,23 @@ impl LlmClient {
             LlmProvider::ClaudeCode => {
                 // Claude Code doesn't provide embeddings directly
                 // Fall back to OpenAI or return an error
-                Err(anyhow!("Claude Code does not support embeddings. Use OpenAI provider."))
+                Err(anyhow!(
+                    "Claude Code does not support embeddings. Use OpenAI provider."
+                ))
             }
         }
     }
 
     /// Generate embeddings using OpenAI Embeddings API
     async fn generate_openai_embedding(&self, text: &str) -> Result<Vec<f32>> {
-        let api_key = self.config.api_key.clone()
+        let api_key = self
+            .config
+            .api_key
+            .clone()
             .or_else(|| std::env::var("OPENAI_API_KEY").ok())
-            .ok_or_else(|| anyhow!("OpenAI API key not configured. Set OPENAI_API_KEY environment variable."))?;
+            .ok_or_else(|| {
+                anyhow!("OpenAI API key not configured. Set OPENAI_API_KEY environment variable.")
+            })?;
 
         if text.trim().is_empty() {
             return Err(anyhow!("Cannot generate embedding for empty text"));
@@ -401,7 +424,10 @@ impl LlmClient {
         // Estimate token count (rough approximation)
         let estimated_tokens = (text.len() as f64 * 0.25) as u32;
         if estimated_tokens > 8191 {
-            return Err(anyhow!("Text too long for embedding (estimated {} tokens, max 8191)", estimated_tokens));
+            return Err(anyhow!(
+                "Text too long for embedding (estimated {} tokens, max 8191)",
+                estimated_tokens
+            ));
         }
 
         let request = OpenAiEmbeddingRequest {
@@ -542,10 +568,13 @@ impl LlmClient {
         use_case: EmbeddingUseCase,
     ) -> Result<Vec<f32>> {
         match self.config.provider {
-            LlmProvider::OpenAI => self.generate_openai_embedding_optimized(text, use_case).await,
-            LlmProvider::ClaudeCode => {
-                Err(anyhow!("Claude Code does not support optimized embeddings. Use OpenAI provider."))
+            LlmProvider::OpenAI => {
+                self.generate_openai_embedding_optimized(text, use_case)
+                    .await
             }
+            LlmProvider::ClaudeCode => Err(anyhow!(
+                "Claude Code does not support optimized embeddings. Use OpenAI provider."
+            )),
         }
     }
 
@@ -555,7 +584,10 @@ impl LlmClient {
         text: &str,
         use_case: EmbeddingUseCase,
     ) -> Result<Vec<f32>> {
-        let api_key = self.config.api_key.clone()
+        let api_key = self
+            .config
+            .api_key
+            .clone()
             .or_else(|| std::env::var("OPENAI_API_KEY").ok())
             .ok_or_else(|| anyhow!("OpenAI API key not configured"))?;
 

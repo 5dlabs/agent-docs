@@ -97,7 +97,9 @@ impl EmbeddingService {
         text: &str,
         use_case: EmbeddingUseCase,
     ) -> Result<Vec<f32>> {
-        self.llm_client.generate_embedding_optimized(text, use_case).await
+        self.llm_client
+            .generate_embedding_optimized(text, use_case)
+            .await
     }
 
     /// Generate embeddings for multiple texts
@@ -138,7 +140,9 @@ impl EmbeddingService {
         corpus: &[String],
         top_k: usize,
     ) -> Result<Vec<(String, f32)>> {
-        self.llm_client.find_most_similar(query, corpus, top_k).await
+        self.llm_client
+            .find_most_similar(query, corpus, top_k)
+            .await
     }
 
     /// Process document with both LLM analysis and embeddings
@@ -151,8 +155,12 @@ impl EmbeddingService {
         let summary = self.llm_client.summarize(content).await?;
 
         // Generate embeddings for both original and summary
-        let content_embedding = self.embed_text_optimized(content, EmbeddingUseCase::SemanticSearch).await?;
-        let summary_embedding = self.embed_text_optimized(&summary, EmbeddingUseCase::SemanticSearch).await?;
+        let content_embedding = self
+            .embed_text_optimized(content, EmbeddingUseCase::SemanticSearch)
+            .await?;
+        let summary_embedding = self
+            .embed_text_optimized(&summary, EmbeddingUseCase::SemanticSearch)
+            .await?;
 
         Ok(DocumentEmbedding {
             content_embedding,

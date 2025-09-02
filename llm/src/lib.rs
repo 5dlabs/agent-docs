@@ -5,16 +5,16 @@
 //! (local binary execution) and OpenAI API with embedding capabilities.
 
 pub mod client;
+pub mod embeddings;
+pub mod integration;
 pub mod models;
 pub mod prompts;
-pub mod embeddings;
 pub mod search;
-pub mod integration;
 
 // Re-export main types
 pub use client::{EmbeddingUseCase, LlmClient};
 pub use embeddings::EmbeddingService;
-pub use models::{LlmProvider, ModelConfig, Message, LlmResponse, Usage};
+pub use integration::EnhancedDocumentProcessor;
+pub use models::{LlmProvider, LlmResponse, Message, ModelConfig, Usage};
 pub use prompts::{PromptBuilder, PromptFactory, PromptTemplate};
 pub use search::{HybridSearchEngine, SearchConfig, SearchResult, SearchStats};
-pub use integration::EnhancedDocumentProcessor;
