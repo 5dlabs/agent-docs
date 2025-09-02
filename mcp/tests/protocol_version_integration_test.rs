@@ -59,10 +59,7 @@ fn test_header_validation_with_registry() {
 
     // Test with missing header (backwards compatibility - defaults to 2025-03-26)
     headers.clear();
-    assert_eq!(
-        validate_protocol_version(&headers),
-        Ok(())
-    );
+    assert_eq!(validate_protocol_version(&headers), Ok(()));
 }
 
 /// Test session creation with protocol version consistency
