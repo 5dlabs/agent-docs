@@ -403,9 +403,12 @@ async fn test_tools_list_endpoint() {
         .unwrap();
     let response_json: Value = serde_json::from_slice(&body_bytes).unwrap();
 
+    // Support both plain and JSON-RPC envelope forms
+    let payload = response_json.get("result").unwrap_or(&response_json);
+
     // Should contain tools array
-    assert!(response_json.get("tools").is_some());
-    let tools = response_json["tools"].as_array().unwrap();
+    assert!(payload.get("tools").is_some());
+    let tools = payload["tools"].as_array().unwrap();
 
     // Should contain rust_query tool
     let has_rust_query = tools.iter().any(|tool| {
@@ -449,9 +452,12 @@ async fn test_rust_query_tool_call() {
         .unwrap();
     let response_json: Value = serde_json::from_slice(&body_bytes).unwrap();
 
+    // Support both plain and JSON-RPC envelope forms
+    let payload = response_json.get("result").unwrap_or(&response_json);
+
     // Should contain content array
-    assert!(response_json.get("content").is_some());
-    let content = response_json["content"].as_array().unwrap();
+    assert!(payload.get("content").is_some());
+    let content = payload["content"].as_array().unwrap();
     assert!(!content.is_empty());
 
     // First content item should be text
