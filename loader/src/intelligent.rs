@@ -21,19 +21,27 @@ use crate::parsers::UniversalParser;
 /// Document source types for intelligent discovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DocumentSource {
-    /// GitHub repository with owner/repo format
-    GitHubRepo { owner: String, repo: String },
-    /// Specific GitHub file with full URL
-    GitHubFile { url: String, path: String },
-    /// Web page with URL
-    WebPage { url: String },
+    /// GitHub repository with URL and docs-only flag
+    GithubRepo { url: String, docs_only: bool },
+    /// Specific GitHub file with full URL and path
+    GithubFile { url: String, path: String },
+    /// Web page with URL, max depth, and external link following
+    WebPage {
+        url: String,
+        max_depth: usize,
+        follow_external: bool,
+    },
     /// API documentation with base URL and optional spec URL
     ApiDocs {
         base_url: String,
         spec_url: Option<String>,
     },
-    /// Local file path
-    LocalFile { path: PathBuf },
+    /// Local file path with extensions and recursive flag
+    LocalFile {
+        path: PathBuf,
+        extensions: Vec<String>,
+        recursive: bool,
+    },
     /// Raw markdown content
     RawMarkdown { content: String, source: String },
 }
@@ -43,12 +51,11 @@ impl DocumentSource {
     #[must_use]
     pub fn url(&self) -> String {
         match self {
-            DocumentSource::GitHubRepo { owner, repo } => {
-                format!("https://github.com/{owner}/{repo}")
-            }
-            DocumentSource::GitHubFile { url, .. } | DocumentSource::WebPage { url } => url.clone(),
+            DocumentSource::GithubRepo { url, .. } => url.clone(),
+            DocumentSource::GithubFile { url, .. } => url.clone(),
+            DocumentSource::WebPage { url, .. } => url.clone(),
             DocumentSource::ApiDocs { base_url, .. } => base_url.clone(),
-            DocumentSource::LocalFile { path } => format!("file://{}", path.display()),
+            DocumentSource::LocalFile { path, .. } => format!("file://{}", path.display()),
             DocumentSource::RawMarkdown { source, .. } => source.clone(),
         }
     }
@@ -57,11 +64,13 @@ impl DocumentSource {
     #[must_use]
     pub fn name(&self) -> String {
         match self {
-            DocumentSource::GitHubRepo { owner, repo } => format!("{owner}/{repo}"),
-            DocumentSource::GitHubFile { path, .. } => path.clone(),
-            DocumentSource::WebPage { url } => url.clone(),
+            DocumentSource::GithubRepo { url, .. } => {
+                url.trim_start_matches("https://github.com/").to_string()
+            }
+            DocumentSource::GithubFile { path, .. } => path.clone(),
+            DocumentSource::WebPage { url, .. } => url.clone(),
             DocumentSource::ApiDocs { base_url, .. } => base_url.clone(),
-            DocumentSource::LocalFile { path } => path.display().to_string(),
+            DocumentSource::LocalFile { path, .. } => path.display().to_string(),
             DocumentSource::RawMarkdown { source, .. } => source.clone(),
         }
     }
@@ -376,7 +385,7 @@ impl IntelligentLoader for ClaudeIntelligentLoader {
             // Add high-priority documentation files
             for doc_file in analysis.docs_found {
                 if doc_file.priority >= 5.0 {
-                    sources.push(DocumentSource::GitHubFile {
+                    sources.push(DocumentSource::GithubFile {
                         url: format!(
                             "https://raw.githubusercontent.com/{owner}/{repo}/HEAD/{path}",
                             path = doc_file.path
@@ -388,9 +397,9 @@ impl IntelligentLoader for ClaudeIntelligentLoader {
 
             // Always include README if not already found
             if !sources.iter().any(
-                |s| matches!(s, DocumentSource::GitHubFile { path, .. } if path.contains("README")),
+                |s| matches!(s, DocumentSource::GithubFile { path, .. } if path.contains("README")),
             ) {
-                sources.push(DocumentSource::GitHubFile {
+                sources.push(DocumentSource::GithubFile {
                     url: format!("https://raw.githubusercontent.com/{owner}/{repo}/HEAD/README.md"),
                     path: "README.md".to_string(),
                 });
@@ -401,6 +410,8 @@ impl IntelligentLoader for ClaudeIntelligentLoader {
             // Handle web pages
             Ok(vec![DocumentSource::WebPage {
                 url: url.to_string(),
+                max_depth: 1,
+                follow_external: false,
             }])
         } else {
             Err(anyhow!("Unsupported URL format: {}", url))
@@ -450,12 +461,15 @@ Return your classification in JSON format:
 
     async fn extract_relevant(&mut self, source: DocumentSource) -> Result<Vec<DocPage>> {
         match source {
-            DocumentSource::GitHubFile { url, path } => self.extract_github_file(&url, &path).await,
-            DocumentSource::WebPage { url } => self.extract_web_page(&url).await,
-            DocumentSource::GitHubRepo { owner, repo } => {
+            DocumentSource::GithubFile { url, path } => self.extract_github_file(&url, &path).await,
+            DocumentSource::WebPage { url, .. } => self.extract_web_page(&url, 1, false).await,
+            DocumentSource::GithubRepo { url, .. } => {
+                let (owner, repo) = Self::parse_github_url(&url)?;
                 self.extract_repo_readme(&owner, &repo).await
             }
-            DocumentSource::LocalFile { path } => self.extract_local_file(&path).await,
+            DocumentSource::LocalFile { path, extensions, recursive } => {
+                self.extract_local_file(&path, &extensions, recursive).await
+            }
             _ => Err(anyhow!("Unsupported source type for extraction")),
         }
     }
@@ -493,52 +507,205 @@ impl ClaudeIntelligentLoader {
         Ok(vec![doc_page])
     }
 
-    /// Extract content from a web page
-    async fn extract_web_page(&mut self, url: &str) -> Result<Vec<DocPage>> {
-        let response = self.rate_limiter.get(url).await?;
-        let html_content = response.text().await?;
 
-        // Use UniversalParser to parse the HTML
-        let parsed = self.parser.parse(&html_content, url).await?;
 
-        let doc_page = DocPage {
-            url: url.to_string(),
-            content: parsed.text_content,
-            item_type: "web_page".to_string(),
-            module_path: Url::parse(url)?.path().to_string(),
-            extracted_at: Utc::now(),
-        };
 
-        Ok(vec![doc_page])
-    }
-
-    /// Extract content from a local file
-    async fn extract_local_file(&mut self, path: &PathBuf) -> Result<Vec<DocPage>> {
-        use tokio::fs;
-
-        let content = fs::read_to_string(path)
-            .await
-            .map_err(|e| anyhow!("Failed to read local file {}: {}", path.display(), e))?;
-
-        // Use UniversalParser to parse the content
-        let path_str = path.to_string_lossy();
-        let parsed = self.parser.parse(&content, &path_str).await?;
-
-        let doc_page = DocPage {
-            url: format!("file://{}", path.display()),
-            content: parsed.text_content,
-            item_type: Self::determine_file_type(&path_str),
-            module_path: path_str.to_string(),
-            extracted_at: Utc::now(),
-        };
-
-        Ok(vec![doc_page])
-    }
 
     /// Extract README from a GitHub repository
     async fn extract_repo_readme(&mut self, owner: &str, repo: &str) -> Result<Vec<DocPage>> {
         let readme_url = format!("https://raw.githubusercontent.com/{owner}/{repo}/HEAD/README.md");
         self.extract_github_file(&readme_url, "README.md").await
+    }
+
+    /// Extract documents from a given source
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the source cannot be processed or if document extraction fails.
+    pub async fn extract_from_source(&mut self, source: DocumentSource) -> Result<Vec<DocPage>> {
+        match source {
+            DocumentSource::GithubRepo { url, docs_only } => {
+                self.extract_github_repo(&url, docs_only).await
+            }
+            DocumentSource::GithubFile { url, path } => {
+                self.extract_github_file(&url, &path).await
+            }
+            DocumentSource::WebPage { url, max_depth, follow_external } => {
+                self.extract_web_page(&url, max_depth, follow_external).await
+            }
+            DocumentSource::LocalFile { path, extensions, recursive } => {
+                self.extract_local_file(&path, &extensions, recursive).await
+            }
+            DocumentSource::ApiDocs { base_url, spec_url } => {
+                self.extract_api_docs(&base_url, spec_url.as_deref()).await
+            }
+            DocumentSource::RawMarkdown { content, source } => {
+                self.extract_raw_markdown(&content, &source).await
+            }
+        }
+    }
+
+    /// Extract documents from a GitHub repository
+    async fn extract_github_repo(&mut self, url: &str, docs_only: bool) -> Result<Vec<DocPage>> {
+        info!("Extracting GitHub repository: {} (docs_only: {})", url, docs_only);
+
+        // Parse repository URL
+        let (owner, repo) = Self::parse_github_url(url)?;
+
+        // Get repository tree
+        let repo_tree = self.get_repository_tree(&owner, &repo).await?;
+        let mut docs = Vec::new();
+
+        for file_path in &repo_tree {
+            // Skip non-documentation files if docs_only is enabled
+            if docs_only && !Self::is_documentation_file(file_path) {
+                continue;
+            }
+
+            // Extract the file content
+            let file_url = format!("https://github.com/{owner}/{repo}");
+            match self.extract_github_file(&file_url, file_path).await {
+                Ok(mut file_docs) => docs.append(&mut file_docs),
+                Err(e) => warn!("Failed to extract {}: {}", file_path, e),
+            }
+        }
+
+        Ok(docs)
+    }
+
+    /// Extract documents from a web page
+    async fn extract_web_page(&mut self, url: &str, max_depth: usize, follow_external: bool) -> Result<Vec<DocPage>> {
+        info!("Extracting web page: {} (max_depth: {}, follow_external: {})", url, max_depth, follow_external);
+
+        // For now, just extract the single page
+        // TODO: Implement crawling with depth and external link following
+        let response = self.rate_limiter.get(url).await?;
+        let content = response.text().await?;
+
+        let parsed = self.parser.parse(&content, url).await?;
+
+        let doc_page = DocPage {
+            url: url.to_string(),
+            content: parsed.text_content,
+            item_type: "web_page".to_string(),
+            module_path: url.to_string(),
+            extracted_at: Utc::now(),
+        };
+
+        Ok(vec![doc_page])
+    }
+
+    /// Extract documents from local files
+    async fn extract_local_file(&mut self, path: &PathBuf, extensions: &[String], recursive: bool) -> Result<Vec<DocPage>> {
+        info!("Extracting local files from: {:?} (recursive: {})", path, recursive);
+
+        let mut docs = Vec::new();
+        self.extract_local_files_recursive(path, extensions, recursive, &mut docs).await?;
+
+        Ok(docs)
+    }
+
+    /// Recursively extract files from local directory
+    async fn extract_local_files_recursive(
+        &mut self,
+        path: &PathBuf,
+        extensions: &[String],
+        recursive: bool,
+        docs: &mut Vec<DocPage>,
+    ) -> Result<()> {
+        if path.is_file() {
+            if self.should_process_file(path, extensions) {
+                match tokio::fs::read_to_string(path).await {
+                    Ok(content) => {
+                        let parsed = self.parser.parse(&content, &path.to_string_lossy()).await?;
+                        let doc_page = DocPage {
+                            url: format!("file://{}", path.display()),
+                            content: parsed.text_content,
+                            item_type: Self::determine_file_type(&path.to_string_lossy()),
+                            module_path: path.to_string_lossy().to_string(),
+                            extracted_at: Utc::now(),
+                        };
+                        docs.push(doc_page);
+                    }
+                    Err(e) => warn!("Failed to read file {:?}: {}", path, e),
+                }
+            }
+        } else if path.is_dir() && recursive {
+            let mut entries = tokio::fs::read_dir(path).await?;
+            while let Some(entry) = entries.next_entry().await? {
+                let entry_path = entry.path();
+                Box::pin(self.extract_local_files_recursive(&entry_path, extensions, recursive, docs)).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if file should be processed based on extensions
+    fn should_process_file(&self, path: &std::path::Path, extensions: &[String]) -> bool {
+        if let Some(ext) = path.extension() {
+            let ext_str = ext.to_string_lossy().to_lowercase();
+            extensions.iter().any(|e| e == &ext_str)
+        } else {
+            false
+        }
+    }
+
+    /// Extract API documentation
+    async fn extract_api_docs(&mut self, base_url: &str, spec_url: Option<&str>) -> Result<Vec<DocPage>> {
+        info!("Extracting API docs from: {}", base_url);
+
+        let url = spec_url.unwrap_or(base_url);
+        let response = self.rate_limiter.get(url).await?;
+        let content = response.text().await?;
+
+        let parsed = self.parser.parse(&content, url).await?;
+
+        let doc_page = DocPage {
+            url: url.to_string(),
+            content: parsed.text_content,
+            item_type: "api_spec".to_string(),
+            module_path: url.to_string(),
+            extracted_at: Utc::now(),
+        };
+
+        Ok(vec![doc_page])
+    }
+
+    /// Extract raw markdown content
+    async fn extract_raw_markdown(&mut self, content: &str, source: &str) -> Result<Vec<DocPage>> {
+        info!("Extracting raw markdown from: {}", source);
+
+        let parsed = self.parser.parse(content, source).await?;
+
+        let doc_page = DocPage {
+            url: source.to_string(),
+            content: parsed.text_content,
+            item_type: "markdown".to_string(),
+            module_path: source.to_string(),
+            extracted_at: Utc::now(),
+        };
+
+        Ok(vec![doc_page])
+    }
+
+    /// Check if file is a documentation file
+    fn is_documentation_file(path: &str) -> bool {
+        let path_lower = path.to_lowercase();
+        path_lower.contains("readme") ||
+        path_lower.contains("docs/") ||
+        path_lower.contains("documentation") ||
+        path_lower.starts_with("docs") ||
+        path_lower.contains("guide") ||
+        path_lower.contains("tutorial") ||
+        matches!(path_lower.as_str(),
+            "license" | "license.md" | "license.txt" |
+            "contributing" | "contributing.md" |
+            "changelog" | "changelog.md" |
+            "changelog.txt" |
+            "api" | "api.md" |
+            "architecture" | "architecture.md"
+        )
     }
 
     /// Determine file type from path
