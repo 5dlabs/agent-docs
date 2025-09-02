@@ -1,0 +1,558 @@
+---
+# Sensor for PR Created Event - Resume after implementation work
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: play-workflow-pr-created
+  namespace: argo
+spec:
+  replicas: 1
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    serviceAccountName: argo-events-sa
+  dependencies:
+    - name: github-pr-created
+      eventSourceName: github
+      eventName: org
+      filters:
+        data:
+          # Filter for pull_request opened events
+          - path: headers.X-Github-Event
+            type: string
+            value: ["pull_request"]
+          - path: body.action
+            type: string
+            value: ["opened"]
+  triggers:
+    - template:
+        name: resume-after-pr-created
+        conditions: "github-pr-created"
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: resume-pr-created-
+                namespace: agent-platform
+                labels:
+                  type: webhook-resume
+                  target-stage: waiting-pr-created
+              spec:
+                entrypoint: resume-workflow
+                serviceAccountName: argo-workflow
+                templates:
+                  - name: resume-workflow
+                    script:
+                      image: alpine/k8s:1.31.0
+                      command: [bash]
+                      source: |
+                        #!/bin/bash
+                        set -e
+
+                        echo "=== PR Created Workflow Resume ==="
+
+                        # This sensor was triggered by a PR creation
+                        # We need to find the most recent implementation workflow waiting for PR
+
+                        # Find workflows waiting for PR creation
+                        WAITING_WORKFLOWS=$(kubectl get workflows -n agent-platform \
+                          -l current-stage=waiting-pr-created,workflow-type=play-orchestration \
+                          -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
+
+                        if [ -z "$WAITING_WORKFLOWS" ]; then
+                          echo "No workflows waiting for PR creation"
+                          exit 0
+                        fi
+
+                        # Process each waiting workflow
+                        for WORKFLOW_NAME in $WAITING_WORKFLOWS; do
+                          echo "Processing workflow: $WORKFLOW_NAME"
+
+                          # Get task ID from workflow
+                          TASK_ID=$(kubectl get workflow $WORKFLOW_NAME -n agent-platform \
+                            -o jsonpath='{.metadata.labels.task-id}')
+
+                          if [ -z "$TASK_ID" ]; then
+                            echo "No task ID found for workflow, skipping"
+                            continue
+                          fi
+
+                          echo "Task ID: $TASK_ID"
+
+                          # Check if there's a recent succeeded implementation CodeRun for this task
+                          CODERUN=$(kubectl get coderun -n agent-platform \
+                            -l task-id=$TASK_ID,workflow-stage=implementation \
+                            --field-selector=status.phase=Succeeded \
+                            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+
+                          if [ -z "$CODERUN" ]; then
+                            echo "No succeeded implementation CodeRun for task $TASK_ID, skipping"
+                            continue
+                          fi
+
+                          echo "Found CodeRun: $CODERUN"
+
+                          # Get PR URL from the CodeRun status
+                          PR_URL=$(kubectl get coderun $CODERUN -n agent-platform \
+                            -o jsonpath='{.status.pullRequestUrl}' 2>/dev/null || echo "")
+
+                          if [ -z "$PR_URL" ]; then
+                            echo "No PR URL in CodeRun status, skipping"
+                            continue
+                          fi
+
+                          # Extract PR number from URL
+                          PR_NUMBER=$(echo "$PR_URL" | sed 's/.*\/pull\///' | sed 's/[^0-9].*//')
+
+                          echo "PR URL: $PR_URL"
+                          echo "PR Number: $PR_NUMBER"
+
+                          # Update workflow parameters with PR info
+                          if [ -n "$PR_NUMBER" ] && [ -n "$PR_URL" ]; then
+                            PATCH_JSON="{\"spec\":{\"arguments\":{\"parameters\":["
+                            PATCH_JSON="${PATCH_JSON}{\"name\":\"pr-url\",\"value\":\"$PR_URL\"},"
+                            PATCH_JSON="${PATCH_JSON}{\"name\":\"pr-number\",\"value\":\"$PR_NUMBER\"}]}}}"
+                            kubectl patch workflow $WORKFLOW_NAME -n agent-platform \
+                              --type='merge' -p "$PATCH_JSON"
+                          fi
+
+                          # Resume the workflow
+                          echo "Resuming workflow $WORKFLOW_NAME"
+                          kubectl patch workflow $WORKFLOW_NAME -n agent-platform \
+                            --type='merge' -p '{"spec":{"suspend":false}}'
+
+                          echo "✅ Workflow resumed successfully"
+                        done
+
+                        echo "Finished processing waiting workflows"
+      retryStrategy:
+        steps: 2  # Minimal retries for reliability
+        duration: "5s"
+        factor: 2
+        jitter: 0.1
+
+---
+# Sensor for Ready-for-QA Label Added - Resume after quality work
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: play-workflow-ready-for-qa
+  namespace: argo
+spec:
+  replicas: 1
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    serviceAccountName: argo-events-sa
+  dependencies:
+    - name: github-label-added
+      eventSourceName: github
+      eventName: org
+      filters:
+        data:
+          - path: headers.X-Github-Event
+            type: string
+            value: ["pull_request"]
+          - path: body.action
+            type: string
+            value: ["labeled"]
+          - path: body.label.name
+            type: string
+            value: ["ready-for-qa"]
+  triggers:
+    - template:
+        name: resume-after-ready-for-qa
+        conditions: "github-label-added"
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: resume-ready-qa-
+                namespace: agent-platform
+                labels:
+                  type: webhook-resume
+                  target-stage: waiting-ready-for-qa
+              spec:
+                entrypoint: resume-workflow
+                serviceAccountName: argo-workflow
+                templates:
+                  - name: resume-workflow
+                    script:
+                      image: alpine/k8s:1.31.0
+                      command: [bash]
+                      source: |
+                        #!/bin/bash
+                        set -e
+
+                        echo "=== Ready-for-QA Webhook Resume ==="
+
+                        # Since we received the webhook, we know Cleo added the label
+                        # The workflow WILL transition to waiting-ready-for-qa, but it might take a few seconds
+                        # Keep trying for up to 2 minutes (24 attempts with 5 second delays)
+
+                        MAX_ATTEMPTS=24
+                        ATTEMPT=1
+
+                        while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+                          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Looking for workflow in waiting-ready-for-qa stage..."
+
+                          # Find any workflow waiting for QA resumption
+                          WORKFLOW_NAME=$(kubectl get workflows -n agent-platform \
+                            -l current-stage=waiting-ready-for-qa,workflow-type=play-orchestration \
+                            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+
+                          if [ -n "$WORKFLOW_NAME" ]; then
+                            echo "Found workflow: $WORKFLOW_NAME"
+
+                            # There's a second race condition: the suspend node might not be created yet
+                            # Keep trying to find and resume the suspend node
+                            NODE_ATTEMPTS=0
+                            MAX_NODE_ATTEMPTS=12  # Try for 1 minute
+
+                            while [ $NODE_ATTEMPTS -lt $MAX_NODE_ATTEMPTS ]; do
+                              # Find the suspended node ID for wait-ready-for-qa
+                              NODE_ID=$(kubectl get workflow $WORKFLOW_NAME -n agent-platform -o json | \
+                                jq -r '.status.nodes | to_entries | .[] |
+                                select(.value.displayName == "wait-ready-for-qa" and .value.type == "Suspend") |
+                                .key')
+
+                              if [ -n "$NODE_ID" ]; then
+                                echo "Found suspended node: $NODE_ID"
+                                # Get the phase of the node
+                                NODE_PHASE=$(kubectl get workflow $WORKFLOW_NAME -n agent-platform -o json | \
+                                  jq -r ".status.nodes.\"$NODE_ID\".phase")
+
+                                if [ "$NODE_PHASE" = "Running" ]; then
+                                  echo "Resuming suspend node..."
+                                  kubectl patch workflow $WORKFLOW_NAME -n agent-platform \
+                                    --type='merge' -p "{\"status\":{\"nodes\":{\"$NODE_ID\":{\"phase\":\"Succeeded\"}}}}"
+                                  echo "✅ Suspend node resumed successfully"
+                                  exit 0
+                                else
+                                  echo "Node already in phase: $NODE_PHASE"
+                                  exit 0
+                                fi
+                              fi
+
+                              NODE_ATTEMPTS=$((NODE_ATTEMPTS + 1))
+                              if [ $NODE_ATTEMPTS -lt $MAX_NODE_ATTEMPTS ]; then
+                                echo "Suspend node not found yet (attempt $NODE_ATTEMPTS/$MAX_NODE_ATTEMPTS), waiting 5 seconds..."
+                                sleep 5
+                              fi
+                            done
+
+                            echo "Warning: Suspend node never appeared, workflow might be in unexpected state"
+                            exit 1
+                          fi
+
+                          if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                            echo "Workflow not found yet, waiting 5 seconds..."
+                            sleep 5
+                          fi
+
+                          ATTEMPT=$((ATTEMPT + 1))
+                        done
+
+                        echo "❌ ERROR: No workflow found after $MAX_ATTEMPTS attempts"
+                        echo "This suggests the workflow stage transition failed"
+                        exit 1
+      retryStrategy:
+        steps: 2  # Minimal retries for reliability
+        duration: "5s"
+        factor: 2
+        jitter: 0.1
+
+# ---
+# # DEPRECATED: Replaced by merge-to-main-sensor.yaml
+# # We now wait for merge to main instead of PR approval
+# # Sensor for PR Approved - Resume after testing work
+# apiVersion: argoproj.io/v1alpha1
+# kind: Sensor
+# metadata:
+#   name: play-workflow-pr-approved
+#   namespace: argo
+# spec:
+#   replicas: 2
+#   template:
+#     serviceAccountName: argo-events-sa
+#   dependencies:
+#     - name: github-pr-approved
+#       eventSourceName: github
+#       eventName: org
+#       filters:
+#         data:
+#           # Filter for pull_request_review submitted events with approval
+#           - path: headers.X-Github-Event
+#             type: string
+#             value: ["pull_request_review"]
+#           - path: body.action
+#             type: string
+#             value: ["submitted"]
+#           - path: body.review.state
+#             type: string
+#             value: ["approved"]
+#   triggers:
+#     - template:
+#         name: resume-after-pr-approved
+#         conditions: "github-pr-approved"
+#         k8s:
+#           operation: create
+#           source:
+#             resource:
+#               apiVersion: argoproj.io/v1alpha1
+#               kind: Workflow
+#               metadata:
+#                 generateName: resume-pr-approved-
+#                 namespace: agent-platform
+#                 labels:
+#                   type: webhook-resume
+#                   target-stage: waiting-pr-approved
+#               spec:
+#                 entrypoint: resume-workflow
+#                 serviceAccountName: argo-workflow
+#                 templates:
+#                   - name: resume-workflow
+#                     script:
+#                       image: alpine/k8s:1.31.0
+#                       command: [bash]
+#                       source: |
+#                         #!/bin/bash
+#                         set -e
+#
+#                         echo "=== PR Approved Workflow Resume ==="
+#
+#                         # Find any workflow waiting for PR approval
+#                         WORKFLOW_NAME=$(kubectl get workflows -n agent-platform \
+#                           -l current-stage=waiting-pr-approved,workflow-type=play-orchestration \
+#                           -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+#
+#                         if [ -z "$WORKFLOW_NAME" ]; then
+#                           echo "No workflow found waiting for PR approval"
+#                           exit 0
+#                         fi
+#
+#                         echo "Found workflow: $WORKFLOW_NAME"
+#
+#                         # Find the suspended node ID for wait-pr-approved
+#                         NODE_ID=$(kubectl get workflow $WORKFLOW_NAME -n agent-platform -o json | \
+#                           jq -r '.status.nodes | to_entries | .[] |
+#                           select(.value.displayName == "wait-pr-approved" and .value.type == "Suspend") |
+#                           .key')
+#
+#                         if [ -n "$NODE_ID" ]; then
+#                           echo "Found suspended node: $NODE_ID"
+#                           # Resume the specific suspend node
+#                           kubectl patch workflow $WORKFLOW_NAME -n agent-platform \
+#                             --type='merge' -p "{\"status\":{\"nodes\":{\"$NODE_ID\":{\"phase\":\"Succeeded\"}}}}"
+#                           echo "✅ Suspend node resumed successfully"
+#                         else
+#                           echo "Warning: Could not find suspend node, trying workflow-level resume"
+#                           kubectl patch workflow $WORKFLOW_NAME -n agent-platform \
+#                             --type='merge' -p '{"spec":{"suspend":false}}'
+#                           echo "✅ Workflow resumed (fallback method)"
+#                         fi
+#       retryStrategy:
+#         steps: 3
+#         duration: "10s"
+#         factor: 2
+#         jitter: 0.1
+
+---
+# Enhanced Sensor for Implementation Agent Remediation - Cancel outdated work with advanced concurrency control
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: implementation-agent-remediation
+  namespace: argo
+spec:
+  replicas: 1
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    serviceAccountName: argo-events-sa
+    container:
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "256Mi"
+          cpu: "300m"
+  dependencies:
+    - name: github-rex-push
+      eventSourceName: github
+      eventName: org
+      filters:
+        data:
+          # Filter for push events from Rex implementation agent
+          - path: headers.X-Github-Event
+            type: string
+            value: ["push"]
+          - path: body.pusher.name
+            type: string
+            value: ["rex-5dlabs[bot]"]
+          # Enhanced filtering for concurrent push events
+          - path: body.ref
+            type: string
+            comparator: "~"
+            value: ["refs/heads/feature/.*", "refs/heads/task-.*"]
+        exprs:
+          # Additional validation for concurrent push events
+          - expr: 'body.commits | length > 0'
+            fields:
+              - name: has_commits
+                path: body.commits
+          - expr: 'body.repository.name != ""'
+            fields:
+              - name: repo_name
+                path: body.repository.name
+          - expr: 'body.head_commit.message != ""'
+            fields:
+              - name: commit_message
+                path: body.head_commit.message
+  triggers:
+    - template:
+        name: enhanced-agent-cancellation
+        conditions: "github-rex-push"
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: enhanced-cancellation-
+                namespace: agent-platform
+                labels:
+                  type: enhanced-remediation
+                  version: v2
+              spec:
+                entrypoint: enhanced-cancellation-workflow
+                serviceAccountName: agent-cancellation-sa
+                arguments:
+                  parameters:
+                    - name: pusher-name
+                      value: "{{ .Input.body.pusher.name }}"
+                    - name: ref
+                      value: "{{ .Input.body.ref }}"
+                    - name: head-commit
+                      value: "{{ .Input.body.head_commit.id }}"
+                    - name: commit-message
+                      value: "{{ .Input.body.head_commit.message }}"
+                    - name: repo-name
+                      value: "{{ .Input.body.repository.name }}"
+                    - name: correlation-id
+                      value: "{{ uuidv4() }}"
+                templates:
+                  - name: enhanced-cancellation-workflow
+                    script:
+                      image: agent-cancellation:latest
+                      command: [bash]
+                      source: |
+                        #!/bin/bash
+                        set -euo pipefail
+
+                        echo "=== Enhanced Agent Cancellation System ==="
+                        echo "🔧 Version: 2.0 - Concurrent Safe"
+                        echo "📊 Correlation ID: {{workflow.parameters.correlation-id}}"
+                        echo "🤖 Pusher: {{workflow.parameters.pusher-name}}"
+                        echo "📋 Ref: {{workflow.parameters.ref}}"
+                        echo "💾 Head Commit: {{workflow.parameters.head-commit}}"
+                        echo "📝 Message: {{workflow.parameters.commit-message}}"
+
+                        # Enhanced environment setup
+                        export CORRELATION_ID="{{workflow.parameters.correlation-id}}"
+                        export REPO_NAME="{{workflow.parameters.repo-name}}"
+                        export PUSH_REF="{{workflow.parameters.ref}}"
+                        export HEAD_COMMIT="{{workflow.parameters.head-commit}}"
+                        export COMMIT_MESSAGE="{{workflow.parameters.commit-message}}"
+
+                        # Extract and validate task information
+                        BRANCH_NAME=$(echo "$PUSH_REF" | sed 's|refs/heads/||')
+                        echo "🌿 Branch: $BRANCH_NAME"
+
+                        # Enhanced task ID extraction with validation
+                        TASK_ID=$(echo "$BRANCH_NAME" | grep -oE 'task-?([0-9]+)' | head -1 | sed 's/task-\?//')
+
+                        if [ -z "$TASK_ID" ]; then
+                          echo "⚠️  No task ID found in branch name, skipping enhanced cancellation"
+                          echo "📝 Branch name: $BRANCH_NAME"
+                          exit 0
+                        fi
+
+                        echo "🎯 Task ID: $TASK_ID"
+
+                        # Enhanced PR number extraction from commit message
+                        PR_NUMBER=""
+                        if echo "$COMMIT_MESSAGE" | grep -qE '\(\#[0-9]+\)'; then
+                          PR_NUMBER=$(echo "$COMMIT_MESSAGE" | grep -oE '\(#[0-9]+\)' | sed 's/[#(]//g')
+                        elif echo "$COMMIT_MESSAGE" | grep -qE '#[0-9]+'; then
+                          PR_NUMBER=$(echo "$COMMIT_MESSAGE" | grep -oE '#[0-9]+' | sed 's/#//')
+                        fi
+
+                        if [ -n "$PR_NUMBER" ]; then
+                          echo "🔗 Associated PR: #$PR_NUMBER"
+                          export PR_NUMBER="$PR_NUMBER"
+                        else
+                          echo "ℹ️  No PR number found in commit message"
+                        fi
+
+                        # Enhanced state-aware cancellation with distributed locking
+                        echo ""
+                        echo "🔐 Initializing Enhanced Cancellation System..."
+
+                        # Check if enhanced cancellation controller is available
+                        if command -v enhanced-cancellation-controller >/dev/null 2>&1; then
+                          echo "✅ Enhanced cancellation controller found"
+                          exec enhanced-cancellation-controller
+                        else
+                          echo "⚠️  Enhanced controller not available, falling back to basic cancellation"
+
+                          # Fallback to basic cancellation logic
+                          echo ""
+                          echo "🔄 Executing Basic Cancellation Fallback..."
+
+                          # Find CodeRuns for quality and testing agents on this task
+                          echo "Looking for outdated CodeRuns to cancel..."
+                          kubectl get coderuns -n agent-platform \
+                            -l task-id=$TASK_ID \
+                            -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.agent-type}{"\t"}{.status.phase}{"\n"}{end}' | \
+                          while read coderun_name agent_type phase; do
+                            if [ "$agent_type" = "cleo" ] || [ "$agent_type" = "tess" ]; then
+                              echo "📋 Found CodeRun: $coderun_name (agent: $agent_type, phase: $phase)"
+
+                              # Enhanced phase checking
+                              if [ "$phase" = "Running" ] || [ "$phase" = "Pending" ]; then
+                                echo "🛑 Cancelling outdated CodeRun: $coderun_name (agent: $agent_type)"
+                                kubectl delete coderun $coderun_name -n agent-platform --ignore-not-found=true
+                              elif [ "$phase" = "Succeeded" ] || [ "$phase" = "Failed" ]; then
+                                echo "✅ CodeRun $coderun_name already completed (phase: $phase), skipping"
+                              else
+                                echo "❓ CodeRun $coderun_name in unknown phase: $phase, attempting cancellation"
+                                kubectl delete coderun $coderun_name -n agent-platform --ignore-not-found=true --timeout=30s
+                              fi
+                            fi
+                          done
+
+                          echo "✅ Basic remediation completed"
+                        fi
+      retryStrategy:
+        steps: 3  # Enhanced retries for reliability
+        duration: "10s"
+        factor: 2
+        jitter: 0.1

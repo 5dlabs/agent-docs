@@ -1,0 +1,99 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+
+# Dependency directories
+node_modules/
+
+# Environment variables
+.env
+
+# Agent secrets (SSH keys and tokens)
+agents/
+**/id_ed25519
+**/id_ed25519.pub
+**/.env
+
+# Editor directories and files
+.idea
+.vscode
+.cursor
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS specific
+.DS_Store
+*.swp
+*~
+
+# Kubernetes Files
+kubeconfig*
+*.kubeconfig
+
+# Test and Debug Files
+test-*.yaml
+debug-*.yaml
+
+# Helm Files
+*.tgz
+charts/*.tgz
+Chart.lock
+**/charts/*.tgz
+
+# Data Files (local persistence)
+/data/
+
+# Temporary Files
+/tmp/
+/temp/
+/bin/
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Taskmaster directory (local task management)
+# .taskmaster/
+
+# Claude configuration files
+**/CLAUDE.md
+controller/target/
+mcp/target/
+sidecar/target/
+
+# Agent files
+agent_*.md
+
+# cargo-dist research
+.repos/
+
+.claude/*
+
+*.private-key.pem
+
+# Local temp working dir for ephemeral clones
+.tmp/
+
+# Test repositories
+.test-repo/
+
+# Solana credentials
+sol.env
+
+# Cloudflare credentials
+cloudflare.env
+
+# Charts repository (for local development)
+charts-repo/
+
+# Task files
+# tasks.json
+# tasks/ 

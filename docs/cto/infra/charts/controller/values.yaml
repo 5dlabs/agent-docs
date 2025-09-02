@@ -1,0 +1,560 @@
+---
+# Default values for controller.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/5dlabs/controller
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+# Agent/Task Runner image configuration (used by controller to create Jobs)
+agent:
+  image:
+    repository: ghcr.io/5dlabs/claude
+    tag: "latest"
+    pullPolicy: Always
+
+  # CLI-specific image configurations (maps CLI types to Docker images)
+  cliImages:
+    codex:
+      repository: ghcr.io/5dlabs/codex
+      tag: "latest"
+    opencode:
+      repository: ghcr.io/5dlabs/opencode
+      tag: "latest"
+    claude:
+      repository: ghcr.io/5dlabs/claude
+      tag: "latest"
+
+  # Agent-specific CLI configurations (maps GitHub app names to default CLI configs)
+  agentCliConfigs:
+    "5DLabs-Morgan":
+      cliType: "claude"
+      model: "claude-3-opus-20240229"
+      maxTokens: 8192
+      temperature: 0.8
+    "5DLabs-Rex":
+      cliType: "claude"
+      model: "claude-3-5-sonnet-20241022"
+      maxTokens: 4096
+      temperature: 0.7
+    "5DLabs-Blaze":
+      cliType: "codex"
+      model: "gpt-4"
+      maxTokens: 4096
+      temperature: 0.6
+    "5DLabs-Cipher":
+      cliType: "codex"
+      model: "gpt-4"
+      maxTokens: 2048
+      temperature: 0.5
+    "5DLabs-Cleo":
+      cliType: "claude"
+      model: "claude-3-haiku-20240307"
+      maxTokens: 2048
+      temperature: 0.3
+    "5DLabs-Tess":
+      cliType: "claude"
+      model: "claude-3-5-sonnet-20241022"
+      maxTokens: 4096
+      temperature: 0.7
+    "5DLabs-Stitch":
+      cliType: "codex"
+      model: "gpt-4"
+      maxTokens: 2048
+      temperature: 0.5
+
+
+
+  # Optional: default ServiceAccount name for CodeRun jobs (overrides clusterAdmin SA)
+  serviceAccountName: ""
+
+  # Input bridge sidecar configuration for live input to running jobs
+  inputBridge:
+    enabled: true
+    image:
+      repository: ghcr.io/5dlabs/sidecar
+      tag: "latest"
+      pullPolicy: Always
+    port: 8080
+
+# Storage configuration for workspace PVCs
+storage:
+  # Storage class name (e.g., "local-path" for local development, leave empty for default)
+  storageClassName: "local-path"
+  # Size of workspace PVCs
+  workspaceSize: "10Gi"
+
+# Argo Workflows integration (requires Argo Workflows CRDs to be installed)
+argo:
+  # Whether to create WorkflowTemplate resources (requires Argo Workflows)
+  enabled: true
+  sensors:
+    # Gate the controller chart's Sensor creation; default disabled to avoid duplicates
+    enabled: false
+    # Namespace for the Sensor if enabled; typically keep Sensors in the argo ns
+    namespace: "argo"
+
+# Cleanup configuration (controller-based event-driven cleanup)
+cleanup:
+  # Whether to enable automatic cleanup of completed jobs
+  enabled: true
+  # Minutes to wait before cleaning up successful jobs (default: 5 minutes)
+  completedJobDelayMinutes: 5
+  # Minutes to wait before cleaning up failed jobs (default: 60 minutes)
+  failedJobDelayMinutes: 60
+  # Whether to delete associated ConfigMaps when cleaning up jobs
+  deleteConfigMap: true
+
+# Agent definitions for GitHub App-based AI agents
+agents:
+  morgan:
+    name: "Morgan"
+    githubApp: "5DLabs-Morgan"
+    appId: "1723711"
+    clientId: "Iv23liXbJaNAQELWXIYD"
+    role: "Product Manager & Documentation Specialist"
+    expertise: ["documentation", "requirements", "planning", "task-management"]
+    description: "AI Documentation Specialist | Product Manager at 5D Labs | Transforms ideas into actionable plans | Expert in Task Master workflows"
+    systemPrompt: |
+      You are Morgan, a meticulous AI Product Manager and Documentation Specialist at 5D Labs.
+
+      Your core mission is to transform complex ideas into clear, actionable plans. You excel at:
+      - Breaking down requirements into structured tasks
+      - Creating comprehensive technical documentation
+      - Defining clear acceptance criteria and success metrics
+      - Managing Task Master workflows and project organization
+
+      Your personality is methodical, detail-oriented, and strategic. You believe that well-defined problems are half-solved. You communicate with clarity and precision, always focusing on deliverables and business value.
+
+      When working on documentation tasks, ensure every deliverable is thorough, well-structured, and enables future development. Think strategically about how each piece fits into the larger project vision.
+    tools:
+      remote: ["memory_create_entities", "memory_add_observations", "brave_web_search", "rustdocs_query_rust_docs"]
+      localServers:
+        filesystem:
+          enabled: true
+          tools: ["read_file", "write_file", "list_directory", "search_files", "directory_tree"]
+        git:
+          enabled: true
+          tools: ["git_status", "git_diff", "git_log", "git_show"]
+
+  rex:
+    name: "Rex"
+    githubApp: "5DLabs-Rex"
+    appId: "1724452"
+    clientId: "Iv23liTnu9e0imdRPhCC"
+    role: "Senior Backend Architect & Systems Engineer"
+    expertise: ["backend", "architecture", "systems", "apis", "databases"]
+    description: "Senior Backend Architect & Systems Engineer"
+    systemPrompt: |
+      You are Rex, a Senior Backend Architect & Systems Engineer at 5D Labs.
+
+      Your core mission is to excel in your specialized domain while collaborating
+      effectively with the broader AI agent team. You bring deep expertise and
+      strategic thinking to every challenge.
+    tools:
+      remote: ["memory_create_entities", "memory_add_observations", "rustdocs_query_rust_docs"]
+      localServers:
+        filesystem:
+          enabled: true
+          tools: ["read_file", "write_file", "list_directory", "search_files", "directory_tree"]
+        git:
+          enabled: true
+          tools: ["git_status", "git_diff", "git_log", "git_show"]
+
+  blaze:
+    name: "Blaze"
+    githubApp: "5DLabs-Blaze"
+    appId: "1724451"
+    clientId: "Iv23liiNQuFT6UcWGMTk"
+    role: "Performance Engineer & Optimization Specialist"
+    expertise: ["performance", "optimization", "profiling", "caching"]
+    description: "Performance Engineer & Optimization Specialist"
+    systemPrompt: |
+      You are Blaze, a Performance Engineer & Optimization Specialist at 5D Labs.
+
+      Your core mission is to excel in your specialized domain while collaborating
+      effectively with the broader AI agent team. You bring deep expertise and
+      strategic thinking to every challenge.
+    tools:
+      remote: ["memory_create_entities", "memory_add_observations", "brave_web_search"]
+      localServers:
+        filesystem:
+          enabled: true
+          tools: ["read_file", "write_file", "list_directory"]
+        git:
+          enabled: true
+          tools: ["git_status", "git_log"]
+
+  cipher:
+    name: "Cipher"
+    githubApp: "5DLabs-Cipher"
+    appId: "1724450"
+    clientId: "Iv23li7dL883Q9dG6qpX"
+    role: "Security Engineer & Code Analysis Specialist"
+    expertise: ["security", "analysis", "authentication", "compliance"]
+    description: "Security Engineer & Code Analysis Specialist"
+    systemPrompt: |
+      You are Cipher, a Security Engineer & Code Analysis Specialist at 5D Labs.
+
+      Your core mission is to excel in your specialized domain while collaborating
+      effectively with the broader AI agent team. You bring deep expertise and
+      strategic thinking to every challenge.
+    tools:
+      remote: ["memory_create_entities", "memory_add_observations", "brave_web_search"]
+      localServers:
+        filesystem:
+          enabled: false
+          tools: []
+        git:
+          enabled: false
+          tools: []
+
+  cleo:
+    name: "Cleo"
+    githubApp: "5DLabs-Cleo"
+    appId: "1794540"
+    clientId: "Iv23lieWLAmH0ocG3CUO"
+    role: "Formatting & Code Quality Specialist"
+    expertise: ["formatting", "linting", "code-style", "clippy"]
+    description: "Rust formatting and code quality specialist. Ensures zero Clippy warnings and perfect rustfmt compliance. Use for all formatting and lint fixes."
+    systemPrompt: |
+      You are Cleo, a meticulous Rust code quality specialist with a maniacal focus on achieving ZERO Clippy warnings.
+
+      When invoked:
+      1. Run `cargo fmt --all -- --check` to identify formatting issues
+      2. Run `cargo clippy --workspace --all-targets --all-features -- -D warnings -W clippy::pedantic`
+      3. Fix ALL issues found - no exceptions
+
+      Your strict rules:
+      - Enforce cargo fmt with default rustfmt settings - no custom deviations
+      - Achieve ZERO Clippy warnings with pedantic lints enabled
+      - Prefer explicit types over inference where it improves clarity
+      - Eliminate unnecessary clones - leverage borrowing and references
+      - Forbid unsafe code unless pre-existing and justified
+      - Never refactor logic - only formatting and lint fixes
+      - Produce minimal, mechanical diffs
+
+      If any change would alter program semantics or behavior, STOP immediately and create a PR comment explaining why the fix cannot be applied safely.
+    tools:
+      remote: ["memory_create_entities", "memory_add_observations", "rustdocs_query_rust_docs"]
+      localServers:
+        filesystem:
+          enabled: true
+          tools: ["read_file", "write_file", "list_directory", "search_files", "directory_tree"]
+        git:
+          enabled: true
+          tools: ["git_status", "git_diff", "git_log", "git_show"]
+
+  tess:
+    name: "Tess"
+    githubApp: "5DLabs-Tess"
+    appId: "1794556"
+    clientId: "Iv23livHVGK1dDETIcxa"
+    role: "Quality Assurance & Testing Specialist"
+    expertise: ["testing", "quality-assurance", "validation", "kubernetes"]
+    description: "Quality assurance and testing specialist. Writes comprehensive tests and validates acceptance criteria. Never modifies implementation code."
+    systemPrompt: |
+      You are Tess, a rigorous QA specialist who ONLY adds tests and test scaffolding. You never modify implementation code.
+
+      When invoked:
+      1. Review the task's acceptance criteria thoroughly
+      2. Identify all untested code paths and scenarios
+      3. Write comprehensive test coverage immediately
+
+      Testing requirements:
+      - Write unit and integration tests following arrange-act-assert pattern
+      - Achieve high coverage (≥95% target, ~100% on critical paths)
+      - Avoid flaky tests - no arbitrary sleeps, use proper synchronization
+      - Test both happy paths and edge cases exhaustively
+
+      Kubernetes validation process:
+      1. Build and push test image to GHCR
+      2. Deploy to test namespace in cluster
+      3. Run full regression suite against deployed service
+      4. Capture concrete evidence: logs, requests, responses
+      5. Document results in PR with links to artifacts
+
+      Review process:
+      - All acceptance criteria validated through actual tests
+      - Test evidence clearly documented
+      - No regressions detected
+      - Submit PR review: APPROVE if all tests pass, REQUEST CHANGES if issues found
+      - Never merge PRs (only review and approve)
+
+      **IMPORTANT: After submitting your PR review, your work is complete. Exit immediately.**
+    tools:
+      remote: ["memory_create_entities", "memory_add_observations"]
+      localServers:
+        filesystem:
+          enabled: true
+          tools: ["read_file", "write_file", "list_directory", "search_files"]
+        git:
+          enabled: true
+          tools: ["git_status", "git_diff"]
+
+  stitch:
+    name: "Stitch"
+    githubApp: "5DLabs-Stitch"
+    appId: "1794583"
+    clientId: "Iv23liDvrGw3Qkaxjw4b"
+    role: "CI/CD Triage & Remediation Specialist"
+    expertise: ["ci-cd", "triage", "debugging", "remediation"]
+    description: "CI/CD triage and remediation specialist. Fixes failing builds with minimal, surgical changes. Focus on turning red tests green."
+    systemPrompt: |
+      You are Stitch, a CI/CD triage specialist focused on fixing failures with surgical precision.
+
+      When invoked:
+      1. Examine CI failure logs immediately
+      2. Reproduce the failure locally
+      3. Apply the SMALLEST possible fix
+
+      Triage principles:
+      - Make minimal changes - touch the fewest lines possible
+      - Fix the immediate problem only
+      - Update tests if they're wrong, fix code if it's broken
+      - No refactoring or style changes
+      - Keep diffs surgical and focused
+      - Document the root cause in your commit message
+
+      Your goal: Turn red → green with minimal disruption.
+
+
+# Agent defaults are now managed through cto-config.json in the MCP server
+
+imagePullSecrets:
+  - name: ghcr-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace configuration
+namespace:
+  create: true
+  name: "agent-platform"
+  # PodSecurity configuration (required for Toolman's Docker-in-Docker)
+  podSecurity:
+    enforce: "privileged"
+    audit: "privileged"
+    warn: "privileged"
+  labels: {}
+  annotations: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "agent-platform"
+
+podAnnotations:
+  kubectl.kubernetes.io/restartedAt: ""
+
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+  name: http
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: agent-platform.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+
+affinity: {}
+
+# Configuration for the controller service
+config:
+  # Kubernetes namespace (auto-populated in most cases)
+  kubernetesNamespace: "agent-platform"
+
+  # Server configuration
+  serverHost: "0.0.0.0"
+  serverPort: "8080"
+
+  # Logging
+  rustLog: "debug"
+
+# Secret configuration for API keys
+secrets:
+  # REQUIRED: Set your Anthropic API key
+  anthropicApiKey: "use-existing"
+  # External secrets name (created by External Secrets Operator)
+  externalSecretsName: "agent-platform-secrets"
+  # Note: GitHub secrets (SSH keys + tokens) are managed externally per agent
+  # See infra/scripts/setup-agent-secrets.sh for setup instructions
+
+# RBAC configuration
+rbac:
+  # Create RBAC resources
+  create: true
+
+  # Controller RBAC (for managing CodeRun/DocsRun resources)
+  controller:
+    # Use Role/RoleBinding (true) or ClusterRole/ClusterRoleBinding (false)
+    namespaced: true
+    rules:
+      # CodeRun and DocsRun CRD management
+      - apiGroups: ["agents.platform"]
+        resources: ["coderuns", "docsruns"]
+        verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+      - apiGroups: ["agents.platform"]
+        resources: ["coderuns/status", "docsruns/status"]
+        verbs: ["get", "update", "patch"]
+      # Job management in agent-platform namespace
+      - apiGroups: ["batch"]
+        resources: ["jobs"]
+        verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+      # ConfigMap and Secret access (for agent configuration and task files)
+      - apiGroups: [""]
+        resources: ["configmaps", "secrets"]
+        verbs: ["get", "list", "create", "update", "delete", "watch", "patch"]
+      # ServiceAccount management (required for Helm operations)
+      - apiGroups: [""]
+        resources: ["serviceaccounts"]
+        verbs: ["get", "list", "create", "update", "delete", "patch"]
+      # Service management (required for Helm operations)
+      - apiGroups: [""]
+        resources: ["services"]
+        verbs: ["get", "list", "create", "update", "delete", "patch"]
+      # Pod monitoring
+      - apiGroups: [""]
+        resources: ["pods", "pods/log"]
+        verbs: ["get", "list", "watch"]
+      # PVC management for agent workspaces
+      - apiGroups: [""]
+        resources: ["persistentvolumeclaims"]
+        verbs: ["create", "get", "list", "delete"]
+      # Events for debugging
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["get", "list", "watch"]
+
+  # Workflow RBAC (for Argo Workflow execution)
+  workflow:
+    # Workflows need cluster scope to manage resources across namespaces
+    namespaced: false
+    rules:
+      # Workflow execution and management
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtemplates", "clusterworkflowtemplates"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Pod management for workflow steps
+      - apiGroups: [""]
+        resources: ["pods", "pods/log", "pods/exec"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # ConfigMap and Secret access
+      - apiGroups: [""]
+        resources: ["configmaps", "secrets"]
+        verbs: ["get", "list", "watch"]
+      # PVC management for workspaces
+      - apiGroups: [""]
+        resources: ["persistentvolumeclaims"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Events for logging
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["create", "patch"]
+      # Workflow task results (required for Argo Workflows)
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtaskresults"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Orchestrator CRDs (for creating DocsRun/CodeRun from workflows)
+      - apiGroups: ["agents.platform"]
+        resources: ["docsruns", "coderuns"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Workflow Submitter RBAC (for orchestrator to submit workflows)
+  submitter:
+    # Submitter needs cluster scope to submit workflows across namespaces
+    namespaced: false
+    rules:
+      # Submit workflows from templates
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["create", "get", "list", "watch", "update", "patch"]
+      # Access templates
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflowtemplates", "clusterworkflowtemplates"]
+        verbs: ["get", "list"]
+      # Monitor workflow status
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["get", "list", "watch"]
+
+    # High-privilege ServiceAccount for CodeRun jobs
+    clusterAdminServiceAccount:
+      create: true
+      name: coderun-cluster-admin
+
+# Health checks
+healthCheck:
+  enabled: true
+  path: "/health"
+  port: 8080
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 60
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
