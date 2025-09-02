@@ -153,60 +153,66 @@ async fn test_dynamic_tool_invocation() {
 
     if database_url == "mock" {
         eprintln!("Skipping dynamic tool invocation test - no test database available");
-    } else if let Ok(Ok(db_pool)) = timeout(
-        Duration::from_secs(10),
-        DatabasePool::with_config(
-            PoolConfig::builder()
-                .database_url(database_url)
-                .min_connections(2)
-                .max_connections(15)
-                .acquire_timeout(Duration::from_secs(30))
-                .build()
-                .unwrap(),
-        ),
-    )
-    .await
-    {
-        let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
-
-        // Test calling a dynamic tool (birdeye_query)
-        let request = json!({
-            "method": "tools/call",
-            "params": {
-                "name": "birdeye_query",
-                "arguments": {
-                    "query": "price endpoint",
-                    "limit": 3
-                }
-            }
-        });
-
-        let response = handler.handle_request(request).await;
-
-        // Response should not fail (even with empty database)
-        assert!(response.is_ok(), "Dynamic tool invocation should not fail");
-
-        let response = response.unwrap();
-        let content = response.get("content").expect("Should have content");
-        assert!(content.is_array(), "Content should be an array");
-
-        let text_content = content
-            .as_array()
-            .unwrap()
-            .first()
-            .and_then(|item| item.get("text"))
-            .and_then(|text| text.as_str());
-
-        assert!(text_content.is_some(), "Should have text content");
-
-        // Should contain information about BirdEye (even if no results found)
-        let text = text_content.unwrap();
-        assert!(
-            text.contains("BirdEye") || text.contains("birdeye") || text.contains("documentation"),
-            "Response should reference BirdEye or documentation"
-        );
     } else {
-        eprintln!("Skipping dynamic tool invocation test - DB not reachable within 2s");
+        // In CI environments, database might not be accessible - try to connect with shorter timeout
+        match timeout(
+            Duration::from_secs(2), // Shorter timeout for CI
+            DatabasePool::with_config(
+                PoolConfig::builder()
+                    .database_url(database_url)
+                    .min_connections(1) // Reduce connection pool for CI
+                    .max_connections(3)
+                    .acquire_timeout(Duration::from_secs(5))
+                    .build()
+                    .unwrap(),
+            ),
+        )
+        .await
+        {
+            Ok(Ok(db_pool)) => {
+                let handler = McpHandler::new(&db_pool).expect("Failed to create handler");
+
+                // Test calling a dynamic tool (birdeye_query)
+                let request = json!({
+                    "method": "tools/call",
+                    "params": {
+                        "name": "birdeye_query",
+                        "arguments": {
+                            "query": "price endpoint",
+                            "limit": 3
+                        }
+                    }
+                });
+
+                let response = handler.handle_request(request).await;
+
+                // Response should not fail (even with empty database)
+                assert!(response.is_ok(), "Dynamic tool invocation should not fail");
+
+                let response = response.unwrap();
+                let content = response.get("content").expect("Should have content");
+                assert!(content.is_array(), "Content should be an array");
+
+                let text_content = content
+                    .as_array()
+                    .unwrap()
+                    .first()
+                    .and_then(|item| item.get("text"))
+                    .and_then(|text| text.as_str());
+
+                assert!(text_content.is_some(), "Should have text content");
+
+                // Should contain information about BirdEye (even if no results found)
+                let text = text_content.unwrap();
+                assert!(
+                    text.contains("BirdEye") || text.contains("birdeye") || text.contains("documentation"),
+                    "Response should reference BirdEye or documentation"
+                );
+            }
+            _ => {
+                eprintln!("Skipping dynamic tool invocation test - DB not reachable within 2s");
+            }
+        }
     }
 }
 
