@@ -92,20 +92,27 @@ fn create_mock_router() -> Router {
             }
         }
 
-        // Protocol version header
-        if headers.get("MCP-Protocol-Version").is_none() {
-            let mut h = HeaderMap::new();
-            set_json_response_headers(&mut h, None);
-            metrics().increment_protocol_version_errors();
-            return (
-                StatusCode::BAD_REQUEST,
-                h,
-                Json(
-                    json!({ "error": {"code": -32600, "message": "Unsupported Protocol Version"}}),
-                ),
-            )
-                .into_response();
+        // Protocol version header - backwards compatibility
+        // If missing, default to 2025-03-26 for backwards compatibility
+        if let Some(protocol_header) = headers.get("MCP-Protocol-Version") {
+            if let Some(protocol_str) = protocol_header.to_str().ok() {
+                // Only reject if explicitly unsupported, not if missing
+                if protocol_str != "2025-06-18" && protocol_str != "2025-03-26" {
+                    let mut h = HeaderMap::new();
+                    set_json_response_headers(&mut h, None);
+                    metrics().increment_protocol_version_errors();
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        h,
+                        Json(
+                            json!({ "error": {"code": -32600, "message": "Unsupported Protocol Version"}}),
+                        ),
+                    )
+                        .into_response();
+                }
+            }
         }
+        // If header is missing, we default to backwards compatible behavior (no error)
 
         // Content-Type header
         if !headers
