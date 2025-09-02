@@ -205,7 +205,11 @@ impl EmbeddingService {
 
     /// Estimate token count for a text
     #[must_use]
-    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss,
+        clippy::cast_sign_loss
+    )]
     pub fn estimate_tokens(&self, text: &str) -> usize {
         // Rough estimation: 1 token ≈ 4 characters for English text
         (text.len() as f64 * 0.25).ceil() as usize

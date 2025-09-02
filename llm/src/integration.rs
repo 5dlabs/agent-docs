@@ -279,7 +279,10 @@ impl EnhancedDocumentProcessor {
             llm_provider: self.llm_client.config().provider.clone(),
             embedding_service_stats: self.embedding_service.get_stats(),
             search_enabled: self.search_engine.is_some(),
-            search_stats: self.search_engine.as_ref().map(HybridSearchEngine::get_stats),
+            search_stats: self
+                .search_engine
+                .as_ref()
+                .map(HybridSearchEngine::get_stats),
         }
     }
 }

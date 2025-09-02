@@ -227,10 +227,10 @@ impl LlmClient {
         }
 
         let openai_response: OpenAiResponse = response.json().await?;
-        let content = openai_response
-            .choices
-            .first()
-            .map_or_else(|| "No response from `OpenAI`".to_string(), |choice| choice.message.content.clone());
+        let content = openai_response.choices.first().map_or_else(
+            || "No response from `OpenAI`".to_string(),
+            |choice| choice.message.content.clone(),
+        );
 
         // Convert usage statistics
         let usage = openai_response.usage.map(|u| Usage {
@@ -422,7 +422,11 @@ impl LlmClient {
         }
 
         // Estimate token count (rough approximation)
-        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_precision_loss,
+            clippy::cast_sign_loss
+        )]
         let estimated_tokens = (text.len() as f64 * 0.25) as u32;
         if estimated_tokens > 8191 {
             return Err(anyhow!(
@@ -594,7 +598,9 @@ impl LlmClient {
 
         let (model, dimensions) = match use_case {
             EmbeddingUseCase::SemanticSearch => ("text-embedding-3-large", Some(3072)),
-            EmbeddingUseCase::CodeSearch | EmbeddingUseCase::Classification => ("text-embedding-3-small", Some(1536)),
+            EmbeddingUseCase::CodeSearch | EmbeddingUseCase::Classification => {
+                ("text-embedding-3-small", Some(1536))
+            }
             EmbeddingUseCase::Clustering => ("text-embedding-3-large", Some(1024)),
         };
 
