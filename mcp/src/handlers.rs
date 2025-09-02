@@ -156,7 +156,7 @@ impl McpHandler {
         match method {
             "tools/list" => Ok(self.handle_tools_list()),
             "tools/call" => self.handle_tool_call(&request).await,
-            "initialize" => Ok(McpHandler::handle_initialize(&request)),
+            "initialize" => Ok(Self::handle_initialize(&request)),
             _ => Err(anyhow!("Unsupported method: {}", method)),
         }
     }

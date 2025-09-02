@@ -21,12 +21,12 @@ pub struct CrateJobProcessor {
 
 impl CrateJobProcessor {
     /// Create a new job processor
-    pub fn new(db_pool: DatabasePool) -> Self {
+    pub const fn new(db_pool: DatabasePool) -> Self {
         Self { db_pool }
     }
 
     /// Get a reference to the database pool
-    pub fn db_pool(&self) -> &DatabasePool {
+    pub const fn db_pool(&self) -> &DatabasePool {
         &self.db_pool
     }
 

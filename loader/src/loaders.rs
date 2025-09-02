@@ -320,18 +320,23 @@ impl RustLoader {
 
         // Look for links to modules, structs, functions, etc.
         if let Ok(link_selector) = Selector::parse("a[href]") {
+            // Extract URLs first to avoid holding references across await
+            let mut urls_to_fetch = Vec::new();
             for element in document.select(&link_selector).take(20) {
                 // Limit to prevent too many requests
                 if let Some(href) = element.value().attr("href") {
                     if let Some(full_url) = self.resolve_docs_rs_url(base_url, href) {
                         if visited_urls.insert(full_url.clone()) {
-                            if let Ok(doc_page) =
-                                self.fetch_docs_rs_item(&full_url, crate_name).await
-                            {
-                                discovered_pages.push(doc_page);
-                            }
+                            urls_to_fetch.push(full_url);
                         }
                     }
+                }
+            }
+
+            // Now fetch each URL without holding DOM references
+            for full_url in urls_to_fetch {
+                if let Ok(doc_page) = self.fetch_docs_rs_item(&full_url, crate_name).await {
+                    discovered_pages.push(doc_page);
                 }
             }
         }

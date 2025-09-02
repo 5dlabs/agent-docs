@@ -265,7 +265,7 @@ mod tests {
             metadata_hints: None,
         };
         let config = ToolsConfig {
-            tools: vec![tool1.clone(), tool2],
+            tools: vec![tool1, tool2],
         };
 
         let enabled = ConfigLoader::filter_enabled_tools(&config);
