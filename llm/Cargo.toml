@@ -13,7 +13,9 @@ serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-reqwest = { workspace = true }
+reqwest = { workspace = true } # Added back for OpenAI API support
+async-trait = { workspace = true }
+chrono = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
