@@ -1,5 +1,27 @@
-# Runtime-only Dockerfile for Agent Docs MCP Server
-# Expects a prebuilt binary at build/http_server in the build context
+# Multi-stage build for Agent Docs MCP Server (spec-compliant JSON-RPC HTTP)
+
+# Build stage
+FROM rust:1.79-bullseye AS builder
+
+WORKDIR /workspace
+
+# Cache deps first
+COPY Cargo.toml Cargo.lock ./
+COPY db/Cargo.toml db/Cargo.toml
+COPY embed/Cargo.toml embed/Cargo.toml
+COPY llm/Cargo.toml llm/Cargo.toml
+COPY loader/Cargo.toml loader/Cargo.toml
+COPY mcp/Cargo.toml mcp/Cargo.toml
+
+RUN mkdir -p db/src embed/src llm/src loader/src mcp/src && \
+    echo "fn main(){}" > mcp/src/main.rs && \
+    cargo build -p mcp --bin http_server --release || true
+
+# Copy source
+COPY . .
+
+# Build release binary
+RUN cargo build -p mcp --bin http_server --release
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -21,8 +43,8 @@ RUN useradd -r -s /bin/false -m -d /app mcpuser
 WORKDIR /app
 RUN chown mcpuser:mcpuser /app
 
-# Copy prebuilt binary from CI artifact packaged in the build context
-COPY --chown=mcpuser:mcpuser build/http_server /app/http_server
+# Copy binary from builder
+COPY --from=builder /workspace/target/release/http_server /app/http_server
 RUN chmod +x /app/http_server
 
 # Switch to non-root user
@@ -39,9 +61,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Expose port
 EXPOSE 3001
-
-# Cache-bust marker (safe to keep with no-cache build)
-RUN echo "Build timestamp: 1756780123"
 
 # Run the MCP server (exec form, absolute path)
 CMD ["/app/http_server"]
