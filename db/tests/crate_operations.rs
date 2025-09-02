@@ -306,7 +306,7 @@ impl DatabaseTestFixture {
 
         // Ensure document_sources entry exists before inserting documents
         let source_exists = sqlx::query(
-            "SELECT 1 FROM document_sources WHERE doc_type = $1::doc_type AND source_name = $2"
+            "SELECT 1 FROM document_sources WHERE doc_type = $1::doc_type AND source_name = $2",
         )
         .bind("rust")
         .bind(&self.test_crate_name)
