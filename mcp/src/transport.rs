@@ -676,10 +676,11 @@ async fn handle_json_rpc_request(
     );
 
     // Process through existing MCP handler
+    let jsonrpc_id_value = json_request.get("id").cloned().unwrap_or(Value::Null);
     match state.handler.handle_request(json_request).await {
-        Ok(response) => {
+        Ok(result_value) => {
             metrics().increment_post_success();
-            debug!(request_id = %request_id, session_id = %session_id, "MCP handler response: {}", response);
+            debug!(request_id = %request_id, session_id = %session_id, "MCP handler result: {}", result_value);
 
             // Update session activity using comprehensive session manager
             let _ = state
@@ -691,12 +692,34 @@ async fn handle_json_rpc_request(
             set_json_response_headers(&mut response_headers, Some(session_id));
             add_security_headers(&mut response_headers);
 
-            Ok((StatusCode::OK, response_headers, Json(response)).into_response())
+            // Wrap in JSON-RPC envelope
+            let envelope = json!({
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id_value,
+                "result": result_value
+            });
+
+            Ok((StatusCode::OK, response_headers, Json(envelope)).into_response())
         }
         Err(e) => {
             metrics().increment_internal_errors();
             error!(request_id = %request_id, session_id = %session_id, "MCP handler failed: {}", e);
-            Err(TransportError::InternalError(format!("Handler error: {e}")))
+            // Return JSON-RPC error envelope with HTTP 200 to follow JSON-RPC semantics
+            let mut response_headers = HeaderMap::new();
+            set_json_response_headers(&mut response_headers, Some(session_id));
+            add_security_headers(&mut response_headers);
+
+            let error_envelope = json!({
+                "jsonrpc": "2.0",
+                "id": jsonrpc_id_value,
+                "error": {
+                    "code": -32603,
+                    "message": "Internal Server Error",
+                    "data": format!("Handler error: {e}")
+                }
+            });
+
+            Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
         }
     }
 }
