@@ -48,13 +48,14 @@ fn test_validate_protocol_version_invalid() {
     assert_eq!(result, Err(StatusCode::BAD_REQUEST));
 }
 
-/// Test protocol version validation with missing header
+/// Test protocol version validation with missing header (backwards compatibility)
 #[test]
 fn test_validate_protocol_version_missing() {
     let headers = HeaderMap::new();
 
+    // For backwards compatibility, missing header defaults to 2025-03-26
     let result = validate_protocol_version(&headers);
-    assert_eq!(result, Err(StatusCode::BAD_REQUEST));
+    assert_eq!(result, Ok(()));
 }
 
 /// Test protocol version validation with malformed header value

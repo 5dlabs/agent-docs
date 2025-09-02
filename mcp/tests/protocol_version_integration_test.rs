@@ -57,11 +57,11 @@ fn test_header_validation_with_registry() {
         Err(StatusCode::BAD_REQUEST)
     );
 
-    // Test with missing header
+    // Test with missing header (backwards compatibility - defaults to 2025-03-26)
     headers.clear();
     assert_eq!(
         validate_protocol_version(&headers),
-        Err(StatusCode::BAD_REQUEST)
+        Ok(())
     );
 }
 

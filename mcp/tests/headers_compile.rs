@@ -20,14 +20,13 @@ fn test_validate_protocol_version_compiles() {
     // Test that the validate_protocol_version function exists and compiles
     let headers = HeaderMap::new();
 
-    // This should return an error for missing headers, but the important part
-    // is that it compiles and we can call the function
+    // For backwards compatibility, missing protocol version header now defaults to 2025-03-26
     let result = validate_protocol_version(&headers);
 
-    // We expect this to fail since no headers are set, but it should compile
+    // We expect this to succeed (backwards compatible behavior)
     assert!(
-        result.is_err(),
-        "Should return error for missing protocol version"
+        result.is_ok(),
+        "Should succeed for missing protocol version (backwards compatibility)"
     );
 }
 

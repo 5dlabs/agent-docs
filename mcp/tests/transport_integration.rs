@@ -228,8 +228,8 @@ async fn test_post_mcp_without_protocol_version_returns_400() {
 
     let response = app.oneshot(request).await.unwrap();
 
-    // Should return 400 Bad Request
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    // For backwards compatibility, missing header should return 200 OK (defaults to 2025-03-26)
+    assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
