@@ -52,6 +52,7 @@ async fn create_test_server() -> Router {
 }
 
 /// Create a mock router for testing when database is not available
+#[allow(clippy::too_many_lines)]
 fn create_mock_router() -> Router {
     async fn mock_mcp_handler(request: Request<Body>) -> impl IntoResponse {
         let method = request.method().clone();
@@ -95,7 +96,7 @@ fn create_mock_router() -> Router {
         // Protocol version header - backwards compatibility
         // If missing, default to 2025-03-26 for backwards compatibility
         if let Some(protocol_header) = headers.get("MCP-Protocol-Version") {
-            if let Some(protocol_str) = protocol_header.to_str().ok() {
+            if let Ok(protocol_str) = protocol_header.to_str() {
                 // Only reject if explicitly unsupported, not if missing
                 if protocol_str != "2025-06-18" && protocol_str != "2025-03-26" {
                     let mut h = HeaderMap::new();
