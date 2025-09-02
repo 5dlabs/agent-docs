@@ -71,7 +71,9 @@ impl LlmClient {
             max_tokens: 1000,
             messages: vec![ClaudeMessage {
                 role: "user".to_string(),
-                content: format!("Please analyze this text and provide a concise summary:\n\n{text}"),
+                content: format!(
+                    "Please analyze this text and provide a concise summary:\n\n{text}"
+                ),
             }],
         };
 

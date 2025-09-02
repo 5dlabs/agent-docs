@@ -14,9 +14,9 @@ use loader::loaders::RateLimiter;
 use loader::parsers::UniversalParser;
 
 // Database dependencies
-use db::DatabasePool;
 use db::models::Document;
 use db::queries::DocumentQueries;
+use db::DatabasePool;
 use uuid::Uuid;
 
 /// AI-enabled Document Ingestion CLI
@@ -617,10 +617,12 @@ async fn handle_database_command(
     let mut failed_count = 0;
 
     for (i, batch) in documents.chunks(batch_size).enumerate() {
-        info!("📦 Processing batch {} of {} (size: {})",
-              i + 1,
-              documents.len().div_ceil(batch_size),
-              batch.len());
+        info!(
+            "📦 Processing batch {} of {} (size: {})",
+            i + 1,
+            documents.len().div_ceil(batch_size),
+            batch.len()
+        );
 
         match DocumentQueries::batch_insert_documents(pool.pool(), batch).await {
             Ok(inserted_docs) => {
