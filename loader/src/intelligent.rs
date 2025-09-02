@@ -135,7 +135,7 @@ pub trait IntelligentLoader {
 /// Claude-powered intelligent loader implementation
 pub struct ClaudeIntelligentLoader {
     /// Claude LLM client
-    llm_client: llm::client::LlmClient,
+    pub llm_client: llm::client::LlmClient,
     /// Rate limiter for API calls
     rate_limiter: RateLimiter,
     /// GitHub API client
@@ -147,20 +147,19 @@ pub struct ClaudeIntelligentLoader {
 impl ClaudeIntelligentLoader {
     /// Create a new Claude-powered intelligent loader
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if the GitHub client cannot be created.
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            llm_client: llm::client::LlmClient::new(),
+    /// Returns an error if the LLM client cannot be created.
+    pub fn new() -> Result<Self> {
+        Ok(Self {
+            llm_client: llm::client::LlmClient::new()?,
             rate_limiter: RateLimiter::new(),
             github_client: Octocrab::builder().build().unwrap_or_else(|_| {
                 warn!("Failed to create GitHub client, using anonymous access");
                 Octocrab::default()
             }),
             parser: UniversalParser::new(2000, 200),
-        }
+        })
     }
 
     /// Analyze a GitHub repository using Claude
@@ -181,7 +180,7 @@ impl ClaudeIntelligentLoader {
 
         // Use Claude to analyze the repository
         let analysis_prompt = Self::build_analysis_prompt(&repo_info, &repo_tree);
-        let analysis_response = self.llm_client.summarize(&analysis_prompt)?;
+        let analysis_response = self.llm_client.summarize(&analysis_prompt).await?;
 
         // Parse Claude's response
         Self::parse_analysis_response(&analysis_response)
@@ -343,30 +342,17 @@ Return your analysis in JSON format with the following structure:
     }
 
     /// Get repository file tree
-    async fn get_repository_tree(&self, owner: &str, repo: &str) -> Result<Vec<String>> {
-        let contents = self
-            .github_client
-            .repos(owner, repo)
-            .get_content()
-            .path("")
-            .r#ref("HEAD")
-            .send()
-            .await?;
-
-        let mut tree = Vec::new();
-        for item in contents.items {
-            if item.r#type == "file" {
-                tree.push(item.path);
-            }
-        }
-
-        Ok(tree)
+    async fn get_repository_tree(&self, _owner: &str, _repo: &str) -> Result<Vec<String>> {
+        // For now, return empty vec - we'll implement local filesystem scanning instead
+        // This method is deprecated in favor of local file system scanning
+        warn!("get_repository_tree is deprecated - use local filesystem scanning instead");
+        Ok(Vec::new())
     }
 }
 
 impl Default for ClaudeIntelligentLoader {
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("Failed to create ClaudeIntelligentLoader - check ANTHROPIC_API_KEY")
     }
 }
 
@@ -445,7 +431,7 @@ Return your classification in JSON format:
             &content[..content.len().min(1000)]
         );
 
-        let response = self.llm_client.summarize(&classification_prompt)?;
+        let response = self.llm_client.summarize(&classification_prompt).await?;
         let classification: serde_json::Value = serde_json::from_str(&response)?;
 
         match classification["doc_type"].as_str() {
