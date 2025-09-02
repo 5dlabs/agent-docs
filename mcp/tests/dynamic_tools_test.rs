@@ -204,13 +204,12 @@ async fn test_dynamic_tool_invocation() {
 
                 // Should contain information about BirdEye (even if no results found)
                 let text = text_content.unwrap();
-                eprintln!("DEBUG: Tool response text: '{}'", text);
+                eprintln!("DEBUG: Tool response text: '{text}'");
                 assert!(
                     text.contains("BirdEye")
                         || text.contains("birdeye")
                         || text.contains("documentation"),
-                    "Response should reference BirdEye or documentation, but got: '{}'",
-                    text
+                    "Response should reference BirdEye or documentation, but got: '{text}'"
                 );
             }
             _ => {
