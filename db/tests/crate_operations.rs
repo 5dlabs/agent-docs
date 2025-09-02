@@ -280,6 +280,12 @@ impl DatabaseTestFixture {
             .execute(&self.pool)
             .await?;
 
+        // Clean up document_sources entries created for tests
+        sqlx::query("DELETE FROM document_sources WHERE doc_type = 'rust' AND source_name = $1")
+            .bind(&self.test_crate_name)
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
@@ -297,6 +303,31 @@ impl DatabaseTestFixture {
 
     async fn insert_test_documents(&self, count: i32) -> Result<Vec<Uuid>> {
         let mut doc_ids = Vec::new();
+
+        // Ensure document_sources entry exists before inserting documents
+        let source_exists = sqlx::query(
+            "SELECT 1 FROM document_sources WHERE doc_type = $1::doc_type AND source_name = $2"
+        )
+        .bind("rust")
+        .bind(&self.test_crate_name)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if source_exists.is_none() {
+            // Create document_sources entry if it doesn't exist
+            sqlx::query(
+                "INSERT INTO document_sources (doc_type, source_name, config, enabled, created_at, updated_at)
+                 VALUES ($1::doc_type, $2, $3, $4, $5, $5)
+                 ON CONFLICT (doc_type, source_name) DO NOTHING"
+            )
+            .bind("rust")
+            .bind(&self.test_crate_name)
+            .bind(json!({"test": true, "version": "0.1.0"}))
+            .bind(true)
+            .bind(Utc::now())
+            .execute(&self.pool)
+            .await?;
+        }
 
         for i in 0..count {
             let doc_id = Uuid::new_v4();
