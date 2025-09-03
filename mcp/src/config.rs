@@ -61,6 +61,7 @@ impl ConfigLoader {
         // Try to load from filesystem second
         if let Ok(config_content) = std::fs::read_to_string("/app/tools.json") {
             debug!("Loading configuration from filesystem (/app/tools.json)");
+            info!("Successfully read {} bytes from filesystem", config_content.len());
 
             let config: ToolsConfig = serde_json::from_str(&config_content)
                 .map_err(|e| anyhow!("Failed to parse filesystem config: {}", e))?;
@@ -73,6 +74,8 @@ impl ConfigLoader {
             );
 
             return Ok(config);
+        } else {
+            info!("Failed to read from filesystem (/app/tools.json), falling back to embedded config");
         }
 
         // Fallback to embedded config
