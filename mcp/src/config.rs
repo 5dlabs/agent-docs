@@ -41,7 +41,24 @@ impl ConfigLoader {
     ///
     /// Returns an error if the config is invalid.
     pub fn load_default() -> Result<ToolsConfig> {
-        // Try to load from filesystem first
+        // Try to load from environment variable first
+        if let Ok(config_content) = std::env::var("TOOLS_CONFIG") {
+            debug!("Loading configuration from environment variable TOOLS_CONFIG");
+
+            let config: ToolsConfig = serde_json::from_str(&config_content)
+                .map_err(|e| anyhow!("Failed to parse environment config: {}", e))?;
+
+            Self::validate_config(&config)?;
+
+            info!(
+                "Loaded environment configuration with {} tools",
+                config.tools.len()
+            );
+
+            return Ok(config);
+        }
+
+        // Try to load from filesystem second
         if let Ok(config_content) = std::fs::read_to_string("/app/tools.json") {
             debug!("Loading configuration from filesystem (/app/tools.json)");
 
