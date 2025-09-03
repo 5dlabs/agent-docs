@@ -48,7 +48,6 @@ async fn test_configuration_validation() {
     let expected_tools = vec![
         "birdeye_query",
         "solana_query",
-        "jupyter_query",
         "cilium_query",
         "talos_query",
         "meteora_query",
@@ -245,7 +244,6 @@ fn test_tool_description_quality() {
         let doc_type_variants = match tool.doc_type.as_str() {
             "birdeye" => vec!["birdeye", "blockchain", "api"],
             "solana" => vec!["solana", "blockchain", "validator"],
-            "jupyter" => vec!["jupyter", "notebook", "data"],
             "cilium" => vec!["cilium", "networking", "kubernetes"],
             "talos" => vec!["talos", "kubernetes", "linux"],
             "meteora" => vec!["meteora", "defi", "protocol"],
