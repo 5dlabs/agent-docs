@@ -95,6 +95,8 @@ async fn test_dynamic_tools_registration() {
         let expected_dynamic_tools = vec![
             "birdeye_query",
             "solana_query",
+            "jupiter_query",
+            "ethereum_query",
             "cilium_query",
             "talos_query",
             "meteora_query",
