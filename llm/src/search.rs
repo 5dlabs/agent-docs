@@ -116,7 +116,7 @@ impl HybridSearchEngine {
         let query_embedding = self.embedding_service.embed_text(query).await?;
 
         // Extract keywords from query for keyword search
-        let query_keywords = self.extract_keywords(query);
+        let query_keywords = Self::extract_keywords(query);
 
         // Perform semantic search
         let semantic_results = self.semantic_search(&query_embedding, limit * 2);
@@ -125,7 +125,7 @@ impl HybridSearchEngine {
         let keyword_results = self.keyword_search(&query_keywords, limit * 2);
 
         // Combine results using hybrid ranking
-        let combined_results = self.combine_results(
+        let combined_results = Self::combine_results(
             semantic_results,
             keyword_results,
             semantic_weight,
@@ -208,7 +208,6 @@ impl HybridSearchEngine {
 
     /// Combine semantic and keyword search results
     fn combine_results(
-        &self,
         semantic_results: Vec<(String, f32)>,
         keyword_results: Vec<(String, f32)>,
         semantic_weight: f32,
@@ -245,8 +244,8 @@ impl HybridSearchEngine {
     }
 
     /// Extract keywords from query text
-    fn extract_keywords(&self, _query: &str) -> Vec<String> {
-        _query
+    fn extract_keywords(query: &str) -> Vec<String> {
+        query
             .to_lowercase()
             .split_whitespace()
             .filter(|word| word.len() > 2) // Filter out short words
@@ -258,7 +257,7 @@ impl HybridSearchEngine {
 
     /// Build inverted index for a document
     fn build_inverted_index(&mut self, doc_id: &str, content: &str) {
-        let keywords = self.extract_keywords(content);
+        let keywords = Self::extract_keywords(content);
 
         for keyword in keywords {
             self.inverted_index
@@ -438,9 +437,9 @@ mod tests {
     fn test_keyword_extraction() {
         let llm_client = LlmClient::new().unwrap();
         let embedding_service = EmbeddingService::new(llm_client);
-        let search_engine = HybridSearchEngine::new(embedding_service);
+        let _search_engine = HybridSearchEngine::new(embedding_service);
 
-        let keywords = search_engine.extract_keywords("What is machine learning?");
+        let keywords = HybridSearchEngine::extract_keywords("What is machine learning?");
         assert!(keywords.contains(&"machine".to_string()));
         assert!(keywords.contains(&"learning".to_string()));
     }

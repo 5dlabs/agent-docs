@@ -58,7 +58,7 @@ impl EnhancedDocumentProcessor {
             .embed_text_optimized(&content, EmbeddingUseCase::SemanticSearch)
             .await?;
 
-        let code_embedding = if self.is_code_content(&content) {
+        let code_embedding = if Self::is_code_content(&content) {
             Some(
                 self.embedding_service
                     .embed_text_optimized(&content, EmbeddingUseCase::CodeSearch)
@@ -70,8 +70,8 @@ impl EnhancedDocumentProcessor {
 
         // Step 3: Extract keywords and metadata
         let keywords = self.extract_keywords(&content).await?;
-        let metadata = self.extract_metadata(&content)?;
-        let quality_score = self.calculate_quality_score(&content, &summary)?;
+        let metadata = Self::extract_metadata(&content);
+        let quality_score = Self::calculate_quality_score(&content, &summary);
 
         // Step 5: Add to search index if available
         if let Some(ref search_engine) = self.search_engine {
@@ -123,8 +123,8 @@ impl EnhancedDocumentProcessor {
 
             // Extract basic metadata
             let keywords = self.extract_keywords(&content).await?;
-            let metadata = self.extract_metadata(&content)?;
-            let quality_score = self.calculate_quality_score(&content, &summary)?;
+            let metadata = Self::extract_metadata(&content);
+            let quality_score = Self::calculate_quality_score(&content, &summary);
 
             let processed_doc = ProcessedDocument {
                 id: doc_id.clone(),
@@ -236,7 +236,7 @@ impl EnhancedDocumentProcessor {
     }
 
     /// Extract metadata from document
-    fn extract_metadata(&self, _content: &str) -> Result<HashMap<String, String>> {
+    fn extract_metadata(_content: &str) -> HashMap<String, String> {
         // This could be enhanced to extract more sophisticated metadata
         let mut metadata = HashMap::new();
         metadata.insert("processed_at".to_string(), chrono::Utc::now().to_rfc3339());
@@ -244,11 +244,11 @@ impl EnhancedDocumentProcessor {
             "processor_version".to_string(),
             env!("CARGO_PKG_VERSION").to_string(),
         );
-        Ok(metadata)
+        metadata
     }
 
     /// Calculate document quality score
-    fn calculate_quality_score(&self, content: &str, summary: &str) -> Result<f32> {
+    fn calculate_quality_score(content: &str, summary: &str) -> f32 {
         // Simple quality scoring based on content length and summary coherence
         #[allow(clippy::cast_precision_loss)]
         let content_length_score = (content.len() as f32 / 1000.0).min(1.0);
@@ -256,11 +256,11 @@ impl EnhancedDocumentProcessor {
         let summary_length_score = (summary.len() as f32 / 200.0).min(1.0);
 
         // Could be enhanced with more sophisticated LLM-based quality assessment
-        Ok(f32::midpoint(content_length_score, summary_length_score))
+        f32::midpoint(content_length_score, summary_length_score)
     }
 
     /// Check if content appears to be code
-    fn is_code_content(&self, content: &str) -> bool {
+    fn is_code_content(content: &str) -> bool {
         // Simple heuristic: check for code patterns
         let code_indicators = [
             "fn ", "struct ", "impl ", "use ", "mod ", "#[", "```", "let ", "const ", "pub ",
@@ -472,7 +472,7 @@ pub mod examples {
 
 #[cfg(test)]
 mod tests {
-    use super::{EnhancedDocumentProcessor, ProcessedDocument};
+    use super::EnhancedDocumentProcessor;
 
     #[tokio::test]
     async fn test_document_processing() {
@@ -501,10 +501,10 @@ mod tests {
 
     #[test]
     fn test_document_type_classification() {
-        let processor = EnhancedDocumentProcessor::new().unwrap();
+        let _processor = EnhancedDocumentProcessor::new().unwrap();
 
         // Test code detection
-        assert!(processor.is_code_content("fn main() { println!(\"Hello\"); }"));
-        assert!(!processor.is_code_content("This is just plain text."));
+        assert!(EnhancedDocumentProcessor::is_code_content("fn main() { println!(\"Hello\"); }"));
+        assert!(!EnhancedDocumentProcessor::is_code_content("This is just plain text."));
     }
 }
