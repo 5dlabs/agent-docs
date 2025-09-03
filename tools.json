@@ -66,6 +66,32 @@
       }
     },
     {
+      "name": "jupiter_query",
+      "docType": "jupiter",
+      "title": "Jupiter Protocol Documentation Query",
+      "description": "Search Jupiter DeFi protocol documentation for DEX aggregation, swap APIs, and Solana-based trading infrastructure.",
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "json", "typescript"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "swap-api",
+          "token-api",
+          "price-api",
+          "dex-integration",
+          "wallet-integration"
+        ],
+        "supported_topics": [
+          "trading",
+          "liquidity",
+          "apis",
+          "integration",
+          "development"
+        ],
+        "supports_api_version": true
+      }
+    },
+    {
       "name": "ethereum_query",
       "docType": "ethereum",
       "title": "Ethereum Documentation Query",
