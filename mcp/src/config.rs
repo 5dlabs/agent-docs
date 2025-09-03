@@ -256,7 +256,7 @@ mod tests {
     fn test_validate_config_invalid_doc_type() {
         let tool = ToolConfig {
             name: "test_query".to_string(),
-            doc_type: "invalid_type".to_string(),
+            doc_type: "".to_string(), // Empty doc type is invalid
             title: "Test".to_string(),
             description: "Test tool".to_string(),
             enabled: true,
@@ -266,7 +266,7 @@ mod tests {
 
         let result = ConfigLoader::validate_config(&config);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid docType"));
+        assert!(result.unwrap_err().to_string().contains("docType cannot be empty"));
     }
 
     #[test]

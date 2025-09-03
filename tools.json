@@ -130,7 +130,7 @@
       "name": "rust_best_practices_query",
       "docType": "rust_best_practices",
       "title": "Rust Best Practices Query",
-      "description": "Search curated Rust best practices, patterns, and guidelines for idiomatic and performant code.",
+      "description": "Search curated Rust best practices, patterns, and guidelines for idiomatic and performant code in rust_best_practices.",
       "enabled": true
     },
     {
