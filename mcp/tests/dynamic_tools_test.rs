@@ -3,11 +3,11 @@
 use db::{DatabasePool, PoolConfig};
 use mcp::{config::ConfigLoader, handlers::McpHandler};
 use serde_json::json;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 use tokio::time::{timeout, Duration};
 
-// Use a mutex to ensure tests don't run in parallel when modifying env vars
-static TEST_MUTEX: Mutex<()> = Mutex::new(());
+// Use an async mutex to ensure tests don't run in parallel when modifying env vars
+static TEST_MUTEX: Mutex<()> = Mutex::const_new(());
 
 fn setup_test_config() {
     // Load test configuration into environment variable
@@ -22,7 +22,7 @@ fn cleanup_test_config() {
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn test_dynamic_tools_registration() {
-    let _lock = TEST_MUTEX.lock().unwrap();
+    let _lock = TEST_MUTEX.lock().await;
     setup_test_config();
 
     // Create a mock database pool
@@ -171,7 +171,7 @@ async fn test_dynamic_tools_registration() {
 
 #[tokio::test]
 async fn test_dynamic_tool_invocation() {
-    let _lock = TEST_MUTEX.lock().unwrap();
+    let _lock = TEST_MUTEX.lock().await;
     setup_test_config();
 
     let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
@@ -273,7 +273,7 @@ async fn test_dynamic_tool_invocation() {
 
 #[tokio::test]
 async fn test_parameter_validation_dynamic_tools() {
-    let _lock = TEST_MUTEX.lock().unwrap();
+    let _lock = TEST_MUTEX.lock().await;
     setup_test_config();
     let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
 
