@@ -3,10 +3,24 @@
 use mcp::config::ConfigLoader;
 use serde_json::json;
 
+fn setup_test_config() {
+    // Load test configuration into environment variable
+    let test_config = include_str!("test_config.json");
+    std::env::set_var("TOOLS_CONFIG", test_config);
+}
+
+fn cleanup_test_config() {
+    std::env::remove_var("TOOLS_CONFIG");
+}
+
 #[tokio::test]
 async fn test_configuration_validation() {
-    // Test that we can load the default configuration successfully
-    let config = ConfigLoader::load_default().expect("Should load default configuration");
+    setup_test_config();
+
+    // Test that we can load the configuration successfully
+    let config = ConfigLoader::load_default().expect("Should load configuration");
+
+    cleanup_test_config();
 
     // Verify configuration structure
     assert!(
@@ -48,6 +62,7 @@ async fn test_configuration_validation() {
     let expected_tools = vec![
         "birdeye_query",
         "solana_query",
+        "jupiter_query",
         "cilium_query",
         "talos_query",
         "meteora_query",
@@ -189,7 +204,9 @@ fn test_configuration_validation_failures() {
 
 #[test]
 fn test_doctype_to_tool_name_mapping() {
-    let config = ConfigLoader::load_default().expect("Should load default configuration");
+    setup_test_config();
+    let config = ConfigLoader::load_default().expect("Should load configuration");
+    cleanup_test_config();
 
     // Verify that tools follow proper naming conventions based on their doc type
     for tool in &config.tools {
@@ -202,7 +219,6 @@ fn test_doctype_to_tool_name_mapping() {
                         | "remove_rust_crate"
                         | "list_rust_crates"
                         | "check_rust_status"
-                        | "rust_best_practices_query"
                 ),
                 "Unexpected rust tool name: {}",
                 tool.name
@@ -228,7 +244,9 @@ fn test_doctype_to_tool_name_mapping() {
 
 #[test]
 fn test_tool_description_quality() {
-    let config = ConfigLoader::load_default().expect("Should load default configuration");
+    setup_test_config();
+    let config = ConfigLoader::load_default().expect("Should load configuration");
+    cleanup_test_config();
 
     // Verify that all descriptions are substantial and informative
     for tool in &config.tools {
