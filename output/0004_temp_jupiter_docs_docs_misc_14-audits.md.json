@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/docs/misc/14-audits.md",
+  "content": "sidebar_label: \"Audits\"\ndescription: \"Audits of Jupiter's protocols.\"\ntitle: \"Audits\" \n\n     Audits \n     \n\n Jupiter's protocols are audited by reputable security firms to ensure the highest level of security and reliability. The following section provides the audits of Jupiter's protocols. \n Jupiter Swap \n \n Offside Labs  (v6) \n Sec3  (v3) \n \n Jupiter Limit Order \n \n Offside Labs  (v2) \n \n Jupiter DAO \n \n Offside Labs \n \n Jupiter Perpetuals \n \n Offside Labs \n OtterSec \n Sec3 \n \n Jupiter Lend \n \n Zenith Report: June 24th, 2025 - July 31, 2025 \n Offside Labs Liquidity report: July 10th, 2025 - July 18, 2025 \n Offside Labs Vaults report: July 23rd, 2025 - August 4th, 2025",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/docs/misc/14-audits.md",
+  "extracted_at": "2025-09-03T01:39:45.464345Z"
+}

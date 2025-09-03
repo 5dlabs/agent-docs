@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/cli-status.rst",
+  "content": "To validate that Cilium has been properly installed, you can run\n\n.. code-block:: shell-session\n\n   $ cilium status --wait\n      /¯¯\\\n   /¯¯\\__/¯¯\\    Cilium:         OK\n   \\__/¯¯\\__/    Operator:       OK\n   /¯¯\\__/¯¯\\    Hubble:         disabled\n   \\__/¯¯\\__/    ClusterMesh:    disabled\n      \\__/\n\n   DaemonSet         cilium             Desired: 2, Ready: 2/2, Available: 2/2\n   Deployment        cilium-operator    Desired: 2, Ready: 2/2, Available: 2/2\n   Containers:       cilium-operator    Running: 2\n                     cilium             Running: 2\n   Image versions    cilium             quay.io/cilium/cilium:v1.9.5: 2\n                     cilium-operator    quay.io/cilium/operator-generic:v1.9.5: 2\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/cli-status.rst",
+  "extracted_at": "2025-09-03T01:13:29.302915Z"
+}

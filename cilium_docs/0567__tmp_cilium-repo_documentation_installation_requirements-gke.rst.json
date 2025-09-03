@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/requirements-gke.rst",
+  "content": "To install Cilium on `Google Kubernetes Engine (GKE) <https://cloud.google.com/kubernetes-engine>`_,\nperform the following steps:\n\n**Default Configuration:**\n\n=============== =================== ===============\nDatapath        IPAM                Datastore\n=============== =================== ===============\nDirect Routing  Kubernetes PodCIDR  Kubernetes CRD\n=============== =================== ===============\n\n**Requirements:**\n\n* The cluster should be created with the taint ``node.cilium.io/agent-not-ready=true:NoExecute``\n  using ``--node-taints`` option. However, there are other options. Please make\n  sure to read and understand the documentation page on :ref:`taint effects and unmanaged pods<taint_effects>`.\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/requirements-gke.rst",
+  "extracted_at": "2025-09-03T01:13:29.306241Z"
+}

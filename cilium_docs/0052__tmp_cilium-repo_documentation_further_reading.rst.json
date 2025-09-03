@@ -3,5 +3,5 @@
   "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n###############\nFurther Reading\n###############\n\n.. include:: ../FURTHER_READINGS.rst\n      :start-after: further-reading-begin\n      :end-before: further-reading-end\n",
   "item_type": "unknown",
   "module_path": "/tmp/cilium-repo/Documentation/further_reading.rst",
-  "extracted_at": "2025-09-03T00:53:44.748782Z"
+  "extracted_at": "2025-09-03T01:13:28.791115Z"
 }

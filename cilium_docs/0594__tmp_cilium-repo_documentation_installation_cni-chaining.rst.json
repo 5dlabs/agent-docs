@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/cni-chaining.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _cni_chaining:\n\n************\nCNI Chaining\n************\n\nCNI chaining allows to use Cilium in combination with other CNI plugins.\n\nWith Cilium CNI chaining, the base network connectivity and IP address management\nis managed by the non-Cilium CNI plugin, but Cilium attaches eBPF programs to the\nnetwork devices created by the non-Cilium plugin to provide L3/L4 network\nvisibility, policy enforcement and other advanced features.\n\n.. toctree::\n   :maxdepth: 1\n   :glob:\n\n   cni-chaining-aws-cni\n   cni-chaining-azure-cni\n   cni-chaining-calico\n   cni-chaining-generic-veth\n   cni-chaining-portmap\n   cni-chaining-weave\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/cni-chaining.rst",
+  "extracted_at": "2025-09-03T01:13:29.315636Z"
+}

@@ -3,5 +3,5 @@
   "content": "cilium-dbg bgp peers \n List current state of all peers \n Synopsis \n List state of all peers defined in Cilium BGP configuration \n cilium-dbg bgp peers [flags]\n \n Options \n   -c, --capabilities    Show BGP peer capabilities in detail\n  -h, --help            help for peers\n  -o, --output string   json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg bgp \t - Access to BGP control plane",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_bgp_peers.md",
-  "extracted_at": "2025-09-03T00:53:44.844747Z"
+  "extracted_at": "2025-09-03T01:13:28.894593Z"
 }

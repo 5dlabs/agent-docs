@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/requirements-intro.rst",
+  "content": "Requirements\n============\n\nMake sure your Kubernetes environment is meeting the requirements:\n\n* Kubernetes >= 1.16\n* Linux kernel >= 5.10 or equivalent\n* Kubernetes in CNI mode\n* Mounted eBPF filesystem mounted on all worker nodes\n* Recommended: Enable PodCIDR allocation (``--allocate-node-cidrs``) in the ``kube-controller-manager`` (recommended)\n\nRefer to the section :ref:`k8s_requirements` for detailed instruction on how to\nprepare your Kubernetes environment.\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/requirements-intro.rst",
+  "extracted_at": "2025-09-03T01:13:29.311691Z"
+}

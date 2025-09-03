@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/kind-preload.rst",
+  "content": ".. parsed-literal:: docker pull quay.io/cilium/cilium:|IMAGE_TAG| kind load docker-image quay.io/cilium/cilium:|IMAGE_TAG|\nPreload the ``cilium`` image into each worker node in the kind cluster: null\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/kind-preload.rst",
+  "extracted_at": "2025-09-03T01:13:29.311082Z"
+}

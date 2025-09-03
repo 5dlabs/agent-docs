@@ -3,5 +3,5 @@
   "content": "cilium-health status \n Display cilium connectivity to other nodes \n cilium-health status [flags]\n \n Options \n   -h, --help            help for status\n  -o, --output string   json| yaml| jsonpath='{}'\n      --succinct        Print the result succinctly (one node per line)\n      --verbose         Print more information in results\n \n Options inherited from parent commands \n   -D, --debug         Enable debug messages\n  -H, --host string   URI to cilium-health server API\n \n SEE ALSO \n \n cilium-health \t - Cilium Health Client",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-health_status.md",
-  "extracted_at": "2025-09-03T00:53:44.841645Z"
+  "extracted_at": "2025-09-03T01:13:28.891360Z"
 }

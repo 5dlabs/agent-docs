@@ -3,5 +3,5 @@
   "content": "cilium-operator-azure troubleshoot clustermesh \n Troubleshoot connectivity towards remote clusters \n cilium-operator-azure troubleshoot clustermesh [clusters...] [flags]\n \n Options \n       --H string                     URI to server-side API\n      --clustermesh-config string    Path to the ClusterMesh configuration directory (default \"/var/lib/cilium/clustermesh/\")\n  -h, --help                         help for clustermesh\n      --timeout duration             Timeout when checking connectivity to a given cluster (default 5s)\n      --without-service-resolution   Disable k8s service to IP resolution through the k8s client\n \n SEE ALSO \n \n cilium-operator-azure troubleshoot \t - Run troubleshooting utilities to check control-plane connectivity",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_troubleshoot_clustermesh.md",
-  "extracted_at": "2025-09-03T00:53:44.833329Z"
+  "extracted_at": "2025-09-03T01:13:28.882910Z"
 }

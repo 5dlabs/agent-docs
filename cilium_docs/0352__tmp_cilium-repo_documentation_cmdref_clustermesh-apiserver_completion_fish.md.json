@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_completion_fish.md",
+  "content": "clustermesh-apiserver completion fish \n Generate the autocompletion script for fish \n Synopsis \n Generate the autocompletion script for the fish shell. \n To load completions in your current shell session: \n clustermesh-apiserver completion fish | source\n \n To load completions for every new session, execute once: \n clustermesh-apiserver completion fish > ~/.config/fish/completions/clustermesh-apiserver.fish\n \n You will need to start a new shell for this setup to take effect. \n clustermesh-apiserver completion fish [flags]\n \n Options \n   -h, --help              help for fish\n      --no-descriptions   disable completion descriptions\n \n SEE ALSO \n \n clustermesh-apiserver completion \t - Generate the autocompletion script for the specified shell",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_completion_fish.md",
+  "extracted_at": "2025-09-03T01:13:29.090126Z"
+}

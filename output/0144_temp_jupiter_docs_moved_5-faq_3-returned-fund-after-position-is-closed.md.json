@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/Moved/5-faq/3-returned-fund-after-position-is-closed.md",
+  "content": "sidebar_label: \"Returned Fund after Position is Closed\"\ndescription: Learn how to locate fund after position is closed \n Returned fund after Position is closed \n \n Under  Transaction History  on Jupiter Perpetual Trading, click on the transaction ID of the closed position. \n \n \n \n You could find your returned fund here: \n \n For  SOL-Long position , check  SOL Balance Change  tab \n \n For  ALL other positions , check  Token Balance Change  tab \n \n :::info\nNote: Wallet service providers might not be fully parsing the transactions. If you still couldn’t locate your fund although it was shown that it’s returned on the explorers, please contact your wallet service provider accordingly.\n:::",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/Moved/5-faq/3-returned-fund-after-position-is-closed.md",
+  "extracted_at": "2025-09-03T01:39:45.914704Z"
+}

@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-generic_metrics.md",
+  "content": "cilium-operator-generic metrics \n Access metric status of the operator \n Options \n   -h, --help   help for metrics\n \n SEE ALSO \n \n cilium-operator-generic \t - Run cilium-operator-generic \n cilium-operator-generic metrics list \t - List all metrics for the operator",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-generic_metrics.md",
+  "extracted_at": "2025-09-03T01:13:28.941350Z"
+}

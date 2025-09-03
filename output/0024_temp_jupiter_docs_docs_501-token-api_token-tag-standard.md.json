@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/docs/501-token-api/token-tag-standard.md",
+  "content": "description: \"Token Tag Standard\"\ntitle: \"Token Tag Standard\" \n\n     Token Tag Standard \n     \n\n The Token API is built with a tagging system such as Verified, LSTs and more. In this section, we will be going through how you can get your tokens tagged for better visibility on Jupiter UI or via the Token API. \n Requirements \n \n An endpoint that points to a .csv file with a mint address per row . \n A preferred word or acronym for your tag - one that's short and mobile friendly. \n A set interval for us to poll. \n \n The endpoint should be public, with our IP whitelisted for rate limits where necessary. \n How to get your tokens tagged \n After you have completed the requirements, please reach out to us via  Discord . \n Once we start ingesting your list, the tokens will be tagged automatically.",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/docs/501-token-api/token-tag-standard.md",
+  "extracted_at": "2025-09-03T01:39:45.495904Z"
+}

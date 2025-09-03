@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/network/clustermesh/intro.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _Cluster Mesh:\n\n############################\nMulti-Cluster (Cluster Mesh)\n############################\n\nCluster mesh extends the networking datapath across multiple clusters. It\nallows endpoints in all connected clusters to communicate while providing full\npolicy enforcement. Load-balancing is available via Kubernetes annotations.\n\nSee :ref:`gs_clustermesh` for instructions on how to set up cluster mesh.\n\n.. _kvstoremesh:\n\nKVStoreMesh\n===========\n\nKVStoreMesh is an extension of Cluster Mesh. It caches the information obtained\nfrom the remote clusters in a local kvstore (such as etcd), to which all local\nCilium agents connect. This is different from vanilla Cluster Mesh, where each\nagent directly pulls the information from the remote clusters. KVStoreMesh enables\nimproved scalability and isolation.\n\n.. note::\n\n  Starting from v1.16 KVStoreMesh is enabled by default.\n  If you wish to disable it, please refer to :ref:`enable_clustermesh`\n  for instructions on how to disable KVStoreMesh.\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/network/clustermesh/intro.rst",
+  "extracted_at": "2025-09-03T01:13:29.195356Z"
+}

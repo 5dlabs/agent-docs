@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-health_completion_fish.md",
+  "content": "cilium-health completion fish \n Generate the autocompletion script for fish \n Synopsis \n Generate the autocompletion script for the fish shell. \n To load completions in your current shell session: \n cilium-health completion fish | source\n \n To load completions for every new session, execute once: \n cilium-health completion fish > ~/.config/fish/completions/cilium-health.fish\n \n You will need to start a new shell for this setup to take effect. \n cilium-health completion fish [flags]\n \n Options \n   -h, --help              help for fish\n      --no-descriptions   disable completion descriptions\n \n Options inherited from parent commands \n   -D, --debug         Enable debug messages\n  -H, --host string   URI to cilium-health server API\n \n SEE ALSO \n \n cilium-health completion \t - Generate the autocompletion script for the specified shell",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-health_completion_fish.md",
+  "extracted_at": "2025-09-03T01:13:28.966918Z"
+}

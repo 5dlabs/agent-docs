@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/docs/4-api-responses.md",
+  "content": "sidebar_label: \"API Responses\"\ndescription: \"API responses for the Jupiter API.\"\ntitle: \"API Responses\"\ndisplayed_sidebar: docs \n\n     API Responses \n     \n\n In this section, you can find the list of responses that can be returned by the Jupiter API. \n :::info Program Errors\nFor more information on error codes from programs, see the  Swap API - Common Errors .\n::: \n Common Codes Description Debug \n 200 Good Success! \n 400 Bad Request Likely a problem with the request, check the request parameters, syntax, etc. \n 401 Unauthorized Likely a problem with the API key, check if the API key is correct. \n 404 Not Found Likely a broken or invalid endpoint. \n 429 Rate Limited You are being rate limited. Either slow down requests, reduce bursts, or upgrade your plan. \n 500 Internal Server Error Please reach out in  Discord . \n 502 Bad Gateway Please reach out in  Discord . \n 503 Service Unavailable Please reach out in  Discord . \n 504 Gateway Timeout Please reach out in  Discord .",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/docs/4-api-responses.md",
+  "extracted_at": "2025-09-03T01:39:45.710379Z"
+}

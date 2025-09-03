@@ -3,5 +3,5 @@
   "content": "cilium-operator shell \n Connect to the Cilium shell \n cilium-operator shell [command] [args]... [flags]\n \n Options \n   -h, --help   help for shell\n \n SEE ALSO \n \n cilium-operator \t - Run cilium-operator",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator_shell.md",
-  "extracted_at": "2025-09-03T00:53:44.805700Z"
+  "extracted_at": "2025-09-03T01:13:28.854157Z"
 }

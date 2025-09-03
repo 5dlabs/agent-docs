@@ -3,5 +3,5 @@
   "content": "cilium encryption \n Cilium encryption \n Options \n   -h, --help   help for encryption\n \n Options inherited from parent commands \n       --as string                  Username to impersonate for the operation. User could be a regular user or a service account in a namespace.\n      --as-group stringArray       Group to impersonate for the operation, this flag can be repeated to specify multiple groups.\n      --context string             Kubernetes configuration context\n      --helm-release-name string   Helm release name (default \"cilium\")\n      --kubeconfig string          Path to the kubeconfig file\n  -n, --namespace string           Namespace Cilium is running in (default \"kube-system\")\n \n SEE ALSO \n \n cilium \t - Cilium provides eBPF-based Networking, Security, and Observability for Kubernetes \n cilium encryption create-key \t - Create IPsec key \n cilium encryption key-status \t - Display IPsec key \n cilium encryption rotate-key \t - Rotate IPsec key \n cilium encryption status \t - Display encryption status",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium_encryption.md",
-  "extracted_at": "2025-09-03T00:53:44.800336Z"
+  "extracted_at": "2025-09-03T01:13:28.848861Z"
 }

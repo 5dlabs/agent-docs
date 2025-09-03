@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/requirements-k3s.rst",
+  "content": "To install Cilium on `k3s <https://rancher.com/docs/k3s/latest/en/quick-start/>`_,\nperform the following steps:\n\n**Default Configuration:**\n\n=============== =============== ==============\nDatapath        IPAM            Datastore\n=============== =============== ==============\nEncapsulation   Cluster Pool    Kubernetes CRD\n=============== =============== ==============\n\n**Requirements:**\n\n* Install your k3s cluster as you normally would but making sure to disable\n  support for the default CNI plugin and the built-in network policy enforcer so\n  you can install Cilium on top:\n\n.. code-block:: shell-session\n\n    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC='--flannel-backend=none --disable-network-policy' sh -\n\n* For the Cilium CLI to access the cluster in successive steps you will need to\n  use the ``kubeconfig`` file stored at ``/etc/rancher/k3s/k3s.yaml`` by setting\n  the ``KUBECONFIG`` environment variable:\n\n.. code-block:: shell-session\n\n    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/requirements-k3s.rst",
+  "extracted_at": "2025-09-03T01:13:29.307022Z"
+}

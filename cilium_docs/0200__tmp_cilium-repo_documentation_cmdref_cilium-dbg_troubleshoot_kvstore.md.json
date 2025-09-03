@@ -3,5 +3,5 @@
   "content": "cilium-dbg troubleshoot kvstore \n Troubleshoot connectivity towards the etcd kvstore \n cilium-dbg troubleshoot kvstore [flags]\n \n Options \n       --etcd-config string           Path to the etcd configuration (default \"/var/lib/etcd-config/etcd.config\")\n  -h, --help                         help for kvstore\n      --timeout duration             Timeout when checking connectivity to the kvstore (default 5s)\n      --without-service-resolution   Disable k8s service to IP resolution through the k8s client\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg troubleshoot \t - Run troubleshooting utilities to check control-plane connectivity",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_troubleshoot_kvstore.md",
-  "extracted_at": "2025-09-03T00:53:44.858378Z"
+  "extracted_at": "2025-09-03T01:13:28.908362Z"
 }

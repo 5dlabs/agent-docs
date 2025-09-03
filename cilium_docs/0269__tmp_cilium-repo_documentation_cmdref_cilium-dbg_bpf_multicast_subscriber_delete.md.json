@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_bpf_multicast_subscriber_delete.md",
+  "content": "cilium-dbg bpf multicast subscriber delete \n Delete a subscriber from the multicast group. \n Synopsis \n Delete a subscriber from the given multicast group.\nTo delete remote subscriber, following information is required: \n \n group: multicast group address from which subscriber is deleted. \n subscriber-address: subscriber IP address \n \n cilium-dbg bpf multicast subscriber delete <group> <subscriber-address> [flags]\n \n Examples \n To delete a remote node 10.100.0.1 from multicast group 229.0.0.1, use the following command:\ncilium-dbg bpf multicast subscriber delete 229.0.0.1 10.100.0.1\n\n \n Options \n   -h, --help   help for delete\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg bpf multicast subscriber \t - Manage the multicast subscribers.",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_bpf_multicast_subscriber_delete.md",
+  "extracted_at": "2025-09-03T01:13:28.944983Z"
+}

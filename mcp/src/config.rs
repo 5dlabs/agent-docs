@@ -80,6 +80,7 @@ impl ConfigLoader {
             "solana",
             "ebpf",
             "rust_best_practices",
+            "jupiter",
         ];
 
         for tool in &config.tools {

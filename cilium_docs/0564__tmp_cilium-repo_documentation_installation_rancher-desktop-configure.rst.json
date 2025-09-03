@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/rancher-desktop-configure.rst",
+  "content": "Configuring Rancher Desktop is done using a YAML configuration file.\nThis step is necessary in order to disable the default CNI and replace it with\nCilium.\n\nNext you need to start Rancher Desktop with ``containerd`` and create a :download:`override.yaml </installation/rancher-desktop-override.yaml>`:\n\n.. literalinclude:: /installation/rancher-desktop-override.yaml\n   :language: yaml\n\nAfter the file is created move it into your Rancher Desktop's ``lima/_config`` directory:\n\n.. tabs::\n  .. group-tab:: Linux\n\n    .. code-block:: shell-session\n\n      cp override.yaml ~/.local/share/rancher-desktop/lima/_config/override.yaml\n\n  .. group-tab:: macOS\n\n    .. code-block:: shell-session\n\n      cp override.yaml ~/Library/Application\\ Support/rancher-desktop/lima/_config/override.yaml\n\nFinally, open the Rancher Desktop UI and go to the Troubleshooting panel and click \"Reset Kubernetes\".\n\nAfter a few minutes Rancher Desktop will start back up prepared for installing Cilium.\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/rancher-desktop-configure.rst",
+  "extracted_at": "2025-09-03T01:13:29.305646Z"
+}

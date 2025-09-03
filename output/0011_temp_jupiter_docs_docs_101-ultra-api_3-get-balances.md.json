@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/docs/101-ultra-api/3-get-balances.md",
+  "content": "sidebar_label: \"Get Balances (Deprecated)\"\ndescription: \"Request for token balances of an account.\"\ntitle: \"Get Balances (Deprecated)\" \n\n     Get Balances (Deprecated) \n     \n\n :::warning\nThis Ultra endpoint is not maintained in favour of the  Get Holdings  endpoint, please use that instead.\n::: \n Get Balances (Deprecated) \n The Ultra API supports a simple endpoint to get the token balances of an account, you just need to pass in the required parameter of the user's wallet address. \n const balancesResponse = await (\n  await fetch(`https://lite-api.jup.ag/ultra/v1/balances/3X2LFoTQecbpqCR7G5tL1kczqBKurjKPHhKSZrJ4wgWc`)\n).json();\n\nconsole.log(JSON.stringify(balancesResponse, null, 2));\n \n Balances Response \n The balances response will return a list of token balances for the user's wallet address. \n Successful example response: \n {\n  \"SOL\": {\n    \"amount\": \"0\",\n    \"uiAmount\": 0,\n    \"slot\": 324307186,\n    \"isFrozen\": false\n  }\n}\n \n Failed example response: \n {\n  \"error\": \"Invalid address\"\n}",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/docs/101-ultra-api/3-get-balances.md",
+  "extracted_at": "2025-09-03T01:39:45.475178Z"
+}

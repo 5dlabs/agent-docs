@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium_multicast_add.md",
+  "content": "cilium multicast add \n Add all nodes to the specified multicast group as subscribers in every cilium-agent \n cilium multicast add [flags]\n \n Options \n   -g, --group-ip string          Multicast group IP address\n  -h, --help                     help for add\n      --wait-duration duration   Maximum time to wait for result, default 1 minute (default 1m0s)\n \n Options inherited from parent commands \n       --as string                  Username to impersonate for the operation. User could be a regular user or a service account in a namespace.\n      --as-group stringArray       Group to impersonate for the operation, this flag can be repeated to specify multiple groups.\n      --context string             Kubernetes configuration context\n      --helm-release-name string   Helm release name (default \"cilium\")\n      --kubeconfig string          Path to the kubeconfig file\n  -n, --namespace string           Namespace Cilium is running in (default \"kube-system\")\n \n SEE ALSO \n \n cilium multicast \t - Manage multicast groups",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium_multicast_add.md",
+  "extracted_at": "2025-09-03T01:13:29.118698Z"
+}

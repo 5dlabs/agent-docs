@@ -3,5 +3,5 @@
   "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _proxy_injection:\n\n***************\nProxy Injection\n***************\n\nCilium is capable of transparently injecting a Layer 4 proxy into any network\nconnection. This is used as the foundation to enforce higher level network\npolicies (see :ref:`DNS based` and :ref:`l7_policy`).\n\nThe following proxies can be injected:\n\n.. toctree::\n   :maxdepth: 1\n   :glob:\n\n   envoy\n\n",
   "item_type": "unknown",
   "module_path": "/tmp/cilium-repo/Documentation/security/network/proxy/index.rst",
-  "extracted_at": "2025-09-03T00:53:44.694112Z"
+  "extracted_at": "2025-09-03T01:13:28.733031Z"
 }

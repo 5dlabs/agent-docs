@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium_multicast_list.md",
+  "content": "cilium multicast list \n Show the information about multicast groups \n Options \n   -h, --help   help for list\n \n Options inherited from parent commands \n       --as string                  Username to impersonate for the operation. User could be a regular user or a service account in a namespace.\n      --as-group stringArray       Group to impersonate for the operation, this flag can be repeated to specify multiple groups.\n      --context string             Kubernetes configuration context\n      --helm-release-name string   Helm release name (default \"cilium\")\n      --kubeconfig string          Path to the kubeconfig file\n  -n, --namespace string           Namespace Cilium is running in (default \"kube-system\")\n \n SEE ALSO \n \n cilium multicast \t - Manage multicast groups \n cilium multicast list group \t - Show list of multicast groups in every node \n cilium multicast list subscriber \t - Show list of subscribers belonging to the specified multicast group",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium_multicast_list.md",
+  "extracted_at": "2025-09-03T01:13:29.098860Z"
+}

@@ -3,5 +3,5 @@
   "content": "cilium-operator-azure metrics \n Access metric status of the operator \n Options \n   -h, --help   help for metrics\n \n SEE ALSO \n \n cilium-operator-azure \t - Run cilium-operator-azure \n cilium-operator-azure metrics list \t - List all metrics for the operator",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_metrics.md",
-  "extracted_at": "2025-09-03T00:53:44.842058Z"
+  "extracted_at": "2025-09-03T01:13:28.891758Z"
 }

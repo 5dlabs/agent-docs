@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/network/concepts/ipam/deep_dive.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n###################\nTechnical Deep Dive\n###################\n\nCilium Container Networking Control Flow\n========================================\n\nThe control flow diagram below gives an overview on how endpoints obtain their\nIP address from the IPAM for each different mode of Address Management that\nCilium Supports.\n\n.. image:: cilium_container_networking_control_flow.png\n    :align: center\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/network/concepts/ipam/deep_dive.rst",
+  "extracted_at": "2025-09-03T01:13:29.210869Z"
+}

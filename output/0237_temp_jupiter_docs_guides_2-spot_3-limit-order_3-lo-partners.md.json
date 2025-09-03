@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/guides/2-spot/3-limit-order/3-lo-partners.md",
+  "content": "sidebar_label: Partners\ntitle: Limit Order Partners\ndescription: Learn about Jupiter's limit order partners including Birdeye and TradingView.\nslug: /limit-order/lo-partners \n\n     Limit Order Partners | Jupiter Station \n     \n\n Jupiter's powerful charts data and technology are powered by  Birdeye  and  TradingView . \n \n   \n     \n    \n   \n \n Charts data are powered by  Birdeye's  on-chain data. \n \n \n   \n     \n       \n         \n         \n       \n     \n     \n       \n         \n       \n     \n   \n \n Jupiter uses  TradingView  technology to showcase chart data. TradingView serves as a charting platform catering to a worldwide network of traders and investors, offering exceptional access to real-time information such as the  SOL/USD  chart, the most recent news, financial reports,  Stock screener  and  Economic calendar .",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/guides/2-spot/3-limit-order/3-lo-partners.md",
+  "extracted_at": "2025-09-03T01:39:46.051554Z"
+}

@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/operations/performance/index.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _performance_scalability:\n\nPerformance & Scalability\n=========================\n\nWelcome to the performance and scalability guides. This section contains\nbest-practices to tune various performance and scalability aspects. It also\ncontains official benchmarks as measured by the development team in a\nstandardized and repeatable bare metal environment.\n\n.. toctree::\n   :maxdepth: 1\n   :glob:\n\n   tuning\n   benchmark\n   scalability/index\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/operations/performance/index.rst",
+  "extracted_at": "2025-09-03T01:13:29.351497Z"
+}

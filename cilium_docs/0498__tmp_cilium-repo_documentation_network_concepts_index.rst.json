@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/network/concepts/index.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _network_concept_root:\n.. _network_root:\n\nNetworking Concepts\n-------------------\n.. toctree::\n   :maxdepth: 2\n   :glob:\n\n   routing\n   ipam/index\n   masquerading\n   fragmentation\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/network/concepts/index.rst",
+  "extracted_at": "2025-09-03T01:13:29.206745Z"
+}

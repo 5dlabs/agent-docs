@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-health_completion_powershell.md",
+  "content": "cilium-health completion powershell \n Generate the autocompletion script for powershell \n Synopsis \n Generate the autocompletion script for powershell. \n To load completions in your current shell session: \n cilium-health completion powershell | Out-String | Invoke-Expression\n \n To load completions for every new session, add the output of the above command\nto your powershell profile. \n cilium-health completion powershell [flags]\n \n Options \n   -h, --help              help for powershell\n      --no-descriptions   disable completion descriptions\n \n Options inherited from parent commands \n   -D, --debug         Enable debug messages\n  -H, --host string   URI to cilium-health server API\n \n SEE ALSO \n \n cilium-health completion \t - Generate the autocompletion script for the specified shell",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-health_completion_powershell.md",
+  "extracted_at": "2025-09-03T01:13:29.102590Z"
+}

@@ -3,5 +3,5 @@
   "content": "cilium-operator status \n Display status of operator \n Options \n   -h, --help   help for status\n \n SEE ALSO \n \n cilium-operator \t - Run cilium-operator \n cilium-operator status clustermesh \t - Display status of remote clusters",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator_status.md",
-  "extracted_at": "2025-09-03T00:53:44.854884Z"
+  "extracted_at": "2025-09-03T01:13:28.904773Z"
 }

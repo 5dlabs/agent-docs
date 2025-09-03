@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/requirements-rke.rst",
+  "content": "To install Cilium top of a **standalone** `Rancher Kubernetes Engine 1 (RKE1) <https://rke.docs.rancher.com/>`__ or `Rancher Kubernetes Engine 2 (RKE2) <https://docs.rke2.io/>`__ cluster, follow the installation instructions provided in the dedicated :ref:`Installation using Rancher Kubernetes Engine <rke_install>` guide.\nIf your RKE1/2 cluster is managed by Rancher (**non-standalone**), follow the :ref:`Installation using Rancher <rancher_managed_rke_clusters>` guide instead.",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/requirements-rke.rst",
+  "extracted_at": "2025-09-03T01:13:29.313927Z"
+}

@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/kind-create-cluster.rst",
+  "content": "To create a cluster with the configuration defined above, pass the\n``kind-config.yaml`` you created with the ``--config`` flag of kind.\n\n.. code-block:: shell-session\n\n    kind create cluster --config=kind-config.yaml\n\nAfter a couple of seconds or minutes, a 4 nodes cluster should be created.\n\nA new ``kubectl`` context (``kind-kind``) should be added to ``KUBECONFIG`` or, if unset,\nto ``${HOME}/.kube/config``:\n\n.. code-block:: shell-session\n\n    kubectl cluster-info --context kind-kind\n\n.. note::\n   The cluster nodes will remain in state ``NotReady`` until Cilium is deployed.\n   This behavior is expected.\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/kind-create-cluster.rst",
+  "extracted_at": "2025-09-03T01:13:29.304454Z"
+}

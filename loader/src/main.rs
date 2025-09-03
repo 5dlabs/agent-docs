@@ -11,6 +11,7 @@ use tracing::{info, warn, Level};
 use tracing_subscriber::fmt;
 
 use loader::intelligent::{ClaudeIntelligentLoader, DocumentSource, IntelligentLoader};
+use loader::intelligent_ingestion::IntelligentRepositoryAnalyzer;
 use loader::loaders::RateLimiter;
 use loader::parsers::UniversalParser;
 
@@ -165,6 +166,16 @@ enum Commands {
         #[arg(long)]
         yes: bool,
     },
+
+    /// Intelligent repository analysis and ingestion using Claude Code
+    Intelligent {
+        /// GitHub repository URL to analyze and ingest
+        url: String,
+
+        /// Skip confirmation prompt for command execution
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 #[tokio::main]
@@ -258,6 +269,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 yes,
             )
             .await?;
+        }
+        Commands::Intelligent { url, yes } => {
+            handle_intelligent_command(&url, yes).await?;
         }
     }
 
@@ -430,9 +444,9 @@ Only include the top 20-30 most important files, focusing on quality over quanti
     let analysis_response = loader.llm_client.summarize(&analysis_prompt).await?;
     info!("Claude analysis response: {}", analysis_response);
 
-    // For now, return first 200 files as prioritized (we'll parse Claude's response later)
-    // This provides a good balance between quality and quantity
-    let prioritized_count = std::cmp::min(200, doc_files.len());
+    // For now, return ALL files as prioritized (we'll parse Claude's response later)
+    // This ensures we capture the complete documentation set
+    let prioritized_count = doc_files.len();
     Ok(doc_files[..prioritized_count].to_vec())
 }
 
@@ -715,4 +729,67 @@ fn create_document_from_json(
         created_at: Some(chrono::Utc::now()),
         updated_at: Some(chrono::Utc::now()),
     }
+}
+
+async fn handle_intelligent_command(
+    github_url: &str,
+    skip_confirmation: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use std::io::{self, Write};
+
+    info!("🧠 Starting intelligent repository analysis");
+    info!("🔗 Repository: {}", github_url);
+
+    // Initialize the intelligent analyzer
+    let mut analyzer = IntelligentRepositoryAnalyzer::new()
+        .map_err(|e| format!("Failed to initialize Claude Code analyzer: {e}"))?;
+
+    // Analyze the repository using Claude Code
+    let analysis = analyzer.analyze_repository(github_url).await
+        .map_err(|e| format!("Repository analysis failed: {e}"))?;
+
+    // Display the analysis results
+    println!();
+    println!("🎯 CLAUDE CODE ANALYSIS COMPLETE");
+    println!("{}", "=".repeat(50));
+    println!("📊 Repository: {}", analysis.repo_info.name);
+    println!("📋 Doc Type: {}", analysis.strategy.doc_type);
+    println!("🔧 Extensions: {:?}", analysis.strategy.extensions);
+    println!("📁 Include Paths: {:?}", analysis.strategy.include_paths);
+    if !analysis.strategy.exclude_paths.is_empty() {
+        println!("🚫 Exclude Paths: {:?}", analysis.strategy.exclude_paths);
+    }
+    println!("📦 Chunking: {}", if analysis.strategy.use_ai_chunking { "AI-powered" } else { "Basic" });
+    println!();
+    println!("💭 CLAUDE'S REASONING:");
+    println!("{}", analysis.reasoning);
+    println!();
+    println!("🚀 GENERATED CLI COMMANDS:");
+    for (i, cmd) in analysis.cli_commands.iter().enumerate() {
+        println!("  {}. {}", i + 1, cmd);
+    }
+    println!();
+
+    // Execute commands if confirmed
+    if skip_confirmation {
+        info!("⚡ Auto-executing commands (--yes flag provided)");
+        analyzer.execute_ingestion(&analysis)?;
+    } else {
+        print!("Execute these Claude-generated commands? (y/N): ");
+        io::stdout().flush()?;
+        
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        
+        if input.trim().to_lowercase() == "y" {
+            info!("⚡ Executing Claude's ingestion strategy");
+            analyzer.execute_ingestion(&analysis)?;
+        } else {
+            println!("❌ Ingestion cancelled by user");
+            return Ok(());
+        }
+    }
+
+    println!("🎉 Intelligent ingestion completed successfully!");
+    Ok(())
 }

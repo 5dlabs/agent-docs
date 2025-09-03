@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/network/ebpf/index.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _ebpf_datapath:\n\neBPF Datapath\n-------------\n\n.. toctree::\n   :maxdepth: 2\n   :glob:\n\n   intro\n   lifeofapacket\n   maps\n   iptables\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/network/ebpf/index.rst",
+  "extracted_at": "2025-09-03T01:13:29.219381Z"
+}

@@ -3,5 +3,5 @@
   "content": "cilium-dbg bpf ipcache update \n Update an entry for a prefix \n cilium-dbg bpf ipcache update [flags]\n \n Examples \n cilium bpf ipcache update 10.244.3.110/32 --tunnelendpoint 172.21.0.2 --identity 6 --encryptkey 255 --clusterid 0\n \n Options \n       --clusterid uint16        Cluster ID\n      --encryptkey uint8        Encrypt key\n  -h, --help                    help for update\n      --identity uint32         Identity\n      --skiptunnel              Skip tunnel\n      --tunnelendpoint string   Tunnel endpoint\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg bpf ipcache \t - Manage the IPCache mappings for IP/CIDR <-> Identity",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_bpf_ipcache_update.md",
-  "extracted_at": "2025-09-03T00:53:44.815476Z"
+  "extracted_at": "2025-09-03T01:13:28.864206Z"
 }

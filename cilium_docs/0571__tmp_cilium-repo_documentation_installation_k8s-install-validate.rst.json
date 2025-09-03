@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/k8s-install-validate.rst",
+  "content": "Validate the Installation\n=========================\n\n.. tabs::\n\n  .. tab:: Cilium CLI\n\n    .. include:: /installation/cli-download.rst\n    .. include:: /installation/cli-status.rst\n    .. include:: /installation/cli-connectivity-test.rst\n\n  .. tab:: Manually\n\n    .. include:: /installation/kubectl-status.rst\n    .. include:: /installation/kubectl-connectivity-test.rst\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/k8s-install-validate.rst",
+  "extracted_at": "2025-09-03T01:13:29.307149Z"
+}

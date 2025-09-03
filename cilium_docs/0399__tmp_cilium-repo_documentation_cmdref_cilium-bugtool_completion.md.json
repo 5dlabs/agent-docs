@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-bugtool_completion.md",
+  "content": "cilium-bugtool completion \n Generate the autocompletion script for the specified shell \n Synopsis \n Generate the autocompletion script for cilium-bugtool for the specified shell.\nSee each sub-command's help for details on how to use the generated script. \n Options \n   -h, --help   help for completion\n \n SEE ALSO \n \n cilium-bugtool \t - Collects agent & system information useful for bug reporting \n cilium-bugtool completion bash \t - Generate the autocompletion script for bash \n cilium-bugtool completion fish \t - Generate the autocompletion script for fish \n cilium-bugtool completion powershell \t - Generate the autocompletion script for powershell \n cilium-bugtool completion zsh \t - Generate the autocompletion script for zsh",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-bugtool_completion.md",
+  "extracted_at": "2025-09-03T01:13:29.116918Z"
+}

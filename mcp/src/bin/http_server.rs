@@ -229,8 +229,8 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     let enum_sql = r"
         DO $$ BEGIN
             CREATE TYPE doc_type AS ENUM (
-                'rust', 'jupyter', 'birdeye', 'cilium', 'talos', 
-                'meteora', 'raydium', 'solana', 'ebpf', 'rust_best_practices'
+                'rust', 'jupyter', 'birdeye', 'cilium', 'talos',
+                'meteora', 'raydium', 'solana', 'ebpf', 'rust_best_practices', 'jupiter'
             );
         EXCEPTION
             WHEN duplicate_object THEN null;

@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_fqdn.md",
+  "content": "cilium-dbg fqdn \n Manage fqdn proxy \n cilium-dbg fqdn [flags]\n \n Options \n   -h, --help   help for fqdn\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg \t - CLI \n cilium-dbg fqdn cache \t - Manage fqdn proxy cache \n cilium-dbg fqdn names \t - Show internal state Cilium has for DNS names / regexes",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_fqdn.md",
+  "extracted_at": "2025-09-03T01:13:29.121361Z"
+}

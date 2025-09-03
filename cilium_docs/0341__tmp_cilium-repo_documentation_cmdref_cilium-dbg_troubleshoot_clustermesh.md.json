@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_troubleshoot_clustermesh.md",
+  "content": "cilium-dbg troubleshoot clustermesh \n Troubleshoot connectivity towards remote clusters \n cilium-dbg troubleshoot clustermesh [clusters...] [flags]\n \n Options \n       --H string                     URI to server-side API\n      --clustermesh-config string    Path to the ClusterMesh configuration directory (default \"/var/lib/cilium/clustermesh/\")\n  -h, --help                         help for clustermesh\n      --timeout duration             Timeout when checking connectivity to a given cluster (default 5s)\n      --without-service-resolution   Disable k8s service to IP resolution through the k8s client\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg troubleshoot \t - Run troubleshooting utilities to check control-plane connectivity",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_troubleshoot_clustermesh.md",
+  "extracted_at": "2025-09-03T01:13:29.084077Z"
+}

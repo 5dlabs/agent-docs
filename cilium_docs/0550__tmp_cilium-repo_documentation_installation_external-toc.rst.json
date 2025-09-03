@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/external-toc.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _external_install_root:\n\nExternal Installers\n-------------------\n\n.. toctree::\n   :maxdepth: 2\n   :glob:\n\n   k8s-install-aks\n   k8s-install-kops\n   k8s-install-kubespray\n   k8s-install-kubeadm\n   k8s-install-rancher-existing-nodes\n   k8s-install-rke\n   rancher-desktop\n\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/external-toc.rst",
+  "extracted_at": "2025-09-03T01:13:29.300004Z"
+}

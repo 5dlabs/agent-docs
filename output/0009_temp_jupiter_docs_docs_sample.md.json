@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/docs/sample.md",
+  "content": "sidebar_label: \"Welcome\"\ndescription: \"Welcome to the Jupiter Documentation. Integrate APIs for swaps, payments, and more effortlessly. Explore robust tools now!\"\nhide_table_of_contents: true\ntitle: Welcome to Jupiter Developer Documentation \n\n     Developer Documentation \n     \n\n import DocsLanding from '@site/src/components/DocsLanding';",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/docs/sample.md",
+  "extracted_at": "2025-09-03T01:39:45.473193Z"
+}

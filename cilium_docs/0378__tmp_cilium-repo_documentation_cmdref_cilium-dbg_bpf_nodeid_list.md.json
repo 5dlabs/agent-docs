@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_bpf_nodeid_list.md",
+  "content": "cilium-dbg bpf nodeid list \n List node IDs and their IP addresses \n Synopsis \n List node IDs and their IP addresses. \n cilium-dbg bpf nodeid list [flags]\n \n Options \n   -h, --help            help for list\n  -o, --output string   json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg bpf nodeid \t - Manage the node IDs",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_bpf_nodeid_list.md",
+  "extracted_at": "2025-09-03T01:13:29.104321Z"
+}

@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_metrics.md",
+  "content": "cilium-dbg metrics \n Access metric status \n Options \n   -h, --help   help for metrics\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg \t - CLI \n cilium-dbg metrics list \t - List all metrics",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_metrics.md",
+  "extracted_at": "2025-09-03T01:13:28.923045Z"
+}

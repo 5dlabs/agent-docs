@@ -3,5 +3,5 @@
   "content": "cilium-dbg envoy admin logging set global \n Change global logging level for all loggers of Envoy Proxy \n cilium-dbg envoy admin logging set global <level> [flags]\n \n Options \n   -h, --help   help for global\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg envoy admin logging set \t - Change logging levels of Envoy Proxy",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_envoy_admin_logging_set_global.md",
-  "extracted_at": "2025-09-03T00:53:44.831486Z"
+  "extracted_at": "2025-09-03T01:13:28.881002Z"
 }

@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-health_completion.md",
+  "content": "cilium-health completion \n Generate the autocompletion script for the specified shell \n Synopsis \n Generate the autocompletion script for cilium-health for the specified shell.\nSee each sub-command's help for details on how to use the generated script. \n Options \n   -h, --help   help for completion\n \n Options inherited from parent commands \n   -D, --debug         Enable debug messages\n  -H, --host string   URI to cilium-health server API\n \n SEE ALSO \n \n cilium-health \t - Cilium Health Client \n cilium-health completion bash \t - Generate the autocompletion script for bash \n cilium-health completion fish \t - Generate the autocompletion script for fish \n cilium-health completion powershell \t - Generate the autocompletion script for powershell \n cilium-health completion zsh \t - Generate the autocompletion script for zsh",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-health_completion.md",
+  "extracted_at": "2025-09-03T01:13:28.931725Z"
+}

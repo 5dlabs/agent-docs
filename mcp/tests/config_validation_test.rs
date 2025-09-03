@@ -207,6 +207,7 @@ fn test_doctype_to_tool_name_mapping() {
             "raydium" => assert_eq!(tool.name, "raydium_query"),
             "ebpf" => assert_eq!(tool.name, "ebpf_query"),
             "rust_best_practices" => assert_eq!(tool.name, "rust_best_practices_query"),
+            "jupiter" => assert_eq!(tool.name, "jupiter_query"),
             "rust" => {
                 // Rust doc_type supports multiple tools - both query and management
                 assert!(
@@ -251,6 +252,7 @@ fn test_tool_description_quality() {
             "raydium" => vec!["raydium", "dex", "amm"],
             "ebpf" => vec!["ebpf", "kernel", "filter"],
             "rust_best_practices" => vec!["rust", "practices", "patterns"],
+            "jupiter" => vec!["jupiter", "defi", "dex", "solana"],
             "rust" => vec!["rust", "crate", "documentation", "management"],
             _ => vec![],
         };

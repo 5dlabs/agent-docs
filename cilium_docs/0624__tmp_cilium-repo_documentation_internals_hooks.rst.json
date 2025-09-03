@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/internals/hooks.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\neBPF Program Types\n==================\n\nCilium uses the following eBPF program types to attach programs to the kernel:\n\n- ``BPF_PROG_TYPE_XDP``\n- ``BPF_PROG_TYPE_SCHED_ACT``\n- ``BPF_PROG_TYPE_CGROUP_SOCK_ADDR``\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/internals/hooks.rst",
+  "extracted_at": "2025-09-03T01:13:29.360884Z"
+}

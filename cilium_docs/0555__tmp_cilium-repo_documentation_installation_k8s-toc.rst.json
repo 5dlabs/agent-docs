@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/installation/k8s-toc.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _k8s_install_root:\n\nInstallation with K8s distributions\n-----------------------------------\n.. toctree::\n   :maxdepth: 2\n   :glob:\n\n   k8s-install-external-etcd\n   k8s-install-openshift-okd\n   k8s-install-broadcom-vmware-esxi-nsx\n   k3s\n   k0s\n   kind\n   cni-chaining\n\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/installation/k8s-toc.rst",
+  "extracted_at": "2025-09-03T01:13:29.301556Z"
+}

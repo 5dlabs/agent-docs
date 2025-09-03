@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/network/servicemesh/warning.rst",
+  "content": ".. Note:: Note that Cilium Ingress Controller will configure required Envoy resource under the hood. Please check Cilium Agent logs if you are creating Envoy resources explicitly to make sure there is no conflict.\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/network/servicemesh/warning.rst",
+  "extracted_at": "2025-09-03T01:13:29.141585Z"
+}

@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium_features.md",
+  "content": "cilium features \n Report which features are enabled in Cilium agents \n Options \n   -h, --help   help for features\n \n Options inherited from parent commands \n       --as string                  Username to impersonate for the operation. User could be a regular user or a service account in a namespace.\n      --as-group stringArray       Group to impersonate for the operation, this flag can be repeated to specify multiple groups.\n      --context string             Kubernetes configuration context\n      --helm-release-name string   Helm release name (default \"cilium\")\n      --kubeconfig string          Path to the kubeconfig file\n  -n, --namespace string           Namespace Cilium is running in (default \"kube-system\")\n \n SEE ALSO \n \n cilium \t - Cilium provides eBPF-based Networking, Security, and Observability for Kubernetes \n cilium features status \t - Display features status \n cilium features summary \t - Stores and generates the summary for the features tested on a CI run",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium_features.md",
+  "extracted_at": "2025-09-03T01:13:29.119196Z"
+}

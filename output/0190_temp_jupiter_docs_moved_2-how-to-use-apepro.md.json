@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/Moved/2-how-to-use-apepro.md",
+  "content": "sidebar_label: How to Use ApePro\ntitle: How to Use Ape Pro\ndescription: Learn the basics of how to use Ape Pro. \n\n      How to Use Ape Pro: A Guide \n     \n\n Account Creation \n \n Visit : Go to  ape.pro . \n Sign Up : Choose a login method (social login or Web3). \n No Seed Phrase : Accounts are secured without the need for a seed phrase. \n \n Deposit Funds & Activate Your Account \n \n Activate Your Account : Deposit at least 0.1 SOL to activate your account. \n \n Trading \n \n Quick Trades : Use quick buy and sell features to trade without signing wallet transactions. \n MEV Protection : Enjoy MEV-protected swaps with intelligent fee optimisations \n \n Managing Positions and PnL \n \n Positions : Monitor open token positions and your profit and loss (PnL) in real time. \n Transaction History : Access your trading history in your profile drawer. \n \n Exploring New Tokens \n \n New Tokens Page : Discover new tokens launched in the past 24 hours. \n Hunt Gems Page : Use the Hunt Gems feature to find new and graduating tokens. \n \n Token Checklist \n \n Before trading, use the token checklist to assess tokens for potential risks",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/Moved/2-how-to-use-apepro.md",
+  "extracted_at": "2025-09-03T01:39:45.984650Z"
+}

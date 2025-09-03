@@ -10,7 +10,7 @@ use db::{
 use embed::OpenAIEmbeddingClient;
 use serde_json::{json, Value};
 use std::fmt::Write as _;
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// Base trait for MCP tools
 #[async_trait]
@@ -49,13 +49,14 @@ impl RustQueryTool {
     async fn semantic_search(&self, query: &str, limit: Option<i64>) -> Result<String> {
         debug!("Performing Rust documentation search for: {}", query);
 
-        // For now, use a simple database search (we'll add real embeddings later)
-        let dummy_embedding = vec![0.0; 3072]; // Placeholder embedding
+        // Use our LLM implementation to generate real embeddings
+        let llm_client = llm::LlmClient::new()?;
+        let query_embedding = llm_client.generate_embedding(query).await?;
 
         // Perform vector similarity search
         let results = DocumentQueries::rust_vector_search(
             self.db_pool.pool(),
-            &dummy_embedding,
+            &query_embedding,
             limit.unwrap_or(5),
         )
         .await?;
@@ -171,32 +172,16 @@ impl DynamicQueryTool {
             self.config.doc_type, query
         );
 
-        // For now, use a simple database search (we'll add real embeddings later)
-        let dummy_embedding = vec![0.0; 3072]; // Placeholder embedding
-
         // Use config doc_type directly (already in correct format)
         let db_doc_type = self.config.doc_type.as_str();
 
-        // Perform vector similarity search filtered by doc_type and metadata
-        let results = if let Some(metadata_filters) = filters {
-            DocumentQueries::doc_type_vector_search_with_filters(
-                self.db_pool.pool(),
-                db_doc_type,
-                query,
-                &dummy_embedding,
-                limit.unwrap_or(5),
-                &metadata_filters,
-            )
-            .await?
-        } else {
-            DocumentQueries::doc_type_vector_search(
-                self.db_pool.pool(),
-                db_doc_type,
-                query,
-                &dummy_embedding,
-                limit.unwrap_or(5),
-            )
-            .await?
+        // Try vector search first, fallback to text search if vector extension not available
+        let results = match self.try_vector_search(query, db_doc_type, limit, filters.as_ref()).await {
+            Ok(results) => results,
+            Err(e) => {
+                warn!("Vector search failed ({}), falling back to text search", e);
+                self.text_search(query, db_doc_type, limit).await?
+            }
         };
 
         if results.is_empty() {
@@ -352,6 +337,86 @@ impl DynamicQueryTool {
                 format!("source: {}", doc.source_name)
             }
         }
+    }
+
+    /// Try vector search with real embeddings
+    async fn try_vector_search(
+        &self,
+        query: &str,
+        db_doc_type: &str,
+        limit: Option<i64>,
+        filters: Option<&MetadataFilters>,
+    ) -> Result<Vec<db::models::Document>> {
+        // Use our LLM implementation to generate real embeddings
+        let llm_client = llm::LlmClient::new()?;
+        let query_embedding = llm_client.generate_embedding(query).await?;
+
+        // Perform vector similarity search filtered by doc_type and metadata
+        let results = if let Some(metadata_filters) = filters {
+            DocumentQueries::doc_type_vector_search_with_filters(
+                self.db_pool.pool(),
+                db_doc_type,
+                query,
+                &query_embedding,
+                limit.unwrap_or(5),
+                metadata_filters,
+            )
+            .await?
+        } else {
+            DocumentQueries::doc_type_vector_search(
+                self.db_pool.pool(),
+                db_doc_type,
+                query,
+                &query_embedding,
+                limit.unwrap_or(5),
+            )
+            .await?
+        };
+
+        Ok(results)
+    }
+
+    /// Fallback text search when vector search is not available
+    async fn text_search(
+        &self,
+        query: &str,
+        db_doc_type: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<db::models::Document>> {
+        // Get all documents of this type and filter by query text
+        let results = DocumentQueries::find_by_type_str(
+            self.db_pool.pool(),
+            db_doc_type,
+        )
+        .await?;
+
+        // Filter results based on query text and rank by relevance
+        let query_lower = query.to_lowercase();
+        let mut filtered_results: Vec<_> = results
+            .into_iter()
+            .filter(|doc| {
+                let content_match = doc.content.to_lowercase().contains(&query_lower);
+                let path_match = doc.doc_path.to_lowercase().contains(&query_lower);
+                content_match || path_match
+            })
+            .collect();
+
+        // Sort by relevance (path matches first, then by content length)
+        filtered_results.sort_by(|a, b| {
+            let a_path_match = a.doc_path.to_lowercase().contains(&query_lower);
+            let b_path_match = b.doc_path.to_lowercase().contains(&query_lower);
+            
+            match (a_path_match, b_path_match) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => b.content.len().cmp(&a.content.len()), // Longer content first
+            }
+        });
+
+        // Take only the requested number of results
+        filtered_results.truncate(usize::try_from(limit.unwrap_or(5)).unwrap_or(5));
+
+        Ok(filtered_results)
     }
 
     /// Calculate a mock relevance score based on result position

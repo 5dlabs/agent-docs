@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_kvstore_set.md",
+  "content": "cilium-dbg kvstore set \n Set a key and value \n cilium-dbg kvstore set [options] <key> [flags]\n \n Examples \n cilium kvstore set foo=bar\n \n Options \n   -h, --help           help for set\n      --key string     Key\n      --value string   Value\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --kvstore string       Key-Value Store type\n      --kvstore-opt map      Key-Value Store options\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg kvstore \t - Direct access to the kvstore",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_kvstore_set.md",
+  "extracted_at": "2025-09-03T01:13:29.095119Z"
+}

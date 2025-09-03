@@ -3,5 +3,5 @@
   "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _reviewer_committer:\n\nContributing as a Reviewer or Committer\n=======================================\n\nSome contributors have specific roles, such as reviewers or committers. The\nfollowing resources provide guidance for some specific tasks attached to those\nroles. Refer to `Cilium's Contributor Ladder`_ for details\nabout the different roles.\n\n.. _Cilium's Contributor Ladder: https://github.com/cilium/community/blob/main/CONTRIBUTOR-LADDER.md\n\n.. toctree::\n   :maxdepth: 2\n\n   review_process\n   review_docs\n   review_vendor\n   duties\n",
   "item_type": "unknown",
   "module_path": "/tmp/cilium-repo/Documentation/contributing/development/reviewers_committers/index.rst",
-  "extracted_at": "2025-09-03T00:53:44.753093Z"
+  "extracted_at": "2025-09-03T01:13:28.796611Z"
 }

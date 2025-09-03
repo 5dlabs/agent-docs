@@ -3,5 +3,5 @@
   "content": "cilium-operator-azure completion fish \n Generate the autocompletion script for fish \n Synopsis \n Generate the autocompletion script for the fish shell. \n To load completions in your current shell session: \n cilium-operator-azure completion fish | source\n \n To load completions for every new session, execute once: \n cilium-operator-azure completion fish > ~/.config/fish/completions/cilium-operator-azure.fish\n \n You will need to start a new shell for this setup to take effect. \n cilium-operator-azure completion fish [flags]\n \n Options \n   -h, --help              help for fish\n      --no-descriptions   disable completion descriptions\n \n SEE ALSO \n \n cilium-operator-azure completion \t - Generate the autocompletion script for the specified shell",
   "item_type": "markdown",
   "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_completion_fish.md",
-  "extracted_at": "2025-09-03T00:53:44.857278Z"
+  "extracted_at": "2025-09-03T01:13:28.907234Z"
 }

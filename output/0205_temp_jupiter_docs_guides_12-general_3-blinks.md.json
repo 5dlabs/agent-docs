@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/guides/12-general/3-blinks.md",
+  "content": "sidebar_label: \"Actions & Blinks\"\ndescription: Explore Blinks on Jupiter's leap in Solana swapping and boost your trading experience. Seamless integration across platforms. Learn today in our guide!\ntitle: Jupiter, Action & Blinks \n\n     Blinks on Jupiter: Innovative Solana Swap Actions | Jupiter Station \n     \n\n Jupiter: Actions & Blinks \n Jupiter is a partner of Solana Actions, which power Blockchain Links (Blinks) across the ecosystem. \n Currently, you can make Swap Blinks on Twitter, with the goal of bringing Jupiter to meet more users, wherever they are. \n Read More: \n \n Solana's Announcement \n Dialect's Announcement \n Dialect's Documents \n \n Swapping on a Swap Blink \n \n Enable Blinks on your Wallet. Read the Guides (Phantom, Backpack) \n Watch the Blink unfurl on Twitter. \n Click (or input) the amount to swap. \n Sign the Wallet TX. \n \n \n And you're done! \n Creating a Swap Blink \n \n Go to https://jup.ag, and then select the desired input and output token. \n Copy the URL, it should look something like this https://jup.ag/swap/SOL-JUP \n Post it on Twitter! \n \n \n Users can now swap with your Blink, if their wallet has Blinks enabled.",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/guides/12-general/3-blinks.md",
+  "extracted_at": "2025-09-03T01:39:46.003341Z"
+}

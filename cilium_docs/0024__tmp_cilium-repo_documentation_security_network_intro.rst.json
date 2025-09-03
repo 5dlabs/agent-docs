@@ -3,5 +3,5 @@
   "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n************\nIntroduction\n************\n\nCilium provides security on multiple levels. Each can be used individually or\ncombined together.\n\n* :ref:`arch_id_security`: Connectivity policies between endpoints (Layer 3),\n  e.g. any endpoint with label ``role=frontend`` can connect to any endpoint with\n  label ``role=backend``.\n* Restriction of accessible ports (Layer 4) for both incoming and outgoing\n  connections, e.g. endpoint with label ``role=frontend`` can only make outgoing\n  connections on port 443 (https) and endpoint ``role=backend`` can only accept\n  connections on port 443 (https).\n* Fine grained access control on application protocol level to secure HTTP and\n  remote procedure call (RPC) protocols, e.g the endpoint with label\n  ``role=frontend`` can only perform the REST API call ``GET /userdata/[0-9]+``,\n  all other API interactions with ``role=backend`` are restricted.\n",
   "item_type": "unknown",
   "module_path": "/tmp/cilium-repo/Documentation/security/network/intro.rst",
-  "extracted_at": "2025-09-03T00:53:44.696002Z"
+  "extracted_at": "2025-09-03T01:13:28.735042Z"
 }

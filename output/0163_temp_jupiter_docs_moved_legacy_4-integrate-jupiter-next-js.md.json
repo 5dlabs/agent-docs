@@ -1,0 +1,7 @@
+{
+  "url": "file://temp_jupiter_docs/Moved/legacy/4-integrate-jupiter-next-js.md",
+  "content": "description: Integrate Jupiter into your NextJS App. \n Integrate Jupiter with NextJS \n Use the API in your own NextJS UI. \n NextJS example using Jupiter API \n https://github.com/jup-ag/jupiter-api-nextjs-example \n Clone, Build and Run \n First, fetch the latest version of the example code: \n $ git clone https://github.com/jup-ag/jupiter-api-nextjs-example.git\n$ cd jupiter-api-nextjs-example\n \n Next, follow the steps in the git repository's  README . \n Example Demo : https://jupiter-api-nextjs-example.vercel.app/",
+  "item_type": "markdown",
+  "module_path": "temp_jupiter_docs/Moved/legacy/4-integrate-jupiter-next-js.md",
+  "extracted_at": "2025-09-03T01:39:45.947206Z"
+}
