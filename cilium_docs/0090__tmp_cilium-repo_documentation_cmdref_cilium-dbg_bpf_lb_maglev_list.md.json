@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_bpf_lb_maglev_list.md",
+  "content": "cilium-dbg bpf lb maglev list \n List Maglev lookup tables \n cilium-dbg bpf lb maglev list [flags]\n \n Options \n   -h, --help            help for list\n  -o, --output string   json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg bpf lb maglev \t - Maglev lookup table",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_bpf_lb_maglev_list.md",
+  "extracted_at": "2025-09-03T00:53:44.799307Z"
+}

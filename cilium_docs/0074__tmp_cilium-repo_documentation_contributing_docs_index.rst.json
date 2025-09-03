@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/contributing/docs/index.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _docs_guide:\n\nDocumentation\n-------------\n\nThis section provides guidance on the structure of Cilium documentation,\ndescribes its style, and explains how to test it. Before contributing, please\nreview the structure recommendations and style guide.\n\nSee the :ref:`clone and provision environment section <provision_environment>`\nto learn how to fork and clone the repository.\n\n.. toctree::\n   :maxdepth: 2\n   :glob:\n\n   docsstructure\n   docsstyle\n   docstest\n   docsframework\n\nThe best way to get help if you get stuck is to ask a question on `Cilium\nSlack`_. With Cilium contributors across the globe, there is almost always\nsomeone available to help.\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/contributing/docs/index.rst",
+  "extracted_at": "2025-09-03T00:53:44.775318Z"
+}

@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-generic_status_clustermesh.md",
+  "content": "cilium-operator-generic status clustermesh \n Display status of remote clusters \n cilium-operator-generic status clustermesh [flags]\n \n Options \n   -h, --help                    help for clustermesh\n  -o, --output string           json| yaml| jsonpath='{}'\n  -s, --server-address string   Address of the operator API server (default \"localhost:9234\")\n      --verbose                 Output verbose status information for ready clusters as well\n \n SEE ALSO \n \n cilium-operator-generic status \t - Display status of operator",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-generic_status_clustermesh.md",
+  "extracted_at": "2025-09-03T00:53:44.830965Z"
+}

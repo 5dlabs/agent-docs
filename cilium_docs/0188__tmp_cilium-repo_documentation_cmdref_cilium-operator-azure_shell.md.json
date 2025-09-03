@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_shell.md",
+  "content": "cilium-operator-azure shell \n Connect to the Cilium shell \n cilium-operator-azure shell [command] [args]... [flags]\n \n Options \n   -h, --help   help for shell\n \n SEE ALSO \n \n cilium-operator-azure \t - Run cilium-operator-azure",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_shell.md",
+  "extracted_at": "2025-09-03T00:53:44.852320Z"
+}

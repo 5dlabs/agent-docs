@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/index.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\nCommand Reference\n=================\n\n.. only:: html\n\n   .. toctree::\n      :maxdepth: 0\n      :titlesonly:\n\n      index_cilium_cli\n      index_cilium-agent\n      index_cilium-bugtool\n      index_cilium-dbg\n      index_cilium-health\n      index_cilium-operator\n      index_clustermesh-apiserver\n      kvstore\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/index.rst",
+  "extracted_at": "2025-09-03T00:53:44.807650Z"
+}

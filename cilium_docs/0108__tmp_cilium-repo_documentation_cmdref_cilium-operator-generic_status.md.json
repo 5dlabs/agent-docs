@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-generic_status.md",
+  "content": "cilium-operator-generic status \n Display status of operator \n Options \n   -h, --help   help for status\n \n SEE ALSO \n \n cilium-operator-generic \t - Run cilium-operator-generic \n cilium-operator-generic status clustermesh \t - Display status of remote clusters",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-generic_status.md",
+  "extracted_at": "2025-09-03T00:53:44.809579Z"
+}

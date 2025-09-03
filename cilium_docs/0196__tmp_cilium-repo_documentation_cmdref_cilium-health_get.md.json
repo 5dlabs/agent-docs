@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-health_get.md",
+  "content": "cilium-health get \n Display local cilium agent status \n cilium-health get [flags]\n \n Options \n   -h, --help            help for get\n  -o, --output string   json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n   -D, --debug         Enable debug messages\n  -H, --host string   URI to cilium-health server API\n \n SEE ALSO \n \n cilium-health \t - Cilium Health Client",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-health_get.md",
+  "extracted_at": "2025-09-03T00:53:44.856221Z"
+}

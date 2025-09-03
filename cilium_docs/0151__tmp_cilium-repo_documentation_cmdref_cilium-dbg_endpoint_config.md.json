@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_endpoint_config.md",
+  "content": "cilium-dbg endpoint config \n View & modify endpoint configuration \n cilium-dbg endpoint config <endpoint id> [<option>=(enable|disable) ...] [flags]\n \n Examples \n endpoint config 5421 DropNotification=false TraceNotification=false PolicyVerdictNotification=true\n \n Options \n   -h, --help            help for config\n      --list-options    List available options\n  -o, --output string   json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg endpoint \t - Manage endpoints",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_endpoint_config.md",
+  "extracted_at": "2025-09-03T00:53:44.834206Z"
+}

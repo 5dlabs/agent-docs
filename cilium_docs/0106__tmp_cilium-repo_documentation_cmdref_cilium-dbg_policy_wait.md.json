@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_policy_wait.md",
+  "content": "cilium-dbg policy wait \n Wait for all endpoints to have updated to a given policy revision \n cilium-dbg policy wait <revision> [flags]\n \n Options \n       --fail-wait-time int   Wait time after which command fails if endpoint regeration fails (seconds) (default 60)\n  -h, --help                 help for wait\n      --max-wait-time int    Wait time after which command fails (seconds) (default 360)\n      --sleep-time int       Sleep interval between checks (seconds) (default 1)\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg policy \t - Manage security policies",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_policy_wait.md",
+  "extracted_at": "2025-09-03T00:53:44.808623Z"
+}

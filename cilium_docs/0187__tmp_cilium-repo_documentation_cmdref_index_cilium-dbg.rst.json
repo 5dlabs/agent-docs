@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/index_cilium-dbg.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\ncilium-dbg\n==========\n\n.. only:: html\n\n   .. toctree::\n      :maxdepth: 0\n      :glob:\n      :titlesonly:\n\n      cilium-dbg*\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/index_cilium-dbg.rst",
+  "extracted_at": "2025-09-03T00:53:44.851930Z"
+}

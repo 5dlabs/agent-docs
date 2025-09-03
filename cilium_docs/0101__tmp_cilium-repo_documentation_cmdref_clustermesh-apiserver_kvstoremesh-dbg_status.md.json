@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_kvstoremesh-dbg_status.md",
+  "content": "clustermesh-apiserver kvstoremesh-dbg status \n Display status of remote clusters \n clustermesh-apiserver kvstoremesh-dbg status [flags]\n \n Options \n   -h, --help            help for status\n  -o, --output string   json| yaml| jsonpath='{}'\n      --verbose         Output verbose status information for ready clusters as well\n \n Options inherited from parent commands \n   -H, --host string   URI to server-side API (default \"localhost:9889\")\n \n SEE ALSO \n \n clustermesh-apiserver kvstoremesh-dbg \t - CLI for interacting with KVStoreMesh",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_kvstoremesh-dbg_status.md",
+  "extracted_at": "2025-09-03T00:53:44.806238Z"
+}

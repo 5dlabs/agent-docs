@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-aws_status.md",
+  "content": "cilium-operator-aws status \n Display status of operator \n Options \n   -h, --help   help for status\n \n SEE ALSO \n \n cilium-operator-aws \t - Run cilium-operator-aws \n cilium-operator-aws status clustermesh \t - Display status of remote clusters",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-aws_status.md",
+  "extracted_at": "2025-09-03T00:53:44.852738Z"
+}

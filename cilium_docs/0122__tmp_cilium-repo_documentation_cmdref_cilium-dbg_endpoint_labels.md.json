@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_endpoint_labels.md",
+  "content": "cilium-dbg endpoint labels \n Manage label configuration of endpoint \n cilium-dbg endpoint labels [flags]\n \n Options \n   -a, --add strings      Add/enable labels\n  -d, --delete strings   Delete/disable labels\n  -h, --help             help for labels\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg endpoint \t - Manage endpoints",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_endpoint_labels.md",
+  "extracted_at": "2025-09-03T00:53:44.817976Z"
+}

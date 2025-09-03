@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/security/index.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _security_root:\n\nSecuring Networks with Cilium\n-----------------------------\n\n.. note::\n\n    The 2022 security audits for Cilium are available:\n    \n    - :download:`Cilium Security Audit 2022 <audits/CiliumSecurityAudit2022.pdf>`\n    - :download:`Cilium Fuzzing Audit 2022 <audits/CiliumFuzzingAudit2022.pdf>`\n  \n.. toctree::\n   :maxdepth: 2\n   :glob:\n\n   http\n   dns\n   tls-visibility\n   kafka\n   grpc\n   elasticsearch\n   aws\n   policy-creation\n   host-firewall\n   restrict-pod-access",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/security/index.rst",
+  "extracted_at": "2025-09-03T00:53:44.692245Z"
+}

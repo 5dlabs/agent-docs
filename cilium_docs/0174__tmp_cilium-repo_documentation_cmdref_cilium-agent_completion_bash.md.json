@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-agent_completion_bash.md",
+  "content": "cilium-agent completion bash \n Generate the autocompletion script for bash \n Synopsis \n Generate the autocompletion script for the bash shell. \n This script depends on the 'bash-completion' package.\nIf it is not installed already, you can install it via your OS's package manager. \n To load completions in your current shell session: \n source <(cilium-agent completion bash)\n \n To load completions for every new session, execute once: \n Linux: \n cilium-agent completion bash > /etc/bash_completion.d/cilium-agent\n \n macOS: \n cilium-agent completion bash > $(brew --prefix)/etc/bash_completion.d/cilium-agent\n \n You will need to start a new shell for this setup to take effect. \n cilium-agent completion bash\n \n Options \n   -h, --help              help for bash\n      --no-descriptions   disable completion descriptions\n \n SEE ALSO \n \n cilium-agent completion \t - Generate the autocompletion script for the specified shell",
+  "item_type": "markdown",
+  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-agent_completion_bash.md",
+  "extracted_at": "2025-09-03T00:53:44.845316Z"
+}

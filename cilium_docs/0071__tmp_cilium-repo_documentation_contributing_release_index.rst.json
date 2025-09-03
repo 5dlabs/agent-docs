@@ -1,0 +1,7 @@
+{
+  "url": "file:///tmp/cilium-repo/Documentation/contributing/release/index.rst",
+  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _release_management:\n\nRelease Management\n------------------\n\nThis section includes information around the release cycles and guides for\ndevelopers responsible for backporting fixes.\n\nRelease preparation steps can be found under `github.com/cilium/release <https://github.com/cilium/release/issues/new/choose>`_.\n\n.. toctree::\n   :maxdepth: 2\n\n   organization\n   backports\n",
+  "item_type": "unknown",
+  "module_path": "/tmp/cilium-repo/Documentation/contributing/release/index.rst",
+  "extracted_at": "2025-09-03T00:53:44.772256Z"
+}
