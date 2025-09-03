@@ -504,7 +504,11 @@ mod tests {
         let _processor = EnhancedDocumentProcessor::new().unwrap();
 
         // Test code detection
-        assert!(EnhancedDocumentProcessor::is_code_content("fn main() { println!(\"Hello\"); }"));
-        assert!(!EnhancedDocumentProcessor::is_code_content("This is just plain text."));
+        assert!(EnhancedDocumentProcessor::is_code_content(
+            "fn main() { println!(\"Hello\"); }"
+        ));
+        assert!(!EnhancedDocumentProcessor::is_code_content(
+            "This is just plain text."
+        ));
     }
 }
