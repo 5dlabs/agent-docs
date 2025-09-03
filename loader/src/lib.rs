@@ -1,7 +1,7 @@
 //! Document loading and parsing
 //!
 //! This crate provides document loading functionality for various documentation
-//! types including Rust crates and API documentation.
+//! types including Rust crates, Jupiter documentation, and API documentation.
 
 pub mod extractors;
 pub mod intelligent;

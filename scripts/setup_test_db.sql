@@ -12,6 +12,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'doc_type') THEN
         CREATE TYPE doc_type AS ENUM (
             'rust',
+            'jupiter',
             'birdeye',
             'cilium',
             'talos',
@@ -142,6 +143,13 @@ BEGIN
             BEGIN
                 INSERT INTO document_sources (doc_type, source_name, config, enabled)
                 VALUES ('solana', 'test_solana', '{"network": "mainnet"}', true);
+            EXCEPTION
+                WHEN unique_violation THEN NULL;
+            END;
+
+            BEGIN
+                INSERT INTO document_sources (doc_type, source_name, config, enabled)
+                VALUES ('jupiter', 'test_jupiter', '{"api_version": "v1"}', true);
             EXCEPTION
                 WHEN unique_violation THEN NULL;
             END;

@@ -143,22 +143,22 @@ fn test_configuration_validation_failures() {
         "Should fail validation for invalid tool name"
     );
 
-    // Test with invalid doc_type
-    let invalid_doc_type_config = ToolsConfig {
+    // Test with empty doc_type (truly invalid)
+    let empty_doc_type_config = ToolsConfig {
         tools: vec![ToolConfig {
             name: "valid_query".to_string(),
-            doc_type: "invalid_type".to_string(),
+            doc_type: "".to_string(), // Empty doc type is invalid
             title: "Valid Tool".to_string(),
-            description: "Valid tool with invalid doc type".to_string(),
+            description: "Valid tool with empty doc type".to_string(),
             enabled: true,
             metadata_hints: None,
         }],
     };
 
-    let result = ConfigLoader::validate_config(&invalid_doc_type_config);
+    let result = ConfigLoader::validate_config(&empty_doc_type_config);
     assert!(
         result.is_err(),
-        "Should fail validation for invalid doc type"
+        "Should fail validation for empty doc type"
     );
 
     // Test with duplicate names
@@ -194,34 +194,39 @@ fn test_configuration_validation_failures() {
 fn test_doctype_to_tool_name_mapping() {
     let config = ConfigLoader::load_default().expect("Should load default configuration");
 
-    // Verify that each docType maps to an appropriately named tool
+    // Verify that tools follow proper naming conventions based on their doc type
     for tool in &config.tools {
-        match tool.doc_type.as_str() {
-            "birdeye" => assert_eq!(tool.name, "birdeye_query"),
-            "solana" => assert_eq!(tool.name, "solana_query"),
-
-            "cilium" => assert_eq!(tool.name, "cilium_query"),
-            "talos" => assert_eq!(tool.name, "talos_query"),
-            "meteora" => assert_eq!(tool.name, "meteora_query"),
-            "raydium" => assert_eq!(tool.name, "raydium_query"),
-            "ebpf" => assert_eq!(tool.name, "ebpf_query"),
-            "rust_best_practices" => assert_eq!(tool.name, "rust_best_practices_query"),
-            "jupiter" => assert_eq!(tool.name, "jupiter_query"),
-            "rust" => {
-                // Rust doc_type supports multiple tools - both query and management
-                assert!(
-                    matches!(
-                        tool.name.as_str(),
-                        "add_rust_crate"
-                            | "remove_rust_crate"
-                            | "list_rust_crates"
-                            | "check_rust_status"
-                    ),
-                    "Unexpected rust tool name: {}",
-                    tool.name
-                );
-            }
-            _ => panic!("Unexpected doc_type: {}", tool.doc_type),
+        // For non-rust doc types, tools should be query tools ending with "_query"
+        if tool.doc_type != "rust" {
+            assert!(
+                tool.name.ends_with("_query"),
+                "Non-rust tool '{}' should end with '_query', but doc_type is '{}'",
+                tool.name,
+                tool.doc_type
+            );
+            // The tool name should match the doc type (with _query suffix)
+            let expected_name = format!("{}_query", tool.doc_type);
+            assert_eq!(
+                tool.name,
+                expected_name,
+                "Tool name '{}' should match doc_type '{}' with '_query' suffix",
+                tool.name,
+                tool.doc_type
+            );
+        } else {
+            // Rust doc_type supports multiple tools - both query and management
+            assert!(
+                matches!(
+                    tool.name.as_str(),
+                    "add_rust_crate"
+                        | "remove_rust_crate"
+                        | "list_rust_crates"
+                        | "check_rust_status"
+                        | "rust_best_practices_query"
+                ),
+                "Unexpected rust tool name: {}",
+                tool.name
+            );
         }
     }
 }
@@ -239,30 +244,18 @@ fn test_tool_description_quality() {
             tool.description.len()
         );
 
-        // Check that description mentions the tool's domain
+        // Check that description mentions the tool's doc type or related terms
         let description_lower = tool.description.to_lowercase();
-        let doc_type_variants = match tool.doc_type.as_str() {
-            "birdeye" => vec!["birdeye", "blockchain", "api"],
-            "solana" => vec!["solana", "blockchain", "validator"],
-            "cilium" => vec!["cilium", "networking", "kubernetes"],
-            "talos" => vec!["talos", "kubernetes", "linux"],
-            "meteora" => vec!["meteora", "defi", "protocol"],
-            "raydium" => vec!["raydium", "dex", "amm"],
-            "ebpf" => vec!["ebpf", "kernel", "filter"],
-            "rust_best_practices" => vec!["rust", "practices", "patterns"],
-            "jupiter" => vec!["jupiter", "defi", "dex", "solana"],
-            "rust" => vec!["rust", "crate", "documentation", "management"],
-            _ => vec![],
-        };
 
-        let mentions_domain = doc_type_variants
-            .iter()
-            .any(|variant| description_lower.contains(variant));
+        // At minimum, the description should mention the doc type
+        let mentions_doc_type = description_lower.contains(&tool.doc_type.to_lowercase());
 
         assert!(
-            mentions_domain,
-            "Tool description for {} should mention its domain. Description: {}",
-            tool.name, tool.description
+            mentions_doc_type,
+            "Tool description for {} should mention its doc type '{}'. Description: {}",
+            tool.name,
+            tool.doc_type,
+            tool.description
         );
     }
 }

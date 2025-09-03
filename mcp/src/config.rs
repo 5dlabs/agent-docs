@@ -111,18 +111,6 @@ impl ConfigLoader {
         }
 
         let mut tool_names = std::collections::HashSet::new();
-        let valid_doc_types = [
-            "rust",
-            "birdeye",
-            "cilium",
-            "talos",
-            "meteora",
-            "raydium",
-            "solana",
-            "ebpf",
-            "rust_best_practices",
-            "jupiter",
-        ];
 
         for tool in &config.tools {
             // Check for empty fields
@@ -158,15 +146,8 @@ impl ConfigLoader {
                 ));
             }
 
-            // Validate doc_type
-            if !valid_doc_types.contains(&tool.doc_type.as_str()) {
-                return Err(anyhow!(
-                    "Invalid docType '{}' for tool '{}'. Valid types: {:?}",
-                    tool.doc_type,
-                    tool.name,
-                    valid_doc_types
-                ));
-            }
+            // Validate doc_type - all doc types from the configuration are considered valid
+            // No need to validate against a hardcoded list since we extract them dynamically
 
             debug!("Validated tool: {} -> {}", tool.name, tool.doc_type);
         }

@@ -9,8 +9,8 @@
 - [ ] Test coverage ≥95%: `cargo llvm-cov --workspace --all-features --fail-under-lines 95`
 
 ### Functional Requirements Validation
-- [ ] All 12 tools available and functional
-  - [ ] 8 query tools: rust_query, birdeye_query, solana_query, cilium_query, talos_query, meteora_query, raydium_query, ebpf_query, rust_best_practices_query
+- [ ] All 13 tools available and functional
+  - [ ] 9 query tools: rust_query, birdeye_query, solana_query, jupiter_query, cilium_query, talos_query, meteora_query, raydium_query, ebpf_query, rust_best_practices_query
   - [ ] 4 management tools: add_rust_crate, remove_rust_crate, list_rust_crates, check_rust_status
 - [ ] Streamable HTTP transport working correctly
   - [ ] POST requests to `/mcp` return 200 with valid JSON-RPC responses
