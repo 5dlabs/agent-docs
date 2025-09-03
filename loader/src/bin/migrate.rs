@@ -85,7 +85,6 @@ fn parse_source_path(s: &str) -> Result<(DocType, PathBuf), String> {
 
     let doc_type = match type_str.to_lowercase().as_str() {
         "rust" => DocType::Rust,
-        "jupyter" => DocType::Jupyter,
         "birdeye" => DocType::Birdeye,
         "solana" => DocType::Solana,
         "cilium" => DocType::Cilium,

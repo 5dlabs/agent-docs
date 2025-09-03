@@ -113,7 +113,6 @@ impl ConfigLoader {
         let mut tool_names = std::collections::HashSet::new();
         let valid_doc_types = [
             "rust",
-            "jupyter",
             "birdeye",
             "cilium",
             "talos",

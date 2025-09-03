@@ -199,7 +199,7 @@ fn test_doctype_to_tool_name_mapping() {
         match tool.doc_type.as_str() {
             "birdeye" => assert_eq!(tool.name, "birdeye_query"),
             "solana" => assert_eq!(tool.name, "solana_query"),
-            "jupyter" => assert_eq!(tool.name, "jupyter_query"),
+
             "cilium" => assert_eq!(tool.name, "cilium_query"),
             "talos" => assert_eq!(tool.name, "talos_query"),
             "meteora" => assert_eq!(tool.name, "meteora_query"),

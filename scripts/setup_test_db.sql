@@ -12,7 +12,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'doc_type') THEN
         CREATE TYPE doc_type AS ENUM (
             'rust',
-            'jupyter',
             'birdeye',
             'cilium',
             'talos',
@@ -131,12 +130,7 @@ BEGIN
                 WHEN unique_violation THEN NULL;
             END;
 
-            BEGIN
-                INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                VALUES ('jupyter', 'test_notebook', '{"kernel": "python3"}', true);
-            EXCEPTION
-                WHEN unique_violation THEN NULL;
-            END;
+
 
             BEGIN
                 INSERT INTO document_sources (doc_type, source_name, config, enabled)

@@ -11,7 +11,6 @@ use uuid::Uuid;
 #[sqlx(type_name = "doc_type", rename_all = "snake_case")]
 pub enum DocType {
     Rust,
-    Jupyter,
     Birdeye,
     Cilium,
     Talos,
@@ -26,7 +25,6 @@ impl fmt::Display for DocType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             DocType::Rust => "rust",
-            DocType::Jupyter => "jupyter",
             DocType::Birdeye => "birdeye",
             DocType::Cilium => "cilium",
             DocType::Talos => "talos",
