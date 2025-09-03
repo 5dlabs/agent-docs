@@ -40,13 +40,6 @@
       }
     },
     {
-      "name": "jupyter_query",
-      "docType": "jupyter",
-      "title": "Jupyter Notebook Documentation Query",
-      "description": "Search interactive notebook documentation and examples across data science and development workflows.",
-      "enabled": true
-    },
-    {
       "name": "jupiter_query",
       "docType": "jupiter",
       "title": "Jupiter Protocol Documentation Query",
