@@ -35,12 +35,30 @@ impl ConfigLoader {
         Ok(config)
     }
 
-    /// Load tools configuration from embedded default config
+    /// Load tools configuration from filesystem or embedded fallback
     ///
     /// # Errors
     ///
-    /// Returns an error if the default config is invalid.
+    /// Returns an error if the config is invalid.
     pub fn load_default() -> Result<ToolsConfig> {
+        // Try to load from filesystem first
+        if let Ok(config_content) = std::fs::read_to_string("/app/tools.json") {
+            debug!("Loading configuration from filesystem (/app/tools.json)");
+
+            let config: ToolsConfig = serde_json::from_str(&config_content)
+                .map_err(|e| anyhow!("Failed to parse filesystem config: {}", e))?;
+
+            Self::validate_config(&config)?;
+
+            info!(
+                "Loaded filesystem configuration with {} tools",
+                config.tools.len()
+            );
+
+            return Ok(config);
+        }
+
+        // Fallback to embedded config
         const DEFAULT_CONFIG: &str = include_str!("../../tools.json");
 
         debug!("Loading default embedded configuration");
@@ -51,7 +69,7 @@ impl ConfigLoader {
         Self::validate_config(&config)?;
 
         info!(
-            "Loaded default configuration with {} tools",
+            "Loaded default embedded configuration with {} tools",
             config.tools.len()
         );
 
