@@ -256,7 +256,7 @@ mod tests {
     fn test_validate_config_invalid_doc_type() {
         let tool = ToolConfig {
             name: "test_query".to_string(),
-            doc_type: "".to_string(), // Empty doc type is invalid
+            doc_type: String::new(), // Empty doc type is invalid
             title: "Test".to_string(),
             description: "Test tool".to_string(),
             enabled: true,

@@ -147,7 +147,7 @@ fn test_configuration_validation_failures() {
     let empty_doc_type_config = ToolsConfig {
         tools: vec![ToolConfig {
             name: "valid_query".to_string(),
-            doc_type: "".to_string(), // Empty doc type is invalid
+            doc_type: String::new(), // Empty doc type is invalid
             title: "Valid Tool".to_string(),
             description: "Valid tool with empty doc type".to_string(),
             enabled: true,
@@ -193,8 +193,22 @@ fn test_doctype_to_tool_name_mapping() {
 
     // Verify that tools follow proper naming conventions based on their doc type
     for tool in &config.tools {
-        // For non-rust doc types, tools should be query tools ending with "_query"
-        if tool.doc_type != "rust" {
+        // For rust doc_type, supports multiple tools - both query and management
+        if tool.doc_type == "rust" {
+            assert!(
+                matches!(
+                    tool.name.as_str(),
+                    "add_rust_crate"
+                        | "remove_rust_crate"
+                        | "list_rust_crates"
+                        | "check_rust_status"
+                        | "rust_best_practices_query"
+                ),
+                "Unexpected rust tool name: {}",
+                tool.name
+            );
+        } else {
+            // For non-rust doc types, tools should be query tools ending with "_query"
             assert!(
                 tool.name.ends_with("_query"),
                 "Non-rust tool '{}' should end with '_query', but doc_type is '{}'",
@@ -207,20 +221,6 @@ fn test_doctype_to_tool_name_mapping() {
                 tool.name, expected_name,
                 "Tool name '{}' should match doc_type '{}' with '_query' suffix",
                 tool.name, tool.doc_type
-            );
-        } else {
-            // Rust doc_type supports multiple tools - both query and management
-            assert!(
-                matches!(
-                    tool.name.as_str(),
-                    "add_rust_crate"
-                        | "remove_rust_crate"
-                        | "list_rust_crates"
-                        | "check_rust_status"
-                        | "rust_best_practices_query"
-                ),
-                "Unexpected rust tool name: {}",
-                tool.name
             );
         }
     }
