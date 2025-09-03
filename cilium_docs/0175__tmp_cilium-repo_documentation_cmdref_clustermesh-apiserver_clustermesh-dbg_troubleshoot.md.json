@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_clustermesh-dbg_troubleshoot.md",
-  "content": "clustermesh-apiserver clustermesh-dbg troubleshoot \n Troubleshoot connectivity towards the local etcd kvstore \n clustermesh-apiserver clustermesh-dbg troubleshoot [flags]\n \n Options \n       --etcd-config string   Path to the etcd configuration (default \"/var/lib/cilium/etcd-config.yaml\")\n  -h, --help                 help for troubleshoot\n      --timeout duration     Timeout when checking connectivity to the etcd kvstore (default 5s)\n \n SEE ALSO \n \n clustermesh-apiserver clustermesh-dbg \t - CLI for interacting with ClusterMesh",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_clustermesh-dbg_troubleshoot.md",
-  "extracted_at": "2025-09-03T01:13:28.895607Z"
-}

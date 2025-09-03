@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium_version.md",
-  "content": "cilium version \n Display detailed version information \n Synopsis \n Displays information about the version of this software. \n cilium version [flags]\n \n Options \n       --client   If true, shows client version only (no server required)\n  -h, --help     help for version\n \n Options inherited from parent commands \n       --as string                  Username to impersonate for the operation. User could be a regular user or a service account in a namespace.\n      --as-group stringArray       Group to impersonate for the operation, this flag can be repeated to specify multiple groups.\n      --context string             Kubernetes configuration context\n      --helm-release-name string   Helm release name (default \"cilium\")\n      --kubeconfig string          Path to the kubeconfig file\n  -n, --namespace string           Namespace Cilium is running in (default \"kube-system\")\n \n SEE ALSO \n \n cilium \t - Cilium provides eBPF-based Networking, Security, and Observability for Kubernetes",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium_version.md",
-  "extracted_at": "2025-09-03T01:13:28.890475Z"
-}

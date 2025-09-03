@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-aws_metrics.md",
-  "content": "cilium-operator-aws metrics \n Access metric status of the operator \n Options \n   -h, --help   help for metrics\n \n SEE ALSO \n \n cilium-operator-aws \t - Run cilium-operator-aws \n cilium-operator-aws metrics list \t - List all metrics for the operator",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-aws_metrics.md",
-  "extracted_at": "2025-09-03T01:13:28.975847Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/installation/k8s-install-openshift-okd.rst",
-  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _k8s_install_openshift_okd:\n\n*****************************\nInstallation on OpenShift OKD\n*****************************\n\nThere is currently no community-maintained installation of Cilium on OpenShift.\nHowever, Cilium can be installed on OpenShift by using vendor-maintained OLM images.\nThese images, and the relevant installation instructions for them, can be\nfound on the Red Hat Ecosystem Catalog:\n\n* `Isovalent Enterprise for Cilium Software Page <https://catalog.redhat.com/software/container-stacks/detail/61a80a18b1610a914eccb3c2>`__\n* `Certified Isovalent Enterprise for Cilium OLM container images <https://catalog.redhat.com/search?q=isovalent&searchType=containers&partnerName=Isovalent&p=1&product_listings_names=Isovalent%20Enterprise%20for%20Cilium>`__\n\n.. admonition:: Video\n  :class: attention\n\n  To learn more about OpenShift and Cilium, check out `eCHO episode 31: OpenShift Test Environment with Cilium <https://www.youtube.com/watch?v=4jwIBS5IzYg&t=945s>`__.\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/installation/k8s-install-openshift-okd.rst",
-  "extracted_at": "2025-09-03T01:13:29.314616Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/deprecated.rst",
-  "content": ".. warning:: This feature is deprecated and will be removed in a future release.\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/deprecated.rst",
-  "extracted_at": "2025-09-03T01:13:29.370206Z"
-}

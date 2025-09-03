@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver.md",
-  "content": "clustermesh-apiserver \n Run the ClusterMesh apiserver \n Options \n   -h, --help   help for clustermesh-apiserver\n \n SEE ALSO \n \n clustermesh-apiserver clustermesh \t - Run ClusterMesh \n clustermesh-apiserver clustermesh-dbg \t - CLI for interacting with ClusterMesh \n clustermesh-apiserver completion \t - Generate the autocompletion script for the specified shell \n clustermesh-apiserver etcdinit \t - Initialize an etcd data directory for use by the etcd sidecar of clustermesh-apiserver \n clustermesh-apiserver kvstoremesh \t - Run KVStoreMesh \n clustermesh-apiserver kvstoremesh-dbg \t - CLI for interacting with KVStoreMesh \n clustermesh-apiserver mcsapi-coredns-cfg \t - Automatically configure CoreDNS with recommended MCS-API settings \n clustermesh-apiserver shell \t - Connect to the Cilium shell \n clustermesh-apiserver version \t - Print version information",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver.md",
-  "extracted_at": "2025-09-03T01:13:29.098302Z"
-}

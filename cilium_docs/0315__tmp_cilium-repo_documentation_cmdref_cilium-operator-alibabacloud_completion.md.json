@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-alibabacloud_completion.md",
-  "content": "cilium-operator-alibabacloud completion \n Generate the autocompletion script for the specified shell \n Synopsis \n Generate the autocompletion script for cilium-operator-alibabacloud for the specified shell.\nSee each sub-command's help for details on how to use the generated script. \n Options \n   -h, --help   help for completion\n \n SEE ALSO \n \n cilium-operator-alibabacloud \t - Run cilium-operator-alibabacloud \n cilium-operator-alibabacloud completion bash \t - Generate the autocompletion script for bash \n cilium-operator-alibabacloud completion fish \t - Generate the autocompletion script for fish \n cilium-operator-alibabacloud completion powershell \t - Generate the autocompletion script for powershell \n cilium-operator-alibabacloud completion zsh \t - Generate the autocompletion script for zsh",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-alibabacloud_completion.md",
-  "extracted_at": "2025-09-03T01:13:28.969098Z"
-}

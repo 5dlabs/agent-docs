@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-health.md",
-  "content": "cilium-health \n Cilium Health Client \n Synopsis \n Client for querying the Cilium health status API \n cilium-health [flags]\n \n Options \n   -D, --debug         Enable debug messages\n  -h, --help          help for cilium-health\n  -H, --host string   URI to cilium-health server API\n \n SEE ALSO \n \n cilium-health completion \t - Generate the autocompletion script for the specified shell \n cilium-health get \t - Display local cilium agent status \n cilium-health ping \t - Check whether the cilium-health API is up \n cilium-health status \t - Display cilium connectivity to other nodes",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-health.md",
-  "extracted_at": "2025-09-03T01:13:28.885384Z"
-}

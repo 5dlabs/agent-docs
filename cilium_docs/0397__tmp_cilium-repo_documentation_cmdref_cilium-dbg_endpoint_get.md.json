@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_endpoint_get.md",
-  "content": "cilium-dbg endpoint get \n Display endpoint information \n cilium-dbg endpoint get ( <endpoint identifier> | -l <endpoint labels> )  [flags]\n \n Examples \n   cilium-dbg endpoint get 4598\n  cilium-dbg endpoint get pod-name:default:foobar\n  cilium-dbg endpoint get -l id.baz\n \n Options \n   -h, --help             help for get\n  -l, --labels strings   list of labels\n  -o, --output string    json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg endpoint \t - Manage endpoints",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_endpoint_get.md",
-  "extracted_at": "2025-09-03T01:13:29.115963Z"
-}

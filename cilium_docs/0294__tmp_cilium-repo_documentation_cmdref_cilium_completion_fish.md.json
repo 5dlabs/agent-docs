@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium_completion_fish.md",
-  "content": "cilium completion fish \n Generate the autocompletion script for fish \n Synopsis \n Generate the autocompletion script for the fish shell. \n To load completions in your current shell session: \n cilium completion fish | source\n \n To load completions for every new session, execute once: \n cilium completion fish > ~/.config/fish/completions/cilium.fish\n \n You will need to start a new shell for this setup to take effect. \n cilium completion fish [flags]\n \n Options \n   -h, --help              help for fish\n      --no-descriptions   disable completion descriptions\n \n Options inherited from parent commands \n       --as string                  Username to impersonate for the operation. User could be a regular user or a service account in a namespace.\n      --as-group stringArray       Group to impersonate for the operation, this flag can be repeated to specify multiple groups.\n      --context string             Kubernetes configuration context\n      --helm-release-name string   Helm release name (default \"cilium\")\n      --kubeconfig string          Path to the kubeconfig file\n  -n, --namespace string           Namespace Cilium is running in (default \"kube-system\")\n \n SEE ALSO \n \n cilium completion \t - Generate the autocompletion script for the specified shell",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium_completion_fish.md",
-  "extracted_at": "2025-09-03T01:13:28.958894Z"
-}

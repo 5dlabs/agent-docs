@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_encrypt_status.md",
-  "content": "cilium-dbg encrypt status \n Display the current encryption state \n cilium-dbg encrypt status [flags]\n \n Options \n   -h, --help            help for status\n  -o, --output string   json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg encrypt \t - Manage transparent encryption",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_encrypt_status.md",
-  "extracted_at": "2025-09-03T01:13:29.097649Z"
-}

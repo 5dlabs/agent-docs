@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_preflight.md",
-  "content": "cilium-dbg preflight \n Cilium upgrade helper \n Synopsis \n CLI to help upgrade cilium \n Options \n   -h, --help   help for preflight\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg \t - CLI \n cilium-dbg preflight fqdn-poller \t - Prepare for DNS Polling upgrades to cilium 1.4 \n cilium-dbg preflight migrate-identity \t - Migrate KVStore-backed identities to kubernetes CRD-backed identities \n cilium-dbg preflight validate-cnp \t - Validate Cilium Network Policies deployed in the cluster",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_preflight.md",
-  "extracted_at": "2025-09-03T01:13:29.115396Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/helm-reference.rst",
-  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _helm_reference:\n\n##############\nHelm Reference\n##############\n\nThe table below serves as a reference for the values that can be set on\nCilium's Helm chart.\n\n.. include:: ./helm-values.rst\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/helm-reference.rst",
-  "extracted_at": "2025-09-03T01:13:29.254762Z"
-}

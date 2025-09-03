@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/network/kubernetes/ipam.rst",
-  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _gsg_ipam:\n\n**********************\nConfiguring IPAM Modes\n**********************\n\nCilium supports multiple IP Address Management (IPAM) modes to meet the needs\nof different environments and cloud providers.\n\nThe following sections provide documentation for each supported IPAM mode:\n\n.. toctree::\n   :maxdepth: 1\n   :glob:\n\n   ipam-crd\n   ipam-cluster-pool\n   ipam-multi-pool\n\n   ../concepts/ipam/kubernetes\n   ../concepts/ipam/azure\n   ../concepts/ipam/azure-delegated-ipam\n   ../concepts/ipam/eni\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/network/kubernetes/ipam.rst",
-  "extracted_at": "2025-09-03T01:13:29.236542Z"
-}

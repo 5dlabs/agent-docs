@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_config.md",
-  "content": "cilium-dbg config \n Cilium configuration options \n cilium-dbg config [<option>=(enable|disable) ...] [flags]\n \n Options \n   -a, --all             Display all cilium configurations\n  -h, --help            help for config\n      --list-options    List available options\n  -n, --num-pages int   Number of pages for perf ring buffer. New values have to be > 0\n  -o, --output string   json| yaml| jsonpath='{}'\n  -r, --read-only       Display read only configurations\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg \t - CLI \n cilium-dbg config get \t - Retrieve cilium configuration",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_config.md",
-  "extracted_at": "2025-09-03T01:13:29.117875Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-alibabacloud_status.md",
-  "content": "cilium-operator-alibabacloud status \n Display status of operator \n Options \n   -h, --help   help for status\n \n SEE ALSO \n \n cilium-operator-alibabacloud \t - Run cilium-operator-alibabacloud \n cilium-operator-alibabacloud status clustermesh \t - Display status of remote clusters",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-alibabacloud_status.md",
-  "extracted_at": "2025-09-03T01:13:29.129714Z"
-}

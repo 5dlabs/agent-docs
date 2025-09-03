@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/contributing/development/index.rst",
-  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _dev_guide:\n\nDevelopment\n-----------\n\nWe're happy you're interested in contributing to the Cilium project.\n\nThis section of the Cilium documentation  will help you make sure you have an\nenvironment capable of testing changes to the Cilium source code, and that you\nunderstand the workflow of getting these changes reviewed and merged upstream.\n\n.. toctree::\n   :maxdepth: 2\n\n   contributing_guide\n   reviewers_committers/index\n   dev_setup\n   images\n   codeoverview\n   datapath_config\n   hive\n   statedb\n   debugging\n   hubble\n   introducing_new_crds\n   bgp_cplane\n   renovate\n\nThe best way to get help if you get stuck is to ask a question on `Cilium\nSlack`_. With Cilium contributors across the globe, there is almost always\nsomeone available to help.\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/contributing/development/index.rst",
-  "extracted_at": "2025-09-03T01:13:28.791482Z"
-}

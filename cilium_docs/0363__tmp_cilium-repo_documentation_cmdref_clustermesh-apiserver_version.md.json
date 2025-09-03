@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_version.md",
-  "content": "clustermesh-apiserver version \n Print version information \n clustermesh-apiserver version [flags]\n \n Options \n   -h, --help   help for version\n \n SEE ALSO \n \n clustermesh-apiserver \t - Run the ClusterMesh apiserver",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_version.md",
-  "extracted_at": "2025-09-03T01:13:29.095539Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_troubleshoot.md",
-  "content": "cilium-operator-azure troubleshoot \n Run troubleshooting utilities to check control-plane connectivity \n Options \n   -h, --help   help for troubleshoot\n \n SEE ALSO \n \n cilium-operator-azure \t - Run cilium-operator-azure \n cilium-operator-azure troubleshoot clustermesh \t - Troubleshoot connectivity towards remote clusters \n cilium-operator-azure troubleshoot kvstore \t - Troubleshoot connectivity towards the etcd kvstore",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_troubleshoot.md",
-  "extracted_at": "2025-09-03T01:13:28.934594Z"
-}

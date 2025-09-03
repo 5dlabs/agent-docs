@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_map_list.md",
-  "content": "cilium-dbg map list \n List all open BPF maps \n cilium-dbg map list [flags]\n \n Examples \n cilium map list\n \n Options \n   -h, --help            help for list\n  -o, --output string   json| yaml| jsonpath='{}'\n      --verbose         Print cache contents of all maps\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg map \t - Access userspace cached content of BPF maps",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_map_list.md",
-  "extracted_at": "2025-09-03T01:13:28.961694Z"
-}

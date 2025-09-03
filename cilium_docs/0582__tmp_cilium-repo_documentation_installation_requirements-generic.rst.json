@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/installation/requirements-generic.rst",
-  "content": "**Requirements:**\n\n* Kubernetes must be configured to use CNI (see `Network Plugin Requirements <https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/#network-plugin-requirements>`_)\n* Linux kernel >= 5.10\n\n.. tip::\n\n   See :ref:`admin_system_reqs` for more details on the system requirements.\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/installation/requirements-generic.rst",
-  "extracted_at": "2025-09-03T01:13:29.311352Z"
-}

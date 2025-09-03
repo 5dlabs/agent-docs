@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_map_events.md",
-  "content": "cilium-dbg map events \n Display cached list of events for a BPF map \n cilium-dbg map events <name> [flags]\n \n Examples \n cilium map events cilium_ipcache\n \n Options \n   -f, --follow          If set then events will be streamed\n  -h, --help            help for events\n  -o, --output string   json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg map \t - Access userspace cached content of BPF maps",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_map_events.md",
-  "extracted_at": "2025-09-03T01:13:28.946290Z"
-}

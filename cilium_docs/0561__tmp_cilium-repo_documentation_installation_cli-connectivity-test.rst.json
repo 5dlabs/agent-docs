@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/installation/cli-connectivity-test.rst",
-  "content": "Run the following command to validate that your cluster has proper network\nconnectivity:\n\n.. code-block:: shell-session\n\n   $ cilium connectivity test\n   ℹ️  Monitor aggregation detected, will skip some flow validation steps\n   ✨ [k8s-cluster] Creating namespace for connectivity check...\n   (...)\n   ---------------------------------------------------------------------------------------------------------------------\n   📋 Test Report\n   ---------------------------------------------------------------------------------------------------------------------\n   ✅ 69/69 tests successful (0 warnings)\n\n.. note::\n\n   The connectivity test may fail to deploy due to too many open files in one\n   or more of the pods. If you notice this error, you can increase the\n   ``inotify`` resource limits on your host machine (see\n   `Pod errors due to \"too many open files\" <https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files>`_).\n\nCongratulations! You have a fully functional Kubernetes cluster with Cilium. 🎉\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/installation/cli-connectivity-test.rst",
-  "extracted_at": "2025-09-03T01:13:29.304258Z"
-}

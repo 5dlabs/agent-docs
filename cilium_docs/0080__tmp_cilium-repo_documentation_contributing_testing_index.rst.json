@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/contributing/testing/index.rst",
-  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _testing_guide:\n\nTesting\n-------\n\nThere are multiple ways to test Cilium functionality, including unit-testing\nand integration testing. In order to improve developer throughput, we provide\nways to run both the unit and integration tests in your own workspace as opposed\nto being fully reliant on the Cilium CI infrastructure. We encourage all PRs to\nadd unit tests and if necessary, integration tests. Consult the following pages\nto see how to run the variety of tests that have been written for Cilium, and\ninformation about Cilium's CI infrastructure.\n\n.. _testing_root:\n\n.. toctree::\n   :maxdepth: 2\n   :glob:\n\n   ci\n   e2e\n   e2e_legacy\n   scalability\n   unit\n   bpf\n\nThe best way to get help if you get stuck is to ask a question on the `Cilium\nSlack`_. With Cilium contributors across the globe, there is almost always\nsomeone available to help.\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/contributing/testing/index.rst",
-  "extracted_at": "2025-09-03T01:13:28.835180Z"
-}

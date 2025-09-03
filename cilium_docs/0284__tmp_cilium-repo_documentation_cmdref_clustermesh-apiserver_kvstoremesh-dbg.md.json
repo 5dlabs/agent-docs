@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_kvstoremesh-dbg.md",
-  "content": "clustermesh-apiserver kvstoremesh-dbg \n CLI for interacting with KVStoreMesh \n Options \n   -h, --help          help for kvstoremesh-dbg\n  -H, --host string   URI to server-side API (default \"localhost:9889\")\n \n SEE ALSO \n \n clustermesh-apiserver \t - Run the ClusterMesh apiserver \n clustermesh-apiserver kvstoremesh-dbg status \t - Display status of remote clusters \n clustermesh-apiserver kvstoremesh-dbg troubleshoot \t - Troubleshoot connectivity towards the local etcd kvstore and remote clusters",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/clustermesh-apiserver_kvstoremesh-dbg.md",
-  "extracted_at": "2025-09-03T01:13:28.953181Z"
-}

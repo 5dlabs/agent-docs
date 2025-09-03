@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_endpoint_health.md",
-  "content": "cilium-dbg endpoint health \n View endpoint health \n cilium-dbg endpoint health <endpoint id> [flags]\n \n Examples \n cilium endpoint health 5421\n \n Options \n   -h, --help            help for health\n  -o, --output string   json| yaml| jsonpath='{}'\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg endpoint \t - Manage endpoints",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_endpoint_health.md",
-  "extracted_at": "2025-09-03T01:13:28.903032Z"
-}

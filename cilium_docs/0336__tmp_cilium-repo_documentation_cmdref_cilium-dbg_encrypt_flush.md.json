@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_encrypt_flush.md",
-  "content": "cilium-dbg encrypt flush \n Flushes the current IPsec state \n Synopsis \n Will cause a short connectivity disruption \n cilium-dbg encrypt flush [flags]\n \n Options \n   -f, --force            Skip confirmation\n  -h, --help             help for flush\n      --node-id string   Only delete states and policies with this node ID. Decimal or hexadecimal (0x) format. If multiple filters are used, they all apply\n  -o, --output string    json| yaml| jsonpath='{}'\n      --spi uint8        Only delete states and policies with this SPI. If multiple filters are used, they all apply\n      --stale            Delete stale states and policies based on the current node ID map content\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg encrypt \t - Manage transparent encryption",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_encrypt_flush.md",
-  "extracted_at": "2025-09-03T01:13:29.080335Z"
-}

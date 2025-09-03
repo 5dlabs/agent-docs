@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-aws_metrics_list.md",
-  "content": "cilium-operator-aws metrics list \n List all metrics for the operator \n cilium-operator-aws metrics list [flags]\n \n Options \n   -h, --help                    help for list\n  -p, --match-pattern string    Show only metrics whose names match matchpattern\n  -o, --output string           json| yaml| jsonpath='{}'\n  -s, --server-address string   Address of the operator API server (default \"localhost:9234\")\n \n SEE ALSO \n \n cilium-operator-aws metrics \t - Access metric status of the operator",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-aws_metrics_list.md",
-  "extracted_at": "2025-09-03T01:13:28.888Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/observability/hubble/port-forward.rst",
-  "content": ".. note::\n\n    The following commands use the ``-P`` (``--port-forward``) flag to automatically\n    port-forward the Hubble Relay service from your local machine on port ``4245``.\n\n    You can also omit the flag and create a port-forward manually with the Cilium CLI:\n\n    .. code-block:: shell-session\n\n        $ cilium hubble port-forward\n        ℹ️ Hubble Relay is available at 127.0.0.1:4245\n\n    Or with kubectl:\n\n    .. code-block:: shell-session\n\n        $ kubectl -n kube-system port-forward service/hubble-relay 4245:80\n        Forwarding from 127.0.0.1:4245 -> 4245\n        Forwarding from [::1]:4245 -> 4245\n\n    For more information on this method, see `Use Port Forwarding to Access Application in a Cluster <https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/>`_.\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/observability/hubble/port-forward.rst",
-  "extracted_at": "2025-09-03T01:13:29.326465Z"
-}

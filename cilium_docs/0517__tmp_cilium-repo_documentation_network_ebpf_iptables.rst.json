@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/network/ebpf/iptables.rst",
-  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n##############\nIptables Usage\n##############\n\nDepending on the Linux kernel version being used, the eBPF datapath can\nimplement a varying feature set fully in eBPF. If certain required capabilities\nare not available, the functionality is provided using a legacy iptables\nimplementation. See :ref:`features_kernel_matrix` for more details.\n\n\nkube-proxy Interoperability\n===========================\n\nThe following diagram shows the integration of iptables rules as installed by\nkube-proxy and the iptables rules as installed by Cilium.\n\n.. image:: _static/kubernetes_iptables.svg\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/network/ebpf/iptables.rst",
-  "extracted_at": "2025-09-03T01:13:29.220120Z"
-}

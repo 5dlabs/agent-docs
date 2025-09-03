@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/installation/requirements-openshift.rst",
-  "content": "To install Cilium on `OpenShift <https://www.openshift.com/>`_,\nperform the following steps:\n\n**Default Configuration:**\n\n=============== =============== ==============\nDatapath        IPAM            Datastore\n=============== =============== ==============\nEncapsulation   Cluster Pool    Kubernetes CRD\n=============== =============== ==============\n\n**Requirements:**\n\n* OpenShift 4.x\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/installation/requirements-openshift.rst",
-  "extracted_at": "2025-09-03T01:13:29.307277Z"
-}

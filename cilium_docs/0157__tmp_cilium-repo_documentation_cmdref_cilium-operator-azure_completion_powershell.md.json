@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_completion_powershell.md",
-  "content": "cilium-operator-azure completion powershell \n Generate the autocompletion script for powershell \n Synopsis \n Generate the autocompletion script for powershell. \n To load completions in your current shell session: \n cilium-operator-azure completion powershell | Out-String | Invoke-Expression\n \n To load completions for every new session, add the output of the above command\nto your powershell profile. \n cilium-operator-azure completion powershell [flags]\n \n Options \n   -h, --help              help for powershell\n      --no-descriptions   disable completion descriptions\n \n SEE ALSO \n \n cilium-operator-azure completion \t - Generate the autocompletion script for the specified shell",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_completion_powershell.md",
-  "extracted_at": "2025-09-03T01:13:28.887018Z"
-}

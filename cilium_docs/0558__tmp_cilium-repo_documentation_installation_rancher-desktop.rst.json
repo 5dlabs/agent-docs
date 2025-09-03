@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/installation/rancher-desktop.rst",
-  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _rancher_desktop_install:\n\n**********************************\nInstallation Using Rancher Desktop\n**********************************\n\nThis guide walks you through installation of Cilium on `Rancher Desktop <https://rancherdesktop.io>`_,\nan open-source desktop application for Mac, Windows and Linux.\n\nConfigure Rancher Desktop\n=========================\n\n.. include:: rancher-desktop-configure.rst\n\nInstall Cilium\n==============\n\n.. include:: cli-download.rst\n\nInstall Cilium by running:\n\n.. parsed-literal::\n\n    cilium install |CHART_VERSION|\n\nValidate the Installation\n=========================\n\n.. include:: cli-status.rst\n.. include:: cli-connectivity-test.rst\n\n.. include:: next-steps.rst\n\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/installation/rancher-desktop.rst",
-  "extracted_at": "2025-09-03T01:13:29.303159Z"
-}

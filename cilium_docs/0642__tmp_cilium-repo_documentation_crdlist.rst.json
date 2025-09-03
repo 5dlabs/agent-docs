@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/crdlist.rst",
-  "content": "0: CiliumBGPAdvertisement\n1: CiliumBGPClusterConfig\n2: CiliumBGPNodeConfig\n3: CiliumBGPNodeConfigOverride\n4: CiliumBGPPeerConfig\n5: CiliumBGPPeeringPolicy\n6: :ref:`CiliumCIDRGroup<CiliumCIDRGroup>`\n7: CiliumClusterwideEnvoyConfig\n8: :ref:`CiliumClusterwideNetworkPolicy<CiliumClusterwideNetworkPolicy>`\n9: CiliumEgressGatewayPolicy\n10: :ref:`CiliumEndpoint<CiliumEndpoint>`\n11: :ref:`CiliumEndpointSlice<CiliumEndpointSlice>`\n12: CiliumEnvoyConfig\n13: CiliumGatewayClassConfig\n14: CiliumIdentity\n15: CiliumL2AnnouncementPolicy\n16: CiliumLoadBalancerIPPool\n17: CiliumLocalRedirectPolicy\n18: :ref:`CiliumNetworkPolicy<CiliumNetworkPolicy>`\n19: CiliumNode\n20: CiliumNodeConfig\n21: CiliumPodIPPool\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/crdlist.rst",
-  "extracted_at": "2025-09-03T01:13:29.371515Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/installation/kind-install-deps.rst",
-  "content": "1. Install ``docker`` stable as described in\n   `Install Docker Engine <https://docs.docker.com/engine/install/>`_\n\n2. Install ``kubectl`` version >= v1.14.0 as described in the\n   `Kubernetes Docs <https://kubernetes.io/docs/tasks/tools/install-kubectl/>`_\n\n3. Install ``helm`` >= v3.13.0 per Helm documentation:\n   `Installing Helm <https://helm.sh/docs/intro/install/>`_\n\n4. Install ``kind`` >= v0.7.0 per kind documentation:\n   `Installation and Usage <https://kind.sigs.k8s.io/#installation-and-usage>`_\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/installation/kind-install-deps.rst",
-  "extracted_at": "2025-09-03T01:13:29.301096Z"
-}

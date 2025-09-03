@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/security/policy/index.rst",
-  "content": ".. only:: not (epub or latex or html)\n\n    WARNING: You are looking at unreleased Cilium documentation.\n    Please use the official rendered version released here:\n    https://docs.cilium.io\n\n.. _network_policy:\n.. _Network Policies:\n.. _Network Policy:\n\nOverview of Network Policy\n--------------------------\n\nThis page documents the policy language used to configure network policies\nin Cilium. Security policies can be specified and imported via the following\nmechanisms:\n\n* Using Kubernetes `NetworkPolicy`, `CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy`\n  resources. See the section :ref:`k8s_policy` for more details. In this mode,\n  Kubernetes will automatically distribute the policies to all agents.\n\n* Directly imported into the agent via CLI or :ref:`api_ref` of the agent. This\n  method does not automatically distribute policies to all agents. It is in the\n  responsibility of the user to import the policy in all required agents. (This\n  method is deprecated as of v1.18 and will be removed in v1.19.)\n\n.. toctree::\n   :maxdepth: 2\n   :glob:\n\n   intro\n   language\n   kubernetes\n   lifecycle\n   troubleshooting\n   caveats\n",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/security/policy/index.rst",
-  "extracted_at": "2025-09-03T01:13:28.749774Z"
-}

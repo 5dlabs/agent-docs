@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/security/gsg_requirements.rst",
-  "content": "If you haven't read the :ref:`intro` yet, we'd encourage you to do that first.\nThe best way to get help if you get stuck is to ask a question on `Cilium Slack`_. With Cilium contributors across the globe, there is almost always someone available to help.\nSetup Cilium ============\nIf you have not set up Cilium yet, follow the guide :ref:`k8s_install_standard` for instructions on how to quickly bootstrap a Kubernetes cluster and install Cilium. If in doubt, pick the minikube route, you will be good to go in less than 5 minutes.",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/security/gsg_requirements.rst",
-  "extracted_at": "2025-09-03T01:13:28.746871Z"
-}

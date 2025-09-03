@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-dbg_ip_get.md",
-  "content": "cilium-dbg ip get \n Display IP Cache information \n cilium-dbg ip get ( <cidr> |-l <identity labels> ) [flags]\n \n Options \n   -h, --help             help for get\n  -l, --labels strings   list of labels\n  -o, --output string    json| yaml| jsonpath='{}'\n  -v, --verbose          Print all fields of ipcache\n \n Options inherited from parent commands \n       --config string        Config file (default is $HOME/.cilium.yaml)\n  -D, --debug                Enable debug messages\n  -H, --host string          URI to server-side API\n      --log-driver strings   Logging endpoints to use (example: syslog)\n      --log-opt map          Log driver options (example: format=json)\n \n SEE ALSO \n \n cilium-dbg ip \t - Manage IP addresses and associated information",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-dbg_ip_get.md",
-  "extracted_at": "2025-09-03T01:13:28.857555Z"
-}

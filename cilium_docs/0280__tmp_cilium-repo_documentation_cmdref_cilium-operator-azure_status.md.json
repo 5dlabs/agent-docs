@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_status.md",
-  "content": "cilium-operator-azure status \n Display status of operator \n Options \n   -h, --help   help for status\n \n SEE ALSO \n \n cilium-operator-azure \t - Run cilium-operator-azure \n cilium-operator-azure status clustermesh \t - Display status of remote clusters",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-azure_status.md",
-  "extracted_at": "2025-09-03T01:13:28.950988Z"
-}

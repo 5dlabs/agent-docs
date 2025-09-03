@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium_clustermesh_disconnect.md",
-  "content": "cilium clustermesh disconnect \n Disconnect from a remote cluster \n cilium clustermesh disconnect [flags]\n \n Options \n       --connection-mode string        Connection mode: unicast, bidirectional or mesh (default \"bidirectional\")\n      --destination-context strings   Comma separated list of Kubernetes configuration contexts of destination cluster\n  -h, --help                          help for disconnect\n \n Options inherited from parent commands \n       --as string                  Username to impersonate for the operation. User could be a regular user or a service account in a namespace.\n      --as-group stringArray       Group to impersonate for the operation, this flag can be repeated to specify multiple groups.\n      --context string             Kubernetes configuration context\n      --helm-release-name string   Helm release name (default \"cilium\")\n      --kubeconfig string          Path to the kubeconfig file\n  -n, --namespace string           Namespace Cilium is running in (default \"kube-system\")\n \n SEE ALSO \n \n cilium clustermesh \t - Multi Cluster Management",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium_clustermesh_disconnect.md",
-  "extracted_at": "2025-09-03T01:13:29.132421Z"
-}

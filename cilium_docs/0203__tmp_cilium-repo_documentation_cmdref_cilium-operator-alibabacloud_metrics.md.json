@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-alibabacloud_metrics.md",
-  "content": "cilium-operator-alibabacloud metrics \n Access metric status of the operator \n Options \n   -h, --help   help for metrics\n \n SEE ALSO \n \n cilium-operator-alibabacloud \t - Run cilium-operator-alibabacloud \n cilium-operator-alibabacloud metrics list \t - List all metrics for the operator",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-alibabacloud_metrics.md",
-  "extracted_at": "2025-09-03T01:13:28.909626Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/cmdref/cilium-operator-aws_completion.md",
-  "content": "cilium-operator-aws completion \n Generate the autocompletion script for the specified shell \n Synopsis \n Generate the autocompletion script for cilium-operator-aws for the specified shell.\nSee each sub-command's help for details on how to use the generated script. \n Options \n   -h, --help   help for completion\n \n SEE ALSO \n \n cilium-operator-aws \t - Run cilium-operator-aws \n cilium-operator-aws completion bash \t - Generate the autocompletion script for bash \n cilium-operator-aws completion fish \t - Generate the autocompletion script for fish \n cilium-operator-aws completion powershell \t - Generate the autocompletion script for powershell \n cilium-operator-aws completion zsh \t - Generate the autocompletion script for zsh",
-  "item_type": "markdown",
-  "module_path": "/tmp/cilium-repo/Documentation/cmdref/cilium-operator-aws_completion.md",
-  "extracted_at": "2025-09-03T01:13:28.864803Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file:///tmp/cilium-repo/Documentation/installation/next-steps.rst",
-  "content": "Next Steps ==========\n* :ref:`hubble_setup` * :ref:`hubble_cli` * :ref:`hubble_ui` * :ref:`gs_http` * :ref:`clustermesh`",
-  "item_type": "unknown",
-  "module_path": "/tmp/cilium-repo/Documentation/installation/next-steps.rst",
-  "extracted_at": "2025-09-03T01:13:29.311229Z"
-}
