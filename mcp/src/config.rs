@@ -266,7 +266,10 @@ mod tests {
 
         let result = ConfigLoader::validate_config(&config);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("docType cannot be empty"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("docType cannot be empty"));
     }
 
     #[test]
