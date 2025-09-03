@@ -1,0 +1,95 @@
+{
+  "tools": [
+    {
+      "name": "birdeye_query",
+      "docType": "birdeye",
+      "title": "BirdEye API Documentation Query",
+      "description": "Search and retrieve information from BirdEye blockchain API documentation.",
+      "enabled": true
+    },
+    {
+      "name": "solana_query",
+      "docType": "solana",
+      "title": "Solana Documentation Query",
+      "description": "Search Solana core documentation and development guides.",
+      "enabled": true
+    },
+    {
+      "name": "jupiter_query",
+      "docType": "jupiter",
+      "title": "Jupiter Protocol Documentation Query",
+      "description": "Search Jupiter DeFi protocol documentation for DEX aggregation.",
+      "enabled": true
+    },
+    {
+      "name": "cilium_query",
+      "docType": "cilium",
+      "title": "Cilium Documentation Query",
+      "description": "Search Cilium networking and security documentation for Kubernetes environments.",
+      "enabled": true
+    },
+    {
+      "name": "talos_query",
+      "docType": "talos",
+      "title": "Talos OS Documentation Query",
+      "description": "Search Talos OS documentation for minimal, secure, and immutable Linux.",
+      "enabled": true
+    },
+    {
+      "name": "meteora_query",
+      "docType": "meteora",
+      "title": "Meteora Protocol Documentation Query",
+      "description": "Search Meteora DeFi protocol documentation including liquidity pools and yield strategies.",
+      "enabled": true
+    },
+    {
+      "name": "raydium_query",
+      "docType": "raydium",
+      "title": "Raydium Protocol Documentation Query",
+      "description": "Search Raydium DEX and AMM documentation for Solana-based trading and liquidity.",
+      "enabled": true
+    },
+    {
+      "name": "ebpf_query",
+      "docType": "ebpf",
+      "title": "eBPF Documentation Query",
+      "description": "Search eBPF documentation for kernel programming and observability tools.",
+      "enabled": true
+    },
+    {
+      "name": "rust_best_practices_query",
+      "docType": "rust_best_practices",
+      "title": "Rust Best Practices Query",
+      "description": "Search curated rust_best_practices documentation for patterns and idiomatic code guidelines.",
+      "enabled": true
+    },
+    {
+      "name": "add_rust_crate",
+      "docType": "rust",
+      "title": "Add Rust Crate",
+      "description": "Add a new Rust crate to the documentation system with automatic ingestion.",
+      "enabled": true
+    },
+    {
+      "name": "remove_rust_crate",
+      "docType": "rust",
+      "title": "Remove Rust Crate",
+      "description": "Remove a Rust crate from the documentation system with cascade deletion.",
+      "enabled": true
+    },
+    {
+      "name": "list_rust_crates",
+      "docType": "rust",
+      "title": "List Rust Crates",
+      "description": "List all Rust crates in the documentation system with pagination and filtering.",
+      "enabled": true
+    },
+    {
+      "name": "check_rust_status",
+      "docType": "rust",
+      "title": "Check Rust System Status",
+      "description": "Check system health and get comprehensive statistics about Rust crate management.",
+      "enabled": true
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 use anyhow::{anyhow, Result};
 use db::models::{ToolConfig, ToolsConfig};
 use std::path::Path;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 /// Configuration loader for dynamic tools
 pub struct ConfigLoader;
@@ -41,10 +41,7 @@ impl ConfigLoader {
     ///
     /// Returns an error if the config is invalid.
     pub fn load_default() -> Result<ToolsConfig> {
-        // Fallback to embedded config
-        const DEFAULT_CONFIG: &str = include_str!("../../tools.json");
-
-        // Try to load from environment variable first
+        // Try to load from environment variable first (highest priority)
         if let Ok(config_content) = std::env::var("TOOLS_CONFIG") {
             debug!("Loading configuration from environment variable TOOLS_CONFIG");
 
@@ -61,43 +58,45 @@ impl ConfigLoader {
             return Ok(config);
         }
 
-        // Try to load from filesystem second
-        if let Ok(config_content) = std::fs::read_to_string("/app/tools.json") {
-            debug!("Loading configuration from filesystem (/app/tools.json)");
-            info!(
-                "Successfully read {} bytes from filesystem",
-                config_content.len()
-            );
+        // Try to load from filesystem second (expected in production)
+        match std::fs::read_to_string("/app/tools.json") {
+            Ok(config_content) => {
+                debug!("Loading configuration from filesystem (/app/tools.json)");
+                info!(
+                    "Successfully read {} bytes from filesystem",
+                    config_content.len()
+                );
 
-            let config: ToolsConfig = serde_json::from_str(&config_content)
-                .map_err(|e| anyhow!("Failed to parse filesystem config: {}", e))?;
+                let config: ToolsConfig = serde_json::from_str(&config_content)
+                    .map_err(|e| anyhow!("Failed to parse filesystem config: {}", e))?;
 
-            Self::validate_config(&config)?;
+                Self::validate_config(&config)?;
 
-            info!(
-                "Loaded filesystem configuration with {} tools",
-                config.tools.len()
-            );
+                info!(
+                    "Loaded filesystem configuration with {} tools",
+                    config.tools.len()
+                );
 
-            return Ok(config);
+                Ok(config)
+            }
+            Err(e) => {
+                // No fallback to embedded config - configuration is now required
+                error!(
+                    "Failed to load tools configuration from /app/tools.json: {}",
+                    e
+                );
+                error!(
+                    "Configuration is required. Please ensure tools.json is mounted via ConfigMap or set TOOLS_CONFIG environment variable"
+                );
+                Err(anyhow!(
+                    "No tools configuration found. Configuration must be provided via:\n\
+                    1. TOOLS_CONFIG environment variable, or\n\
+                    2. /app/tools.json file (mounted from ConfigMap)\n\
+                    Error: {}",
+                    e
+                ))
+            }
         }
-
-        info!("Failed to read from filesystem (/app/tools.json), falling back to embedded config");
-
-        // Fallback to embedded config
-        debug!("Loading default embedded configuration");
-
-        let config: ToolsConfig = serde_json::from_str(DEFAULT_CONFIG)
-            .map_err(|e| anyhow!("Failed to parse default config: {}", e))?;
-
-        Self::validate_config(&config)?;
-
-        info!(
-            "Loaded default embedded configuration with {} tools",
-            config.tools.len()
-        );
-
-        Ok(config)
     }
 
     /// Validate the tools configuration
@@ -172,29 +171,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_load_default_config() {
-        let config = ConfigLoader::load_default().expect("Default config should be valid");
-        assert!(!config.tools.is_empty());
+    fn test_config_loading() {
+        // Test 1: Loading without config file or env var should fail
+        // Save current env var if it exists
+        let saved_env = std::env::var("TOOLS_CONFIG").ok();
+        std::env::remove_var("TOOLS_CONFIG");
 
-        // Check that all tools have valid names (either query tools or crate management tools)
-        for tool in &config.tools {
-            let is_valid_name = tool.name.ends_with("_query")
-                || matches!(
-                    tool.name.as_str(),
-                    "add_rust_crate"
-                        | "remove_rust_crate"
-                        | "list_rust_crates"
-                        | "check_rust_status"
-                );
-            assert!(
-                is_valid_name,
-                "Tool '{}' has invalid name format",
-                tool.name
-            );
-            assert!(!tool.name.is_empty());
-            assert!(!tool.doc_type.is_empty());
-            assert!(!tool.title.is_empty());
-            assert!(!tool.description.is_empty());
+        let result = ConfigLoader::load_default();
+        assert!(result.is_err());
+
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("No tools configuration found"));
+        assert!(error_msg.contains("TOOLS_CONFIG environment variable"));
+        assert!(error_msg.contains("/app/tools.json"));
+
+        // Test 2: Loading configuration from environment variable should work
+        let test_config = r#"{
+            "tools": [
+                {
+                    "name": "test_query",
+                    "docType": "test",
+                    "title": "Test Query Tool",
+                    "description": "A test query tool",
+                    "enabled": true
+                }
+            ]
+        }"#;
+
+        std::env::set_var("TOOLS_CONFIG", test_config);
+
+        let config = ConfigLoader::load_default().expect("Should load config from env var");
+        assert_eq!(config.tools.len(), 1);
+        assert_eq!(config.tools[0].name, "test_query");
+
+        // Restore original env var state
+        match saved_env {
+            Some(val) => std::env::set_var("TOOLS_CONFIG", val),
+            None => std::env::remove_var("TOOLS_CONFIG"),
         }
     }
 
