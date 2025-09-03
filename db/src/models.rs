@@ -3,42 +3,48 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use std::fmt;
+
 use uuid::Uuid;
 
 /// Document types supported by the system
+/// Now using a newtype for dynamic configuration - any docType from tools.json is valid
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "doc_type", rename_all = "snake_case")]
-pub enum DocType {
-    Rust,
-    Jupiter,
-    Birdeye,
-    Cilium,
-    Talos,
-    Meteora,
-    Raydium,
-    Solana,
-    Ebpf,
-    RustBestPractices,
-}
+#[sqlx(type_name = "doc_type")]
+pub struct DocType(pub String);
 
-impl fmt::Display for DocType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            DocType::Rust => "rust",
-            DocType::Jupiter => "jupiter",
-            DocType::Birdeye => "birdeye",
-            DocType::Cilium => "cilium",
-            DocType::Talos => "talos",
-            DocType::Meteora => "meteora",
-            DocType::Raydium => "raydium",
-            DocType::Solana => "solana",
-            DocType::Ebpf => "ebpf",
-            DocType::RustBestPractices => "rust_best_practices",
-        };
-        write!(f, "{s}")
+impl DocType {
+    pub fn new(s: impl Into<String>) -> Self {
+        Self(s.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn into_inner(self) -> String {
+        self.0
     }
 }
+
+impl From<String> for DocType {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
+impl From<&str> for DocType {
+    fn from(s: &str) -> Self {
+        Self(s.to_string())
+    }
+}
+
+impl std::fmt::Display for DocType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+
 
 /// Main document record
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -766,7 +766,7 @@ impl QueryPerformanceMonitor {
         // Benchmark: Documents by type (Rust)
         let (rust_result, rust_metrics) = Self::execute_with_monitoring(
             "rust_documents_by_type",
-            DocumentQueries::find_by_type(pool, DocType::Rust),
+            DocumentQueries::find_by_type(pool, DocType::from("rust")),
         )
         .await?;
         results.push(rust_metrics);

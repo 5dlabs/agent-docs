@@ -435,12 +435,12 @@ impl MigrationPipeline {
             MockDocument {
                 path: "test/doc1.md".to_string(),
                 content: "Test document 1".to_string(),
-                doc_type: DocType::Rust,
+                doc_type: DocType::from("rust"),
             },
             MockDocument {
                 path: "test/doc2.md".to_string(),
                 content: "Test document 2".to_string(),
-                doc_type: DocType::Rust,
+                doc_type: DocType::from("rust"),
             },
         ];
 

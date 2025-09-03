@@ -83,19 +83,8 @@ fn parse_source_path(s: &str) -> Result<(DocType, PathBuf), String> {
         .split_once('=')
         .ok_or_else(|| "Source path must be in format 'type=path'".to_string())?;
 
-    let doc_type = match type_str.to_lowercase().as_str() {
-        "rust" => DocType::Rust,
-        "jupiter" => DocType::Jupiter,
-        "birdeye" => DocType::Birdeye,
-        "solana" => DocType::Solana,
-        "cilium" => DocType::Cilium,
-        "talos" => DocType::Talos,
-        "meteora" => DocType::Meteora,
-        "raydium" => DocType::Raydium,
-        "ebpf" => DocType::Ebpf,
-        "rust_best_practices" => DocType::RustBestPractices,
-        _ => return Err(format!("Unknown document type: {type_str}")),
-    };
+    // With dynamic DocType as newtype, any type_str is valid
+    let doc_type = DocType::from(type_str.to_lowercase());
 
     Ok((doc_type, PathBuf::from(path_str)))
 }

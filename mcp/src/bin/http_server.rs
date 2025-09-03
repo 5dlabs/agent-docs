@@ -225,16 +225,19 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         checksum: calculate_checksum(extensions_sql),
     });
 
-    // Migration 2: Create enum types
+        // Migration 2: Create doc_type as TEXT (dynamic types)
     let enum_sql = r"
-        DO $$ BEGIN
-            CREATE TYPE doc_type AS ENUM (
-                'rust', 'jupiter', 'birdeye', 'cilium', 'talos',
-                'meteora', 'raydium', 'solana', 'ebpf', 'rust_best_practices'
-            );
-        EXCEPTION
-            WHEN duplicate_object THEN null;
-        END $$;
+    -- With dynamic DocType as String, we use TEXT instead of enum
+    -- This allows any doc_type value from tools.json to be stored
+    DO $$ BEGIN
+        -- Create doc_type as TEXT if it doesn't exist as enum
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'doc_type') THEN
+            -- We'll handle this as TEXT in the table definition
+            NULL;
+        END IF;
+    EXCEPTION
+        WHEN duplicate_object THEN null;
+    END $$;
     ";
     migration_manager.register_migration(MigrationInfo {
         id: "002_enum_types".to_string(),
@@ -252,7 +255,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         BEGIN
             CREATE TABLE IF NOT EXISTS documents (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-                doc_type doc_type NOT NULL,
+                doc_type TEXT NOT NULL,
                 source_name VARCHAR(255) NOT NULL,
                 doc_path TEXT NOT NULL,
                 content TEXT NOT NULL,
@@ -289,7 +292,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     let sources_sql = r"
         CREATE TABLE IF NOT EXISTS document_sources (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            doc_type doc_type NOT NULL,
+            doc_type TEXT NOT NULL,
             source_name VARCHAR(255) NOT NULL,
             config JSONB DEFAULT '{}',
             enabled BOOLEAN DEFAULT true,

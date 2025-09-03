@@ -6,29 +6,13 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector";
 
--- Create doc_type enum if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'doc_type') THEN
-        CREATE TYPE doc_type AS ENUM (
-            'rust',
-            'jupiter',
-            'birdeye',
-            'cilium',
-            'talos',
-            'meteora',
-            'raydium',
-            'solana',
-            'ebpf',
-            'rust_best_practices'
-        );
-    END IF;
-END $$;
+-- With dynamic DocType as String, we don't need to create enum type
+-- The database will handle doc_type as TEXT in table definitions
 
 -- Create document_sources table
 CREATE TABLE IF NOT EXISTS document_sources (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    doc_type doc_type NOT NULL,
+    doc_type TEXT NOT NULL,
     source_name VARCHAR(255) NOT NULL,
     config JSONB DEFAULT '{}',
     enabled BOOLEAN DEFAULT true,
@@ -42,7 +26,7 @@ DO $$
 BEGIN
     CREATE TABLE IF NOT EXISTS documents (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        doc_type doc_type NOT NULL,
+        doc_type TEXT NOT NULL,
         source_name VARCHAR(255) NOT NULL,
         doc_path TEXT NOT NULL,
         content TEXT NOT NULL,
