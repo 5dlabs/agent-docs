@@ -225,7 +225,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         checksum: calculate_checksum(extensions_sql),
     });
 
-        // Migration 2: Create doc_type as TEXT (dynamic types)
+    // Migration 2: Create doc_type as TEXT (dynamic types)
     let enum_sql = r"
     -- With dynamic DocType as String, we use TEXT instead of enum
     -- This allows any doc_type value from tools.json to be stored

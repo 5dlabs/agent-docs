@@ -44,8 +44,6 @@ impl std::fmt::Display for DocType {
     }
 }
 
-
-
 /// Main document record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Document {
