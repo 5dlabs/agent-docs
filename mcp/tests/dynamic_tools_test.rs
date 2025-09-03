@@ -24,7 +24,7 @@ fn cleanup_test_config() {
 async fn test_dynamic_tools_registration() {
     let _lock = TEST_MUTEX.lock().unwrap();
     setup_test_config();
-    
+
     // Create a mock database pool
     // Fast path for CI/unit tests: skip DB unless explicitly requested
     let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
@@ -37,7 +37,7 @@ async fn test_dynamic_tools_registration() {
         // Test that the configuration can be loaded without database
         let config = ConfigLoader::load_default().expect("Should load config");
         let enabled_tools = ConfigLoader::filter_enabled_tools(&config);
-        
+
         cleanup_test_config();
 
         // Should have multiple enabled tools
@@ -165,7 +165,7 @@ async fn test_dynamic_tools_registration() {
     } else {
         eprintln!("Skipping dynamic tools test - DB not reachable within 2s");
     }
-    
+
     cleanup_test_config();
 }
 
@@ -173,7 +173,7 @@ async fn test_dynamic_tools_registration() {
 async fn test_dynamic_tool_invocation() {
     let _lock = TEST_MUTEX.lock().unwrap();
     setup_test_config();
-    
+
     let database_url = std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| "mock".to_string());
 
     if database_url == "mock" || database_url.is_empty() {
@@ -267,7 +267,7 @@ async fn test_dynamic_tool_invocation() {
             }
         }
     }
-    
+
     cleanup_test_config();
 }
 
@@ -339,6 +339,6 @@ async fn test_parameter_validation_dynamic_tools() {
     } else {
         eprintln!("Skipping parameter validation test - DB not reachable within 2s");
     }
-    
+
     cleanup_test_config();
 }
