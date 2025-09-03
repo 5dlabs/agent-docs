@@ -160,7 +160,7 @@
     },
     {
       "name": "list_rust_crates",
-      "docType": "rust", 
+      "docType": "rust",
       "title": "List Rust Crates",
       "description": "List all Rust crates in the documentation system with pagination, filtering, and comprehensive statistics.",
       "enabled": true,
