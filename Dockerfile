@@ -1,6 +1,9 @@
 # Runtime-only Dockerfile for Agent Docs MCP Server
 # Expects a prebuilt binary at build/http_server in the build context
 
+# Stage to get Claude binary
+FROM ghcr.io/5dlabs/claude:latest as claude-provider
+
 # Runtime stage
 FROM debian:bookworm-slim
 
@@ -21,6 +24,10 @@ RUN useradd -r -s /bin/false -m -d /app mcpuser
 WORKDIR /app
 RUN chown mcpuser:mcpuser /app
 
+# Copy Claude binary from the claude-provider stage
+COPY --from=claude-provider /usr/local/bin/claude /usr/local/bin/claude
+RUN chmod +x /usr/local/bin/claude
+
 # Copy prebuilt binary from CI artifact packaged in the build context
 COPY --chown=mcpuser:mcpuser build/http_server /app/http_server
 RUN chmod +x /app/http_server
@@ -32,6 +39,8 @@ USER mcpuser
 ENV RUST_LOG=info
 ENV MCP_PORT=3001
 ENV MCP_HOST=0.0.0.0
+# Claude binary path for intelligent ingestion
+ENV CLAUDE_BINARY_PATH=/usr/local/bin/claude
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
