@@ -41,6 +41,9 @@ impl ConfigLoader {
     ///
     /// Returns an error if the config is invalid.
     pub fn load_default() -> Result<ToolsConfig> {
+        // Fallback to embedded config
+        const DEFAULT_CONFIG: &str = include_str!("../../tools.json");
+
         // Try to load from environment variable first
         if let Ok(config_content) = std::env::var("TOOLS_CONFIG") {
             debug!("Loading configuration from environment variable TOOLS_CONFIG");
@@ -77,15 +80,13 @@ impl ConfigLoader {
             );
 
             return Ok(config);
-        } else {
-            info!(
-                "Failed to read from filesystem (/app/tools.json), falling back to embedded config"
-            );
         }
 
-        // Fallback to embedded config
-        const DEFAULT_CONFIG: &str = include_str!("../../tools.json");
+        info!(
+            "Failed to read from filesystem (/app/tools.json), falling back to embedded config"
+        );
 
+        // Fallback to embedded config
         debug!("Loading default embedded configuration");
 
         let config: ToolsConfig = serde_json::from_str(DEFAULT_CONFIG)
