@@ -82,9 +82,7 @@ impl ConfigLoader {
             return Ok(config);
         }
 
-        info!(
-            "Failed to read from filesystem (/app/tools.json), falling back to embedded config"
-        );
+        info!("Failed to read from filesystem (/app/tools.json), falling back to embedded config");
 
         // Fallback to embedded config
         debug!("Loading default embedded configuration");
