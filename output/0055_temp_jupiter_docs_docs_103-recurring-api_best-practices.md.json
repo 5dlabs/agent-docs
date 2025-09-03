@@ -1,7 +1,0 @@
-{
-  "url": "file://temp_jupiter_docs/docs/103-recurring-api/best-practices.md",
-  "content": "sidebar_label: \"Best Practices\"\ndescription: \"Best Practices for using the Recurring API\"\ntitle: \"Best Practices\" \n\n     Best Practices \n     \n\n Some best practices when using the Recurring API. \n Item Recommendation \n Understand the Recurring Product. The Recurring API supports order creation for both recurring and smart recurring strategies. Understand the difference between the two and choose the appropriate one for your needs. \n Both types of orders require minimum total amount of 100 USD. As per the Jupiter Recurring API's requirements to prevent small orders from being created. This is similar to jup.ag's frontend check for minimum order amount. \n Time-based orders require minimum number of orders of 2 and 50 USD per order. As per the Jupiter Recurring API's requirements to prevent small orders from being created. This is similar to jup.ag's frontend check for minimum order amount. \n Token-2022 tokens The Recurring API does not currently support Token-2022 mints. Ensure you’re only scheduling orders for standard SPL tokens (Token Program) until Token-2022 support is added.",
-  "item_type": "markdown",
-  "module_path": "temp_jupiter_docs/docs/103-recurring-api/best-practices.md",
-  "extracted_at": "2025-09-03T01:39:45.750362Z"
-}

@@ -1,7 +1,0 @@
-{
-  "url": "file://temp_jupiter_docs/docs_versioned_docs/version-old/8-additional-topics/2-displaying-jup-stats.md",
-  "content": "sidebar_label: Jupiter Stats\ndescription: Learn to fetch key stats such as tickers, swap pairs, and more. Examples included\ntitle: Fetch Jupiter Stats \n\n     Fetch Jupiter Stats: Tickers, Swap Pairs, and More \n     \n\n :::warning\nThese endpoints are no longer maintained.\n::: \n \n \n Last 24 hrs: https://stats.jup.ag/info/day \n \n \n Last week: https://stats.jup.ag/info/week \n \n \n Last month: https://stats.jup.ag/info/month",
-  "item_type": "markdown",
-  "module_path": "temp_jupiter_docs/docs_versioned_docs/version-old/8-additional-topics/2-displaying-jup-stats.md",
-  "extracted_at": "2025-09-03T01:39:45.872132Z"
-}

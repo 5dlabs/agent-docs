@@ -1,7 +1,0 @@
-{
-  "url": "file://temp_jupiter_docs/docs_versioned_docs/version-old/8-additional-topics/4-builder-tips.md",
-  "content": "sidebar_label: \"Builder Tips\"\ndescription: Learn key tips for using Jupiter to develop on Solana. Boost DApp efficiency and security effortlessly.\ntitle: General Building Tips \n\n     General Tips For Building on Solana With Jupiter | Jupiter Station \n     \n\n New to building on Solana? \n This is a good resource: https://solanacookbook.com \n Private Key, beware of compromising your wallet. \n A wallet Private Key is the most important strings of text, that allows anyone to restore/access your wallet, make sure you never commit your  Private Key  into your version control ( Git, etc. ), or expose them anywhere. \n The safer way would be the use of  .env  file in your projects, and adding a  .gitignore  entry. Managing secrets can feel like extra work, but it is necessary to keep your wallets safe. \n Our example repos are all equipped with  .env  support by default, if you want to configure it yourself:  dotenv ,  react-native-dotenv . \n Careful! Before executing this function block! \n Swaps are irreversible! Make sure you are certain with your code, and be extra careful if you happen to run intervals, or any code without human supervision.",
-  "item_type": "markdown",
-  "module_path": "temp_jupiter_docs/docs_versioned_docs/version-old/8-additional-topics/4-builder-tips.md",
-  "extracted_at": "2025-09-03T01:39:45.873705Z"
-}

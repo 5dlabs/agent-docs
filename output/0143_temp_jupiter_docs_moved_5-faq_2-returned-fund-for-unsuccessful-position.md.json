@@ -1,7 +1,0 @@
-{
-  "url": "file://temp_jupiter_docs/Moved/5-faq/2-returned-fund-for-unsuccessful-position.md",
-  "content": "sidebar_label: \"Returned Fund for Unsuccessful Position\"\ndescription: Learn how to locate returned fund for unsuccessful attempt to increase position \n Returned fund for unsuccessful position \n \n Go to the Transaction ID \n \n \n \n Scroll down to  CreateIncreasePositionMarketRequest \n \n \n \n Click on  Position Request  address \n \n \n \n Click on the latest successful transaction \n \n \n \n You could find your returned fund here: \n \n For  SOL , check  SOL Balance Change  tab \n \n For  ALL other token , check  Token Balance Change  tab \n \n :::info\nNote: Wallet service providers might not be fully parsing the transactions. If you still couldn’t locate your fund although it was shown that it’s returned on the explorers, please contact your wallet service provider accordingly.\n:::",
-  "item_type": "markdown",
-  "module_path": "temp_jupiter_docs/Moved/5-faq/2-returned-fund-for-unsuccessful-position.md",
-  "extracted_at": "2025-09-03T01:39:45.914076Z"
-}

@@ -745,7 +745,9 @@ async fn handle_intelligent_command(
         .map_err(|e| format!("Failed to initialize Claude Code analyzer: {e}"))?;
 
     // Analyze the repository using Claude Code
-    let analysis = analyzer.analyze_repository(github_url).await
+    let analysis = analyzer
+        .analyze_repository(github_url)
+        .await
         .map_err(|e| format!("Repository analysis failed: {e}"))?;
 
     // Display the analysis results
@@ -759,7 +761,14 @@ async fn handle_intelligent_command(
     if !analysis.strategy.exclude_paths.is_empty() {
         println!("🚫 Exclude Paths: {:?}", analysis.strategy.exclude_paths);
     }
-    println!("📦 Chunking: {}", if analysis.strategy.use_ai_chunking { "AI-powered" } else { "Basic" });
+    println!(
+        "📦 Chunking: {}",
+        if analysis.strategy.use_ai_chunking {
+            "AI-powered"
+        } else {
+            "Basic"
+        }
+    );
     println!();
     println!("💭 CLAUDE'S REASONING:");
     println!("{}", analysis.reasoning);
@@ -777,10 +786,10 @@ async fn handle_intelligent_command(
     } else {
         print!("Execute these Claude-generated commands? (y/N): ");
         io::stdout().flush()?;
-        
+
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        
+
         if input.trim().to_lowercase() == "y" {
             info!("⚡ Executing Claude's ingestion strategy");
             analyzer.execute_ingestion(&analysis)?;

@@ -1,7 +1,0 @@
-{
-  "url": "file://temp_jupiter_docs/docs/900-lend-api/2-borrow.md",
-  "content": "sidebar_label: \"Borrow (Soon)\"\ndescription: \"Use Jupiter Lend to borrow assets.\"\ntitle: \"Borrow (Soon)\" \n\n     Borrow (Soon) \n     \n\n :::warning\nThe Jupiter Lend Borrow API is still a  work in progress , stay tuned!\n:::",
-  "item_type": "markdown",
-  "module_path": "temp_jupiter_docs/docs/900-lend-api/2-borrow.md",
-  "extracted_at": "2025-09-03T01:39:45.799820Z"
-}

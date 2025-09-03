@@ -1,5 +1,5 @@
 //! Intelligent Repository Ingestion using Claude Code
-//! 
+//!
 //! This module provides Claude Code-powered analysis of GitHub repositories
 //! to determine optimal ingestion strategies and generate CLI commands.
 
@@ -95,7 +95,7 @@ impl IntelligentRepositoryAnalyzer {
         };
 
         let llm_client = LlmClient::with_config(config);
-        
+
         Ok(Self { llm_client })
     }
 
@@ -109,24 +109,26 @@ impl IntelligentRepositoryAnalyzer {
 
         // First, get basic repository information
         let repo_info = Self::get_repository_info(github_url)?;
-        
+
         // Generate comprehensive analysis prompt for Claude Code
         let analysis_prompt = Self::create_analysis_prompt(github_url, &repo_info);
-        
+
         // Use Claude Code to analyze the repository
         let claude_response = self.llm_client.summarize(&analysis_prompt).await?;
-        
+
         // Debug: Log Claude's response
         info!("🤖 Claude Code Response: {}", claude_response);
-        
+
         // Parse Claude's response into structured analysis
         let analysis = Self::parse_claude_analysis(&claude_response, &repo_info)?;
-        
+
         info!("✅ Repository analysis complete");
-        info!("📋 Strategy: {} files, doc_type: {}", 
-              analysis.strategy.extensions.join(","), 
-              analysis.strategy.doc_type);
-        
+        info!(
+            "📋 Strategy: {} files, doc_type: {}",
+            analysis.strategy.extensions.join(","),
+            analysis.strategy.doc_type
+        );
+
         Ok(analysis)
     }
 
@@ -134,19 +136,19 @@ impl IntelligentRepositoryAnalyzer {
     fn get_repository_info(github_url: &str) -> Result<RepoInfo> {
         // Parse GitHub URL to extract owner/repo
         let (owner, repo_name) = Self::parse_github_url(github_url)?;
-        
+
         // Get actual repository structure by cloning and analyzing
         let temp_dir = format!("/tmp/repo_analysis_{repo_name}");
         let clone_result = std::process::Command::new("git")
             .args(["clone", "--depth", "1", github_url, &temp_dir])
             .output();
-            
+
         let repo_structure = if clone_result.is_ok() {
             Self::analyze_repository_structure(&temp_dir).unwrap_or_default()
         } else {
             "Repository structure unavailable (clone failed)".to_string()
         };
-        
+
         Ok(RepoInfo {
             url: github_url.to_string(),
             name: format!("{owner}/{repo_name}"),
@@ -159,12 +161,15 @@ impl IntelligentRepositoryAnalyzer {
     /// Analyze the actual repository structure
     fn analyze_repository_structure(repo_path: &str) -> Result<String> {
         let mut structure = String::new();
-        
+
         // Get directory structure
         let output = std::process::Command::new("find")
-            .args([repo_path, "-type", "f", "-name", "*.md", "-o", "-name", "*.rst", "-o", "-name", "*.html", "-o", "-name", "README*"])
+            .args([
+                repo_path, "-type", "f", "-name", "*.md", "-o", "-name", "*.rst", "-o", "-name",
+                "*.html", "-o", "-name", "README*",
+            ])
             .output()?;
-            
+
         if output.status.success() {
             let files = String::from_utf8_lossy(&output.stdout);
             let file_list: Vec<&str> = files.lines().take(50).collect(); // Limit for prompt size
@@ -175,12 +180,15 @@ impl IntelligentRepositoryAnalyzer {
                 }
             }
         }
-        
+
         // Get directory structure
         let dir_output = std::process::Command::new("find")
-            .args([repo_path, "-type", "d", "-name", "doc*", "-o", "-name", "Doc*", "-o", "-name", "api*", "-o", "-name", "guide*", "-o", "-name", "example*"])
+            .args([
+                repo_path, "-type", "d", "-name", "doc*", "-o", "-name", "Doc*", "-o", "-name",
+                "api*", "-o", "-name", "guide*", "-o", "-name", "example*",
+            ])
             .output()?;
-            
+
         if dir_output.status.success() {
             let dirs = String::from_utf8_lossy(&dir_output.stdout);
             if !dirs.trim().is_empty() {
@@ -192,13 +200,14 @@ impl IntelligentRepositoryAnalyzer {
                 }
             }
         }
-        
+
         Ok(structure)
     }
 
     /// Create comprehensive analysis prompt for Claude Code
     fn create_analysis_prompt(github_url: &str, repo_info: &RepoInfo) -> String {
-        let prompt = format!(r#"
+        let prompt = format!(
+            r#"
 TASK: Analyze the GitHub repository and create a comprehensive documentation ingestion strategy.
 
 You are an expert at identifying and extracting valuable documentation from software repositories. 
@@ -282,53 +291,108 @@ CRITICAL: You MUST respond with valid JSON in exactly this format:
 }}
 
 RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JSON.
-"#, github_url, repo_info.name, repo_info.estimated_size);
+"#,
+            github_url, repo_info.name, repo_info.estimated_size
+        );
 
         prompt
     }
 
     /// Parse Claude Code's analysis response into structured data
-    fn parse_claude_analysis(claude_response: &str, repo_info: &RepoInfo) -> Result<RepositoryAnalysis> {
+    fn parse_claude_analysis(
+        claude_response: &str,
+        repo_info: &RepoInfo,
+    ) -> Result<RepositoryAnalysis> {
         // Try to extract JSON from Claude's response
-        let json_start = claude_response.find('{').ok_or_else(|| anyhow!("No JSON found in Claude response"))?;
-        let json_end = claude_response.rfind('}').ok_or_else(|| anyhow!("Incomplete JSON in Claude response"))?;
+        let json_start = claude_response
+            .find('{')
+            .ok_or_else(|| anyhow!("No JSON found in Claude response"))?;
+        let json_end = claude_response
+            .rfind('}')
+            .ok_or_else(|| anyhow!("Incomplete JSON in Claude response"))?;
         let json_str = &claude_response[json_start..=json_end];
-        
+
         // Parse the JSON response
         let claude_analysis: serde_json::Value = serde_json::from_str(json_str)
             .map_err(|e| anyhow!("Failed to parse Claude's JSON response: {}", e))?;
-        
+
         // Extract strategy information
-        let strategy_json = claude_analysis.get("ingestion_strategy")
+        let strategy_json = claude_analysis
+            .get("ingestion_strategy")
             .ok_or_else(|| anyhow!("Missing ingestion_strategy in Claude response"))?;
-        
+
         let strategy = IngestionStrategy {
-            docs_only: strategy_json.get("docs_only").and_then(serde_json::Value::as_bool).unwrap_or(true),
-            include_paths: strategy_json.get("include_paths")
+            docs_only: strategy_json
+                .get("docs_only")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
+            include_paths: strategy_json
+                .get("include_paths")
                 .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default(),
-            exclude_paths: strategy_json.get("exclude_paths")
+            exclude_paths: strategy_json
+                .get("exclude_paths")
                 .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default(),
-            extensions: strategy_json.get("extensions")
-                .and_then(|v| v.as_array()).map_or_else(|| vec!["md".to_string(), "rst".to_string()], |arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect()),
-            recursive: strategy_json.get("recursive").and_then(serde_json::Value::as_bool).unwrap_or(true),
-            chunk_size: strategy_json.get("chunk_size").and_then(serde_json::Value::as_u64).map(|v| usize::try_from(v).unwrap_or(1000)),
-            use_ai_chunking: strategy_json.get("use_ai_chunking").and_then(serde_json::Value::as_bool).unwrap_or(true),
-            doc_type: strategy_json.get("doc_type").and_then(|v| v.as_str()).unwrap_or("unknown").to_string(),
-            source_name: strategy_json.get("source_name").and_then(|v| v.as_str()).unwrap_or("github-repo").to_string(),
+            extensions: strategy_json
+                .get("extensions")
+                .and_then(|v| v.as_array())
+                .map_or_else(
+                    || vec!["md".to_string(), "rst".to_string()],
+                    |arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(String::from))
+                            .collect()
+                    },
+                ),
+            recursive: strategy_json
+                .get("recursive")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
+            chunk_size: strategy_json
+                .get("chunk_size")
+                .and_then(serde_json::Value::as_u64)
+                .map(|v| usize::try_from(v).unwrap_or(1000)),
+            use_ai_chunking: strategy_json
+                .get("use_ai_chunking")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
+            doc_type: strategy_json
+                .get("doc_type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string(),
+            source_name: strategy_json
+                .get("source_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("github-repo")
+                .to_string(),
         };
 
         // Extract CLI commands
-        let cli_commands = claude_analysis.get("cli_commands")
+        let cli_commands = claude_analysis
+            .get("cli_commands")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
 
         // Extract reasoning
-        let reasoning = claude_analysis.get("reasoning")
+        let reasoning = claude_analysis
+            .get("reasoning")
             .and_then(|v| v.as_str())
             .unwrap_or("No reasoning provided")
             .to_string();
@@ -343,60 +407,69 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
 
     /// Parse GitHub URL to extract owner and repository name
     fn parse_github_url(url_str: &str) -> Result<(String, String)> {
-    let url = url_str.trim_end_matches('/');
+        let url = url_str.trim_end_matches('/');
         let parts: Vec<&str> = url.split('/').collect();
-        
-    if parts.len() < 2 {
+
+        if parts.len() < 2 {
             return Err(anyhow!("Invalid GitHub URL format"));
         }
-        
+
         let owner = parts[parts.len() - 2].to_string();
         let repo = parts[parts.len() - 1].to_string();
-        
+
         Ok((owner, repo))
     }
 
     /// Execute the ingestion strategy generated by Claude Code
     ///
     /// # Errors
-///
+    ///
     /// This function will return an error if:
     /// - Command execution fails
     /// - File operations fail
     /// - Database operations fail
-pub fn execute_ingestion(&self, analysis: &RepositoryAnalysis) -> Result<()> {
-        info!("🚀 Executing ingestion strategy for: {}", analysis.repo_info.name);
+    pub fn execute_ingestion(&self, analysis: &RepositoryAnalysis) -> Result<()> {
+        info!(
+            "🚀 Executing ingestion strategy for: {}",
+            analysis.repo_info.name
+        );
         info!("📋 Reasoning: {}", analysis.reasoning);
-    
+
         for (i, cmd) in analysis.cli_commands.iter().enumerate() {
-            info!("⚡ Executing command {}/{}: {}", i + 1, analysis.cli_commands.len(), cmd);
-            
+            info!(
+                "⚡ Executing command {}/{}: {}",
+                i + 1,
+                analysis.cli_commands.len(),
+                cmd
+            );
+
             // Parse and execute the command
             let parts: Vec<&str> = cmd.split_whitespace().collect();
             if parts.is_empty() {
-            warn!("Empty command, skipping");
+                warn!("Empty command, skipping");
                 continue;
             }
-            
+
             let mut command = Command::new(parts[0]);
             command.args(&parts[1..]);
-            
-            let output = command.output()
+
+            let output = command
+                .output()
                 .map_err(|e| anyhow!("Failed to execute command '{}': {}", cmd, e))?;
-            
+
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 warn!("Command failed: {}", stderr);
                 return Err(anyhow!("Command execution failed: {}", cmd));
             }
-            
+
             let stdout = String::from_utf8_lossy(&output.stdout);
             info!("✅ Command completed successfully");
             if !stdout.trim().is_empty() {
                 info!("📤 Output: {}", stdout.trim());
             }
         }
-        
+
         info!("🎉 All ingestion commands completed successfully!");
         Ok(())
     }
@@ -462,10 +535,12 @@ mod tests {
         }
 
         let mut analyzer = IntelligentRepositoryAnalyzer::new().unwrap();
-        
+
         // Test with a known repository
-        let analysis = analyzer.analyze_repository("https://github.com/cilium/cilium").await;
-        
+        let analysis = analyzer
+            .analyze_repository("https://github.com/cilium/cilium")
+            .await;
+
         match analysis {
             Ok(result) => {
                 println!("Analysis successful:");
@@ -480,5 +555,3 @@ mod tests {
         }
     }
 }
-
-

@@ -176,7 +176,10 @@ impl DynamicQueryTool {
         let db_doc_type = self.config.doc_type.as_str();
 
         // Try vector search first, fallback to text search if vector extension not available
-        let results = match self.try_vector_search(query, db_doc_type, limit, filters.as_ref()).await {
+        let results = match self
+            .try_vector_search(query, db_doc_type, limit, filters.as_ref())
+            .await
+        {
             Ok(results) => results,
             Err(e) => {
                 warn!("Vector search failed ({}), falling back to text search", e);
@@ -384,11 +387,7 @@ impl DynamicQueryTool {
         limit: Option<i64>,
     ) -> Result<Vec<db::models::Document>> {
         // Get all documents of this type and filter by query text
-        let results = DocumentQueries::find_by_type_str(
-            self.db_pool.pool(),
-            db_doc_type,
-        )
-        .await?;
+        let results = DocumentQueries::find_by_type_str(self.db_pool.pool(), db_doc_type).await?;
 
         // Filter results based on query text and rank by relevance
         let query_lower = query.to_lowercase();
@@ -405,7 +404,7 @@ impl DynamicQueryTool {
         filtered_results.sort_by(|a, b| {
             let a_path_match = a.doc_path.to_lowercase().contains(&query_lower);
             let b_path_match = b.doc_path.to_lowercase().contains(&query_lower);
-            
+
             match (a_path_match, b_path_match) {
                 (true, false) => std::cmp::Ordering::Less,
                 (false, true) => std::cmp::Ordering::Greater,

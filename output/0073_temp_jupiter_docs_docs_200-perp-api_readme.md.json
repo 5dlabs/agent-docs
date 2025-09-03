@@ -1,7 +1,0 @@
-{
-  "url": "file://temp_jupiter_docs/docs/200-perp-api/README.md",
-  "content": "sidebar_label: \"About Perp API\"\ndescription: \"Use the Jupiter Perp API to trade or analyze.\"\ntitle: \"About Perp API\" \n\n     About Perp API \n     \n\n :::warning\nThe Perp API is still a  work in progress , stay tuned!\n::: \n :::tip\nIn the meantime, you can use this amazing github repository to direct Anchor IDL parse the Perp Program. \n \n Fetch Perp or JLP pool data \n Interact with the Perp Program \n \n https://github.com/julianfssen/jupiter-perps-anchor-idl-parsing\n:::",
-  "item_type": "markdown",
-  "module_path": "temp_jupiter_docs/docs/200-perp-api/README.md",
-  "extracted_at": "2025-09-03T01:39:45.808917Z"
-}

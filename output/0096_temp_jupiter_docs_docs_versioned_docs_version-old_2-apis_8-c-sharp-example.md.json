@@ -1,7 +1,0 @@
-{
-  "url": "file://temp_jupiter_docs/docs_versioned_docs/version-old/2-apis/8-c-sharp-example.md",
-  "content": "sidebar_label: Game Dev (C#)\ndescription: Integrate Jupiter swaps and payments into your C# games with easy-to-use APIs. Enhance development and enjoy cross-platform support.\ntitle: Game Development (C#) \n\n     Jupiter Swap in C# - Elevate Your Game Development \n     \n\n :::info\nJupiter is fully supported within the Solana.Unity-SDK. The core  library  is independent of Unity and can be incorporated into Unreal Engine using the UnrealCLR library or in a C# backend.\n::: \n Using the Solana.Unity-SDK, game developers can effortlessly incorporate Jupiter swaps into their games and achieve cross-platform compatibility without the need to modify a single line of code. \n Within the SDK, the Jupiter Payments API is also available, enabling you to utilize Jupiter + SolanaPay for facilitating user payments with any SPL token, allowing pricing in USDC or other tokens. \n Documentation \n For detailed documentation, please visit:  Solana Unity SDK Jupiter Documentation \n Demos \n \n Explore this demo video showcasing an in-game swap powered by the Jupiter integration:  Watch Demo Video \n Access a live demo here:  Live Demo",
-  "item_type": "markdown",
-  "module_path": "temp_jupiter_docs/docs_versioned_docs/version-old/2-apis/8-c-sharp-example.md",
-  "extracted_at": "2025-09-03T01:39:45.851041Z"
-}
