@@ -156,10 +156,7 @@ fn test_configuration_validation_failures() {
     };
 
     let result = ConfigLoader::validate_config(&empty_doc_type_config);
-    assert!(
-        result.is_err(),
-        "Should fail validation for empty doc type"
-    );
+    assert!(result.is_err(), "Should fail validation for empty doc type");
 
     // Test with duplicate names
     let duplicate_names_config = ToolsConfig {
@@ -207,11 +204,9 @@ fn test_doctype_to_tool_name_mapping() {
             // The tool name should match the doc type (with _query suffix)
             let expected_name = format!("{}_query", tool.doc_type);
             assert_eq!(
-                tool.name,
-                expected_name,
+                tool.name, expected_name,
                 "Tool name '{}' should match doc_type '{}' with '_query' suffix",
-                tool.name,
-                tool.doc_type
+                tool.name, tool.doc_type
             );
         } else {
             // Rust doc_type supports multiple tools - both query and management
@@ -253,9 +248,7 @@ fn test_tool_description_quality() {
         assert!(
             mentions_doc_type,
             "Tool description for {} should mention its doc type '{}'. Description: {}",
-            tool.name,
-            tool.doc_type,
-            tool.description
+            tool.name, tool.doc_type, tool.description
         );
     }
 }
