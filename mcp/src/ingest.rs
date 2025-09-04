@@ -14,7 +14,9 @@ pub struct IntelligentIngestRequest {
     pub yes: bool,
 }
 
-const fn default_yes() -> bool { true }
+const fn default_yes() -> bool {
+    true
+}
 
 async fn run_cmd(mut cmd: TokioCommand) -> anyhow::Result<String> {
     let mut child = cmd
@@ -43,8 +45,10 @@ async fn run_cmd(mut cmd: TokioCommand) -> anyhow::Result<String> {
 }
 
 fn loader_bin() -> std::path::PathBuf {
-    std::env::var("LOADER_BIN")
-        .map_or_else(|_| std::path::PathBuf::from("/app/loader"), std::path::PathBuf::from)
+    std::env::var("LOADER_BIN").map_or_else(
+        |_| std::path::PathBuf::from("/app/loader"),
+        std::path::PathBuf::from,
+    )
 }
 
 /// Run intelligent ingestion via the server-side loader binary.
