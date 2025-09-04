@@ -708,21 +708,35 @@ impl Tool for IngestTool {
             Self::run_cmd(&mut co_cmd).await?;
         }
 
-        // 2) Run loader local for each include path
-        let mut processed_paths: Vec<String> = Vec::new();
+        // 2) Validate and resolve include paths (fail fast on any unsafe/invalid path)
+        let mut resolved_paths: Vec<(String, PathBuf)> = Vec::new();
+        let mut invalid_paths: Vec<String> = Vec::new();
+
         for raw in paths.split(',') {
             let p = raw.trim();
             if p.is_empty() {
                 continue;
             }
+            match Self::resolve_repo_subpath(&repo_dir, p).await {
+                Some(abs) => resolved_paths.push((p.to_string(), abs)),
+                None => invalid_paths.push(p.to_string()),
+            }
+        }
 
-            // Safely resolve subpath within repo root
-            let Some(abs_path) = Self::resolve_repo_subpath(&repo_dir, p).await else {
-                debug!("ingest: invalid or unsafe path, skipping: {}", p);
-                continue;
-            };
+        if !invalid_paths.is_empty() {
+            return Err(anyhow!(
+                "Invalid or unsafe include path(s): {}",
+                invalid_paths.join(", ")
+            ));
+        }
+        if resolved_paths.is_empty() {
+            return Err(anyhow!("No valid include paths provided"));
+        }
 
-            let safe_dir = p.replace(['/', '\\'], "_");
+        // 3) Run loader local for each validated include path
+        let mut processed_paths: Vec<String> = Vec::new();
+        for (orig, abs_path) in resolved_paths {
+            let safe_dir = orig.replace(['/', '\\'], "_");
             let path_out = out_dir.join(safe_dir);
             tokio::fs::create_dir_all(&path_out).await.ok();
 
@@ -742,10 +756,10 @@ impl Tool for IngestTool {
             }
 
             let _local_out = Self::run_cmd(&mut local_cmd).await?;
-            processed_paths.push(p.to_string());
+            processed_paths.push(orig);
         }
 
-        // 3) Load into database
+        // 4) Load into database
         let mut db_cmd = TokioCommand::new(Self::loader_bin());
         db_cmd
             .arg("database")
