@@ -73,8 +73,7 @@ impl IngestTool {
 
     // Resolve loader binary path (env override with sensible default)
     fn loader_bin() -> PathBuf {
-        std::env::var("LOADER_BIN")
-            .map_or_else(|_| PathBuf::from("/app/loader"), PathBuf::from)
+        std::env::var("LOADER_BIN").map_or_else(|_| PathBuf::from("/app/loader"), PathBuf::from)
     }
 }
 
@@ -654,7 +653,10 @@ impl Tool for IngestTool {
         let source_name = arguments
             .get("source_name")
             .and_then(Value::as_str)
-            .map_or_else(|| Self::sanitize_source_name(&default_source), Self::sanitize_source_name);
+            .map_or_else(
+                || Self::sanitize_source_name(&default_source),
+                Self::sanitize_source_name,
+            );
 
         // Prepare temp directories
         let ts = chrono::Utc::now().format("%Y%m%d%H%M%S");
