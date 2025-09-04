@@ -1,8 +1,8 @@
 //! MCP server implementation
 
 use crate::handlers::McpHandler;
-use crate::ingest::IngestJobManager;
 use crate::health::{create_health_router, init_service_start_time};
+use crate::ingest::IngestJobManager;
 use crate::security::{validate_server_binding, SecurityConfig};
 use crate::session::{SessionConfig, SessionManager as ComprehensiveSessionManager};
 use crate::transport::{

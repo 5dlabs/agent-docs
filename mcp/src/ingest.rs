@@ -50,8 +50,10 @@ async fn run_cmd(mut cmd: TokioCommand) -> anyhow::Result<String> {
 }
 
 fn loader_bin() -> std::path::PathBuf {
-    std::env::var("LOADER_BIN")
-        .map_or_else(|_| std::path::PathBuf::from("/app/loader"), std::path::PathBuf::from)
+    std::env::var("LOADER_BIN").map_or_else(
+        |_| std::path::PathBuf::from("/app/loader"),
+        std::path::PathBuf::from,
+    )
 }
 
 #[derive(Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
