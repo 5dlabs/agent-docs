@@ -22,8 +22,9 @@ ENV SQLX_OFFLINE=true \
     RUSTFLAGS="-C target-cpu=x86-64-v3" \
     CARGO_TERM_COLOR=always
 
-# Build release binaries for server and loader (respect locked deps)
-RUN cargo build --release --workspace --locked
+# Ensure problematic transitive dep stays pre-2024, then build
+RUN cargo update -p base64ct --precise 1.7.3 && \
+    cargo build --release --workspace
 
 # 2) Runtime stage: Claude base image with Node and Claude installed
 FROM --platform=linux/amd64 ghcr.io/5dlabs/claude:latest
