@@ -188,12 +188,10 @@ impl IngestJobManager {
             let mut items: Vec<(Uuid, DateTime<Utc>, bool)> = map
                 .iter()
                 .map(|(id, job)| {
-                    let ts = job
-                        .finished_at
-                        .or(job.started_at)
-                        .unwrap_or_else(Utc::now);
+                    let ts = job.finished_at.or(job.started_at).unwrap_or_else(Utc::now);
                     // Prefer to drop finished jobs first
-                    let is_finished = matches!(job.status, IngestStatus::Succeeded | IngestStatus::Failed);
+                    let is_finished =
+                        matches!(job.status, IngestStatus::Succeeded | IngestStatus::Failed);
                     (*id, ts, is_finished)
                 })
                 .collect();
