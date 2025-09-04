@@ -114,22 +114,28 @@ impl IntelligentRepositoryAnalyzer {
         // Generate comprehensive analysis prompt for Claude Code
         let analysis_prompt = Self::create_analysis_prompt(github_url, &repo_info);
 
+        // Build direct instruction message (expects pure JSON)
+        let messages = vec![llm::models::Message::user(analysis_prompt.clone())];
+
         // Try primary provider first
-        let claude_response = match self.llm_client.summarize(&analysis_prompt).await {
-            Ok(resp) => resp,
+        let claude_response = match self.llm_client.execute(messages.clone()).await {
+            Ok(resp) => resp.content,
             Err(e) => {
                 // Fallback to OpenAI if available
                 if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
+                    if api_key.trim().is_empty() {
+                        return Err(anyhow!("Repository analysis failed: {}", e));
+                    }
                     tracing::warn!(
                         "Primary LLM failed ({}). Falling back to OpenAI provider.",
                         e
                     );
                     let fallback = LlmClient::with_config(ModelConfig::openai(api_key));
-                    match fallback.summarize(&analysis_prompt).await {
+                    match fallback.execute(messages).await {
                         Ok(resp) => {
                             // Switch client for subsequent steps
                             self.llm_client = fallback;
-                            resp
+                            resp.content
                         }
                         Err(e2) => {
                             return Err(anyhow!(
@@ -145,8 +151,8 @@ impl IntelligentRepositoryAnalyzer {
             }
         };
 
-        // Debug: Log Claude's response
-        info!("🤖 Claude Code Response: {}", claude_response);
+        // Debug: Log LLM response
+        info!("🤖 LLM Response: {}", claude_response);
 
         // Parse Claude's response into structured analysis
         let analysis = Self::parse_claude_analysis(&claude_response, &repo_info)?;
