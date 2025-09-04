@@ -987,6 +987,129 @@ impl CrateJobQueries {
     }
 }
 
+/// Ingest job query operations
+pub struct IngestJobQueries;
+
+impl IngestJobQueries {
+    /// Create a new ingest job
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database insertion fails.
+    pub async fn create_job(
+        pool: &PgPool,
+        url: &str,
+        doc_type: &str,
+    ) -> Result<crate::models::IngestJob> {
+        let job_id = uuid::Uuid::new_v4();
+        let now = chrono::Utc::now();
+
+        let row = sqlx::query_as::<_, crate::models::IngestJob>(
+            r"
+            INSERT INTO ingest_jobs (
+                id, url, doc_type, status, started_at, created_at, updated_at
+            ) VALUES ($1, $2, $3, 'queued', $4, $4, $4)
+            RETURNING *
+            ",
+        )
+        .bind(job_id)
+        .bind(url)
+        .bind(doc_type)
+        .bind(now)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// Find ingest job by ID
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub async fn find_job_by_id(
+        pool: &PgPool,
+        job_id: uuid::Uuid,
+    ) -> Result<Option<crate::models::IngestJob>> {
+        let row = sqlx::query_as::<_, crate::models::IngestJob>(
+            "SELECT * FROM ingest_jobs WHERE id = $1",
+        )
+        .bind(job_id)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// Update ingest job status
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database update fails.
+    pub async fn update_job_status(
+        pool: &PgPool,
+        job_id: uuid::Uuid,
+        status: crate::models::JobStatus,
+        output: Option<&str>,
+        error: Option<&str>,
+    ) -> Result<crate::models::IngestJob> {
+        let now = chrono::Utc::now();
+        let finished_at = if matches!(
+            status,
+            crate::models::JobStatus::Completed
+                | crate::models::JobStatus::Failed
+                | crate::models::JobStatus::Cancelled
+        ) {
+            Some(now)
+        } else {
+            None
+        };
+
+        let row = sqlx::query_as::<_, crate::models::IngestJob>(
+            r"
+            UPDATE ingest_jobs
+            SET status = $2,
+                output = COALESCE($3, output),
+                error = COALESCE($4, error),
+                finished_at = COALESCE($5, finished_at),
+                updated_at = $6
+            WHERE id = $1
+            RETURNING *
+            ",
+        )
+        .bind(job_id)
+        .bind(status)
+        .bind(output)
+        .bind(error)
+        .bind(finished_at)
+        .bind(now)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// Clean up old ingest jobs (older than 30 days and completed/failed/cancelled)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the cleanup operation fails.
+    pub async fn cleanup_old_jobs(pool: &PgPool) -> Result<i32> {
+        let result = sqlx::query(
+            r"
+            DELETE FROM ingest_jobs
+            WHERE status IN ('completed', 'failed', 'cancelled')
+              AND finished_at < CURRENT_TIMESTAMP - INTERVAL '30 days'
+            ",
+        )
+        .execute(pool)
+        .await?;
+
+        #[allow(clippy::cast_possible_truncation)] // DB row counts fit within i32 for our use cases
+        Ok(result.rows_affected() as i32)
+    }
+}
+
 /// Crate-related query operations (using documents table only)
 pub struct CrateQueries;
 

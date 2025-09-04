@@ -8,6 +8,7 @@ use llm::{LlmClient, LlmProvider, ModelConfig};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 
+use std::path::PathBuf;
 use std::process::Command;
 use tracing::{info, warn};
 
@@ -132,19 +133,38 @@ impl IntelligentRepositoryAnalyzer {
         Ok(analysis)
     }
 
+    fn work_base() -> PathBuf {
+        if let Ok(dir) = std::env::var("INGEST_WORK_DIR") {
+            PathBuf::from(dir)
+        } else {
+            std::env::temp_dir()
+        }
+    }
+
     /// Get basic repository information using GitHub API or git commands
     fn get_repository_info(github_url: &str) -> Result<RepoInfo> {
         // Parse GitHub URL to extract owner/repo
         let (owner, repo_name) = Self::parse_github_url(github_url)?;
 
         // Get actual repository structure by cloning and analyzing
-        let temp_dir = format!("/tmp/repo_analysis_{repo_name}");
+        let temp_dir = Self::work_base().join(format!("repo_analysis_{repo_name}"));
+        // Ensure base exists
+        if let Some(parent) = temp_dir.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
         let clone_result = std::process::Command::new("git")
-            .args(["clone", "--depth", "1", github_url, &temp_dir])
+            .args([
+                "clone",
+                "--depth",
+                "1",
+                github_url,
+                temp_dir.to_string_lossy().as_ref(),
+            ])
             .output();
 
         let repo_structure = if clone_result.is_ok() {
-            Self::analyze_repository_structure(&temp_dir).unwrap_or_default()
+            Self::analyze_repository_structure(temp_dir.to_string_lossy().as_ref())
+                .unwrap_or_default()
         } else {
             "Repository structure unavailable (clone failed)".to_string()
         };
@@ -440,15 +460,29 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
         let doc_type_override = std::env::var("DOC_TYPE_OVERRIDE").ok();
         let loader_bin = std::env::var("LOADER_BIN").unwrap_or_else(|_| "/app/loader".to_string());
 
-        for (i, cmd) in analysis.cli_commands.iter().enumerate() {
+        // Base for remapping any hardcoded /tmp paths
+        let work_base = Self::work_base();
+        // Create base directory if missing
+        if !work_base.exists() {
+            std::fs::create_dir_all(&work_base).ok();
+        }
+
+        for (i, original_cmd) in analysis.cli_commands.iter().enumerate() {
             info!(
                 "⚡ Executing command {}/{}: {}",
                 i + 1,
                 analysis.cli_commands.len(),
-                cmd
+                original_cmd
             );
 
             // Parse and execute the command
+            // Remap any hard-coded /tmp paths to a writable work_base
+            let cmd = if original_cmd.contains("/tmp/") {
+                original_cmd.replace("/tmp", work_base.to_string_lossy().as_ref())
+            } else {
+                original_cmd.clone()
+            };
+
             let parts: Vec<&str> = cmd.split_whitespace().collect();
             if parts.is_empty() {
                 warn!("Empty command, skipping");
