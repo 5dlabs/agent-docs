@@ -428,6 +428,7 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
     /// - Command execution fails
     /// - File operations fail
     /// - Database operations fail
+    #[allow(clippy::too_many_lines)]
     pub fn execute_ingestion(&self, analysis: &RepositoryAnalysis) -> Result<()> {
         info!(
             "🚀 Executing ingestion strategy for: {}",
@@ -437,6 +438,7 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
 
         // Optional override of doc_type via environment variable
         let doc_type_override = std::env::var("DOC_TYPE_OVERRIDE").ok();
+        let loader_bin = std::env::var("LOADER_BIN").unwrap_or_else(|_| "/app/loader".to_string());
 
         for (i, cmd) in analysis.cli_commands.iter().enumerate() {
             info!(
@@ -453,42 +455,84 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
                 continue;
             }
 
-            let mut command = Command::new(parts[0]);
+            // Normalize command: replace cargo-run and bare 'loader' with LOADER_BIN
+            let (program, mut args_vec): (String, Vec<String>) = if parts[0] == "cargo"
+                && parts.len() >= 2
+                && parts[1] == "run"
+            {
+                // Detect `--bin loader` and take args after `--`
+                let is_loader_bin = parts
+                    .windows(2)
+                    .any(|w| w.len() == 2 && w[0] == "--bin" && w[1] == "loader");
+                if is_loader_bin {
+                    let args_start = parts
+                        .iter()
+                        .position(|p| *p == "--")
+                        .map_or(parts.len(), |i| i + 1);
+                    (
+                        loader_bin.clone(),
+                        parts[args_start..]
+                            .iter()
+                            .map(std::string::ToString::to_string)
+                            .collect(),
+                    )
+                } else {
+                    (
+                        parts[0].to_string(),
+                        parts[1..]
+                            .iter()
+                            .map(std::string::ToString::to_string)
+                            .collect(),
+                    )
+                }
+            } else if parts[0] == "loader" {
+                (
+                    loader_bin.clone(),
+                    parts[1..]
+                        .iter()
+                        .map(std::string::ToString::to_string)
+                        .collect(),
+                )
+            } else {
+                (
+                    parts[0].to_string(),
+                    parts[1..]
+                        .iter()
+                        .map(std::string::ToString::to_string)
+                        .collect(),
+                )
+            };
+
+            let mut command = Command::new(program);
 
             // If overriding doc_type, rewrite args for database command
             if let Some(ref override_type) = doc_type_override {
-                let args = parts[1..].to_vec();
-                // If this is the loader database command, adjust --doc-type
-                // Heuristic: look for "database" subcommand in args
-                if args.contains(&"database") {
-                    let mut new_args: Vec<String> = Vec::with_capacity(args.len() + 2);
-                    let mut i = 0;
-                    while i < args.len() {
-                        if args[i] == "--doc-type" {
-                            // Skip existing value and replace with override
-                            i += 1; // skip flag
-                            if i < args.len() {
-                                i += 1; // skip existing value
+                let is_database = args_vec.iter().any(|a| a == "database");
+                if is_database {
+                    let mut new_args: Vec<String> = Vec::with_capacity(args_vec.len() + 2);
+                    let mut idx = 0;
+                    while idx < args_vec.len() {
+                        if args_vec[idx] == "--doc-type" {
+                            idx += 1; // skip flag
+                            if idx < args_vec.len() {
+                                idx += 1; // skip existing value
                             }
                             new_args.push("--doc-type".to_string());
                             new_args.push(override_type.clone());
                         } else {
-                            new_args.push(args[i].to_string());
-                            i += 1;
+                            new_args.push(args_vec[idx].clone());
+                            idx += 1;
                         }
                     }
-                    // If no --doc-type present, append it
                     if !new_args.iter().any(|a| a == "--doc-type") {
                         new_args.push("--doc-type".to_string());
                         new_args.push(override_type.clone());
                     }
-                    command.args(new_args);
-                } else {
-                    command.args(&args);
+                    args_vec = new_args;
                 }
-            } else {
-                command.args(&parts[1..]);
             }
+
+            command.args(args_vec);
 
             let output = command
                 .output()
