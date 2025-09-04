@@ -435,6 +435,9 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
         );
         info!("📋 Reasoning: {}", analysis.reasoning);
 
+        // Optional override of doc_type via environment variable
+        let doc_type_override = std::env::var("DOC_TYPE_OVERRIDE").ok();
+
         for (i, cmd) in analysis.cli_commands.iter().enumerate() {
             info!(
                 "⚡ Executing command {}/{}: {}",
@@ -451,7 +454,41 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
             }
 
             let mut command = Command::new(parts[0]);
-            command.args(&parts[1..]);
+
+            // If overriding doc_type, rewrite args for database command
+            if let Some(ref override_type) = doc_type_override {
+                let args = parts[1..].to_vec();
+                // If this is the loader database command, adjust --doc-type
+                // Heuristic: look for "database" subcommand in args
+                if args.contains(&"database") {
+                    let mut new_args: Vec<String> = Vec::with_capacity(args.len() + 2);
+                    let mut i = 0;
+                    while i < args.len() {
+                        if args[i] == "--doc-type" {
+                            // Skip existing value and replace with override
+                            i += 1; // skip flag
+                            if i < args.len() {
+                                i += 1; // skip existing value
+                            }
+                            new_args.push("--doc-type".to_string());
+                            new_args.push(override_type.clone());
+                        } else {
+                            new_args.push(args[i].to_string());
+                            i += 1;
+                        }
+                    }
+                    // If no --doc-type present, append it
+                    if !new_args.iter().any(|a| a == "--doc-type") {
+                        new_args.push("--doc-type".to_string());
+                        new_args.push(override_type.clone());
+                    }
+                    command.args(new_args);
+                } else {
+                    command.args(&args);
+                }
+            } else {
+                command.args(&parts[1..]);
+            }
 
             let output = command
                 .output()
