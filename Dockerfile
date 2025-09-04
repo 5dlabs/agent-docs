@@ -1,7 +1,7 @@
 # Multi-stage build to compile Rust binaries and run on Claude runtime image
 
 # 1) Builder stage: compile Rust workspace
-FROM --platform=linux/amd64 rust:1.79-bullseye AS builder
+FROM --platform=linux/amd64 rust:1.82-bullseye AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,8 @@ ENV SQLX_OFFLINE=true \
     CARGO_TERM_COLOR=always
 
 # Ensure problematic transitive dep stays pre-2024, then build
-RUN cargo update -p base64ct --precise 1.7.3 && \
+RUN rustc --version && cargo --version && \
+    cargo update -p base64ct --precise 1.7.3 && \
     cargo build --release --workspace
 
 # 2) Runtime stage: Claude base image with Node and Claude installed
