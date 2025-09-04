@@ -103,11 +103,6 @@ impl McpServer {
         Router::new()
             // Enhanced health check endpoints
             .merge(create_health_router())
-            // Intelligent ingest endpoint (synchronous for now)
-            .route(
-                "/ingest/intelligent",
-                post(crate::ingest::intelligent_ingest_handler),
-            )
             // Intelligent ingest endpoints
             .route(
                 "/ingest/intelligent",
