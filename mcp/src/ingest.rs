@@ -196,8 +196,8 @@ impl IngestJobManager {
                 })
                 .collect();
 
-            // Sort by finished first, then oldest timestamp
-            items.sort_by_key(|(_, ts, is_finished)| (u8::from(*is_finished), *ts));
+            // Sort by finished first (finished=0, unfinished=1), then oldest timestamp
+            items.sort_by_key(|(_, ts, is_finished)| (u8::from(!*is_finished), *ts));
 
             let to_remove = map.len() - self.max_entries;
             for (id, _, _) in items.into_iter().take(to_remove) {
