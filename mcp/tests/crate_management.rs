@@ -894,6 +894,7 @@ async fn test_tool_metadata() -> Result<()> {
             // Skip the test if database is not available
             if e.to_string().contains("connection to server")
                 || e.to_string().contains("FATAL")
+                || e.to_string().contains("password authentication failed")
                 || e.to_string().contains("role")
                 || e.to_string().contains("does not exist")
                 || e.to_string().contains("No such file or directory")

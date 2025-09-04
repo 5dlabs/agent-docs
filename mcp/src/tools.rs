@@ -18,7 +18,14 @@ use tracing::{debug, warn};
 /// Server-side ingest tool that spawns the loader CLI
 pub struct IngestTool;
 
+impl Default for IngestTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IngestTool {
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }
@@ -62,6 +69,12 @@ impl IngestTool {
             .collect::<String>()
             .trim_matches('-')
             .to_string()
+    }
+
+    // Resolve loader binary path (env override with sensible default)
+    fn loader_bin() -> PathBuf {
+        std::env::var("LOADER_BIN")
+            .map_or_else(|_| PathBuf::from("/app/loader"), PathBuf::from)
     }
 }
 
@@ -601,6 +614,7 @@ impl Tool for IngestTool {
         })
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn execute(&self, arguments: Value) -> anyhow::Result<String> {
         let repository_url = arguments
             .get("repository_url")
@@ -640,12 +654,11 @@ impl Tool for IngestTool {
         let source_name = arguments
             .get("source_name")
             .and_then(Value::as_str)
-            .map(Self::sanitize_source_name)
-            .unwrap_or_else(|| Self::sanitize_source_name(&default_source));
+            .map_or_else(|| Self::sanitize_source_name(&default_source), Self::sanitize_source_name);
 
         // Prepare temp directories
         let ts = chrono::Utc::now().format("%Y%m%d%H%M%S");
-        let base = std::env::temp_dir().join(format!("ingest_{}_{}", doc_type, ts));
+        let base = std::env::temp_dir().join(format!("ingest_{doc_type}_{ts}"));
         let repo_dir = base.join("repo");
         let out_dir = base.join("out");
         tokio::fs::create_dir_all(&repo_dir).await.ok();
@@ -686,13 +699,13 @@ impl Tool for IngestTool {
                 continue;
             }
 
-            let safe_dir = p.replace('/', "_").replace('\\', "_");
+            let safe_dir = p.replace(['/', '\\'], "_");
             let path_out = out_dir.join(safe_dir);
             tokio::fs::create_dir_all(&path_out).await.ok();
 
             let rec_flag = if recursive { Some("--recursive") } else { None };
 
-            let mut local_cmd = TokioCommand::new("/app/loader");
+            let mut local_cmd = TokioCommand::new(Self::loader_bin());
             local_cmd
                 .arg("local")
                 .arg("--path")
@@ -710,7 +723,7 @@ impl Tool for IngestTool {
         }
 
         // 3) Load into database
-        let mut db_cmd = TokioCommand::new("/app/loader");
+        let mut db_cmd = TokioCommand::new(Self::loader_bin());
         db_cmd
             .arg("database")
             .arg("--input-dir")
@@ -724,9 +737,9 @@ impl Tool for IngestTool {
 
         let mut resp = String::new();
         let _ = writeln!(resp, "✅ Ingestion completed");
-        let _ = writeln!(resp, "Repository: {}", repository_url);
-        let _ = writeln!(resp, "Doc type: {}", doc_type);
-        let _ = writeln!(resp, "Source: {}", source_name);
+        let _ = writeln!(resp, "Repository: {repository_url}");
+        let _ = writeln!(resp, "Doc type: {doc_type}");
+        let _ = writeln!(resp, "Source: {source_name}");
         let _ = writeln!(resp, "Paths processed: {}", processed_paths.join(", "));
         let _ = writeln!(resp, "Git output:\n{}", clone_out.trim());
         let _ = writeln!(resp, "DB load output:\n{}", db_out.trim());
