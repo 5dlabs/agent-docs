@@ -60,6 +60,10 @@ impl McpServer {
         // Initialize the transport with legacy session cleanup (for backward compatibility)
         initialize_transport(session_manager.clone()).await;
 
+        let ingest_jobs = IngestJobManager::new();
+        // Start background cleanup for ingest jobs
+        ingest_jobs.start_cleanup_task();
+
         let state = McpServerState {
             db_pool: db_pool.clone(),
             handler,
@@ -67,7 +71,7 @@ impl McpServer {
             comprehensive_session_manager,
             transport_config,
             security_config,
-            ingest_jobs: IngestJobManager::new(),
+            ingest_jobs,
         };
 
         // Start background monitoring for the database pool

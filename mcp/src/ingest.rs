@@ -5,7 +5,7 @@ use tokio::io::AsyncReadExt;
 use tokio::process::Command as TokioCommand;
 
 use crate::server::McpServerState;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -80,6 +80,8 @@ pub struct IngestJobRecord {
 #[derive(Clone)]
 pub struct IngestJobManager {
     inner: Arc<Mutex<HashMap<Uuid, IngestJobRecord>>>,
+    ttl: Duration,
+    max_entries: usize,
 }
 
 impl IngestJobManager {
@@ -87,6 +89,9 @@ impl IngestJobManager {
     pub fn new() -> Self {
         Self {
             inner: Arc::new(Mutex::new(HashMap::new())),
+            // Default retention: 24h, max 1000 jobs kept in memory
+            ttl: Duration::hours(24),
+            max_entries: 1000,
         }
     }
 
@@ -96,6 +101,8 @@ impl IngestJobManager {
     }
 
     pub async fn enqueue(&self, url: String, doc_type: String, yes: bool) -> Uuid {
+        // Opportunistic prune before enqueue to enforce limits
+        self.prune().await;
         let id = Uuid::new_v4();
         let record = IngestJobRecord {
             id,
@@ -146,6 +153,60 @@ impl IngestJobManager {
 
         id
     }
+
+    /// Start a background cleanup task that prunes old jobs periodically
+    pub fn start_cleanup_task(&self) {
+        let mgr = self.clone();
+        // Run every 5 minutes
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
+            loop {
+                interval.tick().await;
+                mgr.prune().await;
+            }
+        });
+    }
+
+    async fn prune(&self) {
+        let mut map = self.inner.lock().await;
+        if map.is_empty() {
+            return;
+        }
+
+        let now = Utc::now();
+        // 1) Remove finished/failed jobs older than TTL
+        let ttl = self.ttl;
+        map.retain(|_, job| {
+            let finished = job.finished_at.unwrap_or(job.started_at.unwrap_or(now));
+            let age = now - finished;
+            !(matches!(job.status, IngestStatus::Succeeded | IngestStatus::Failed) && age > ttl)
+        });
+
+        // 2) Enforce max_entries by removing oldest finished jobs first
+        if map.len() > self.max_entries {
+            // Collect ids sorted by (finished_at or started_at)
+            let mut items: Vec<(Uuid, DateTime<Utc>, bool)> = map
+                .iter()
+                .map(|(id, job)| {
+                    let ts = job
+                        .finished_at
+                        .or(job.started_at)
+                        .unwrap_or_else(Utc::now);
+                    // Prefer to drop finished jobs first
+                    let is_finished = matches!(job.status, IngestStatus::Succeeded | IngestStatus::Failed);
+                    (*id, ts, is_finished)
+                })
+                .collect();
+
+            // Sort by finished first, then oldest timestamp
+            items.sort_by_key(|(_, ts, is_finished)| (u8::from(*is_finished), *ts));
+
+            let to_remove = map.len() - self.max_entries;
+            for (id, _, _) in items.into_iter().take(to_remove) {
+                map.remove(&id);
+            }
+        }
+    }
 }
 
 impl Default for IngestJobManager {
@@ -193,6 +254,7 @@ pub async fn get_ingest_status_handler(
             "doc_type": job.doc_type,
             "started_at": job.started_at,
             "finished_at": job.finished_at,
+            "output": job.output,
             "error": job.error,
         }))),
         None => Err((StatusCode::NOT_FOUND, "job not found".to_string())),
