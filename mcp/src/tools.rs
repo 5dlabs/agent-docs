@@ -10,7 +10,7 @@ use db::{
 use embed::OpenAIEmbeddingClient;
 use serde_json::{json, Value};
 use std::fmt::Write as _;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 use tokio::io::AsyncReadExt;
 use tokio::process::Command as TokioCommand;
 use tracing::{debug, warn};
@@ -74,6 +74,30 @@ impl IngestTool {
     // Resolve loader binary path (env override with sensible default)
     fn loader_bin() -> PathBuf {
         std::env::var("LOADER_BIN").map_or_else(|_| PathBuf::from("/app/loader"), PathBuf::from)
+    }
+
+    // Safely resolve a subpath within the cloned repository, preventing path traversal
+    async fn resolve_repo_subpath(repo_root: &Path, subpath: &str) -> Option<PathBuf> {
+        let rel = Path::new(subpath);
+        // Reject absolute paths and any parent directory components
+        if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir)) {
+            return None;
+        }
+
+        let candidate = repo_root.join(rel);
+        // Canonicalize both repo_root and candidate to resolve symlinks and ensure containment
+        let Ok(repo_canon) = tokio::fs::canonicalize(repo_root).await else {
+            return None;
+        };
+        let Ok(cand_canon) = tokio::fs::canonicalize(&candidate).await else {
+            return None;
+        };
+
+        if cand_canon.starts_with(&repo_canon) {
+            Some(cand_canon)
+        } else {
+            None
+        }
     }
 }
 
@@ -681,7 +705,7 @@ impl Tool for IngestTool {
         if branch != "HEAD" {
             let mut co_cmd = TokioCommand::new("git");
             co_cmd.current_dir(&repo_dir).args(["checkout", branch]);
-            let _ = Self::run_cmd(&mut co_cmd).await?;
+            Self::run_cmd(&mut co_cmd).await?;
         }
 
         // 2) Run loader local for each include path
@@ -692,14 +716,11 @@ impl Tool for IngestTool {
                 continue;
             }
 
-            let abs_path = PathBuf::from(&repo_dir).join(p);
-            if !abs_path.exists() {
-                debug!(
-                    "ingest: path does not exist, skipping: {}",
-                    abs_path.display()
-                );
+            // Safely resolve subpath within repo root
+            let Some(abs_path) = Self::resolve_repo_subpath(&repo_dir, p).await else {
+                debug!("ingest: invalid or unsafe path, skipping: {}", p);
                 continue;
-            }
+            };
 
             let safe_dir = p.replace(['/', '\\'], "_");
             let path_out = out_dir.join(safe_dir);
