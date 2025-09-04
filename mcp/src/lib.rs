@@ -10,6 +10,7 @@ pub mod crate_tools;
 pub mod handlers;
 pub mod headers;
 pub mod health;
+pub mod ingest;
 pub mod job_queue;
 pub mod metrics;
 pub mod protocol_version;

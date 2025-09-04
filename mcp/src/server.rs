@@ -8,7 +8,7 @@ use crate::transport::{
     initialize_transport, unified_mcp_handler, SessionManager, TransportConfig,
 };
 use anyhow::Result;
-use axum::{http::Method, routing::any, Router};
+use axum::{http::Method, routing::any, routing::post, Router};
 use db::DatabasePool;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
@@ -100,6 +100,11 @@ impl McpServer {
         Router::new()
             // Enhanced health check endpoints
             .merge(create_health_router())
+            // Intelligent ingest endpoint (synchronous for now)
+            .route(
+                "/ingest/intelligent",
+                post(crate::ingest::intelligent_ingest_handler),
+            )
             // Unified MCP endpoint using new Streamable HTTP transport
             // Supports POST (JSON-RPC) and GET (SSE) - MVP: POST only with 405 for GET
             .route("/mcp", any(unified_mcp_handler))

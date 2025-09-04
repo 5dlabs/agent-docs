@@ -11,7 +11,7 @@ name: CICD
 
 on:
   push:
-    branches: [main, feature/*]
+    branches: [main, feature/*, fix/*, feat/*, hotfix/*]
   pull_request:
     branches: [main]
   workflow_dispatch:

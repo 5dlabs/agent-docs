@@ -10,7 +10,96 @@ use db::{
 use embed::OpenAIEmbeddingClient;
 use serde_json::{json, Value};
 use std::fmt::Write as _;
+use std::path::{Component, Path, PathBuf};
+use tokio::io::AsyncReadExt;
+use tokio::process::Command as TokioCommand;
 use tracing::{debug, warn};
+
+/// Server-side ingest tool that spawns the loader CLI
+pub struct IngestTool;
+
+impl Default for IngestTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl IngestTool {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+
+    // Helper: run a command and capture combined output
+    async fn run_cmd(cmd: &mut TokioCommand) -> anyhow::Result<String> {
+        let mut child = cmd
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()?;
+        let mut out = String::new();
+        if let Some(mut stdout) = child.stdout.take() {
+            let mut buf = Vec::new();
+            stdout.read_to_end(&mut buf).await.ok();
+            out.push_str(&String::from_utf8_lossy(&buf));
+        }
+        if let Some(mut stderr) = child.stderr.take() {
+            let mut buf = Vec::new();
+            stderr.read_to_end(&mut buf).await.ok();
+            out.push_str(&String::from_utf8_lossy(&buf));
+        }
+        let status = child.wait().await?;
+        if !status.success() {
+            return Err(anyhow::anyhow!(format!(
+                "command failed: status={status}, output=\n{}",
+                out
+            )));
+        }
+        Ok(out)
+    }
+
+    fn sanitize_source_name(s: &str) -> String {
+        s.chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                    c
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>()
+            .trim_matches('-')
+            .to_string()
+    }
+
+    // Resolve loader binary path (env override with sensible default)
+    fn loader_bin() -> PathBuf {
+        std::env::var("LOADER_BIN").map_or_else(|_| PathBuf::from("/app/loader"), PathBuf::from)
+    }
+
+    // Safely resolve a subpath within the cloned repository, preventing path traversal
+    async fn resolve_repo_subpath(repo_root: &Path, subpath: &str) -> Option<PathBuf> {
+        let rel = Path::new(subpath);
+        // Reject absolute paths and any parent directory components
+        if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir)) {
+            return None;
+        }
+
+        let candidate = repo_root.join(rel);
+        // Canonicalize both repo_root and candidate to resolve symlinks and ensure containment
+        let Ok(repo_canon) = tokio::fs::canonicalize(repo_root).await else {
+            return None;
+        };
+        let Ok(cand_canon) = tokio::fs::canonicalize(&candidate).await else {
+            return None;
+        };
+
+        if cand_canon.starts_with(&repo_canon) {
+            Some(cand_canon)
+        } else {
+            None
+        }
+    }
+}
 
 /// Base trait for MCP tools
 #[async_trait]
@@ -523,6 +612,161 @@ impl Tool for DynamicQueryTool {
         let filters = self.parse_metadata_filters(&arguments)?;
 
         self.semantic_search(query, limit, filters).await
+    }
+}
+
+#[async_trait]
+impl Tool for IngestTool {
+    fn definition(&self) -> Value {
+        json!({
+            "name": "ingest",
+            "description": "Ingest documentation by spawning the server-side loader CLI. Claude (or client) must provide repository URL, doc_type, paths, and extensions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "repository_url": {"type": "string", "description": "Repository URL to clone (e.g., https://github.com/org/repo)"},
+                    "doc_type": {"type": "string", "description": "Document type/category for storage (e.g., cilium, solana)"},
+                    "paths": {"type": "string", "description": "Comma-separated include paths within the repo (e.g., docs/,README.md)"},
+                    "extensions": {"type": "string", "description": "Comma-separated file extensions to include (e.g., md,rst,html)"},
+                    "branch": {"type": "string", "description": "Optional branch/ref to checkout", "default": "HEAD"},
+                    "source_name": {"type": "string", "description": "Optional source name for attribution (defaults to repo name)"},
+                    "recursive": {"type": "boolean", "description": "Recursive directory traversal for local mode", "default": true}
+                },
+                "required": ["repository_url", "doc_type", "paths", "extensions"]
+            }
+        })
+    }
+
+    #[allow(clippy::too_many_lines)]
+    async fn execute(&self, arguments: Value) -> anyhow::Result<String> {
+        let repository_url = arguments
+            .get("repository_url")
+            .and_then(Value::as_str)
+            .ok_or_else(|| anyhow::anyhow!("Missing required 'repository_url'"))?;
+        let doc_type = arguments
+            .get("doc_type")
+            .and_then(Value::as_str)
+            .ok_or_else(|| anyhow::anyhow!("Missing required 'doc_type'"))?;
+        let paths = arguments
+            .get("paths")
+            .and_then(Value::as_str)
+            .ok_or_else(|| anyhow::anyhow!("Missing required 'paths' (comma-separated)"))?;
+        let extensions = arguments
+            .get("extensions")
+            .and_then(Value::as_str)
+            .ok_or_else(|| anyhow::anyhow!("Missing required 'extensions' (comma-separated)"))?;
+        let branch = arguments
+            .get("branch")
+            .and_then(Value::as_str)
+            .unwrap_or("HEAD");
+        let recursive = arguments
+            .get("recursive")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+
+        // Derive a default source name from repo URL if not provided
+        let default_source = repository_url
+            .split('/')
+            .rev()
+            .take(2)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect::<Vec<_>>()
+            .join("/");
+        let source_name = arguments
+            .get("source_name")
+            .and_then(Value::as_str)
+            .map_or_else(
+                || Self::sanitize_source_name(&default_source),
+                Self::sanitize_source_name,
+            );
+
+        // Prepare temp directories
+        let ts = chrono::Utc::now().format("%Y%m%d%H%M%S");
+        let base = std::env::temp_dir().join(format!("ingest_{doc_type}_{ts}"));
+        let repo_dir = base.join("repo");
+        let out_dir = base.join("out");
+        tokio::fs::create_dir_all(&repo_dir).await.ok();
+        tokio::fs::create_dir_all(&out_dir).await.ok();
+
+        // 1) Clone repository (shallow)
+        let mut clone_cmd = TokioCommand::new("git");
+        clone_cmd.args([
+            "clone",
+            "--depth",
+            "1",
+            repository_url,
+            repo_dir.to_string_lossy().as_ref(),
+        ]);
+        let clone_out = Self::run_cmd(&mut clone_cmd).await?;
+
+        // Optional checkout branch/ref
+        if branch != "HEAD" {
+            let mut co_cmd = TokioCommand::new("git");
+            co_cmd.current_dir(&repo_dir).args(["checkout", branch]);
+            Self::run_cmd(&mut co_cmd).await?;
+        }
+
+        // 2) Run loader local for each include path
+        let mut processed_paths: Vec<String> = Vec::new();
+        for raw in paths.split(',') {
+            let p = raw.trim();
+            if p.is_empty() {
+                continue;
+            }
+
+            // Safely resolve subpath within repo root
+            let Some(abs_path) = Self::resolve_repo_subpath(&repo_dir, p).await else {
+                debug!("ingest: invalid or unsafe path, skipping: {}", p);
+                continue;
+            };
+
+            let safe_dir = p.replace(['/', '\\'], "_");
+            let path_out = out_dir.join(safe_dir);
+            tokio::fs::create_dir_all(&path_out).await.ok();
+
+            let rec_flag = if recursive { Some("--recursive") } else { None };
+
+            let mut local_cmd = TokioCommand::new(Self::loader_bin());
+            local_cmd
+                .arg("local")
+                .arg("--path")
+                .arg(abs_path.to_string_lossy().as_ref())
+                .arg("--extensions")
+                .arg(extensions)
+                .arg("-o")
+                .arg(path_out.to_string_lossy().as_ref());
+            if let Some(flag) = rec_flag {
+                local_cmd.arg(flag);
+            }
+
+            let _local_out = Self::run_cmd(&mut local_cmd).await?;
+            processed_paths.push(p.to_string());
+        }
+
+        // 3) Load into database
+        let mut db_cmd = TokioCommand::new(Self::loader_bin());
+        db_cmd
+            .arg("database")
+            .arg("--input-dir")
+            .arg(out_dir.to_string_lossy().as_ref())
+            .arg("--doc-type")
+            .arg(doc_type)
+            .arg("--source-name")
+            .arg(&source_name)
+            .arg("--yes");
+        let db_out = Self::run_cmd(&mut db_cmd).await?;
+
+        let mut resp = String::new();
+        let _ = writeln!(resp, "✅ Ingestion completed");
+        let _ = writeln!(resp, "Repository: {repository_url}");
+        let _ = writeln!(resp, "Doc type: {doc_type}");
+        let _ = writeln!(resp, "Source: {source_name}");
+        let _ = writeln!(resp, "Paths processed: {}", processed_paths.join(", "));
+        let _ = writeln!(resp, "Git output:\n{}", clone_out.trim());
+        let _ = writeln!(resp, "DB load output:\n{}", db_out.trim());
+        Ok(resp)
     }
 }
 

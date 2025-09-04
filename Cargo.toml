@@ -88,3 +88,5 @@ lto = true            # Link-time optimization
 codegen-units = 1     # Better optimization
 panic = "abort"       # Reduce binary size
 strip = true          # Remove debug symbols
+
+# Pin transitive crates that require edition 2024 to pre-2024 versions for stable builds
