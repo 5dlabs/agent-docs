@@ -113,7 +113,7 @@ impl McpServer {
                 post(crate::ingest::intelligent_ingest_handler),
             )
             .route(
-                "/ingest/jobs/:job_id",
+                "/ingest/jobs/{job_id}",
                 axum::routing::get(crate::ingest::get_ingest_status_handler),
             )
             // Unified MCP endpoint using new Streamable HTTP transport
