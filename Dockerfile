@@ -1,36 +1,57 @@
-# Runtime Dockerfile for Agent Docs MCP Server with Claude
-# Expects a prebuilt binary at build/http_server in the build context
+# Multi-stage build to compile Rust binaries and run on Claude runtime image
 
-# Use Claude image as base - it already has Node, npm, and Claude installed
-FROM ghcr.io/5dlabs/claude:latest
+# 1) Builder stage: compile Rust workspace
+FROM rust:1.79-bullseye AS builder
 
-# Switch to root to install additional dependencies
-USER root
+WORKDIR /app
 
-# Install runtime dependencies for the doc server
-RUN apt-get update && apt-get install -y \
-    libpq5 \
-    --no-install-recommends \
+# Build dependencies required by some crates (e.g., git2)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    zlib1g-dev \
+    cmake \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Set working directory
+# Copy the full workspace
+COPY . .
+
+# Avoid any compile-time DB checks; we don't use sqlx macros requiring live DB
+ENV SQLX_OFFLINE=true
+
+# Build release binaries for server and loader
+RUN cargo build --release --workspace
+
+# 2) Runtime stage: Claude base image with Node and Claude installed
+FROM ghcr.io/5dlabs/claude:latest
+
+# Switch to root to install runtime deps and place binaries
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
 WORKDIR /app
 
-# Copy prebuilt binaries from CI artifact
-COPY --chown=node:node build/http_server /app/http_server
-COPY --chown=node:node build/loader /app/loader
-RUN chmod +x /app/http_server /app/loader
+# Copy compiled binaries from builder
+COPY --from=builder /app/target/release/http_server /app/http_server
+COPY --from=builder /app/target/release/loader /app/loader
+RUN chown node:node /app/http_server /app/loader && \
+    chmod +x /app/http_server /app/loader
 
-# Switch back to node user (already exists in base image)
+# Drop privileges
 USER node
 
 # Configure environment
-ENV RUST_LOG=info
-ENV MCP_PORT=3001
-ENV MCP_HOST=0.0.0.0
-# Claude should already be in PATH from the base image
-ENV CLAUDE_BINARY_PATH=claude
+ENV RUST_LOG=info \
+    MCP_PORT=3001 \
+    MCP_HOST=0.0.0.0 \
+    CLAUDE_BINARY_PATH=claude
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
@@ -39,5 +60,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Expose port
 EXPOSE 3001
 
-# Run the MCP server (exec form, absolute path)
+# Run the MCP server
 CMD ["/app/http_server"]
