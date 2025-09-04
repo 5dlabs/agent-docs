@@ -130,6 +130,35 @@ POST /mcp
 }
 ```
 
+### Intelligent Ingest API
+
+The server provides an asynchronous endpoint to ingest a GitHub repository using the bundled `loader` binary and Claude Code for intelligent discovery.
+
+- POST `/ingest/intelligent`
+  - Body: `{ "url": "https://github.com/org/repo", "doc_type": "<required>", "yes": true }`
+  - Returns: `{ "job_id": "<uuid>" }`
+  - Behavior: enqueues ingestion and returns immediately. The `doc_type` you supply is enforced for DB insertion.
+
+- GET `/ingest/jobs/{job_id}`
+  - Returns: `{ status: queued|running|succeeded|failed, started_at, finished_at, error? }`
+
+Requirements
+- `DATABASE_URL` must be set for the server
+- `LOADER_BIN` defaults to `/app/loader`
+- `CLAUDE_BINARY_PATH` defaults to `claude`
+
+Example
+
+```bash
+curl -s -X POST http://localhost:3001/ingest/intelligent \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://github.com/cilium/cilium","doc_type":"cilium","yes":true}'
+# => { "job_id": "8ab7b0a8-…" }
+
+curl -s http://localhost:3001/ingest/jobs/8ab7b0a8-…
+# => { "status": "running", … }
+```
+
 ### Tool Configuration
 
 The system is highly configurable and can work with **any type of documentation**. Tools are defined in the `tools.json` configuration file, allowing you to:

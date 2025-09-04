@@ -1,6 +1,7 @@
 //! MCP server implementation
 
 use crate::handlers::McpHandler;
+use crate::ingest::IngestJobManager;
 use crate::health::{create_health_router, init_service_start_time};
 use crate::security::{validate_server_binding, SecurityConfig};
 use crate::session::{SessionConfig, SessionManager as ComprehensiveSessionManager};
@@ -23,6 +24,7 @@ pub struct McpServerState {
     pub comprehensive_session_manager: ComprehensiveSessionManager, // New comprehensive session manager
     pub transport_config: TransportConfig,
     pub security_config: SecurityConfig,
+    pub ingest_jobs: IngestJobManager,
 }
 
 /// MCP server
@@ -65,6 +67,7 @@ impl McpServer {
             comprehensive_session_manager,
             transport_config,
             security_config,
+            ingest_jobs: IngestJobManager::new(),
         };
 
         // Start background monitoring for the database pool
@@ -104,6 +107,15 @@ impl McpServer {
             .route(
                 "/ingest/intelligent",
                 post(crate::ingest::intelligent_ingest_handler),
+            )
+            // Intelligent ingest endpoints
+            .route(
+                "/ingest/intelligent",
+                post(crate::ingest::intelligent_ingest_handler),
+            )
+            .route(
+                "/ingest/jobs/:job_id",
+                axum::routing::get(crate::ingest::get_ingest_status_handler),
             )
             // Unified MCP endpoint using new Streamable HTTP transport
             // Supports POST (JSON-RPC) and GET (SSE) - MVP: POST only with 405 for GET
