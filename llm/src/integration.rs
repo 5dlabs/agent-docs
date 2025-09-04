@@ -257,7 +257,7 @@ impl EnhancedDocumentProcessor {
 
         // Could be enhanced with more sophisticated LLM-based quality assessment
         // Use a stable average in place of the unstable f32::midpoint
-        (content_length_score + summary_length_score) / 2.0
+        content_length_score + (summary_length_score - content_length_score) / 2.0
     }
 
     /// Check if content appears to be code
