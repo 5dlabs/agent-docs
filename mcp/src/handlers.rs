@@ -33,6 +33,10 @@ impl McpHandler {
         tools.insert("rust_query".to_string(), Box::new(rust_query_tool));
         debug!("Registered hardcoded rust_query tool");
 
+        // Register server-side ingest tool (spawns loader CLI)
+        tools.insert("ingest".to_string(), Box::new(crate::tools::IngestTool::new()));
+        debug!("Registered hardcoded ingest tool");
+
         // Load and register dynamic tools from configuration
         match Self::register_dynamic_tools(&mut tools, db_pool) {
             Ok(count) => {

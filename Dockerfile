@@ -17,9 +17,10 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy prebuilt binary from CI artifact
+# Copy prebuilt binaries from CI artifact
 COPY --chown=node:node build/http_server /app/http_server
-RUN chmod +x /app/http_server
+COPY --chown=node:node build/loader /app/loader
+RUN chmod +x /app/http_server /app/loader
 
 # Switch back to node user (already exists in base image)
 USER node
