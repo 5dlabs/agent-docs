@@ -136,7 +136,9 @@ impl LlmClient {
 
         // Fall back to OpenAI if available
         if let Ok(api_key) = env::var("OPENAI_API_KEY") {
-            return Ok(ModelConfig::openai(api_key));
+            if !api_key.trim().is_empty() {
+                return Ok(ModelConfig::openai(api_key));
+            }
         }
 
         Err(anyhow!(
