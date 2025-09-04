@@ -8,9 +8,9 @@ use llm::{LlmClient, LlmProvider, ModelConfig};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 
+use std::path::PathBuf;
 use std::process::Command;
 use tracing::{info, warn};
-use std::path::PathBuf;
 
 /// Repository analysis results from Claude Code
 #[derive(Debug, Serialize, Deserialize)]
@@ -163,7 +163,8 @@ impl IntelligentRepositoryAnalyzer {
             .output();
 
         let repo_structure = if clone_result.is_ok() {
-            Self::analyze_repository_structure(temp_dir.to_string_lossy().as_ref()).unwrap_or_default()
+            Self::analyze_repository_structure(temp_dir.to_string_lossy().as_ref())
+                .unwrap_or_default()
         } else {
             "Repository structure unavailable (clone failed)".to_string()
         };

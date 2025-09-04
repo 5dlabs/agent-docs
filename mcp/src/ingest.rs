@@ -76,12 +76,8 @@ impl IngestJobManager {
     /// Returns an error if the job record cannot be created in the database.
     pub async fn enqueue(&self, url: String, doc_type: String, yes: bool) -> anyhow::Result<Uuid> {
         // Create job in DB first so any replica can see it
-        let created = db::queries::IngestJobQueries::create_job(
-            self.db_pool.pool(),
-            &url,
-            &doc_type,
-        )
-        .await?;
+        let created =
+            db::queries::IngestJobQueries::create_job(self.db_pool.pool(), &url, &doc_type).await?;
 
         let job_id = created.id;
         let db_pool = self.db_pool.clone();
@@ -167,7 +163,12 @@ pub async fn intelligent_ingest_handler(
         .ingest_jobs
         .enqueue(body.url, body.doc_type, body.yes)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("failed to create job: {e}")))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to create job: {e}"),
+            )
+        })?;
 
     Ok(Json(json!({ "job_id": job_id })))
 }
