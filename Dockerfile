@@ -1,7 +1,7 @@
 # Multi-stage build to compile Rust binaries and run on Claude runtime image
 
 # 1) Builder stage: compile Rust workspace
-FROM rust:1.79-bullseye AS builder
+FROM rust:nightly-bullseye AS builder
 
 WORKDIR /app
 
@@ -33,6 +33,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
