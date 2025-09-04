@@ -1,7 +1,7 @@
 # Multi-stage build to compile Rust binaries and run on Claude runtime image
 
 # 1) Builder stage: compile Rust workspace
-FROM rust:nightly-bullseye AS builder
+FROM --platform=linux/amd64 rust:1.79-bullseye AS builder
 
 WORKDIR /app
 
@@ -18,14 +18,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy the full workspace
 COPY . .
 
-# Avoid any compile-time DB checks; we don't use sqlx macros requiring live DB
-ENV SQLX_OFFLINE=true
+ENV SQLX_OFFLINE=true \
+    RUSTFLAGS="-C target-cpu=x86-64-v3" \
+    CARGO_TERM_COLOR=always
 
 # Build release binaries for server and loader
 RUN cargo build --release --workspace
 
 # 2) Runtime stage: Claude base image with Node and Claude installed
-FROM ghcr.io/5dlabs/claude:latest
+FROM --platform=linux/amd64 ghcr.io/5dlabs/claude:latest
 
 # Switch to root to install runtime deps and place binaries
 USER root
