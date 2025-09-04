@@ -3,7 +3,7 @@
 use anyhow::{anyhow, Result};
 use db::models::{ToolConfig, ToolsConfig};
 use std::path::Path;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 /// Configuration loader for dynamic tools
 pub struct ConfigLoader;
@@ -81,12 +81,9 @@ impl ConfigLoader {
             }
             Err(e) => {
                 // No fallback to embedded config - configuration is now required
-                error!(
+                debug!(
                     "Failed to load tools configuration from /app/tools.json: {}",
                     e
-                );
-                error!(
-                    "Configuration is required. Please ensure tools.json is mounted via ConfigMap or set TOOLS_CONFIG environment variable"
                 );
                 Err(anyhow!(
                     "No tools configuration found. Configuration must be provided via:\n\
