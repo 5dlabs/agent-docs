@@ -5,7 +5,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
 use tracing::debug;
@@ -273,43 +273,27 @@ impl LlmClient {
             .map_err(|e| anyhow!("Failed to flush Claude stdin: {}", e))?;
         drop(stdin); // Close stdin to signal end of input
 
-        // Read stdout with timeout
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| anyhow!("Failed to get stdout handle"))?;
+        // Wait for process completion and capture output with configurable timeout (default 120s)
+        let timeout_secs: u64 = std::env::var("CLAUDE_TIMEOUT_SECS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(120);
 
-        let mut reader = BufReader::new(stdout);
-        let mut output = String::new();
-        let mut buffer = String::new();
-
-        // Read output with timeout
-        let read_future = reader.read_line(&mut buffer);
-        match timeout(Duration::from_secs(30), read_future).await {
-            Ok(Ok(bytes_read)) => {
-                if bytes_read > 0 {
-                    output.push_str(&buffer);
+        let output_res = timeout(Duration::from_secs(timeout_secs), child.wait_with_output()).await;
+        match output_res {
+            Ok(Ok(out)) => {
+                if !out.status.success() {
+                    return Err(anyhow!("Claude binary exited with status: {}", out.status));
                 }
+                let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                if stdout.trim().is_empty() {
+                    return Err(anyhow!("Claude binary returned empty response"));
+                }
+                Ok(stdout.trim().to_string())
             }
-            Ok(Err(e)) => return Err(anyhow!("Failed to read from Claude stdout: {}", e)),
-            Err(_) => return Err(anyhow!("Timeout reading from Claude binary")),
+            Ok(Err(e)) => Err(anyhow!("Failed to wait for Claude process: {}", e)),
+            Err(_) => Err(anyhow!("Timeout reading from Claude binary")),
         }
-
-        // Wait for process to complete
-        let status = child
-            .wait()
-            .await
-            .map_err(|e| anyhow!("Failed to wait for Claude process: {}", e))?;
-
-        if !status.success() {
-            return Err(anyhow!("Claude binary exited with status: {}", status));
-        }
-
-        if output.trim().is_empty() {
-            return Err(anyhow!("Claude binary returned empty response"));
-        }
-
-        Ok(output.trim().to_string())
     }
 
     /// Format messages for Claude Code binary input

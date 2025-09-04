@@ -114,8 +114,35 @@ impl IntelligentRepositoryAnalyzer {
         // Generate comprehensive analysis prompt for Claude Code
         let analysis_prompt = Self::create_analysis_prompt(github_url, &repo_info);
 
-        // Use Claude Code to analyze the repository
-        let claude_response = self.llm_client.summarize(&analysis_prompt).await?;
+        // Try primary provider first
+        let claude_response = match self.llm_client.summarize(&analysis_prompt).await {
+            Ok(resp) => resp,
+            Err(e) => {
+                // Fallback to OpenAI if available
+                if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
+                    tracing::warn!(
+                        "Primary LLM failed ({}). Falling back to OpenAI provider.",
+                        e
+                    );
+                    let fallback = LlmClient::with_config(ModelConfig::openai(api_key));
+                    match fallback.summarize(&analysis_prompt).await {
+                        Ok(resp) => {
+                            // Switch client for subsequent steps
+                            self.llm_client = fallback;
+                            resp
+                        }
+                        Err(e2) => {
+                            return Err(anyhow!(
+                                "Repository analysis failed: {} (fallback failed: {})",
+                                e, e2
+                            ));
+                        }
+                    }
+                } else {
+                    return Err(anyhow!("Repository analysis failed: {}", e));
+                }
+            }
+        };
 
         // Debug: Log Claude's response
         info!("🤖 Claude Code Response: {}", claude_response);
