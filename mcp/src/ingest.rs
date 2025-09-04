@@ -65,21 +65,23 @@ impl IngestJobManager {
     }
 
     pub async fn get(&self, id: Uuid) -> Option<db::models::IngestJob> {
-        match db::queries::IngestJobQueries::find_job_by_id(self.db_pool.pool(), id).await {
-            Ok(job) => job,
-            Err(_) => None,
-        }
+        db::queries::IngestJobQueries::find_job_by_id(self.db_pool.pool(), id)
+            .await
+            .unwrap_or_default()
     }
 
-    pub async fn enqueue(&self, url: String, doc_type: String, yes: bool) -> Uuid {
+    /// Enqueue a new intelligent ingest job in the database and spawn processing.
+    ///
+    /// # Errors
+    /// Returns an error if the job record cannot be created in the database.
+    pub async fn enqueue(&self, url: String, doc_type: String, yes: bool) -> anyhow::Result<Uuid> {
         // Create job in DB first so any replica can see it
         let created = db::queries::IngestJobQueries::create_job(
             self.db_pool.pool(),
             &url,
             &doc_type,
         )
-        .await
-        .expect("failed to create ingest job");
+        .await?;
 
         let job_id = created.id;
         let db_pool = self.db_pool.clone();
@@ -129,7 +131,7 @@ impl IngestJobManager {
             }
         });
 
-        job_id
+        Ok(job_id)
     }
 
     /// Start a background cleanup task that prunes old jobs periodically
@@ -164,7 +166,8 @@ pub async fn intelligent_ingest_handler(
     let job_id = state
         .ingest_jobs
         .enqueue(body.url, body.doc_type, body.yes)
-        .await;
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("failed to create job: {e}")))?;
 
     Ok(Json(json!({ "job_id": job_id })))
 }

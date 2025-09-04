@@ -557,14 +557,14 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     */
 
     // Migration 9: Create job_status enum (idempotent)
-    let job_status_sql = r#"
+    let job_status_sql = r"
         DO $$
         BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'job_status') THEN
                 CREATE TYPE job_status AS ENUM ('queued', 'running', 'completed', 'failed', 'cancelled');
             END IF;
         END $$;
-    "#;
+    ";
     migration_manager.register_migration(MigrationInfo {
         id: "009_job_status_enum".to_string(),
         version: "1.0.0".to_string(),
@@ -576,7 +576,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     });
 
     // Migration 10: Create ingest_jobs table (idempotent)
-    let ingest_jobs_sql = r#"
+    let ingest_jobs_sql = r"
         DO $$
         BEGIN
             IF NOT EXISTS (
@@ -600,18 +600,18 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
                 CREATE INDEX idx_ingest_jobs_started_at ON ingest_jobs(started_at DESC);
             END IF;
         END $$;
-    "#;
+    ";
     migration_manager.register_migration(MigrationInfo {
         id: "010_ingest_jobs_table".to_string(),
         version: "1.0.0".to_string(),
         description: "Create ingest_jobs table for intelligent ingestion tracking".to_string(),
         up_sql: ingest_jobs_sql.to_string(),
         down_sql: Some(
-            r#"
+            r"
             DROP INDEX IF EXISTS idx_ingest_jobs_status;
             DROP INDEX IF EXISTS idx_ingest_jobs_started_at;
             DROP TABLE IF EXISTS ingest_jobs;
-            "#
+            "
             .to_string(),
         ),
         dependencies: vec!["009_job_status_enum".to_string()],

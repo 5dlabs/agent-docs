@@ -1005,12 +1005,12 @@ impl IngestJobQueries {
         let now = chrono::Utc::now();
 
         let row = sqlx::query_as::<_, crate::models::IngestJob>(
-            r#"
+            r"
             INSERT INTO ingest_jobs (
                 id, url, doc_type, status, started_at, created_at, updated_at
             ) VALUES ($1, $2, $3, 'queued', $4, $4, $4)
             RETURNING *
-            "#,
+            ",
         )
         .bind(job_id)
         .bind(url)
@@ -1066,7 +1066,7 @@ impl IngestJobQueries {
         };
 
         let row = sqlx::query_as::<_, crate::models::IngestJob>(
-            r#"
+            r"
             UPDATE ingest_jobs
             SET status = $2,
                 output = COALESCE($3, output),
@@ -1075,7 +1075,7 @@ impl IngestJobQueries {
                 updated_at = $6
             WHERE id = $1
             RETURNING *
-            "#,
+            ",
         )
         .bind(job_id)
         .bind(status)
@@ -1096,15 +1096,16 @@ impl IngestJobQueries {
     /// Returns an error if the cleanup operation fails.
     pub async fn cleanup_old_jobs(pool: &PgPool) -> Result<i32> {
         let result = sqlx::query(
-            r#"
+            r"
             DELETE FROM ingest_jobs
             WHERE status IN ('completed', 'failed', 'cancelled')
               AND finished_at < CURRENT_TIMESTAMP - INTERVAL '30 days'
-            "#,
+            ",
         )
         .execute(pool)
         .await?;
 
+        #[allow(clippy::cast_possible_truncation)] // DB row counts fit within i32 for our use cases
         Ok(result.rows_affected() as i32)
     }
 }
