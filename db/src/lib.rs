@@ -25,7 +25,7 @@ pub use migration_system::{
 pub use models::*;
 pub use pool_config::{PoolConfig, PoolConfigBuilder};
 pub use queries::{
-    CrateJobQueries, CrateQueries, DocumentQueries, QueryPerformanceMetrics,
+    CrateJobQueries, CrateQueries, DocumentQueries, IngestJobQueries, QueryPerformanceMetrics,
     QueryPerformanceMonitor,
 };
 pub use retry::{DatabaseError, RetryConfig, RetryExecutor};

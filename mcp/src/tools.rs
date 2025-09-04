@@ -76,6 +76,15 @@ impl IngestTool {
         std::env::var("LOADER_BIN").map_or_else(|_| PathBuf::from("/app/loader"), PathBuf::from)
     }
 
+    // Resolve a writable working directory base for ingestion temp files
+    fn ingest_work_dir() -> PathBuf {
+        if let Ok(dir) = std::env::var("INGEST_WORK_DIR") {
+            PathBuf::from(dir)
+        } else {
+            std::env::temp_dir()
+        }
+    }
+
     // Safely resolve a subpath within the cloned repository, preventing path traversal
     async fn resolve_repo_subpath(repo_root: &Path, subpath: &str) -> Option<PathBuf> {
         let rel = Path::new(subpath);
@@ -684,7 +693,7 @@ impl Tool for IngestTool {
 
         // Prepare temp directories
         let ts = chrono::Utc::now().format("%Y%m%d%H%M%S");
-        let base = std::env::temp_dir().join(format!("ingest_{doc_type}_{ts}"));
+        let base = Self::ingest_work_dir().join(format!("ingest_{doc_type}_{ts}"));
         let repo_dir = base.join("repo");
         let out_dir = base.join("out");
         tokio::fs::create_dir_all(&repo_dir).await.ok();

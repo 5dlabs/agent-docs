@@ -139,6 +139,21 @@ pub struct CrateJob {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Intelligent ingest job record for tracking asynchronous ingestion
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct IngestJob {
+    pub id: Uuid,
+    pub url: String,
+    pub doc_type: String,
+    pub status: JobStatus,
+    pub started_at: chrono::DateTime<Utc>,
+    pub finished_at: Option<chrono::DateTime<Utc>>,
+    pub output: Option<String>,
+    pub error: Option<String>,
+    pub created_at: chrono::DateTime<Utc>,
+    pub updated_at: chrono::DateTime<Utc>,
+}
+
 /// Pagination parameters for listing operations
 #[derive(Debug, Clone)]
 pub struct PaginationParams {

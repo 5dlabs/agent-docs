@@ -555,6 +555,68 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         checksum: calculate_checksum(_archival_sql),
     });
     */
+
+    // Migration 9: Create job_status enum (idempotent)
+    let job_status_sql = r#"
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'job_status') THEN
+                CREATE TYPE job_status AS ENUM ('queued', 'running', 'completed', 'failed', 'cancelled');
+            END IF;
+        END $$;
+    "#;
+    migration_manager.register_migration(MigrationInfo {
+        id: "009_job_status_enum".to_string(),
+        version: "1.0.0".to_string(),
+        description: "Create job_status enum for background job tracking".to_string(),
+        up_sql: job_status_sql.to_string(),
+        down_sql: Some("DROP TYPE IF EXISTS job_status;".to_string()),
+        dependencies: vec!["003_documents_table".to_string()],
+        checksum: calculate_checksum(job_status_sql),
+    });
+
+    // Migration 10: Create ingest_jobs table (idempotent)
+    let ingest_jobs_sql = r#"
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'ingest_jobs'
+            ) THEN
+                CREATE TABLE ingest_jobs (
+                    id UUID PRIMARY KEY,
+                    url TEXT NOT NULL,
+                    doc_type TEXT NOT NULL,
+                    status job_status DEFAULT 'queued',
+                    started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    finished_at TIMESTAMPTZ NULL,
+                    output TEXT NULL,
+                    error TEXT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX idx_ingest_jobs_status ON ingest_jobs(status);
+                CREATE INDEX idx_ingest_jobs_started_at ON ingest_jobs(started_at DESC);
+            END IF;
+        END $$;
+    "#;
+    migration_manager.register_migration(MigrationInfo {
+        id: "010_ingest_jobs_table".to_string(),
+        version: "1.0.0".to_string(),
+        description: "Create ingest_jobs table for intelligent ingestion tracking".to_string(),
+        up_sql: ingest_jobs_sql.to_string(),
+        down_sql: Some(
+            r#"
+            DROP INDEX IF EXISTS idx_ingest_jobs_status;
+            DROP INDEX IF EXISTS idx_ingest_jobs_started_at;
+            DROP TABLE IF EXISTS ingest_jobs;
+            "#
+            .to_string(),
+        ),
+        dependencies: vec!["009_job_status_enum".to_string()],
+        checksum: calculate_checksum(ingest_jobs_sql),
+    });
 }
 
 /// Run database migrations only (for K8s migration jobs)
