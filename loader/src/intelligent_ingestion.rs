@@ -456,22 +456,37 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
             }
 
             // Normalize command: replace cargo-run and bare 'loader' with LOADER_BIN
-            let (program, mut args_vec): (String, Vec<String>) = if parts[0] == "cargo"
-                && parts.len() >= 2
-                && parts[1] == "run"
-            {
-                // Detect `--bin loader` and take args after `--`
-                let is_loader_bin = parts
-                    .windows(2)
-                    .any(|w| w.len() == 2 && w[0] == "--bin" && w[1] == "loader");
-                if is_loader_bin {
-                    let args_start = parts
-                        .iter()
-                        .position(|p| *p == "--")
-                        .map_or(parts.len(), |i| i + 1);
+            let (program, mut args_vec): (String, Vec<String>) =
+                if parts[0] == "cargo" && parts.len() >= 2 && parts[1] == "run" {
+                    // Detect `--bin loader` and take args after `--`
+                    let is_loader_bin = parts
+                        .windows(2)
+                        .any(|w| w.len() == 2 && w[0] == "--bin" && w[1] == "loader");
+                    if is_loader_bin {
+                        let args_start = parts
+                            .iter()
+                            .position(|p| *p == "--")
+                            .map_or(parts.len(), |i| i + 1);
+                        (
+                            loader_bin.clone(),
+                            parts[args_start..]
+                                .iter()
+                                .map(std::string::ToString::to_string)
+                                .collect(),
+                        )
+                    } else {
+                        (
+                            parts[0].to_string(),
+                            parts[1..]
+                                .iter()
+                                .map(std::string::ToString::to_string)
+                                .collect(),
+                        )
+                    }
+                } else if parts[0] == "loader" {
                     (
                         loader_bin.clone(),
-                        parts[args_start..]
+                        parts[1..]
                             .iter()
                             .map(std::string::ToString::to_string)
                             .collect(),
@@ -484,24 +499,7 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
                             .map(std::string::ToString::to_string)
                             .collect(),
                     )
-                }
-            } else if parts[0] == "loader" {
-                (
-                    loader_bin.clone(),
-                    parts[1..]
-                        .iter()
-                        .map(std::string::ToString::to_string)
-                        .collect(),
-                )
-            } else {
-                (
-                    parts[0].to_string(),
-                    parts[1..]
-                        .iter()
-                        .map(std::string::ToString::to_string)
-                        .collect(),
-                )
-            };
+                };
 
             let mut command = Command::new(program);
 
