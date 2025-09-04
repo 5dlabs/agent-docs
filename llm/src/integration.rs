@@ -256,7 +256,8 @@ impl EnhancedDocumentProcessor {
         let summary_length_score = (summary.len() as f32 / 200.0).min(1.0);
 
         // Could be enhanced with more sophisticated LLM-based quality assessment
-        f32::midpoint(content_length_score, summary_length_score)
+        // Use a stable average in place of the unstable f32::midpoint
+        (content_length_score + summary_length_score) / 2.0
     }
 
     /// Check if content appears to be code
