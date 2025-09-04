@@ -40,16 +40,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# Create non-root user for running the server
+RUN getent passwd app || useradd -m -u 10001 -s /usr/sbin/nologin app
+
 WORKDIR /app
 
 # Copy compiled binaries from builder
 COPY --from=builder /app/target/release/http_server /app/http_server
 COPY --from=builder /app/target/release/loader /app/loader
-RUN chown node:node /app/http_server /app/loader && \
+RUN chown app:app /app/http_server /app/loader && \
     chmod +x /app/http_server /app/loader
 
 # Drop privileges
-USER node
+USER app
 
 # Configure environment
 ENV RUST_LOG=info \
