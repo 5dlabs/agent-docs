@@ -10,7 +10,7 @@ use std::env;
 /// Test helper to create a database pool (mock for now)
 async fn create_test_db_pool() -> DatabasePool {
     let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://test:test@localhost/test".to_string());
+        .unwrap_or_else(|_| "postgresql://vector_user:EFwiPWDXMoOI2VKNF4eO3eSm8n3hzmjognKytNk2ndskgOAZgEBGDQULE6ryDc7z@vector-postgres.databases.svc.cluster.local:5432/vector_db".to_string());
     
     let config = PoolConfig::builder()
         .max_connections(5)
