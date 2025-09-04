@@ -134,7 +134,8 @@ impl IntelligentRepositoryAnalyzer {
                         Err(e2) => {
                             return Err(anyhow!(
                                 "Repository analysis failed: {} (fallback failed: {})",
-                                e, e2
+                                e,
+                                e2
                             ));
                         }
                     }
