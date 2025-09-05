@@ -133,6 +133,7 @@ POST /mcp
 ### Intelligent Ingest API
 
 The server provides an asynchronous endpoint to ingest a GitHub repository using the bundled `loader` binary and Claude Code for intelligent discovery.
+See also: `docs/llm-roles.md` for the clear separation of LLM responsibilities.
 
 - POST `/ingest/intelligent`
   - Body: `{ "url": "https://github.com/org/repo", "doc_type": "<required>", "yes": true }`
@@ -146,6 +147,13 @@ Requirements
 - `DATABASE_URL` must be set for the server
 - `LOADER_BIN` defaults to `/app/loader`
 - `CLAUDE_BINARY_PATH` defaults to `claude`
+
+### LLM Roles (Summary)
+
+- Claude Code: used only for intelligent document ingestion and discovery (repo analysis and strategy). No fallback to OpenAI.
+- OpenAI: used only for embeddings and batch/vector operations (search, similarity). Not used for ingestion/discovery.
+
+For details, refer to `docs/llm-roles.md`.
 
 Example
 
