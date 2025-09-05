@@ -250,6 +250,19 @@ impl LlmClient {
 
     /// Run Claude Code binary with the given prompt
     async fn run_claude_binary(&self, binary_path: &str, prompt: &str) -> Result<String> {
+        let timeout_secs: u64 = std::env::var("CLAUDE_TIMEOUT_SECS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(120);
+
+        let prompt_len = prompt.len();
+        debug!(
+            binary_path = %binary_path,
+            model = %self.config.model_name,
+            timeout_secs,
+            prompt_len,
+            "Launching Claude binary"
+        );
         // Start the Claude binary process with optional model and extra args
         let mut cmd = Command::new(binary_path);
 
@@ -287,26 +300,41 @@ impl LlmClient {
             .map_err(|e| anyhow!("Failed to flush Claude stdin: {}", e))?;
         drop(stdin); // Close stdin to signal end of input
 
-        // Wait for process completion and capture output with configurable timeout (default 120s)
-        let timeout_secs: u64 = std::env::var("CLAUDE_TIMEOUT_SECS")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(120);
-
         let output_res = timeout(Duration::from_secs(timeout_secs), child.wait_with_output()).await;
         match output_res {
             Ok(Ok(out)) => {
                 if !out.status.success() {
-                    return Err(anyhow!("Claude binary exited with status: {}", out.status));
+                    let stderr = String::from_utf8_lossy(&out.stderr);
+                    let stderr_snip = stderr.chars().take(1000).collect::<String>();
+                    return Err(anyhow!(
+                        "Claude binary exited with status: {}. stderr: {}",
+                        out.status,
+                        stderr_snip
+                    ));
                 }
                 let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                debug!(
+                    exit_code = out.status.code().unwrap_or(-1),
+                    stdout_len = stdout.len(),
+                    stderr_len = stderr.len(),
+                    "Claude completed"
+                );
+                if std::env::var("CLAUDE_LOG_STDERR").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                {
+                    let stderr_snip = stderr.chars().take(1000).collect::<String>();
+                    debug!("Claude stderr (truncated): {}", stderr_snip);
+                }
                 if stdout.trim().is_empty() {
                     return Err(anyhow!("Claude binary returned empty response"));
                 }
                 Ok(stdout.trim().to_string())
             }
             Ok(Err(e)) => Err(anyhow!("Failed to wait for Claude process: {}", e)),
-            Err(_) => Err(anyhow!("Timeout reading from Claude binary")),
+            Err(_) => Err(anyhow!(
+                "Timeout reading from Claude binary (after {}s). Check ANTHROPIC_API_KEY, network egress, and consider increasing CLAUDE_TIMEOUT_SECS.",
+                timeout_secs
+            )),
         }
     }
 

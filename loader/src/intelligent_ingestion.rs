@@ -95,6 +95,14 @@ impl IntelligentRepositoryAnalyzer {
             temperature: 0.1, // Low temperature for consistent analysis
         };
 
+        tracing::debug!(
+            model = %config.model_name,
+            binary = %config.binary_path.as_deref().unwrap_or("claude"),
+            max_tokens = config.max_tokens,
+            temperature = config.temperature,
+            "Intelligent analyzer configured"
+        );
+
         let llm_client = LlmClient::with_config(config);
 
         Ok(Self { llm_client })
@@ -118,12 +126,15 @@ impl IntelligentRepositoryAnalyzer {
         let messages = vec![llm::models::Message::user(analysis_prompt.clone())];
 
         // Execute with Claude only (no fallback)
+        let start = std::time::Instant::now();
         let claude_response = self
             .llm_client
             .execute(messages.clone())
             .await
             .map(|resp| resp.content)
             .map_err(|e| anyhow!("Repository analysis failed (Claude required): {}", e))?;
+        let elapsed = start.elapsed();
+        tracing::debug!(ms = elapsed.as_millis(), repo = %github_url, "Claude analysis completed");
 
         // Debug: Log LLM response
         info!("🤖 LLM Response: {}", claude_response);
@@ -544,6 +555,18 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
                 };
 
             let mut command = Command::new(program);
+            // Enable verbose logging for spawned loader commands when requested
+            if std::env::var("INGEST_DEBUG")
+                .is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            {
+                command.env(
+                    "RUST_LOG",
+                    std::env::var("RUST_LOG")
+                        .unwrap_or_else(|_| "debug,loader=debug,llm=debug,mcp=debug".to_string()),
+                );
+                // Allow opt-in stderr capture from Claude binary used by loader
+                command.env("CLAUDE_LOG_STDERR", "1");
+            }
 
             // If overriding doc_type, rewrite args for database command
             if let Some(ref override_type) = doc_type_override {
