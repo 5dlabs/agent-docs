@@ -7,7 +7,7 @@ use db::{
     queries::{DocumentQueries, MetadataFilters},
     DatabasePool,
 };
-use embed::OpenAIEmbeddingClient;
+use embed::{EmbeddingClient, OpenAIEmbeddingClient};
 use serde_json::{json, Value};
 use std::fmt::Write as _;
 use std::path::{Component, Path, PathBuf};
@@ -147,9 +147,8 @@ impl RustQueryTool {
     async fn semantic_search(&self, query: &str, limit: Option<i64>) -> Result<String> {
         debug!("Performing Rust documentation search for: {}", query);
 
-        // Use our LLM implementation to generate real embeddings
-        let llm_client = llm::LlmClient::new()?;
-        let query_embedding = llm_client.generate_embedding(query).await?;
+        // Generate embeddings via OpenAI embedding client (Claude is not used here)
+        let query_embedding = self.embedding_client.embed(query).await?;
 
         // Perform vector similarity search
         let results = DocumentQueries::rust_vector_search(
@@ -448,9 +447,8 @@ impl DynamicQueryTool {
         limit: Option<i64>,
         filters: Option<&MetadataFilters>,
     ) -> Result<Vec<db::models::Document>> {
-        // Use our LLM implementation to generate real embeddings
-        let llm_client = llm::LlmClient::new()?;
-        let query_embedding = llm_client.generate_embedding(query).await?;
+        // Generate embeddings via OpenAI embedding client (Claude is not used here)
+        let query_embedding = self.embedding_client.embed(query).await?;
 
         // Perform vector similarity search filtered by doc_type and metadata
         let results = if let Some(metadata_filters) = filters {
