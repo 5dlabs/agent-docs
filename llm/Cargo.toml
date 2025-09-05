@@ -16,6 +16,7 @@ tracing = { workspace = true }
 reqwest = { workspace = true } # Added back for OpenAI API support
 async-trait = { workspace = true }
 chrono = { workspace = true }
+nix = { version = "0.27", features = ["fs"] } # For FIFO creation
 
 [dev-dependencies]
 tokio-test = { workspace = true }

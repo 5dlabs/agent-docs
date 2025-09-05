@@ -5,7 +5,6 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::process::Stdio;
-use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
 use tracing::debug;
@@ -261,7 +260,7 @@ impl LlmClient {
         })
     }
 
-    /// Run Claude Code binary with the given prompt
+    /// Run Claude Code binary with the given prompt using proper stream-json protocol
     async fn run_claude_binary(&self, binary_path: &str, prompt: &str) -> Result<String> {
         let timeout_secs: u64 = std::env::var("CLAUDE_TIMEOUT_SECS")
             .ok()
@@ -274,22 +273,27 @@ impl LlmClient {
             model = %self.config.model_name,
             timeout_secs,
             prompt_len,
-            "Launching Claude binary"
+            "Launching Claude binary with stream-json protocol"
         );
-        // Start the Claude binary process with optional model and extra args
+
+        // Create a temporary FIFO for communication (matching CTO template)
+        let fifo_path = "/tmp/claude-fifo";
+        std::fs::remove_file(fifo_path).ok(); // Remove if exists
+        nix::unistd::mkfifo(fifo_path, nix::sys::stat::Mode::S_IRWXU)?;
+
+        // Build Claude command with proper arguments (matching CTO template)
         let mut cmd = Command::new(binary_path);
-
-        // Pass model via environment for CLIs that honor CLAUDE_MODEL
-        cmd.env("CLAUDE_MODEL", &self.config.model_name);
-
-        // Harden Claude CLI execution environment:
-        // - disable telemetry/nonessential network traffic
-        // - disable error reporting and auto-updater
-        // These flags avoid known recursion/stack issues in certain environments.
-        cmd.env("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1");
-        cmd.env("DISABLE_TELEMETRY", "1");
-        cmd.env("DISABLE_ERROR_REPORTING", "1");
-        cmd.env("DISABLE_AUTOUPDATER", "1");
+        cmd.arg("-p")  // Prompt mode
+           .arg("--output-format")
+           .arg("stream-json")
+           .arg("--input-format")
+           .arg("stream-json")
+           .arg("--verbose")
+           .env("CLAUDE_MODEL", &self.config.model_name)
+           .env("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
+           .env("DISABLE_TELEMETRY", "1")
+           .env("DISABLE_ERROR_REPORTING", "1")
+           .env("DISABLE_AUTOUPDATER", "1");
 
         // Allow additional CLI args via CLAUDE_ARGS (whitespace-separated)
         let mut extra_args_count = 0usize;
@@ -300,14 +304,13 @@ impl LlmClient {
             }
         }
 
-        let mut child = cmd
-            .stdin(Stdio::piped())
+        let child = cmd
+            .stdin(Stdio::null())  // No direct stdin, use FIFO
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| anyhow!("Failed to start Claude binary '{}': {}", binary_path, e))?;
 
-        // Best-effort PID capture (platform dependent)
         #[allow(clippy::cast_sign_loss)]
         let pid = child.id().unwrap_or(0);
         debug!(
@@ -316,27 +319,29 @@ impl LlmClient {
             extra_args = extra_args_count,
             pid,
             timeout_secs,
-            "Claude process spawned"
+            "Claude process spawned with stream-json protocol"
         );
 
-        // Get stdin handle
-        let mut stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| anyhow!("Failed to get stdin handle"))?;
+        // Format the prompt as stream-json message (matching CTO template)
+        let json_message = format!(
+            r#"{{"type":"user","message":{{"role":"user","content":[{{"type":"text","text":{}}}]}}}}"#,
+            serde_json::to_string(prompt)?
+        );
 
-        // Write prompt to stdin
-        stdin
-            .write_all(prompt.as_bytes())
-            .await
-            .map_err(|e| anyhow!("Failed to write to Claude stdin: {}", e))?;
-        stdin
-            .flush()
-            .await
-            .map_err(|e| anyhow!("Failed to flush Claude stdin: {}", e))?;
-        drop(stdin); // Close stdin to signal end of input
+        // Write the JSON message to the FIFO (in background task to avoid blocking)
+        let fifo_write = tokio::task::spawn_blocking(move || {
+            std::fs::write(fifo_path, json_message)
+        });
 
-        let output_res = timeout(Duration::from_secs(timeout_secs), child.wait_with_output()).await;
+        // Wait for Claude to complete or timeout
+        let output_res = timeout(Duration::from_secs(timeout_secs), async {
+            let _ = fifo_write.await;
+            child.wait_with_output().await
+        }).await;
+
+        // Clean up FIFO
+        std::fs::remove_file(fifo_path).ok();
+
         match output_res {
             Ok(Ok(out)) => {
                 if !out.status.success() {
@@ -354,7 +359,7 @@ impl LlmClient {
                     exit_code = out.status.code().unwrap_or(-1),
                     stdout_len = stdout.len(),
                     stderr_len = stderr.len(),
-                    "Claude completed"
+                    "Claude completed with stream-json protocol"
                 );
                 if std::env::var("CLAUDE_LOG_STDERR").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
                 {
