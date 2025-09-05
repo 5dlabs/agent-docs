@@ -283,17 +283,17 @@ impl LlmClient {
 
         // Build Claude command with proper arguments (matching CTO template)
         let mut cmd = Command::new(binary_path);
-        cmd.arg("-p")  // Prompt mode
-           .arg("--output-format")
-           .arg("stream-json")
-           .arg("--input-format")
-           .arg("stream-json")
-           .arg("--verbose")
-           .env("CLAUDE_MODEL", &self.config.model_name)
-           .env("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
-           .env("DISABLE_TELEMETRY", "1")
-           .env("DISABLE_ERROR_REPORTING", "1")
-           .env("DISABLE_AUTOUPDATER", "1");
+        cmd.arg("-p") // Prompt mode
+            .arg("--output-format")
+            .arg("stream-json")
+            .arg("--input-format")
+            .arg("stream-json")
+            .arg("--verbose")
+            .env("CLAUDE_MODEL", &self.config.model_name)
+            .env("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
+            .env("DISABLE_TELEMETRY", "1")
+            .env("DISABLE_ERROR_REPORTING", "1")
+            .env("DISABLE_AUTOUPDATER", "1");
 
         // Allow additional CLI args via CLAUDE_ARGS (whitespace-separated)
         let mut extra_args_count = 0usize;
@@ -305,7 +305,7 @@ impl LlmClient {
         }
 
         let child = cmd
-            .stdin(Stdio::null())  // No direct stdin, use FIFO
+            .stdin(Stdio::null()) // No direct stdin, use FIFO
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -329,15 +329,15 @@ impl LlmClient {
         );
 
         // Write the JSON message to the FIFO (in background task to avoid blocking)
-        let fifo_write = tokio::task::spawn_blocking(move || {
-            std::fs::write(fifo_path, json_message)
-        });
+        let fifo_write =
+            tokio::task::spawn_blocking(move || std::fs::write(fifo_path, json_message));
 
         // Wait for Claude to complete or timeout
         let output_res = timeout(Duration::from_secs(timeout_secs), async {
             let _ = fifo_write.await;
             child.wait_with_output().await
-        }).await;
+        })
+        .await;
 
         // Clean up FIFO
         std::fs::remove_file(fifo_path).ok();
