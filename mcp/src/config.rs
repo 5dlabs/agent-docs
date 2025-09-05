@@ -41,7 +41,15 @@ impl ConfigLoader {
     ///
     /// Returns an error if the config is invalid.
     pub fn load_default() -> Result<ToolsConfig> {
-        // Try to load from environment variable first (highest priority)
+        // Highest priority: explicit file path via TOOLS_CONFIG_PATH
+        if let Ok(path) = std::env::var("TOOLS_CONFIG_PATH") {
+            if !path.trim().is_empty() {
+                debug!("Loading configuration from TOOLS_CONFIG_PATH: {}", path);
+                return Self::load_from_file(path);
+            }
+        }
+
+        // Next: load from environment variable content
         if let Ok(config_content) = std::env::var("TOOLS_CONFIG") {
             debug!("Loading configuration from environment variable TOOLS_CONFIG");
 
@@ -58,7 +66,7 @@ impl ConfigLoader {
             return Ok(config);
         }
 
-        // Try to load from filesystem second (expected in production)
+        // Finally: load from filesystem (expected in production)
         match std::fs::read_to_string("/app/tools.json") {
             Ok(config_content) => {
                 debug!("Loading configuration from filesystem (/app/tools.json)");
