@@ -151,8 +151,32 @@ impl ClaudeIntelligentLoader {
     ///
     /// Returns an error if the LLM client cannot be created.
     pub fn new() -> Result<Self> {
+        // Enforce Claude-only for intelligent ingestion/discovery
+        let binary_path = std::env::var("CLAUDE_BINARY_PATH").ok().or_else(|| {
+            // Fallback to binary in PATH if available
+            std::process::Command::new("which")
+                .arg("claude")
+                .status()
+                .ok()
+                .and_then(|s| {
+                    if s.success() {
+                        Some("claude".to_string())
+                    } else {
+                        None
+                    }
+                })
+        });
+
+        let binary = binary_path.ok_or_else(|| {
+            anyhow!(
+                "Claude binary not available. Set CLAUDE_BINARY_PATH or install 'claude' in PATH."
+            )
+        })?;
+
+        let config = llm::models::ModelConfig::claude_code(Some(binary));
+
         Ok(Self {
-            llm_client: llm::client::LlmClient::new()?,
+            llm_client: llm::client::LlmClient::with_config(config),
             rate_limiter: RateLimiter::new(),
             github_client: Octocrab::builder().build().unwrap_or_else(|_| {
                 warn!("Failed to create GitHub client, using anonymous access");

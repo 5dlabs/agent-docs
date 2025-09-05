@@ -117,39 +117,13 @@ impl IntelligentRepositoryAnalyzer {
         // Build direct instruction message (expects pure JSON)
         let messages = vec![llm::models::Message::user(analysis_prompt.clone())];
 
-        // Try primary provider first
-        let claude_response = match self.llm_client.execute(messages.clone()).await {
-            Ok(resp) => resp.content,
-            Err(e) => {
-                // Fallback to OpenAI if available
-                if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
-                    if api_key.trim().is_empty() {
-                        return Err(anyhow!("Repository analysis failed: {}", e));
-                    }
-                    tracing::warn!(
-                        "Primary LLM failed ({}). Falling back to OpenAI provider.",
-                        e
-                    );
-                    let fallback = LlmClient::with_config(ModelConfig::openai(api_key));
-                    match fallback.execute(messages).await {
-                        Ok(resp) => {
-                            // Switch client for subsequent steps
-                            self.llm_client = fallback;
-                            resp.content
-                        }
-                        Err(e2) => {
-                            return Err(anyhow!(
-                                "Repository analysis failed: {} (fallback failed: {})",
-                                e,
-                                e2
-                            ));
-                        }
-                    }
-                } else {
-                    return Err(anyhow!("Repository analysis failed: {}", e));
-                }
-            }
-        };
+        // Execute with Claude only (no fallback)
+        let claude_response = self
+            .llm_client
+            .execute(messages.clone())
+            .await
+            .map(|resp| resp.content)
+            .map_err(|e| anyhow!("Repository analysis failed (Claude required): {}", e))?;
 
         // Debug: Log LLM response
         info!("🤖 LLM Response: {}", claude_response);
