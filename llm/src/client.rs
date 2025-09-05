@@ -282,6 +282,15 @@ impl LlmClient {
         // Pass model via environment for CLIs that honor CLAUDE_MODEL
         cmd.env("CLAUDE_MODEL", &self.config.model_name);
 
+        // Harden Claude CLI execution environment:
+        // - disable telemetry/nonessential network traffic
+        // - disable error reporting and auto-updater
+        // These flags avoid known recursion/stack issues in certain environments.
+        cmd.env("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1");
+        cmd.env("DISABLE_TELEMETRY", "1");
+        cmd.env("DISABLE_ERROR_REPORTING", "1");
+        cmd.env("DISABLE_AUTOUPDATER", "1");
+
         // Allow additional CLI args via CLAUDE_ARGS (whitespace-separated)
         let mut extra_args_count = 0usize;
         if let Ok(extra_args) = env::var("CLAUDE_ARGS") {
