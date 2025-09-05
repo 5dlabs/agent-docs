@@ -8,10 +8,7 @@ fn setup_test_config() {
     let test_config = include_str!("test_config.json");
     std::env::set_var("TOOLS_CONFIG", test_config);
     // Also set an explicit file path to avoid env var races across parallel tests
-    let path = format!(
-        "{}/tests/test_config.json",
-        env!("CARGO_MANIFEST_DIR")
-    );
+    let path = format!("{}/tests/test_config.json", env!("CARGO_MANIFEST_DIR"));
     std::env::set_var("TOOLS_CONFIG_PATH", path);
 }
 
