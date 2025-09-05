@@ -250,8 +250,20 @@ impl LlmClient {
 
     /// Run Claude Code binary with the given prompt
     async fn run_claude_binary(&self, binary_path: &str, prompt: &str) -> Result<String> {
-        // Start the Claude binary process
-        let mut child = Command::new(binary_path)
+        // Start the Claude binary process with optional model and extra args
+        let mut cmd = Command::new(binary_path);
+
+        // Pass model via environment for CLIs that honor CLAUDE_MODEL
+        cmd.env("CLAUDE_MODEL", &self.config.model_name);
+
+        // Allow additional CLI args via CLAUDE_ARGS (whitespace-separated)
+        if let Ok(extra_args) = env::var("CLAUDE_ARGS") {
+            for arg in extra_args.split_whitespace() {
+                cmd.arg(arg);
+            }
+        }
+
+        let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
