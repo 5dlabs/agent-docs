@@ -6,6 +6,7 @@ use tokio::io::AsyncReadExt;
 use tokio::process::Command as TokioCommand;
 
 use crate::server::McpServerState;
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -53,6 +54,10 @@ fn loader_bin() -> std::path::PathBuf {
     )
 }
 
+fn ingest_debug_enabled() -> bool {
+    std::env::var("INGEST_DEBUG").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+}
+
 #[derive(Clone)]
 pub struct IngestJobManager {
     db_pool: DatabasePool,
@@ -83,6 +88,7 @@ impl IngestJobManager {
         let db_pool = self.db_pool.clone();
 
         tokio::spawn(async move {
+            info!(%job_id, %url, %doc_type, "Starting intelligent ingest job");
             // Mark as running with started_at
             let _ = db::queries::IngestJobQueries::update_job_status(
                 db_pool.pool(),
@@ -96,15 +102,36 @@ impl IngestJobManager {
             // Execute the loader
             let mut cmd = TokioCommand::new(loader_bin());
             cmd.arg("intelligent").arg(&url);
+            if ingest_debug_enabled() {
+                // Force verbose logs in the loader child regardless of RUST_LOG
+                cmd.arg("--verbose");
+                // Enable stderr passthrough for Claude binary inside loader
+                cmd.env("CLAUDE_LOG_STDERR", "1");
+                // Ensure a useful default RUST_LOG for the child if not already set
+                if std::env::var("RUST_LOG").is_err() {
+                    cmd.env("RUST_LOG", "debug,loader=debug,llm=debug,mcp=debug");
+                }
+            }
             if yes {
                 cmd.arg("--yes");
             }
             cmd.env("DOC_TYPE_OVERRIDE", &doc_type);
 
+            debug!(
+                %job_id,
+                url = %url,
+                doc_type = %doc_type,
+                yes,
+                verbose = ingest_debug_enabled(),
+                loader = %loader_bin().display(),
+                "Spawning loader for intelligent ingest"
+            );
+
             let result = run_cmd(cmd).await;
 
             match result {
                 Ok(output) => {
+                    debug!(%job_id, out_len = output.len(), "Intelligent ingest completed");
                     let _ = db::queries::IngestJobQueries::update_job_status(
                         db_pool.pool(),
                         job_id,
@@ -115,6 +142,7 @@ impl IngestJobManager {
                     .await;
                 }
                 Err(e) => {
+                    warn!(%job_id, err = %e, "Intelligent ingest failed");
                     let _ = db::queries::IngestJobQueries::update_job_status(
                         db_pool.pool(),
                         job_id,
