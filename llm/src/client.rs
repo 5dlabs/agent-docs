@@ -126,17 +126,23 @@ impl LlmClient {
     fn load_config() -> Result<ModelConfig> {
         // Try Claude Code first (default)
         if let Ok(binary_path) = env::var("CLAUDE_BINARY_PATH") {
+            debug!(
+                binary = %binary_path,
+                "LLM config: using Claude binary from CLAUDE_BINARY_PATH"
+            );
             return Ok(ModelConfig::claude_code(Some(binary_path)));
         }
 
         // Check if Claude binary exists in PATH
         if Self::binary_exists("claude") {
+            debug!("LLM config: using Claude binary in PATH");
             return Ok(ModelConfig::claude_code(Some("claude".to_string())));
         }
 
         // Fall back to OpenAI if available
         if let Ok(api_key) = env::var("OPENAI_API_KEY") {
             if !api_key.trim().is_empty() {
+                debug!("LLM config: using OpenAI provider (API key present)");
                 return Ok(ModelConfig::openai(api_key));
             }
         }
@@ -162,6 +168,12 @@ impl LlmClient {
     ///
     /// Returns an error if the LLM execution fails.
     pub async fn execute(&self, messages: Vec<Message>) -> Result<LlmResponse> {
+        debug!(
+            provider = ?self.config.provider,
+            model = %self.config.model_name,
+            msg_count = messages.len(),
+            "LLM execute invoked"
+        );
         match self.config.provider {
             LlmProvider::ClaudeCode => self.execute_claude_code(messages).await,
             LlmProvider::OpenAI => self.execute_openai(messages).await,
@@ -178,6 +190,7 @@ impl LlmClient {
 
         // Convert messages to Claude Code format
         let prompt = Self::format_messages_for_claude_code(messages);
+        debug!(prompt_len = prompt.len(), "Prepared Claude prompt");
 
         // Execute Claude Code binary
         let output = self.run_claude_binary(binary_path, &prompt).await?;
@@ -270,9 +283,11 @@ impl LlmClient {
         cmd.env("CLAUDE_MODEL", &self.config.model_name);
 
         // Allow additional CLI args via CLAUDE_ARGS (whitespace-separated)
+        let mut extra_args_count = 0usize;
         if let Ok(extra_args) = env::var("CLAUDE_ARGS") {
             for arg in extra_args.split_whitespace() {
                 cmd.arg(arg);
+                extra_args_count += 1;
             }
         }
 
@@ -282,6 +297,18 @@ impl LlmClient {
             .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| anyhow!("Failed to start Claude binary '{}': {}", binary_path, e))?;
+
+        // Best-effort PID capture (platform dependent)
+        #[allow(clippy::cast_sign_loss)]
+        let pid = child.id().unwrap_or(0);
+        debug!(
+            binary = %binary_path,
+            model = %self.config.model_name,
+            extra_args = extra_args_count,
+            pid,
+            timeout_secs,
+            "Claude process spawned"
+        );
 
         // Get stdin handle
         let mut stdin = child
