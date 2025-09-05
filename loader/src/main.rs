@@ -34,6 +34,12 @@ fn scan_dir(
 
         if path.is_dir() {
             if recursive && !path.ends_with(".git") {
+                // Skip directory symlinks to avoid recursion loops
+                if let Ok(meta) = std::fs::symlink_metadata(&path) {
+                    if meta.file_type().is_symlink() {
+                        continue;
+                    }
+                }
                 scan_dir(&path, extensions, recursive, files)?;
             }
         } else if let Some(ext) = path.extension() {
