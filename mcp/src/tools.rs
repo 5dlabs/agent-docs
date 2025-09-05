@@ -754,7 +754,7 @@ impl Tool for IngestTool {
             let mut local_cmd = TokioCommand::new(Self::loader_bin());
             local_cmd
                 .arg("local")
-                .arg("--path")
+                // loader CLI expects the path as a positional argument
                 .arg(abs_path.to_string_lossy().as_ref())
                 .arg("--extensions")
                 .arg(extensions)
