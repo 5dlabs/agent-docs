@@ -57,6 +57,10 @@ impl IngestTool {
         Ok(out)
     }
 
+    fn ingest_debug_enabled() -> bool {
+        std::env::var("INGEST_DEBUG").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+    }
+
     fn sanitize_source_name(s: &str) -> String {
         s.chars()
             .map(|c| {
@@ -750,6 +754,10 @@ impl Tool for IngestTool {
             let rec_flag = if recursive { Some("--recursive") } else { None };
 
             let mut local_cmd = TokioCommand::new(Self::loader_bin());
+            if Self::ingest_debug_enabled() {
+                // Enable verbose logs inside loader (honors --verbose)
+                local_cmd.arg("--verbose");
+            }
             local_cmd
                 .arg("local")
                 // loader CLI expects the path as a positional argument
@@ -768,6 +776,9 @@ impl Tool for IngestTool {
 
         // 4) Load into database
         let mut db_cmd = TokioCommand::new(Self::loader_bin());
+        if Self::ingest_debug_enabled() {
+            db_cmd.arg("--verbose");
+        }
         db_cmd
             .arg("database")
             .arg("--input-dir")
