@@ -6,7 +6,7 @@ FROM --platform=linux/amd64 rust:1.82-bullseye AS builder
 WORKDIR /app
 
 # Build dependencies required by some crates (e.g., git2)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libssl-dev \
@@ -33,7 +33,7 @@ FROM --platform=linux/amd64 ghcr.io/5dlabs/claude:latest
 # Switch to root to install runtime deps and place binaries
 USER root
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     libpq5 \
     ca-certificates \
     curl \
