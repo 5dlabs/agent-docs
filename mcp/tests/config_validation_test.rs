@@ -20,10 +20,9 @@ fn cleanup_test_config() {
 #[tokio::test]
 async fn test_configuration_validation() {
     setup_test_config();
-
-    // Test that we can load the configuration successfully
-    let config = ConfigLoader::load_default().expect("Should load configuration");
-
+    // Prefer explicit file path to avoid env races
+    let path = format!("{}/tests/test_config.json", env!("CARGO_MANIFEST_DIR"));
+    let config = ConfigLoader::load_from_file(&path).expect("Should load configuration");
     cleanup_test_config();
 
     // Verify configuration structure
@@ -209,7 +208,8 @@ fn test_configuration_validation_failures() {
 #[test]
 fn test_doctype_to_tool_name_mapping() {
     setup_test_config();
-    let config = ConfigLoader::load_default().expect("Should load configuration");
+    let path = format!("{}/tests/test_config.json", env!("CARGO_MANIFEST_DIR"));
+    let config = ConfigLoader::load_from_file(&path).expect("Should load configuration");
     cleanup_test_config();
 
     // Verify that tools follow proper naming conventions based on their doc type
@@ -249,7 +249,8 @@ fn test_doctype_to_tool_name_mapping() {
 #[test]
 fn test_tool_description_quality() {
     setup_test_config();
-    let config = ConfigLoader::load_default().expect("Should load configuration");
+    let path = format!("{}/tests/test_config.json", env!("CARGO_MANIFEST_DIR"));
+    let config = ConfigLoader::load_from_file(&path).expect("Should load configuration");
     cleanup_test_config();
 
     // Verify that all descriptions are substantial and informative
