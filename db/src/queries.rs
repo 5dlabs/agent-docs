@@ -274,7 +274,7 @@ impl DocumentQueries {
                 created_at,
                 updated_at
             FROM documents
-            WHERE doc_type = $1
+            WHERE doc_type::text = $1
             ORDER BY created_at DESC
             ",
         )
@@ -430,7 +430,7 @@ impl DocumentQueries {
                 created_at,
                 updated_at
             FROM documents
-            WHERE doc_type = 'rust'
+            WHERE doc_type::text = 'rust'
             ORDER BY LENGTH(content) DESC, created_at DESC
             LIMIT $1
             ",
@@ -492,7 +492,7 @@ impl DocumentQueries {
                 LENGTH(content) as content_length,
                 EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) as age_seconds
             FROM documents
-            WHERE doc_type = $1
+            WHERE doc_type::text = $1
               AND (content ILIKE $2 OR doc_path ILIKE $2)
             ORDER BY 
               CASE WHEN source_name ILIKE 'cilium-repository%' THEN 0 ELSE 1 END ASC,
@@ -550,7 +550,7 @@ impl DocumentQueries {
     ) -> Result<Vec<Document>> {
         // Build dynamic WHERE clause based on provided filters
         let mut query_parts = vec![
-            "doc_type = $1".to_string(),
+            "doc_type::text = $1".to_string(),
             "(content ILIKE $2 OR doc_path ILIKE $2)".to_string(),
         ];
         let mut bind_count = 3;
@@ -781,7 +781,7 @@ impl QueryPerformanceMonitor {
             "explain_doc_type_query",
             Self::explain_query(
                 pool,
-                "SELECT * FROM documents WHERE doc_type = 'rust' LIMIT 10",
+                "SELECT * FROM documents WHERE doc_type::text = 'rust' LIMIT 10",
             ),
         )
         .await?;
@@ -1135,7 +1135,7 @@ impl CrateQueries {
                     COALESCE(SUM(token_count), 0) as total_tokens,
                     MAX(created_at) as last_updated
                 FROM documents 
-                WHERE doc_type = 'rust' 
+                WHERE doc_type::text = 'rust' 
                 AND metadata->>'crate_name' IS NOT NULL
             "
         .to_string()];
@@ -1182,7 +1182,7 @@ impl CrateQueries {
         let mut count_query_parts = vec![r"
             SELECT COUNT(DISTINCT metadata->>'crate_name') 
             FROM documents 
-            WHERE doc_type = 'rust' 
+            WHERE doc_type::text = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
             "
         .to_string()];
@@ -1254,7 +1254,7 @@ impl CrateQueries {
                     COALESCE(SUM(CAST(token_count AS BIGINT)), 0) as tokens_count,
                     MAX(created_at) as last_updated
                 FROM documents 
-                WHERE doc_type = 'rust' 
+                WHERE doc_type::text = 'rust' 
                 AND metadata->>'crate_name' IS NOT NULL
                 GROUP BY metadata->>'crate_name'
             )
@@ -1279,7 +1279,7 @@ impl CrateQueries {
             r"
             SELECT COALESCE(SUM(CAST(token_count AS BIGINT)), 0)::bigint
             FROM documents 
-            WHERE doc_type = 'rust' 
+            WHERE doc_type::text = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
             ",
         )
@@ -1323,7 +1323,7 @@ impl CrateQueries {
                 COALESCE(SUM(CAST(token_count AS BIGINT)), 0)::bigint as total_tokens,
                 MAX(created_at) as last_updated
             FROM documents 
-            WHERE doc_type = 'rust' 
+            WHERE doc_type::text = 'rust' 
             AND metadata->>'crate_name' = $1
             GROUP BY metadata->>'crate_name', metadata->>'crate_version'
             LIMIT 1
