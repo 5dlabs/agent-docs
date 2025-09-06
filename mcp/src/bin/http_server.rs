@@ -253,6 +253,25 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     let documents_sql = r"
         DO $$
         BEGIN
+            -- Drop existing enum if it exists and recreate as TEXT
+            DO $$
+            BEGIN
+                -- Check if doc_type column exists as enum and convert to TEXT
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'documents'
+                    AND column_name = 'doc_type'
+                    AND data_type = 'USER-DEFINED'
+                ) THEN
+                    ALTER TABLE documents ALTER COLUMN doc_type TYPE TEXT;
+                    RAISE NOTICE 'Converted existing doc_type enum column to TEXT';
+                END IF;
+            EXCEPTION
+                WHEN undefined_table THEN
+                    -- Table doesn't exist yet, that's fine
+                    NULL;
+            END $$;
+
             CREATE TABLE IF NOT EXISTS documents (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 doc_type TEXT NOT NULL,

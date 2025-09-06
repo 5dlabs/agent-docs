@@ -294,6 +294,12 @@ impl LlmClient {
             .env("DISABLE_ERROR_REPORTING", "1")
             .env("DISABLE_AUTOUPDATER", "1");
 
+        // Set CLAUDE_CONFIG_DIR to a writable location if not already set
+        // This prevents Claude from trying to write to read-only directories
+        if std::env::var("CLAUDE_CONFIG_DIR").is_err() {
+            cmd.env("CLAUDE_CONFIG_DIR", "/tmp/claude-code-config");
+        }
+
         // Allow additional CLI args via CLAUDE_ARGS (whitespace-separated)
         let mut extra_args_count = 0usize;
         if let Ok(extra_args) = env::var("CLAUDE_ARGS") {
