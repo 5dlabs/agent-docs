@@ -361,13 +361,18 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
                                 if let Some(content) = message.get("content") {
                                     if let Some(content_array) = content.as_array() {
                                         for content_item in content_array {
-                                            if let Some(text) = content_item.get("text").and_then(|v| v.as_str()) {
+                                            if let Some(text) =
+                                                content_item.get("text").and_then(|v| v.as_str())
+                                            {
                                                 // Look for JSON code blocks
                                                 if text.contains("```json") && text.contains('{') {
                                                     // Extract JSON from code block
                                                     if let Some(json_start) = text.find('{') {
                                                         if let Some(json_end) = text.rfind('}') {
-                                                            json_content = Some(text[json_start..=json_end].to_string());
+                                                            json_content = Some(
+                                                                text[json_start..=json_end]
+                                                                    .to_string(),
+                                                            );
                                                             break;
                                                         }
                                                     }
@@ -380,11 +385,13 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
                         }
                         "result" => {
                             // Also check result messages for JSON content
-                            if let Some(result) = stream_msg.get("result").and_then(|v| v.as_str()) {
+                            if let Some(result) = stream_msg.get("result").and_then(|v| v.as_str())
+                            {
                                 if result.contains("```json") && result.contains('{') {
                                     if let Some(json_start) = result.find('{') {
                                         if let Some(json_end) = result.rfind('}') {
-                                            json_content = Some(result[json_start..=json_end].to_string());
+                                            json_content =
+                                                Some(result[json_start..=json_end].to_string());
                                             break;
                                         }
                                     }

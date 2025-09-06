@@ -350,7 +350,10 @@ impl LlmClient {
         info!("✅ Successfully wrote to Claude stdin");
 
         // Wait for Claude to complete or timeout
-        info!("⏳ Waiting for Claude to complete (timeout: {}s)...", timeout_secs);
+        info!(
+            "⏳ Waiting for Claude to complete (timeout: {}s)...",
+            timeout_secs
+        );
         let output_res = timeout(Duration::from_secs(timeout_secs), async {
             info!("🔄 Claude process finishing...");
             child.wait_with_output().await
