@@ -320,9 +320,9 @@ CRITICAL: You MUST respond with valid JSON in exactly this format:
         "source_name": "talos-github"
     }},
     "cli_commands": [
-        "git clone --depth 1 REPO_URL /tmp/cilium-analysis",
-        "cargo run --bin loader -- local /tmp/cilium-analysis --extensions md,html --recursive -o ./talos_docs_full",
-        "cargo run --bin loader -- database --input-dir ./talos_docs_full --doc-type talos --source-name talos-github --yes"
+        "git clone --depth 1 REPO_URL /tmp/talos-analysis",
+        "cargo run --bin loader -- local /tmp/talos-analysis --extensions md,html --recursive -o /tmp/talos_docs_full",
+        "cargo run --bin loader -- database --input-dir /tmp/talos_docs_full --doc-type talos --source-name talos-github --yes"
     ],
     "reasoning": "Detailed explanation of why these decisions were made, what type of documentation was found, and how the strategy maximizes content quality."
 }}
