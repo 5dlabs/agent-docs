@@ -2,7 +2,7 @@ use crate::claude::ClaudeRunner;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
-use tracing::{info};
+use tracing::info;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RepositoryAnalysis {
@@ -44,11 +44,17 @@ pub struct IngestionStrategy {
     pub source_name: String,
 }
 
-pub struct IntelligentRepositoryAnalyzer { runner: ClaudeRunner }
+pub struct IntelligentRepositoryAnalyzer {
+    runner: ClaudeRunner,
+}
 
 impl IntelligentRepositoryAnalyzer {
     #[must_use]
-    pub fn new() -> Self { Self { runner: ClaudeRunner::new() } }
+    pub fn new() -> Self {
+        Self {
+            runner: ClaudeRunner::new(),
+        }
+    }
 
     /// Analyze a GitHub repository and produce an ingest plan.
     ///
@@ -76,8 +82,13 @@ impl IntelligentRepositoryAnalyzer {
     fn parse_github_url(url_str: &str) -> Result<(String, String)> {
         let url = url_str.trim_end_matches('/');
         let parts: Vec<&str> = url.split('/').collect();
-        if parts.len() < 2 { return Err(anyhow!("Invalid GitHub URL format")); }
-        Ok((parts[parts.len()-2].to_string(), parts[parts.len()-1].to_string()))
+        if parts.len() < 2 {
+            return Err(anyhow!("Invalid GitHub URL format"));
+        }
+        Ok((
+            parts[parts.len() - 2].to_string(),
+            parts[parts.len() - 1].to_string(),
+        ))
     }
 
     fn create_analysis_prompt(github_url: &str, repo_info: &RepoInfo) -> String {
@@ -130,20 +141,31 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
     }
 
     #[allow(clippy::too_many_lines)]
-    fn parse_claude_analysis(claude_response: &str, repo_info: &RepoInfo) -> Result<RepositoryAnalysis> {
+    fn parse_claude_analysis(
+        claude_response: &str,
+        repo_info: &RepoInfo,
+    ) -> Result<RepositoryAnalysis> {
         // Try stream-json first, else slice braces
         let mut json_content: Option<String> = None;
         for line in claude_response.lines() {
-            if line.trim().is_empty() { continue; }
+            if line.trim().is_empty() {
+                continue;
+            }
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(line) {
                 if let Some(t) = val.get("type").and_then(|v| v.as_str()) {
                     match t {
                         "assistant" => {
-                            if let Some(arr) = val.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_array()) {
+                            if let Some(arr) = val
+                                .get("message")
+                                .and_then(|m| m.get("content"))
+                                .and_then(|c| c.as_array())
+                            {
                                 for item in arr {
                                     if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
                                         if text.contains('{') {
-                                            if let (Some(s), Some(e)) = (text.find('{'), text.rfind('}')) {
+                                            if let (Some(s), Some(e)) =
+                                                (text.find('{'), text.rfind('}'))
+                                            {
                                                 json_content = Some(text[s..=e].to_string());
                                                 break;
                                             }
@@ -167,38 +189,101 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
         }
         let json_str = json_content.unwrap_or_else(|| {
             let s = claude_response.find('{').unwrap_or(0);
-            let e = claude_response.rfind('}').unwrap_or(claude_response.len()-1);
+            let e = claude_response
+                .rfind('}')
+                .unwrap_or(claude_response.len() - 1);
             claude_response[s..=e].to_string()
         });
 
         let v: serde_json::Value = serde_json::from_str(&json_str)
             .map_err(|e| anyhow!("Failed to parse Claude response JSON: {}", e))?;
 
-        let strategy_json = v.get("ingestion_strategy").ok_or_else(|| anyhow!("missing ingestion_strategy"))?;
+        let strategy_json = v
+            .get("ingestion_strategy")
+            .ok_or_else(|| anyhow!("missing ingestion_strategy"))?;
         let strategy = IngestionStrategy {
-            docs_only: strategy_json.get("docs_only").and_then(serde_json::Value::as_bool).unwrap_or(true),
-            include_paths: strategy_json.get("include_paths").and_then(serde_json::Value::as_array).map(|a| a.iter().filter_map(|e| e.as_str().map(ToString::to_string)).collect()).unwrap_or_default(),
-            exclude_paths: strategy_json.get("exclude_paths").and_then(serde_json::Value::as_array).map(|a| a.iter().filter_map(|e| e.as_str().map(ToString::to_string)).collect()).unwrap_or_default(),
+            docs_only: strategy_json
+                .get("docs_only")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
+            include_paths: strategy_json
+                .get("include_paths")
+                .and_then(serde_json::Value::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|e| e.as_str().map(ToString::to_string))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            exclude_paths: strategy_json
+                .get("exclude_paths")
+                .and_then(serde_json::Value::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|e| e.as_str().map(ToString::to_string))
+                        .collect()
+                })
+                .unwrap_or_default(),
             extensions: strategy_json
                 .get("extensions")
                 .and_then(serde_json::Value::as_array)
                 .map_or_else(
                     || vec!["md".to_string(), "rst".to_string()],
-                    |a| a.iter().filter_map(|e| e.as_str().map(ToString::to_string)).collect(),
+                    |a| {
+                        a.iter()
+                            .filter_map(|e| e.as_str().map(ToString::to_string))
+                            .collect()
+                    },
                 ),
-            recursive: strategy_json.get("recursive").and_then(serde_json::Value::as_bool).unwrap_or(true),
-            chunk_size: strategy_json.get("chunk_size").and_then(serde_json::Value::as_u64).map(|u| usize::try_from(u).unwrap_or(1000)),
-            use_ai_chunking: strategy_json.get("use_ai_chunking").and_then(serde_json::Value::as_bool).unwrap_or(true),
-            doc_type: strategy_json.get("doc_type").and_then(serde_json::Value::as_str).unwrap_or("unknown").to_string(),
-            source_name: strategy_json.get("source_name").and_then(serde_json::Value::as_str).unwrap_or("github-repo").to_string(),
+            recursive: strategy_json
+                .get("recursive")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
+            chunk_size: strategy_json
+                .get("chunk_size")
+                .and_then(serde_json::Value::as_u64)
+                .map(|u| usize::try_from(u).unwrap_or(1000)),
+            use_ai_chunking: strategy_json
+                .get("use_ai_chunking")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
+            doc_type: strategy_json
+                .get("doc_type")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("unknown")
+                .to_string(),
+            source_name: strategy_json
+                .get("source_name")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("github-repo")
+                .to_string(),
         };
-        let cli_commands = v.get("cli_commands").and_then(|x| x.as_array()).map(|a| a.iter().filter_map(|e| e.as_str().map(ToString::to_string)).collect()).unwrap_or_default();
-        let reasoning = v.get("reasoning").and_then(|x| x.as_str()).unwrap_or("No reasoning provided").to_string();
+        let cli_commands = v
+            .get("cli_commands")
+            .and_then(|x| x.as_array())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|e| e.as_str().map(ToString::to_string))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let reasoning = v
+            .get("reasoning")
+            .and_then(|x| x.as_str())
+            .unwrap_or("No reasoning provided")
+            .to_string();
 
-        Ok(RepositoryAnalysis { repo_info: repo_info.clone(), strategy, cli_commands, reasoning })
+        Ok(RepositoryAnalysis {
+            repo_info: repo_info.clone(),
+            strategy,
+            cli_commands,
+            reasoning,
+        })
     }
 }
 
 impl Default for IntelligentRepositoryAnalyzer {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }

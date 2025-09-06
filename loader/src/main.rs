@@ -123,7 +123,6 @@ enum Commands {
         #[arg(long)]
         yes: bool,
     },
-
     // Intelligent ingest moved to server via discovery crate
 }
 
@@ -169,8 +168,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 yes,
             )
             .await?;
-        }
-        // Intelligent ingest now handled by server (discovery)
+        } // Intelligent ingest now handled by server (discovery)
     }
 
     info!("✅ Document ingestion completed successfully!");

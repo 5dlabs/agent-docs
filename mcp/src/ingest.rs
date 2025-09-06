@@ -6,8 +6,8 @@ use tokio::io::AsyncReadExt;
 use tokio::process::Command as TokioCommand;
 
 use crate::server::McpServerState;
-use std::fmt::Write as _;
 use discovery::{IntelligentRepositoryAnalyzer, RepositoryAnalysis};
+use std::fmt::Write as _;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
@@ -92,7 +92,11 @@ impl IngestJobManager {
         tokio::spawn(async move {
             info!(%job_id, %url, %doc_type, "Starting intelligent ingest job");
             let _ = db::queries::IngestJobQueries::update_job_status(
-                db_pool.pool(), job_id, JobStatus::Running, None, None,
+                db_pool.pool(),
+                job_id,
+                JobStatus::Running,
+                None,
+                None,
             )
             .await;
 
@@ -104,7 +108,11 @@ impl IngestJobManager {
                 Err(e) => {
                     warn!(%job_id, err = %e, "Discovery failed");
                     let _ = db::queries::IngestJobQueries::update_job_status(
-                        db_pool.pool(), job_id, JobStatus::Failed, None, Some(&e.to_string()),
+                        db_pool.pool(),
+                        job_id,
+                        JobStatus::Failed,
+                        None,
+                        Some(&e.to_string()),
                     )
                     .await;
                     return;
@@ -117,14 +125,22 @@ impl IngestJobManager {
                 Ok(output) => {
                     debug!(%job_id, out_len = output.len(), "Ingest completed");
                     let _ = db::queries::IngestJobQueries::update_job_status(
-                        db_pool.pool(), job_id, JobStatus::Completed, Some(&output), None,
+                        db_pool.pool(),
+                        job_id,
+                        JobStatus::Completed,
+                        Some(&output),
+                        None,
                     )
                     .await;
                 }
                 Err(e) => {
                     warn!(%job_id, err = %e, "Ingest plan execution failed");
                     let _ = db::queries::IngestJobQueries::update_job_status(
-                        db_pool.pool(), job_id, JobStatus::Failed, None, Some(&e.to_string()),
+                        db_pool.pool(),
+                        job_id,
+                        JobStatus::Failed,
+                        None,
+                        Some(&e.to_string()),
                     )
                     .await;
                 }
@@ -153,7 +169,11 @@ fn work_base() -> std::path::PathBuf {
 }
 
 /// Execute discovery CLI commands with a strict allowlist
-async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str, _yes: bool) -> anyhow::Result<String> {
+async fn execute_cli_plan(
+    analysis: &RepositoryAnalysis,
+    doc_type: &str,
+    _yes: bool,
+) -> anyhow::Result<String> {
     let mut combined = String::new();
 
     for (i, original_cmd) in analysis.cli_commands.iter().enumerate() {
@@ -173,7 +193,8 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str, _yes: b
         if ingest_debug_enabled() {
             command.env(
                 "RUST_LOG",
-                std::env::var("RUST_LOG").unwrap_or_else(|_| "debug,loader=debug,mcp=debug".to_string()),
+                std::env::var("RUST_LOG")
+                    .unwrap_or_else(|_| "debug,loader=debug,mcp=debug".to_string()),
             );
         }
         command.args(args);
@@ -190,9 +211,15 @@ fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
     if parts.is_empty() {
         return (loader, vec![]);
     }
-    if parts[0] == "cargo" && parts.get(1) == Some(&"run") && parts.windows(2).any(|w| w == ["--", "cli"]) {
+    if parts[0] == "cargo"
+        && parts.get(1) == Some(&"run")
+        && parts.windows(2).any(|w| w == ["--", "cli"])
+    {
         // cargo run --bin loader -- cli ... or database ...
-        let args_start = parts.iter().position(|p| *p == "--").map_or(parts.len(), |i| i + 1);
+        let args_start = parts
+            .iter()
+            .position(|p| *p == "--")
+            .map_or(parts.len(), |i| i + 1);
         let mut args: Vec<String> = parts[args_start..].iter().map(|&s| s.to_owned()).collect();
         enforce_doc_type(&mut args, doc_type);
         return (loader, args);
@@ -203,10 +230,16 @@ fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
         return (loader, args);
     }
     if parts[0] == "git" {
-        return ("git".to_string(), parts[1..].iter().map(|&s| s.to_owned()).collect());
+        return (
+            "git".to_string(),
+            parts[1..].iter().map(|&s| s.to_owned()).collect(),
+        );
     }
     // Fallback: return as-is (will be rejected by allowlist)
-    (parts[0].to_string(), parts[1..].iter().map(|&s| s.to_owned()).collect())
+    (
+        parts[0].to_string(),
+        parts[1..].iter().map(|&s| s.to_owned()).collect(),
+    )
 }
 
 fn enforce_doc_type(args: &mut Vec<String>, doc_type: &str) {
@@ -218,7 +251,9 @@ fn enforce_doc_type(args: &mut Vec<String>, doc_type: &str) {
         while i < args.len() {
             if args[i] == "--doc-type" {
                 out.push("--doc-type".to_string());
-                if i + 1 < args.len() { i += 1; } // skip value
+                if i + 1 < args.len() {
+                    i += 1;
+                } // skip value
                 out.push(doc_type.to_string());
                 set = true;
             } else {
@@ -237,10 +272,15 @@ fn enforce_doc_type(args: &mut Vec<String>, doc_type: &str) {
 fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<()> {
     match program {
         p if p == loader_bin().to_string_lossy() => {
-            if args.is_empty() { return Err(anyhow::anyhow!("missing loader subcommand")); }
+            if args.is_empty() {
+                return Err(anyhow::anyhow!("missing loader subcommand"));
+            }
             match args[0].as_str() {
                 "cli" | "database" => Ok(()),
-                other => Err(anyhow::anyhow!(format!("loader subcommand not allowed: {}", other))),
+                other => Err(anyhow::anyhow!(format!(
+                    "loader subcommand not allowed: {}",
+                    other
+                ))),
             }
         }
         "git" => {
@@ -248,14 +288,19 @@ fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<()> {
             if args.first().map(String::as_str) != Some("clone") {
                 return Err(anyhow::anyhow!("only 'git clone' is allowed"));
             }
-            if !args.iter().any(|a| a == "--depth" || a.starts_with("--depth")) {
+            if !args
+                .iter()
+                .any(|a| a == "--depth" || a.starts_with("--depth"))
+            {
                 return Err(anyhow::anyhow!("git clone must include --depth"));
             }
             if let Some(dest) = args.last() {
                 let base = work_base();
                 let dest_path = std::path::Path::new(dest);
                 if !dest_path.starts_with(&base) {
-                    return Err(anyhow::anyhow!("git clone destination is outside work base"));
+                    return Err(anyhow::anyhow!(
+                        "git clone destination is outside work base"
+                    ));
                 }
             }
             Ok(())

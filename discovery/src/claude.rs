@@ -15,8 +15,12 @@ impl ClaudeRunner {
     #[must_use]
     pub fn new() -> Self {
         let binary = std::env::var("CLAUDE_BINARY_PATH").unwrap_or_else(|_| "claude".to_string());
-        let model = std::env::var("CLAUDE_MODEL").unwrap_or_else(|_| "claude-3-5-sonnet-20241022".to_string());
-        Self { binary_path: binary, model_name: model }
+        let model = std::env::var("CLAUDE_MODEL")
+            .unwrap_or_else(|_| "claude-3-5-sonnet-20241022".to_string());
+        Self {
+            binary_path: binary,
+            model_name: model,
+        }
     }
 
     /// Execute a single user prompt and return stdout
@@ -53,7 +57,13 @@ impl ClaudeRunner {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|e| anyhow!("Failed to start Claude binary '{}': {}", self.binary_path, e))?;
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to start Claude binary '{}': {}",
+                    self.binary_path,
+                    e
+                )
+            })?;
 
         let mut stdin = child.stdin.take().ok_or_else(|| anyhow!("no stdin"))?;
         stdin.write_all(json_message.as_bytes()).await?;

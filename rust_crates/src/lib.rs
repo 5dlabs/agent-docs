@@ -50,7 +50,12 @@ impl RateLimiter {
             }
         }
         info!("HTTP GET: {}", url);
-        let resp = self.client.get(url).send().await.map_err(|e| anyhow!("HTTP failed: {}", e))?;
+        let resp = self
+            .client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| anyhow!("HTTP failed: {}", e))?;
         self.last_request = Some(std::time::Instant::now());
         if !resp.status().is_success() {
             return Err(anyhow!("HTTP status: {}", resp.status()));
@@ -59,7 +64,11 @@ impl RateLimiter {
     }
 }
 
-impl Default for RateLimiter { fn default() -> Self { Self::new() } }
+impl Default for RateLimiter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrateMetadata {
@@ -78,19 +87,36 @@ pub struct DocPage {
     pub extracted_at: DateTime<Utc>,
 }
 
-pub struct RustLoader { rate_limiter: RateLimiter }
-impl Default for RustLoader { fn default() -> Self { Self::new() } }
+pub struct RustLoader {
+    rate_limiter: RateLimiter,
+}
+impl Default for RustLoader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl RustLoader {
     #[must_use]
-    pub fn new() -> Self { Self { rate_limiter: RateLimiter::new() } }
+    pub fn new() -> Self {
+        Self {
+            rate_limiter: RateLimiter::new(),
+        }
+    }
 
     /// Load crate metadata and documentation pages.
     ///
     /// # Errors
     /// Returns an error if fetching metadata or pages fails.
-    pub async fn load_crate_docs(&mut self, crate_name: &str, version: Option<&str>) -> Result<(CrateMetadata, Vec<DocPage>)> {
-        info!("Loading crate docs: {} (version: {:?}) [stub]", crate_name, version);
+    pub async fn load_crate_docs(
+        &mut self,
+        crate_name: &str,
+        version: Option<&str>,
+    ) -> Result<(CrateMetadata, Vec<DocPage>)> {
+        info!(
+            "Loading crate docs: {} (version: {:?}) [stub]",
+            crate_name, version
+        );
         let meta = self.fetch_crate_metadata(crate_name).await?;
         let target = version.unwrap_or(&meta.newest_version);
         let pages = Self::create_stub_documentation(crate_name, target);
@@ -120,13 +146,30 @@ impl RustLoader {
     async fn fetch_crate_metadata(&mut self, crate_name: &str) -> Result<CrateMetadata> {
         let url = format!("https://crates.io/api/v1/crates/{crate_name}");
         let text = self.get_text(&url).await?;
-        let json: serde_json::Value = serde_json::from_str(&text).map_err(|e| anyhow!("Parse crates.io: {}", e))?;
-        let c = json.get("crate").ok_or_else(|| anyhow!("Invalid crates.io response"))?;
+        let json: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| anyhow!("Parse crates.io: {}", e))?;
+        let c = json
+            .get("crate")
+            .ok_or_else(|| anyhow!("Invalid crates.io response"))?;
         Ok(CrateMetadata {
-            name: c.get("id").and_then(|v| v.as_str()).unwrap_or(crate_name).to_string(),
-            newest_version: c.get("newest_version").and_then(|v| v.as_str()).unwrap_or("latest").to_string(),
-            description: c.get("description").and_then(|v| v.as_str()).map(ToString::to_string),
-            documentation: c.get("documentation").and_then(|v| v.as_str()).map(ToString::to_string),
+            name: c
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or(crate_name)
+                .to_string(),
+            newest_version: c
+                .get("newest_version")
+                .and_then(|v| v.as_str())
+                .unwrap_or("latest")
+                .to_string(),
+            description: c
+                .get("description")
+                .and_then(|v| v.as_str())
+                .map(ToString::to_string),
+            documentation: c
+                .get("documentation")
+                .and_then(|v| v.as_str())
+                .map(ToString::to_string),
         })
     }
 
@@ -136,23 +179,35 @@ impl RustLoader {
     }
 
     #[allow(dead_code)]
-    async fn fetch_single_page(&mut self, url: &str, crate_name: &str, item_type: &str) -> Result<DocPage> {
+    async fn fetch_single_page(
+        &mut self,
+        url: &str,
+        crate_name: &str,
+        item_type: &str,
+    ) -> Result<DocPage> {
         let text = self.get_text(url).await?;
         let document = Html::parse_document(&text);
-        let content = Selector::parse("body").ok()
-            .map_or_else(
-                || document.root_element().text().collect::<Vec<_>>().join(" "),
-                |sel| {
-                    let mut best = String::new();
-                    for el in document.select(&sel) {
-                        let t = el.text().collect::<Vec<_>>().join(" ");
-                        if t.len() > best.len() { best = t; }
+        let content = Selector::parse("body").ok().map_or_else(
+            || document.root_element().text().collect::<Vec<_>>().join(" "),
+            |sel| {
+                let mut best = String::new();
+                for el in document.select(&sel) {
+                    let t = el.text().collect::<Vec<_>>().join(" ");
+                    if t.len() > best.len() {
+                        best = t;
                     }
-                    best
-                },
-            );
+                }
+                best
+            },
+        );
         let module_path = Self::extract_module_path(url, crate_name);
-        Ok(DocPage { url: url.into(), content, item_type: item_type.into(), module_path, extracted_at: Utc::now() })
+        Ok(DocPage {
+            url: url.into(),
+            content,
+            item_type: item_type.into(),
+            module_path,
+            extracted_at: Utc::now(),
+        })
     }
 
     fn extract_module_path(url: &str, crate_name: &str) -> String {
@@ -162,12 +217,16 @@ impl RustLoader {
                 .map(std::iter::Iterator::collect)
                 .unwrap_or_default();
             if let Some(idx) = parts.iter().position(|&s| s == crate_name) {
-                let module: Vec<String> = parts.iter().skip(idx)
+                let module: Vec<String> = parts
+                    .iter()
+                    .skip(idx)
                     .filter(|&&s| !s.is_empty() && s != "index.html")
                     .filter(|&s| !s.starts_with("struct.") && !s.starts_with("fn."))
                     .map(|s| s.replace(".html", ""))
                     .collect();
-                if !module.is_empty() { return module.join("::"); }
+                if !module.is_empty() {
+                    return module.join("::");
+                }
             }
         }
         crate_name.to_string()
