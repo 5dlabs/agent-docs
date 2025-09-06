@@ -34,8 +34,9 @@ pgvector = { workspace = true }
 # Local crates
 db = { path = "../db" }
 embed = { path = "../embed" }
-llm = { path = "../llm" }
 loader = { path = "../loader" }
+discovery = { path = "../discovery" }
+rust_crates = { path = "../rust_crates" }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

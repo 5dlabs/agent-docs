@@ -744,7 +744,7 @@ impl Tool for IngestTool {
             return Err(anyhow!("No valid include paths provided"));
         }
 
-        // 3) Run loader local for each validated include path
+        // 3) Run loader cli for each validated include path
         let mut processed_paths: Vec<String> = Vec::new();
         for (orig, abs_path) in resolved_paths {
             let safe_dir = orig.replace(['/', '\\'], "_");
@@ -759,7 +759,7 @@ impl Tool for IngestTool {
                 local_cmd.arg("--verbose");
             }
             local_cmd
-                .arg("local")
+                .arg("cli")
                 // loader CLI expects the path as a positional argument
                 .arg(abs_path.to_string_lossy().as_ref())
                 .arg("--extensions")

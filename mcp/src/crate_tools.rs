@@ -16,7 +16,7 @@ use db::{
     DatabasePool,
 };
 use embed::client::EmbeddingClient;
-use loader::loaders::RustLoader;
+use rust_crates::RustLoader;
 use serde_json::{json, Value};
 use sqlx;
 use std::{fmt::Write as _, sync::Arc};

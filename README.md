@@ -167,6 +167,24 @@ curl -s http://localhost:3001/ingest/jobs/8ab7b0a8-…
 # => { "status": "running", … }
 ```
 
+### Loader CLI
+
+The `loader` binary performs on-host ingestion. Claude Code only proposes a plan; `loader` executes it.
+
+- Intelligent (Claude-guided):
+  - Server calls discovery to analyze the repo and generate a plan, then executes steps (typically `git clone` → `loader cli` → `loader database`).
+  - `LOADER_BIN` can point to a packaged loader binary used for plan execution.
+
+- CLI (direct parse):
+  - `cargo run -p loader -- cli <path> --extensions md,rs,txt,json,yaml,toml --recursive -o ./out`
+  - Parses files with the UniversalParser and writes `DocPage` JSON to the output directory. Used by analyzer-generated plans.
+
+- Database (load JSON docs):
+  - `cargo run -p loader -- database --input-dir ./out --doc-type <type> --source-name <name> --yes`
+  - Inserts previously emitted JSON docs into PostgreSQL.
+
+Note: Legacy `github` and `web` subcommands were removed. Use `intelligent` for repo ingestion and `local` for direct filesystem parsing.
+
 ### Tool Configuration
 
 The system is highly configurable and can work with **any type of documentation**. Tools are defined in the `tools.json` configuration file, allowing you to:

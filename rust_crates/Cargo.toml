@@ -1,0 +1,19 @@
+[package]
+name = "rust_crates"
+version = "0.1.0"
+edition = "2021"
+description = "Ingestion helpers for Rust crates (docs.rs/crates.io)"
+license = "MIT"
+
+[dependencies]
+anyhow = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+scraper = "0.20"
+html5ever = "0.27"
+url = "2.5"
+tracing = { workspace = true }
+
