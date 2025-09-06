@@ -1,25 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Minimal rustc wrapper: just forwards to the real rustc binary.
-# Cargo invokes the wrapper as: wrapper <path-to-rustc> <args...>
+# Cargo's RUSTC_WRAPPER contract: this script must behave like rustc.
+# It receives the same args as rustc would; the real compiler path is in $RUSTC.
 
-if [[ $# -lt 1 ]]; then
-  echo "rustc-wrapper: missing rustc path" >&2
-  exit 1
-fi
+REAL_RUSTC="${RUSTC:-rustc}"
 
-RUSTC_BIN="$1"
-shift
-
-# If sccache is available and allowed, use it transparently
+# Prefer sccache if available (unless explicitly disabled)
 if command -v sccache >/dev/null 2>&1 && [[ "${DISABLE_SCCACHE:-0}" != "1" ]]; then
-  exec sccache "$RUSTC_BIN" "$@"
+  exec sccache "$REAL_RUSTC" "$@"
 fi
 
-# Otherwise, invoke rustc directly
-if [[ -x "$RUSTC_BIN" ]]; then
-  exec "$RUSTC_BIN" "$@"
+# Fallback to direct rustc invocation
+if [[ -x "$REAL_RUSTC" ]]; then
+  exec "$REAL_RUSTC" "$@"
 else
   exec rustc "$@"
 fi
