@@ -312,14 +312,12 @@ CRITICAL: You MUST respond with valid JSON in exactly this format:
     }},
     "ingestion_strategy": {{
         "docs_only": true,
-        "include_paths": ["Documentation/", "docs/"],
-        "exclude_paths": ["test/", "vendor/", ".git/"],
-        "extensions": ["md", "rst", "html"],
+        "extensions": ["md", "html"],
         "recursive": true,
         "chunk_size": 2000,
         "use_ai_chunking": true,
-        "doc_type": "cilium",
-        "source_name": "cilium-github"
+        "doc_type": "talos",
+        "source_name": "talos-github"
     }},
     "cli_commands": [
         "git clone --depth 1 REPO_URL /tmp/cilium-analysis",
