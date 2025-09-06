@@ -338,21 +338,81 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
     }
 
     /// Parse Claude Code's analysis response into structured data
+    #[allow(clippy::too_many_lines)]
     fn parse_claude_analysis(
         claude_response: &str,
         repo_info: &RepoInfo,
     ) -> Result<RepositoryAnalysis> {
-        // Try to extract JSON from Claude's response
-        let json_start = claude_response
-            .find('{')
-            .ok_or_else(|| anyhow!("No JSON found in Claude response"))?;
-        let json_end = claude_response
-            .rfind('}')
-            .ok_or_else(|| anyhow!("Incomplete JSON in Claude response"))?;
-        let json_str = &claude_response[json_start..=json_end];
+        // Parse stream-json format from Claude Code
+        let mut json_content = None;
+
+        // Split response into individual JSON objects (stream format)
+        for line in claude_response.lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            if let Ok(stream_msg) = serde_json::from_str::<serde_json::Value>(line) {
+                // Look for assistant message with JSON content
+                if let Some(msg_type) = stream_msg.get("type").and_then(|v| v.as_str()) {
+                    match msg_type {
+                        "assistant" => {
+                            if let Some(message) = stream_msg.get("message") {
+                                if let Some(content) = message.get("content") {
+                                    if let Some(content_array) = content.as_array() {
+                                        for content_item in content_array {
+                                            if let Some(text) = content_item.get("text").and_then(|v| v.as_str()) {
+                                                // Look for JSON code blocks
+                                                if text.contains("```json") && text.contains('{') {
+                                                    // Extract JSON from code block
+                                                    if let Some(json_start) = text.find('{') {
+                                                        if let Some(json_end) = text.rfind('}') {
+                                                            json_content = Some(text[json_start..=json_end].to_string());
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        "result" => {
+                            // Also check result messages for JSON content
+                            if let Some(result) = stream_msg.get("result").and_then(|v| v.as_str()) {
+                                if result.contains("```json") && result.contains('{') {
+                                    if let Some(json_start) = result.find('{') {
+                                        if let Some(json_end) = result.rfind('}') {
+                                            json_content = Some(result[json_start..=json_end].to_string());
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+            }
+        }
+
+        // Fallback to original parsing if stream parsing didn't work
+        let json_str = if let Some(content) = json_content {
+            content
+        } else {
+            // Try to extract JSON from Claude's response (fallback)
+            let json_start = claude_response
+                .find('{')
+                .ok_or_else(|| anyhow!("No JSON found in Claude response"))?;
+            let json_end = claude_response
+                .rfind('}')
+                .ok_or_else(|| anyhow!("Incomplete JSON in Claude response"))?;
+            claude_response[json_start..=json_end].to_string()
+        };
 
         // Parse the JSON response
-        let claude_analysis: serde_json::Value = serde_json::from_str(json_str)
+        let claude_analysis: serde_json::Value = serde_json::from_str(&json_str)
             .map_err(|e| anyhow!("Failed to parse Claude's JSON response: {}", e))?;
 
         // Extract strategy information

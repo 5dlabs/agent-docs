@@ -65,7 +65,7 @@ impl DocumentQueries {
         sqlx::query(
             r#"
             INSERT INTO document_sources (doc_type, source_name, config, enabled)
-            VALUES ($1::doc_type, $2, '{"auto_created": true}', true)
+            VALUES ($1, $2, '{"auto_created": true}', true)
             ON CONFLICT (doc_type, source_name) DO NOTHING
             "#,
         )
@@ -99,7 +99,7 @@ impl DocumentQueries {
                 created_at,
                 updated_at
             )
-            VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
             ON CONFLICT (id) DO UPDATE SET
                 content = EXCLUDED.content,
                 metadata = EXCLUDED.metadata,
@@ -164,7 +164,7 @@ impl DocumentQueries {
         }
 
         for (doc_type, source_name) in sources_to_create {
-            Self::ensure_document_source(pool, &doc_type, &source_name).await?;
+            Self::ensure_document_source(pool, doc_type.as_str(), &source_name).await?;
         }
 
         let mut transaction = pool.begin().await?;
@@ -274,7 +274,7 @@ impl DocumentQueries {
                 created_at,
                 updated_at
             FROM documents
-            WHERE doc_type = $1::doc_type
+            WHERE doc_type = $1
             ORDER BY created_at DESC
             ",
         )
@@ -492,7 +492,7 @@ impl DocumentQueries {
                 LENGTH(content) as content_length,
                 EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) as age_seconds
             FROM documents
-            WHERE doc_type = $1::doc_type
+            WHERE doc_type = $1
               AND (content ILIKE $2 OR doc_path ILIKE $2)
             ORDER BY 
               CASE WHEN source_name ILIKE 'cilium-repository%' THEN 0 ELSE 1 END ASC,
@@ -550,7 +550,7 @@ impl DocumentQueries {
     ) -> Result<Vec<Document>> {
         // Build dynamic WHERE clause based on provided filters
         let mut query_parts = vec![
-            "doc_type = $1::doc_type".to_string(),
+            "doc_type = $1".to_string(),
             "(content ILIKE $2 OR doc_path ILIKE $2)".to_string(),
         ];
         let mut bind_count = 3;

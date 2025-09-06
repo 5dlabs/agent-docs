@@ -50,7 +50,7 @@ impl std::fmt::Display for DocType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Document {
     pub id: Uuid,
-    pub doc_type: String, // We'll handle the enum conversion manually
+    pub doc_type: String,
     pub source_name: String,
     pub doc_path: String,
     pub content: String,

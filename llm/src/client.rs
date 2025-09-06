@@ -5,9 +5,10 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::process::Stdio;
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::models::{LlmProvider, LlmResponse, Message, ModelConfig, Usage};
 
@@ -261,6 +262,7 @@ impl LlmClient {
     }
 
     /// Run Claude Code binary with the given prompt using proper stream-json protocol
+    #[allow(clippy::too_many_lines)]
     async fn run_claude_binary(&self, binary_path: &str, prompt: &str) -> Result<String> {
         let timeout_secs: u64 = std::env::var("CLAUDE_TIMEOUT_SECS")
             .ok()
@@ -276,10 +278,7 @@ impl LlmClient {
             "Launching Claude binary with stream-json protocol"
         );
 
-        // Create a temporary FIFO for communication (matching CTO template)
-        let fifo_path = "/tmp/claude-fifo";
-        std::fs::remove_file(fifo_path).ok(); // Remove if exists
-        nix::unistd::mkfifo(fifo_path, nix::sys::stat::Mode::S_IRWXU)?;
+        // Format the prompt as stream-json message
 
         // Build Claude command with proper arguments (matching CTO template)
         let mut cmd = Command::new(binary_path);
@@ -304,8 +303,8 @@ impl LlmClient {
             }
         }
 
-        let child = cmd
-            .stdin(Stdio::null()) // No direct stdin, use FIFO
+        let mut child = cmd
+            .stdin(Stdio::piped()) // Use piped stdin for direct input
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -313,6 +312,7 @@ impl LlmClient {
 
         #[allow(clippy::cast_sign_loss)]
         let pid = child.id().unwrap_or(0);
+        info!("🚀 Claude process started (PID: {})", pid);
         debug!(
             binary = %binary_path,
             model = %self.config.model_name,
@@ -328,19 +328,34 @@ impl LlmClient {
             serde_json::to_string(prompt)?
         );
 
-        // Write the JSON message to the FIFO (in background task to avoid blocking)
-        let fifo_write =
-            tokio::task::spawn_blocking(move || std::fs::write(fifo_path, json_message));
+        info!("📤 Sending prompt to Claude ({} chars)", json_message.len());
+
+        // Get stdin handle and write the JSON message directly
+        let mut stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow!("Failed to get stdin handle"))?;
+
+        info!("📝 Writing JSON message to Claude stdin...");
+        stdin
+            .write_all(json_message.as_bytes())
+            .await
+            .map_err(|e| anyhow!("Failed to write to Claude stdin: {}", e))?;
+        stdin
+            .flush()
+            .await
+            .map_err(|e| anyhow!("Failed to flush Claude stdin: {}", e))?;
+        drop(stdin); // Close stdin to signal end of input
+
+        info!("✅ Successfully wrote to Claude stdin");
 
         // Wait for Claude to complete or timeout
+        info!("⏳ Waiting for Claude to complete (timeout: {}s)...", timeout_secs);
         let output_res = timeout(Duration::from_secs(timeout_secs), async {
-            let _ = fifo_write.await;
+            info!("🔄 Claude process finishing...");
             child.wait_with_output().await
         })
         .await;
-
-        // Clean up FIFO
-        std::fs::remove_file(fifo_path).ok();
 
         match output_res {
             Ok(Ok(out)) => {
@@ -355,17 +370,34 @@ impl LlmClient {
                 }
                 let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+
+                // Enhanced logging for Claude output
                 debug!(
                     exit_code = out.status.code().unwrap_or(-1),
                     stdout_len = stdout.len(),
                     stderr_len = stderr.len(),
                     "Claude completed with stream-json protocol"
                 );
-                if std::env::var("CLAUDE_LOG_STDERR").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+
+                // Log stdout if CLAUDE_LOG_STDOUT is set or if we're in verbose mode
+                if std::env::var("CLAUDE_LOG_STDOUT").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                    || std::env::var("CLAUDE_VERBOSE").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
                 {
-                    let stderr_snip = stderr.chars().take(1000).collect::<String>();
-                    debug!("Claude stderr (truncated): {}", stderr_snip);
+                    let stdout_snip = stdout.chars().take(2000).collect::<String>();
+                    info!("🔍 Claude stdout (truncated): {}", stdout_snip);
                 }
+
+                // Log stderr if CLAUDE_LOG_STDERR is set or if we're in verbose mode
+                if std::env::var("CLAUDE_LOG_STDERR").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                    || std::env::var("CLAUDE_VERBOSE").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                {
+                    let stderr_snip = stderr.chars().take(2000).collect::<String>();
+                    info!("🔍 Claude stderr (truncated): {}", stderr_snip);
+                }
+
+                // Always log Claude output in debug mode for troubleshooting
+                tracing::debug!("Claude stdout (full): {}", stdout);
+                tracing::debug!("Claude stderr (full): {}", stderr);
                 if stdout.trim().is_empty() {
                     return Err(anyhow!("Claude binary returned empty response"));
                 }
