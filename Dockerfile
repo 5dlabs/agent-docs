@@ -26,8 +26,8 @@ ENV SQLX_OFFLINE=true \
 RUN rustc --version && cargo --version && \
     cargo update -p base64ct --precise 1.7.3 && \
     cargo build --release --workspace && \
-    # Build Redis worker binary with feature flag enabled
-    cargo build --release -p mcp --features redis-queue --bin job_worker
+    # Build Redis worker binary (Redis is now a required dependency)
+    cargo build --release -p mcp --bin job_worker
 
 # 2) Runtime stage: Claude base image with Node and Claude installed
 FROM --platform=linux/amd64 ghcr.io/5dlabs/claude:latest
