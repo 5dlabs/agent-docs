@@ -19,9 +19,12 @@ async fn main() -> Result<()> {
 
     let mut con = if let (Ok(username), Ok(password)) = (
         std::env::var("REDIS_USERNAME"),
-        std::env::var("REDIS_PASSWORD")
+        std::env::var("REDIS_PASSWORD"),
     ) {
-        info!("Connecting to Redis with authentication (user: {})", username);
+        info!(
+            "Connecting to Redis with authentication (user: {})",
+            username
+        );
         let mut con = client.get_multiplexed_async_connection().await?;
         redis::cmd("AUTH")
             .arg(&[&username, &password])
