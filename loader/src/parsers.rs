@@ -319,19 +319,49 @@ impl UniversalParser {
     async fn parse_yaml(&self, content: &str, path: &str) -> Result<ParsedContent> {
         debug!("Parsing YAML content from: {}", path);
 
-        let yaml_value: Value =
-            serde_yaml::from_str(content).map_err(|e| anyhow!("Failed to parse YAML: {}", e))?;
+        // Handle multi-document YAML files (separated by ---)
+        let mut combined_text = String::new();
+        let mut doc_count = 0;
+        
+        // Try to parse as multi-document YAML
+        for document in serde_yaml::Deserializer::from_str(content) {
+            match Value::deserialize(document) {
+                Ok(yaml_value) => {
+                    doc_count += 1;
+                    if doc_count > 1 {
+                        combined_text.push_str("\n\n--- Document ");
+                        combined_text.push_str(&doc_count.to_string());
+                        combined_text.push_str(" ---\n\n");
+                    }
+                    combined_text.push_str(&Self::yaml_to_text(&yaml_value));
+                }
+                Err(e) => {
+                    // If multi-document parsing fails, try single document
+                    if doc_count == 0 {
+                        // Fall back to single document parsing
+                        let yaml_value: Value = serde_yaml::from_str(content)
+                            .map_err(|e| anyhow!("Failed to parse YAML: {}", e))?;
+                        combined_text = Self::yaml_to_text(&yaml_value);
+                        doc_count = 1;
+                        break;
+                    }
+                    // We already parsed some documents, just log the error and continue
+                    warn!("Failed to parse YAML document {} in {}: {}", doc_count + 1, path, e);
+                    break;
+                }
+            }
+        }
 
-        let text_content = Self::yaml_to_text(&yaml_value);
         let metadata = HashMap::from([
             ("format".to_string(), "yaml".to_string()),
             ("is_valid_yaml".to_string(), "true".to_string()),
+            ("document_count".to_string(), doc_count.to_string()),
         ]);
-        let estimated_tokens = Self::estimate_tokens(&text_content);
+        let estimated_tokens = Self::estimate_tokens(&combined_text);
 
         Ok(ParsedContent {
             format: DocumentFormat::Yaml,
-            text_content,
+            text_content: combined_text,
             structured_content: None,
             metadata,
             estimated_tokens: Some(estimated_tokens),
