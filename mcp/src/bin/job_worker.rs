@@ -1,4 +1,3 @@
-
 use anyhow::Result;
 use db::{models::JobStatus, DatabasePool};
 use mcp::queue::{redis_url_from_env, RedisJobMessage};
@@ -151,7 +150,11 @@ struct CrateAddPayload {
     atomic_rollback: bool,
 }
 
-async fn handle_crate_add(db_pool: &DatabasePool, payload: &Value, job_id: uuid::Uuid) -> Result<()> {
+async fn handle_crate_add(
+    db_pool: &DatabasePool,
+    payload: &Value,
+    job_id: uuid::Uuid,
+) -> Result<()> {
     use embed::client::EmbeddingClient;
     use embed::OpenAIEmbeddingClient;
     use mcp::crate_tools::AddRustCrateTool;
@@ -160,7 +163,8 @@ async fn handle_crate_add(db_pool: &DatabasePool, payload: &Value, job_id: uuid:
 
     let p: CrateAddPayload = serde_json::from_value(payload.clone())?;
 
-    let client: StdArc<dyn EmbeddingClient + Send + Sync> = StdArc::new(OpenAIEmbeddingClient::new()?);
+    let client: StdArc<dyn EmbeddingClient + Send + Sync> =
+        StdArc::new(OpenAIEmbeddingClient::new()?);
     let tool = AddRustCrateTool::new(db_pool.clone(), client.clone());
 
     // Construct a minimal call path by invoking the internal ingestion function

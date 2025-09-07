@@ -111,92 +111,92 @@ impl IngestJobManager {
         } else {
             let db_pool = self.db_pool.clone();
             tokio::spawn(async move {
-            // Global concurrency cap for ingest jobs
-            let _permit = get_ingest_semaphore().acquire_owned().await.ok();
-            info!(%job_id, %url, %doc_type, "Starting intelligent ingest job");
-            let _ = db::queries::IngestJobQueries::update_job_status(
-                db_pool.pool(),
-                job_id,
-                JobStatus::Running,
-                None,
-                None,
-            )
-            .await;
+                // Global concurrency cap for ingest jobs
+                let _permit = get_ingest_semaphore().acquire_owned().await.ok();
+                info!(%job_id, %url, %doc_type, "Starting intelligent ingest job");
+                let _ = db::queries::IngestJobQueries::update_job_status(
+                    db_pool.pool(),
+                    job_id,
+                    JobStatus::Running,
+                    None,
+                    None,
+                )
+                .await;
 
-            // Heartbeat task to keep updated_at fresh while job runs
-            let (hb_tx, mut hb_rx) = oneshot::channel::<()>();
-            let hb_pool = db_pool.clone();
-            let hb_job_id = job_id;
-            let hb_handle = tokio::spawn(async move {
-                let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
-                loop {
-                    tokio::select! {
-                        _ = interval.tick() => {
-                            let _ = db::queries::IngestJobQueries::update_job_status(
-                                hb_pool.pool(),
-                                hb_job_id,
-                                JobStatus::Running,
-                                None,
-                                None,
-                            ).await;
-                        }
-                        _ = &mut hb_rx => {
-                            break;
+                // Heartbeat task to keep updated_at fresh while job runs
+                let (hb_tx, mut hb_rx) = oneshot::channel::<()>();
+                let hb_pool = db_pool.clone();
+                let hb_job_id = job_id;
+                let hb_handle = tokio::spawn(async move {
+                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+                    loop {
+                        tokio::select! {
+                            _ = interval.tick() => {
+                                let _ = db::queries::IngestJobQueries::update_job_status(
+                                    hb_pool.pool(),
+                                    hb_job_id,
+                                    JobStatus::Running,
+                                    None,
+                                    None,
+                                ).await;
+                            }
+                            _ = &mut hb_rx => {
+                                break;
+                            }
                         }
                     }
-                }
-            });
+                });
 
-            // 1) Run discovery (Claude Code) to get a plan
-            let mut analyzer = IntelligentRepositoryAnalyzer::new();
+                // 1) Run discovery (Claude Code) to get a plan
+                let mut analyzer = IntelligentRepositoryAnalyzer::new();
 
-            let analysis = match analyzer.analyze_repository(&url).await {
-                Ok(a) => a,
-                Err(e) => {
-                    warn!(%job_id, err = %e, "Discovery failed");
-                    let _ = db::queries::IngestJobQueries::update_job_status(
-                        db_pool.pool(),
-                        job_id,
-                        JobStatus::Failed,
-                        None,
-                        Some(&e.to_string()),
-                    )
-                    .await;
-                    // Stop heartbeat
-                    let _ = hb_tx.send(());
-                    let _ = hb_handle.await;
-                    return;
-                }
-            };
+                let analysis = match analyzer.analyze_repository(&url).await {
+                    Ok(a) => a,
+                    Err(e) => {
+                        warn!(%job_id, err = %e, "Discovery failed");
+                        let _ = db::queries::IngestJobQueries::update_job_status(
+                            db_pool.pool(),
+                            job_id,
+                            JobStatus::Failed,
+                            None,
+                            Some(&e.to_string()),
+                        )
+                        .await;
+                        // Stop heartbeat
+                        let _ = hb_tx.send(());
+                        let _ = hb_handle.await;
+                        return;
+                    }
+                };
 
-            // 2) Execute plan with strict allowlist
-            let exec_res = execute_cli_plan(&analysis, &doc_type, &url).await;
-            match exec_res {
-                Ok(output) => {
-                    debug!(%job_id, out_len = output.len(), "Ingest completed");
-                    let _ = db::queries::IngestJobQueries::update_job_status(
-                        db_pool.pool(),
-                        job_id,
-                        JobStatus::Completed,
-                        Some(&output),
-                        None,
-                    )
-                    .await;
+                // 2) Execute plan with strict allowlist
+                let exec_res = execute_cli_plan(&analysis, &doc_type, &url).await;
+                match exec_res {
+                    Ok(output) => {
+                        debug!(%job_id, out_len = output.len(), "Ingest completed");
+                        let _ = db::queries::IngestJobQueries::update_job_status(
+                            db_pool.pool(),
+                            job_id,
+                            JobStatus::Completed,
+                            Some(&output),
+                            None,
+                        )
+                        .await;
+                    }
+                    Err(e) => {
+                        warn!(%job_id, err = %e, "Ingest plan execution failed");
+                        let _ = db::queries::IngestJobQueries::update_job_status(
+                            db_pool.pool(),
+                            job_id,
+                            JobStatus::Failed,
+                            None,
+                            Some(&e.to_string()),
+                        )
+                        .await;
+                    }
                 }
-                Err(e) => {
-                    warn!(%job_id, err = %e, "Ingest plan execution failed");
-                    let _ = db::queries::IngestJobQueries::update_job_status(
-                        db_pool.pool(),
-                        job_id,
-                        JobStatus::Failed,
-                        None,
-                        Some(&e.to_string()),
-                    )
-                    .await;
-                }
-            }
 
-            // Stop heartbeat
+                // Stop heartbeat
                 let _ = hb_tx.send(());
                 let _ = hb_handle.await;
             });

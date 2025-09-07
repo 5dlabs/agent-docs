@@ -167,72 +167,72 @@ impl Tool for AddRustCrateTool {
             let version_owned = version.map(String::from);
 
             tokio::spawn(async move {
-            // Global concurrency cap for crate ingestion jobs
-            let _permit = get_crate_job_semaphore().acquire_owned().await.ok();
-            tracing::info!("Background task started for crate: {}", crate_name_owned);
-            let mut rust_loader = RustLoader::new();
+                // Global concurrency cap for crate ingestion jobs
+                let _permit = get_crate_job_semaphore().acquire_owned().await.ok();
+                tracing::info!("Background task started for crate: {}", crate_name_owned);
+                let mut rust_loader = RustLoader::new();
 
-            // First, update job status to running
-            if let Err(e) = job_processor
-                .update_job_status(job_id, JobStatus::Running, Some(0), None)
-                .await
-            {
-                tracing::error!("Failed to update job status to running: {}", e);
-            }
-
-            // Heartbeat task to keep updated_at fresh while job runs
-            let (hb_tx, mut hb_rx) = oneshot::channel::<()>();
-            let hb_processor = job_processor.clone();
-            let hb_job_id = job_id;
-            let hb_handle = tokio::spawn(async move {
-                let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
-                loop {
-                    tokio::select! {
-                        _ = interval.tick() => {
-                            let _ = hb_processor.update_job_status(hb_job_id, JobStatus::Running, None, None).await;
-                        }
-                        _ = &mut hb_rx => {
-                            break;
-                        }
-                    }
-                }
-            });
-
-            if let Err(e) = Self::process_crate_ingestion(
-                &job_processor,
-                &mut rust_loader,
-                &embedding_client,
-                &db_pool,
-                job_id,
-                &crate_name_owned,
-                version_owned.as_deref(),
-                features.as_ref(),
-                include_dev_deps,
-                force_update,
-                atomic_rollback,
-            )
-            .await
-            {
-                tracing::error!(
-                    "Background crate ingestion failed for {}: {}",
-                    crate_name_owned,
-                    e
-                );
-                // Update job status to failed
-                if let Err(update_err) = job_processor
-                    .update_job_status(job_id, JobStatus::Failed, Some(0), Some(&e.to_string()))
+                // First, update job status to running
+                if let Err(e) = job_processor
+                    .update_job_status(job_id, JobStatus::Running, Some(0), None)
                     .await
                 {
-                    tracing::error!("Failed to update job status to failed: {}", update_err);
+                    tracing::error!("Failed to update job status to running: {}", e);
                 }
-            } else {
-                tracing::info!(
-                    "Background crate ingestion completed successfully for: {}",
-                    crate_name_owned
-                );
-            }
 
-            // Stop heartbeat
+                // Heartbeat task to keep updated_at fresh while job runs
+                let (hb_tx, mut hb_rx) = oneshot::channel::<()>();
+                let hb_processor = job_processor.clone();
+                let hb_job_id = job_id;
+                let hb_handle = tokio::spawn(async move {
+                    let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+                    loop {
+                        tokio::select! {
+                            _ = interval.tick() => {
+                                let _ = hb_processor.update_job_status(hb_job_id, JobStatus::Running, None, None).await;
+                            }
+                            _ = &mut hb_rx => {
+                                break;
+                            }
+                        }
+                    }
+                });
+
+                if let Err(e) = Self::process_crate_ingestion(
+                    &job_processor,
+                    &mut rust_loader,
+                    &embedding_client,
+                    &db_pool,
+                    job_id,
+                    &crate_name_owned,
+                    version_owned.as_deref(),
+                    features.as_ref(),
+                    include_dev_deps,
+                    force_update,
+                    atomic_rollback,
+                )
+                .await
+                {
+                    tracing::error!(
+                        "Background crate ingestion failed for {}: {}",
+                        crate_name_owned,
+                        e
+                    );
+                    // Update job status to failed
+                    if let Err(update_err) = job_processor
+                        .update_job_status(job_id, JobStatus::Failed, Some(0), Some(&e.to_string()))
+                        .await
+                    {
+                        tracing::error!("Failed to update job status to failed: {}", update_err);
+                    }
+                } else {
+                    tracing::info!(
+                        "Background crate ingestion completed successfully for: {}",
+                        crate_name_owned
+                    );
+                }
+
+                // Stop heartbeat
                 let _ = hb_tx.send(());
                 let _ = hb_handle.await;
             });
