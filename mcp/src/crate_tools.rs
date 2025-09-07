@@ -313,8 +313,8 @@ impl AddRustCrateTool {
         let insert_result = sqlx::query(
             r"
             INSERT INTO document_sources (doc_type, source_name, config, enabled)
-            VALUES ('rust'::doc_type, $1, $2, true)
-            ON CONFLICT (doc_type, source_name) DO NOTHING
+            VALUES ('rust', $1, $2, true)
+            ON CONFLICT DO NOTHING
             ",
         )
         .bind(crate_name)
@@ -334,7 +334,7 @@ impl AddRustCrateTool {
                     sqlx::query(
                         r"
                         INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                        VALUES ('rust'::doc_type, $1, $2, true)
+                        VALUES ('rust', $1, $2, true)
                         ",
                     )
                     .bind(crate_name)

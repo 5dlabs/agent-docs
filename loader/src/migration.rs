@@ -513,7 +513,7 @@ impl MigrationPipeline {
         let insert_result = sqlx::query(
             r"
             INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, embedding, token_count, created_at, updated_at)
-            VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (doc_type, source_name, doc_path) DO UPDATE SET
                 content = EXCLUDED.content,
                 metadata = EXCLUDED.metadata,
@@ -547,7 +547,7 @@ impl MigrationPipeline {
                     sqlx::query(
                         r"
                         INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, embedding, token_count, created_at, updated_at)
-                        VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $9, $10)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                         ",
                     )
                     .bind(document.id)
