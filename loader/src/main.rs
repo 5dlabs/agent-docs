@@ -330,16 +330,10 @@ async fn handle_database_command(
     let pool = DatabasePool::from_env().await?;
     info!("✅ Connected to database");
 
-    // Collect all JSON files from the directory
+    // Collect all JSON files from the directory (recursively)
     let mut json_files = Vec::new();
-    let mut entries = tokio::fs::read_dir(input_dir).await?;
-
-    while let Some(entry) = entries.next_entry().await? {
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("json") {
-            json_files.push(path);
-        }
-    }
+    // Reuse scan_dir helper to recursively gather .json files
+    scan_dir(input_dir, &["json"], true, &mut json_files)?;
 
     if json_files.is_empty() {
         return Err(format!("No JSON files found in {}", input_dir.display()).into());
