@@ -41,7 +41,7 @@ echo "[INFO]  Repo URL : ${REPO_URL}"
 echo "[INFO]  Doc Type : ${DOC_TYPE}"
 echo
 
-START_PAYLOAD=$(jq -n --arg url "${REPO_URL}" --arg doc_type "${DOC_TYPE}" '{url:$url, doc_type:$doc_type, yes:true}')
+START_PAYLOAD=$(jq -n --arg url "${REPO_URL}" --arg doc_type "${DOC_TYPE}" '{url:$url, doc_type:$doc_type}')
 
 echo "[INFO] Enqueuing job..."
 START_RESP=$(curl -sS ${CURL_FLAGS} -X POST "${BASE_URL}/ingest/intelligent" \
@@ -122,4 +122,3 @@ while :; do
   fi
   sleep "${POLL_INTERVAL}"
 done
-

@@ -49,8 +49,7 @@ Starts an intelligent document ingestion job for the specified URL and document 
 ```json
 {
   "url": "string",      // Required: URL to ingest
-  "doc_type": "string", // Required: Document type (e.g., "github", "web", "api")
-  "yes": boolean        // Optional: Auto-confirm ingestion (default: true)
+  "doc_type": "string"  // Required: Document type (e.g., "github", "web", "api")
 }
 ```
 
@@ -77,8 +76,7 @@ curl -X POST http://localhost:3001/ingest/intelligent \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://github.com/example/repo",
-    "doc_type": "github",
-    "yes": true
+    "doc_type": "github"
   }'
 ```
 
@@ -88,8 +86,7 @@ curl -X POST https://doc-server.agent-platform.svc.cluster.local:3001/ingest/int
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://github.com/example/repo",
-    "doc_type": "github",
-    "yes": true
+    "doc_type": "github"
   }'
 ```
 

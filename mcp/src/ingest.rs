@@ -15,12 +15,6 @@ use uuid::Uuid;
 pub struct IntelligentIngestRequest {
     pub url: String,
     pub doc_type: String,
-    #[serde(default = "default_yes")] // default true
-    pub yes: bool,
-}
-
-const fn default_yes() -> bool {
-    true
 }
 
 async fn run_cmd(mut cmd: TokioCommand) -> anyhow::Result<String> {
@@ -81,7 +75,7 @@ impl IngestJobManager {
     ///
     /// # Errors
     /// Returns an error if the job record cannot be created in the database.
-    pub async fn enqueue(&self, url: String, doc_type: String, yes: bool) -> anyhow::Result<Uuid> {
+    pub async fn enqueue(&self, url: String, doc_type: String) -> anyhow::Result<Uuid> {
         // Create job in DB first so any replica can see it
         let created =
             db::queries::IngestJobQueries::create_job(self.db_pool.pool(), &url, &doc_type).await?;
@@ -120,7 +114,7 @@ impl IngestJobManager {
             };
 
             // 2) Execute plan with strict allowlist
-            let exec_res = execute_cli_plan(&analysis, &doc_type, yes).await;
+            let exec_res = execute_cli_plan(&analysis, &doc_type).await;
             match exec_res {
                 Ok(output) => {
                     debug!(%job_id, out_len = output.len(), "Ingest completed");
@@ -172,7 +166,6 @@ fn work_base() -> std::path::PathBuf {
 async fn execute_cli_plan(
     analysis: &RepositoryAnalysis,
     doc_type: &str,
-    _yes: bool,
 ) -> anyhow::Result<String> {
     let mut combined = String::new();
 
@@ -326,7 +319,7 @@ pub async fn intelligent_ingest_handler(
 
     let job_id = state
         .ingest_jobs
-        .enqueue(body.url, body.doc_type, body.yes)
+        .enqueue(body.url, body.doc_type)
         .await
         .map_err(|e| {
             (

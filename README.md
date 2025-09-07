@@ -136,7 +136,7 @@ The server provides an asynchronous endpoint to ingest a GitHub repository using
 See also: `docs/llm-roles.md` for the clear separation of LLM responsibilities.
 
 - POST `/ingest/intelligent`
-  - Body: `{ "url": "https://github.com/org/repo", "doc_type": "<required>", "yes": true }`
+  - Body: `{ "url": "https://github.com/org/repo", "doc_type": "<required>" }`
   - Returns: `{ "job_id": "<uuid>" }`
   - Behavior: enqueues ingestion and returns immediately. The `doc_type` you supply is enforced for DB insertion.
 
