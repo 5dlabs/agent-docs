@@ -113,34 +113,143 @@ impl RustLoader {
         crate_name: &str,
         version: Option<&str>,
     ) -> Result<(CrateMetadata, Vec<DocPage>)> {
-        info!(
-            "Loading crate docs: {} (version: {:?}) [stub]",
-            crate_name, version
-        );
+        info!("Loading crate docs: {} (version: {:?})", crate_name, version);
         let meta = self.fetch_crate_metadata(crate_name).await?;
         let target = version.unwrap_or(&meta.newest_version);
-        let pages = Self::create_stub_documentation(crate_name, target);
+        let pages = self.crawl_docs_rs(crate_name, target, Some(2000)).await?;
         Ok((meta, pages))
     }
 
-    fn create_stub_documentation(crate_name: &str, version: &str) -> Vec<DocPage> {
-        let base_url = format!("https://docs.rs/{crate_name}/{version}");
-        vec![
-            DocPage {
-                url: base_url.clone(),
-                content: format!("# {crate_name} v{version}\n\nStub documentation page."),
-                item_type: "crate".into(),
-                module_path: crate_name.into(),
-                extracted_at: Utc::now(),
-            },
-            DocPage {
-                url: format!("{base_url}/struct.Example.html"),
-                content: "# Example Struct\n\nStub page for Example struct.".into(),
-                item_type: "struct".into(),
-                module_path: format!("{crate_name}::Example"),
-                extracted_at: Utc::now(),
-            },
-        ]
+    async fn crawl_docs_rs(
+        &mut self,
+        crate_name: &str,
+        version: &str,
+        max_pages: Option<usize>,
+    ) -> Result<Vec<DocPage>> {
+        use std::collections::{HashSet, VecDeque};
+
+        let base_url = format!(
+            "https://docs.rs/{}/{}/{}",
+            crate_name, version, crate_name
+        );
+
+        let max_pages = max_pages.unwrap_or(10_000);
+        let mut pages = Vec::new();
+        let mut visited: HashSet<String> = HashSet::new();
+        let mut queue: VecDeque<String> = VecDeque::new();
+        queue.push_back(base_url.clone());
+
+        let mut processed = 0usize;
+
+        fn should_process_url(url: &str) -> bool {
+            if url.contains("/src/") {
+                return false;
+            }
+            if url.contains("#method.")
+                || url.contains("#impl-")
+                || url.contains("#associatedtype.")
+                || url.contains("#associatedconstant.")
+            {
+                return false;
+            }
+            true
+        }
+
+        while let Some(url) = queue.pop_front() {
+            if processed >= max_pages {
+                info!("Reached page limit ({}), stopping crawl", max_pages);
+                break;
+            }
+            if !visited.insert(url.clone()) {
+                continue;
+            }
+            if !should_process_url(&url) {
+                continue;
+            }
+
+            let html = match self.get_text(&url).await {
+                Ok(t) => t,
+                Err(e) => {
+                    debug!("Failed to fetch {}: {}", url, e);
+                    continue;
+                }
+            };
+
+            // Limit non-Send scraper types to this inner scope so they are dropped before awaits
+            let mut discovered_links: Vec<String> = Vec::new();
+            {
+                let document = Html::parse_document(&html);
+                let content_selector =
+                    Selector::parse("div.docblock, section.docblock, .rustdoc .docblock")
+                        .unwrap_or_else(|_| Selector::parse("body").expect("body selector"));
+
+                // Extract content blocks
+                let mut blocks: Vec<String> = Vec::new();
+                for element in document.select(&content_selector) {
+                    let text_content: String = element
+                        .text()
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .collect::<Vec<&str>>()
+                        .join("\n");
+                    if !text_content.is_empty() {
+                        blocks.push(text_content);
+                    }
+                }
+
+                if !blocks.is_empty() {
+                    let item_type = if url.contains("/struct.") {
+                        "struct"
+                    } else if url.contains("/fn.") {
+                        "function"
+                    } else if url.ends_with("/index.html") || url == base_url {
+                        "crate"
+                    } else {
+                        "module"
+                    };
+
+                    pages.push(DocPage {
+                        url: url.clone(),
+                        content: blocks.join("\n\n"),
+                        item_type: item_type.to_string(),
+                        module_path: Self::extract_module_path(&url, crate_name),
+                        extracted_at: Utc::now(),
+                    });
+                }
+
+                // Link discovery for first ~75% of crawl
+                if processed < (max_pages * 3 / 4) {
+                    if let Ok(link_sel) = Selector::parse("a") {
+                        for link in document.select(&link_sel) {
+                            if let Some(href) = link.value().attr("href") {
+                                if let Ok(base) = Url::parse(&url) {
+                                    if let Ok(abs) = base.join(href) {
+                                        let link_url = abs.to_string();
+                                        if link_url.contains("docs.rs")
+                                            && link_url.contains(crate_name)
+                                            && should_process_url(&link_url)
+                                            && !visited.contains(&link_url)
+                                        {
+                                            discovered_links.push(link_url);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            for link_url in discovered_links {
+                queue.push_back(link_url);
+            }
+
+            processed += 1;
+            // Extra small delay to be respectful
+            time::sleep(Duration::from_millis(500)).await;
+        }
+
+        Ok(pages)
     }
 
     async fn fetch_crate_metadata(&mut self, crate_name: &str) -> Result<CrateMetadata> {
