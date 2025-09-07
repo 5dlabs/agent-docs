@@ -183,6 +183,9 @@ fn work_base() -> std::path::PathBuf {
 async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyhow::Result<String> {
     let mut combined = String::new();
     let mut executed_cli_steps: usize = 0;
+    let strict_plan = std::env::var("INGEST_STRICT_PLAN")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
 
     for (i, original_cmd) in analysis.cli_commands.iter().enumerate() {
         // Remap /tmp to work_base
@@ -203,6 +206,15 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
             if args.len() > 1 {
                 let requested_path = std::path::PathBuf::from(&args[1]);
                 if !requested_path.exists() {
+                    if strict_plan {
+                        let msg = format!(
+                            "Requested path not found ({}). Strict plan enabled; not applying fallbacks.",
+                            requested_path.display()
+                        );
+                        warn!("{}", msg);
+                        let _ = writeln!(combined, "⚠️  {msg}");
+                        continue;
+                    }
                     // Attempt a smart fallback: check common documentation directories inside the cloned repo
                     let repo_root = work_base().join("repo-analysis");
                     let candidates = [
@@ -272,13 +284,13 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                     }
                     i += 1;
                 }
-                if !found_ext {
+                if !found_ext && !strict_plan {
                     args.push("--extensions".to_string());
                     // Minimal focused default when model omitted
                     args.push("md,mdx,rst,html,txt".to_string());
                 }
                 // Ensure --recursive present
-                if !args.iter().any(|a| a == "--recursive") {
+                if !strict_plan && !args.iter().any(|a| a == "--recursive") {
                     args.push("--recursive".to_string());
                 }
             }
@@ -302,7 +314,7 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
     }
 
     // If none of the CLI steps were executed (e.g., all paths invalid), attempt auto-detection
-    if executed_cli_steps == 0 {
+    if executed_cli_steps == 0 && !strict_plan {
         let repo_root = work_base().join("repo-analysis");
         let candidates = [
             repo_root.join("docs"),

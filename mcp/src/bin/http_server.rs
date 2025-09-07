@@ -636,6 +636,44 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         dependencies: vec!["009_job_status_enum".to_string()],
         checksum: calculate_checksum(ingest_jobs_sql),
     });
+
+    // Migration 11: Create search-related indexes (optional, idempotent)
+    #[allow(clippy::needless_raw_string_hashes)]
+    let search_indexes_sql = r"
+        DO $$
+        BEGIN
+            -- Optional extension for trigram index; skip if not permitted
+            BEGIN
+                CREATE EXTENSION IF NOT EXISTS pg_trgm;
+            EXCEPTION
+                WHEN insufficient_privilege THEN
+                    RAISE NOTICE 'pg_trgm extension not available, skipping';
+            END;
+
+            -- GIN index on FTS expression to accelerate websearch_to_tsquery filtering
+            CREATE INDEX IF NOT EXISTS idx_documents_fts
+            ON documents USING GIN (to_tsvector('english', coalesce(content,'')));
+
+            -- Trigram index for doc_path fuzzy matches
+            CREATE INDEX IF NOT EXISTS idx_documents_doc_path_trgm
+            ON documents USING GIN (doc_path gin_trgm_ops);
+        END $$;
+    ";
+    migration_manager.register_migration(MigrationInfo {
+        id: "011_search_indexes".to_string(),
+        version: "1.2.0".to_string(),
+        description: "Add FTS and trigram indexes to improve query latency".to_string(),
+        up_sql: search_indexes_sql.to_string(),
+        down_sql: Some(
+            r"
+            DROP INDEX IF EXISTS idx_documents_fts;
+            DROP INDEX IF EXISTS idx_documents_doc_path_trgm;
+        "
+            .to_string(),
+        ),
+        dependencies: vec!["003_documents_table".to_string()],
+        checksum: calculate_checksum(search_indexes_sql),
+    });
 }
 
 /// Run database migrations only (for K8s migration jobs)
