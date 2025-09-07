@@ -255,6 +255,10 @@ async fn execute_cli_plan(
     doc_type: &str,
     repo_url: &str,
 ) -> anyhow::Result<String> {
+    // Generate unique directory for this ingestion
+    let unique_repo_dir = generate_unique_repo_dir(repo_url);
+    let unique_docs_dir = format!("{}_out", unique_repo_dir);
+
     let mut combined = String::new();
     let mut executed_cli_steps: usize = 0;
     let strict_plan = std::env::var("INGEST_STRICT_PLAN")
@@ -262,12 +266,11 @@ async fn execute_cli_plan(
         .unwrap_or(false);
 
     for (i, original_cmd) in analysis.cli_commands.iter().enumerate() {
-        // Remap /tmp to work_base
-        let cmd = if original_cmd.contains("/tmp/") {
-            original_cmd.replace("/tmp", work_base().to_string_lossy().as_ref())
-        } else {
-            original_cmd.clone()
-        };
+        // Remap placeholders and /tmp to work_base
+        let cmd = original_cmd
+            .replace("UNIQUE_REPO_DIR", &work_base().join(&unique_repo_dir).to_string_lossy())
+            .replace("UNIQUE_DOCS_OUT", &work_base().join(&unique_docs_dir).to_string_lossy())
+            .replace("/tmp", work_base().to_string_lossy().as_ref());
 
         // Normalize cargo/loader invocations
         let (program, mut args) = normalize_command(&cmd, doc_type);
