@@ -240,8 +240,10 @@ fn work_base() -> std::path::PathBuf {
     static WORK_BASE: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
     WORK_BASE
         .get_or_init(|| {
-            std::env::var("INGEST_WORK_DIR")
-                .map_or_else(|_| std::env::temp_dir().join("ingest-work"), std::path::PathBuf::from)
+            std::env::var("INGEST_WORK_DIR").map_or_else(
+                |_| std::env::temp_dir().join("ingest-work"),
+                std::path::PathBuf::from,
+            )
         })
         .clone()
 }
