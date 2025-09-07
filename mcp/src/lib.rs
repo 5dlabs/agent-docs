@@ -12,6 +12,7 @@ pub mod headers;
 pub mod health;
 pub mod ingest;
 pub mod job_queue;
+pub mod queue;
 pub mod metrics;
 pub mod protocol_version;
 pub mod security;

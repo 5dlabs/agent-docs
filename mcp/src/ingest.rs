@@ -99,9 +99,18 @@ impl IngestJobManager {
             db::queries::IngestJobQueries::create_job(self.db_pool.pool(), &url, &doc_type).await?;
 
         let job_id = created.id;
-        let db_pool = self.db_pool.clone();
 
-        tokio::spawn(async move {
+        if crate::queue::use_redis_queue() {
+            let msg = crate::queue::RedisJobMessage::new(
+                job_id,
+                "ingest",
+                3,
+                json!({ "url": url.clone(), "doc_type": doc_type.clone() }),
+            );
+            crate::queue::enqueue_job(&msg).await?;
+        } else {
+            let db_pool = self.db_pool.clone();
+            tokio::spawn(async move {
             // Global concurrency cap for ingest jobs
             let _permit = get_ingest_semaphore().acquire_owned().await.ok();
             info!(%job_id, %url, %doc_type, "Starting intelligent ingest job");
@@ -188,9 +197,10 @@ impl IngestJobManager {
             }
 
             // Stop heartbeat
-            let _ = hb_tx.send(());
-            let _ = hb_handle.await;
-        });
+                let _ = hb_tx.send(());
+                let _ = hb_handle.await;
+            });
+        }
 
         Ok(job_id)
     }
@@ -252,8 +262,11 @@ fn generate_unique_repo_dir(repo_url: &str) -> String {
 }
 
 /// Execute discovery CLI commands with a strict allowlist
+///
+/// # Errors
+/// Returns an error if commands fail validation or execution fails.
 #[allow(clippy::too_many_lines)]
-async fn execute_cli_plan(
+pub async fn execute_cli_plan(
     analysis: &RepositoryAnalysis,
     doc_type: &str,
     repo_url: &str,
@@ -451,7 +464,7 @@ async fn execute_cli_plan(
     Ok(combined)
 }
 
-fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
+pub(crate) fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
     let loader = loader_bin().to_string_lossy().to_string();
     let parts: Vec<&str> = cmd.split_whitespace().collect();
     if parts.is_empty() {
@@ -515,7 +528,7 @@ fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
     )
 }
 
-fn enforce_doc_type(args: &mut Vec<String>, doc_type: &str) {
+pub(crate) fn enforce_doc_type(args: &mut Vec<String>, doc_type: &str) {
     if args.first().map(String::as_str) == Some("database") {
         // ensure --doc-type doc_type present (override if needed)
         let mut out = Vec::with_capacity(args.len() + 2);
@@ -542,7 +555,7 @@ fn enforce_doc_type(args: &mut Vec<String>, doc_type: &str) {
     }
 }
 
-fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<()> {
+pub(crate) fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<()> {
     match program {
         p if p == loader_bin().to_string_lossy() => {
             if args.is_empty() {
@@ -583,7 +596,7 @@ fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<()> {
 }
 
 /// Remove or translate flags the loader CLI does not support.
-fn sanitize_loader_args(args: &mut Vec<String>) {
+pub(crate) fn sanitize_loader_args(args: &mut Vec<String>) {
     if args.is_empty() {
         return;
     }

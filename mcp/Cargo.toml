@@ -30,6 +30,7 @@ tokio-stream = { workspace = true }
 url = "2.5"
 sqlx = { workspace = true }
 pgvector = { workspace = true }
+redis = { workspace = true }
 
 # Local crates
 db = { path = "../db" }
@@ -37,6 +38,9 @@ embed = { path = "../embed" }
 loader = { path = "../loader" }
 discovery = { path = "../discovery" }
 rust_crates = { path = "../rust_crates" }
+
+[features]
+default = []
 
 [dev-dependencies]
 tokio-test = { workspace = true }

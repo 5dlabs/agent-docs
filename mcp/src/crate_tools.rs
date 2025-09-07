@@ -143,14 +143,30 @@ impl Tool for AddRustCrateTool {
         // Enqueue the background job
         let job_id = self.job_processor.enqueue_add_crate_job(crate_name).await?;
 
-        // Start async processing in background
-        let job_processor = self.job_processor.clone();
-        let embedding_client = self.embedding_client.clone();
-        let db_pool = self.db_pool.clone();
-        let crate_name_owned = crate_name.to_string();
-        let version_owned = version.map(String::from);
+        // Start async processing via Redis or local background
+        if crate::queue::use_redis_queue() {
+            let msg = crate::queue::RedisJobMessage::new(
+                job_id,
+                "crate_add",
+                3,
+                json!({
+                    "crate_name": crate_name,
+                    "version": version,
+                    "features": features,
+                    "include_dev_deps": include_dev_deps,
+                    "force_update": force_update,
+                    "atomic_rollback": atomic_rollback
+                }),
+            );
+            crate::queue::enqueue_job(&msg).await?;
+        } else {
+            let job_processor = self.job_processor.clone();
+            let embedding_client = self.embedding_client.clone();
+            let db_pool = self.db_pool.clone();
+            let crate_name_owned = crate_name.to_string();
+            let version_owned = version.map(String::from);
 
-        tokio::spawn(async move {
+            tokio::spawn(async move {
             // Global concurrency cap for crate ingestion jobs
             let _permit = get_crate_job_semaphore().acquire_owned().await.ok();
             tracing::info!("Background task started for crate: {}", crate_name_owned);
@@ -217,9 +233,10 @@ impl Tool for AddRustCrateTool {
             }
 
             // Stop heartbeat
-            let _ = hb_tx.send(());
-            let _ = hb_handle.await;
-        });
+                let _ = hb_tx.send(());
+                let _ = hb_handle.await;
+            });
+        }
 
         // Return 202 Accepted with job ID immediately
         Ok(json!({
@@ -231,6 +248,41 @@ impl Tool for AddRustCrateTool {
 }
 
 impl AddRustCrateTool {
+    /// Public wrapper for worker usage to process crate ingestion
+    ///
+    /// # Errors
+    /// Returns an error if ingestion fails or database updates cannot be performed.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn process_in_worker(
+        &self,
+        job_processor: &CrateJobProcessor,
+        rust_loader: &mut RustLoader,
+        embedding_client: &Arc<dyn EmbeddingClient + Send + Sync>,
+        db_pool: &DatabasePool,
+        job_id: Uuid,
+        crate_name: &str,
+        version: Option<&str>,
+        features: Option<&Vec<String>>,
+        include_dev_deps: bool,
+        force_update: bool,
+        atomic_rollback: bool,
+    ) -> Result<()> {
+        Self::process_crate_ingestion(
+            job_processor,
+            rust_loader,
+            embedding_client,
+            db_pool,
+            job_id,
+            crate_name,
+            version,
+            features,
+            include_dev_deps,
+            force_update,
+            atomic_rollback,
+        )
+        .await
+    }
+
     /// Process crate ingestion in background with enhanced options
     #[allow(clippy::too_many_arguments)]
     async fn process_crate_ingestion(

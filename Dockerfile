@@ -25,7 +25,9 @@ ENV SQLX_OFFLINE=true \
 # Ensure problematic transitive dep stays pre-2024, then build
 RUN rustc --version && cargo --version && \
     cargo update -p base64ct --precise 1.7.3 && \
-    cargo build --release --workspace
+    cargo build --release --workspace && \
+    # Build Redis worker binary with feature flag enabled
+    cargo build --release -p mcp --features redis-queue --bin job_worker
 
 # 2) Runtime stage: Claude base image with Node and Claude installed
 FROM --platform=linux/amd64 ghcr.io/5dlabs/claude:latest
@@ -50,8 +52,9 @@ WORKDIR /app
 # Copy compiled binaries from builder
 COPY --from=builder /app/target/release/http_server /app/http_server
 COPY --from=builder /app/target/release/loader /app/loader
-RUN chown app:app /app/http_server /app/loader && \
-    chmod +x /app/http_server /app/loader
+COPY --from=builder /app/target/release/job_worker /app/job_worker
+RUN chown app:app /app/http_server /app/loader /app/job_worker && \
+    chmod +x /app/http_server /app/loader /app/job_worker
 
 # Drop privileges
 USER app
