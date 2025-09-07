@@ -127,9 +127,9 @@ CRITICAL: You MUST respond with valid JSON in exactly this format. Prefer widely
         "source_name": "github"
     }},
     "cli_commands": [
-        "git clone --depth 1 REPO_URL /tmp/repo-analysis",
-        "loader cli /tmp/repo-analysis --extensions md,html --recursive -o /tmp/docs_out",
-        "loader database --input-dir /tmp/docs_out --doc-type example --source-name github --yes"
+        "git clone --depth 1 REPO_URL UNIQUE_REPO_DIR",
+        "loader cli UNIQUE_REPO_DIR --extensions md,html --recursive -o UNIQUE_DOCS_OUT",
+        "loader database --input-dir UNIQUE_DOCS_OUT --doc-type example --source-name github --yes"
     ],
     "reasoning": "Detailed explanation of the strategy and decisions."
 }}
@@ -161,12 +161,12 @@ IMPORTANT CONSTRAINTS FOR cli_commands:
    - Any other flags not listed above
 
 3. To process specific directories, use the PATH argument directly:
-   - CORRECT: "loader cli /tmp/repo-analysis/docs --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o /tmp/docs_out"
-   - WRONG: "loader cli /tmp/repo-analysis --include-dirs docs --extensions md --recursive -o /tmp/docs_out"
+   - CORRECT: "loader cli UNIQUE_REPO_DIR/docs --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o UNIQUE_DOCS_OUT"
+   - WRONG: "loader cli UNIQUE_REPO_DIR --include-dirs docs --extensions md --recursive -o UNIQUE_DOCS_OUT"
 
 4. If unsure of the exact path, include multiple 'loader cli' commands, each targeting a different common docs directory (e.g., docs/, website/content/docs, docs/source).
-   - CORRECT: "loader cli /tmp/repo-analysis/website/content/docs --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o /tmp/docs_out"
-   - CORRECT: "loader cli /tmp/repo-analysis/docs/source --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o /tmp/docs_out"
+   - CORRECT: "loader cli UNIQUE_REPO_DIR/website/content/docs --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o UNIQUE_DOCS_OUT"
+   - CORRECT: "loader cli UNIQUE_REPO_DIR/docs/source --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o UNIQUE_DOCS_OUT"
 
 RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JSON.
 "#,

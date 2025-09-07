@@ -161,7 +161,7 @@ impl IngestJobManager {
             };
 
             // 2) Execute plan with strict allowlist
-            let exec_res = execute_cli_plan(&analysis, &doc_type).await;
+            let exec_res = execute_cli_plan(&analysis, &doc_type, &url).await;
             match exec_res {
                 Ok(output) => {
                     debug!(%job_id, out_len = output.len(), "Ingest completed");
@@ -230,9 +230,27 @@ fn work_base() -> std::path::PathBuf {
     std::env::var("INGEST_WORK_DIR").map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from)
 }
 
+/// Generate a unique directory name for repository analysis based on repo URL and timestamp
+fn generate_unique_repo_dir(repo_url: &str) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let mut hasher = DefaultHasher::new();
+    repo_url.hash(&mut hasher);
+    let hash = hasher.finish();
+
+    // Create a unique directory name combining timestamp and hash
+    format!("repo-analysis-{}-{}", timestamp, hash % 10000)
+}
+
 /// Execute discovery CLI commands with a strict allowlist
 #[allow(clippy::too_many_lines)]
-async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyhow::Result<String> {
+async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str, repo_url: &str) -> anyhow::Result<String> {
     let mut combined = String::new();
     let mut executed_cli_steps: usize = 0;
     let strict_plan = std::env::var("INGEST_STRICT_PLAN")
@@ -268,7 +286,8 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                         continue;
                     }
                     // Attempt a smart fallback: check common documentation directories inside the cloned repo
-                    let repo_root = work_base().join("repo-analysis");
+                    let unique_repo_dir = generate_unique_repo_dir(repo_url);
+                    let repo_root = work_base().join(&unique_repo_dir);
                     let candidates = [
                         repo_root.join("docs"),
                         repo_root.join("Documentation"),
@@ -367,7 +386,8 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
 
     // If none of the CLI steps were executed (e.g., all paths invalid), attempt auto-detection
     if executed_cli_steps == 0 && !strict_plan {
-        let repo_root = work_base().join("repo-analysis");
+        let unique_repo_dir = generate_unique_repo_dir(repo_url);
+        let repo_root = work_base().join(&unique_repo_dir);
         let candidates = [
             repo_root.join("docs"),
             repo_root.join("Documentation"),
