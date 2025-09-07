@@ -247,6 +247,7 @@ fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
         if found_loader_bin {
             let mut args: Vec<String> = parts[args_start..].iter().map(|&s| s.to_owned()).collect();
             enforce_doc_type(&mut args, doc_type);
+            sanitize_loader_args(&mut args);
             return (loader, args);
         }
     }
@@ -255,6 +256,7 @@ fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
     if parts[0] == "loader" {
         let mut args: Vec<String> = parts[1..].iter().map(|&s| s.to_owned()).collect();
         enforce_doc_type(&mut args, doc_type);
+        sanitize_loader_args(&mut args);
         return (loader, args);
     }
 
@@ -338,6 +340,35 @@ fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<()> {
         }
         _ => Err(anyhow::anyhow!(format!("program not allowed: {}", program))),
     }
+}
+
+/// Remove or translate flags the loader CLI does not support.
+fn sanitize_loader_args(args: &mut Vec<String>) {
+    if args.is_empty() {
+        return;
+    }
+    if args[0] != "cli" {
+        return;
+    }
+    // Remove flags we don't support and their values (if present)
+    let mut out: Vec<String> = Vec::with_capacity(args.len());
+    let mut i = 0;
+    while i < args.len() {
+        let a = &args[i];
+        if a == "--exclude-patterns" || a == "--include-patterns" {
+            // drop this flag and consume its value if present and not another flag
+            if i + 1 < args.len() && !args[i + 1].starts_with('-') {
+                i += 1; // skip value
+            }
+        } else if a == "--output" {
+            // translate to -o
+            out.push("-o".to_string());
+        } else {
+            out.push(a.clone());
+        }
+        i += 1;
+    }
+    *args = out;
 }
 
 /// Enqueue intelligent ingestion and return a job ID immediately.
