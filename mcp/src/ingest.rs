@@ -242,25 +242,30 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                         continue;
                     }
                 }
-                // Ensure robust extensions and recursion for coverage
+                // Respect plan's extensions by default; optionally augment via env
+                let augment_extensions_enabled = std::env::var("INGEST_AUGMENT_EXTENSIONS")
+                    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                    .unwrap_or(false);
                 // Normalize/augment --extensions
                 let mut i = 1usize;
                 let mut found_ext = false;
                 while i + 1 < args.len() {
                     if args[i] == "--extensions" {
                         found_ext = true;
-                        if let Some(exts) = args.get(i + 1).cloned() {
-                            let mut set: std::collections::BTreeSet<String> = exts
-                                .split(',')
-                                .map(|s| s.trim().to_lowercase())
-                                .filter(|s| !s.is_empty())
-                                .collect();
-                            for e in [
-                                "md", "mdx", "rst", "html", "json", "yaml", "yml", "toml", "txt",
-                            ] {
-                                set.insert(e.to_string());
+                        if augment_extensions_enabled {
+                            if let Some(exts) = args.get(i + 1).cloned() {
+                                let mut set: std::collections::BTreeSet<String> = exts
+                                    .split(',')
+                                    .map(|s| s.trim().to_lowercase())
+                                    .filter(|s| !s.is_empty())
+                                    .collect();
+                                for e in [
+                                    "md", "mdx", "rst", "html", "json", "yaml", "yml", "toml", "txt",
+                                ] {
+                                    set.insert(e.to_string());
+                                }
+                                args[i + 1] = set.into_iter().collect::<Vec<_>>().join(",");
                             }
-                            args[i + 1] = set.into_iter().collect::<Vec<_>>().join(",");
                         }
                         break;
                     }
@@ -268,7 +273,8 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                 }
                 if !found_ext {
                     args.push("--extensions".to_string());
-                    args.push("md,mdx,rst,html,json,yaml,yml,toml,txt".to_string());
+                    // Minimal focused default when model omitted
+                    args.push("md,mdx,rst,html,txt".to_string());
                 }
                 // Ensure --recursive present
                 if !args.iter().any(|a| a == "--recursive") {

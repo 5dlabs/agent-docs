@@ -119,7 +119,7 @@ CRITICAL: You MUST respond with valid JSON in exactly this format. Prefer widely
     }},
     "ingestion_strategy": {{
         "docs_only": true,
-        "extensions": ["md", "mdx", "rst", "html", "json", "yaml", "yml", "toml", "txt"],
+        "extensions": ["<choose only relevant formats>", "md", "mdx", "rst", "html"],
         "recursive": true,
         "chunk_size": 2000,
         "use_ai_chunking": true,
@@ -134,7 +134,7 @@ CRITICAL: You MUST respond with valid JSON in exactly this format. Prefer widely
     "reasoning": "Detailed explanation of the strategy and decisions."
 }}
 
-DISCOVERY HINTS (consider these common layouts when picking include_paths):
+DISCOVERY HINTS (consider these common layouts when picking include_paths and formats):
 - docs/
 - Documentation/
 - doc/
@@ -144,6 +144,7 @@ DISCOVERY HINTS (consider these common layouts when picking include_paths):
 - docs/source (Sphinx)
 - content/docs
 - docs/content
+Choose the minimal set of file formats that carry documentation value for this repo. Prefer md/mdx/rst/html. Include yaml/yml/toml/json only if they contain human-facing docs (not just config or generated schemas). Exclude build output, vendored libs, and test fixtures.
 
 IMPORTANT CONSTRAINTS FOR cli_commands:
 1. The 'loader cli' command ONLY accepts these arguments:
