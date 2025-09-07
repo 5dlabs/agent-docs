@@ -224,7 +224,7 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                             found.display()
                         );
                         warn!("{}", msg);
-                        let _ = writeln!(combined, "⚠️  {}", msg);
+                        let _ = writeln!(combined, "⚠️  {msg}");
                         // Replace the include path with the fallback
                         args[1] = found.to_string_lossy().to_string();
                     } else {
@@ -233,7 +233,7 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                             requested_path.display()
                         );
                         warn!("{}", msg);
-                        let _ = writeln!(combined, "⚠️  {}", msg);
+                        let _ = writeln!(combined, "⚠️  {msg}");
                         // Skip this command and continue with the plan
                         continue;
                     }
