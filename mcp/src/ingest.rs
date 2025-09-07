@@ -230,11 +230,13 @@ fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
                     if next == "loader" {
                         found_loader_bin = true;
                         // Find the next -- which should indicate the start of loader arguments
-                        for j in (i + 2)..parts.len() {
-                            if parts[j] == "--" {
-                                args_start = j + 1;
-                                break;
-                            }
+                        if let Some((idx, _)) = parts
+                            .iter()
+                            .enumerate()
+                            .skip(i + 2)
+                            .find(|(_, &part)| part == "--")
+                        {
+                            args_start = idx + 1;
                         }
                         break;
                     }
