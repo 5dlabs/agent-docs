@@ -551,12 +551,13 @@ impl DocumentQueries {
     /// Returns an error if the database query fails.
     pub async fn rust_vector_search(
         pool: &PgPool,
+        query: &str,
         _embedding: &[f32],
         limit: i64,
     ) -> Result<Vec<Document>> {
-        // For now, return Rust documents with basic relevance scoring
-        let rows = sqlx::query(
-            r"
+        // Perform full-text search on Rust documents with relevance ranking
+        // Try full-text search first, fallback to tokenized ILIKE if FTS not available
+        let fts_sql = r"
             SELECT
                 id,
                 doc_type::text as doc_type,
@@ -566,16 +567,76 @@ impl DocumentQueries {
                 metadata,
                 token_count,
                 created_at,
-                updated_at
+                updated_at,
+                ts_rank_cd(
+                    to_tsvector('english', coalesce(content,'')),
+                    websearch_to_tsquery('english', $1)
+                ) AS rank
             FROM documents
             WHERE doc_type::text = 'rust'
-            ORDER BY LENGTH(content) DESC, created_at DESC
-            LIMIT $1
-            ",
-        )
-        .bind(limit)
-        .fetch_all(pool)
-        .await?;
+              AND (
+                    to_tsvector('english', coalesce(content,'')) @@ websearch_to_tsquery('english', $1)
+                 OR doc_path ILIKE $2
+                 OR content ILIKE $2
+              )
+            ORDER BY
+              rank DESC,
+              created_at DESC
+            LIMIT $3
+        ";
+
+        let fts_attempt = sqlx::query(fts_sql)
+            .bind(query)
+            .bind(format!("%{query}%"))
+            .bind(limit)
+            .fetch_all(pool)
+            .await;
+
+        let rows = match fts_attempt {
+            Ok(rows) => rows,
+            Err(_) => {
+                // Fallback: tokenized ILIKE requiring all significant tokens
+                let tokens: Vec<String> = query
+                    .split_whitespace()
+                    .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
+                    .filter(|t| t.len() >= 3)
+                    .map(|t| format!("%{t}%"))
+                    .collect();
+
+                let mut where_parts = vec!["doc_type::text = $1".to_string()];
+                let mut binds: Vec<String> = Vec::new();
+                let mut bind_index = 2;
+                for _tok in &tokens {
+                    where_parts.push(format!(
+                        "(content ILIKE ${bind_index} OR doc_path ILIKE ${bind_index})"
+                    ));
+                    bind_index += 1;
+                }
+                // Re-add binds in order matching the placeholders
+                binds.extend(tokens.clone());
+
+                // If no tokens, fall back to simple ILIKE of full query
+                if tokens.is_empty() {
+                    where_parts.push("(content ILIKE $2 OR doc_path ILIKE $2)".to_string());
+                    binds.push(format!("%{query}%"));
+                    bind_index = 3;
+                }
+
+                let sql = format!(
+                    "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
+                     FROM documents WHERE {} ORDER BY created_at DESC LIMIT ${}",
+                    where_parts.join(" AND "),
+                    bind_index
+                );
+
+                let mut q = sqlx::query(&sql).bind("rust");
+                for b in &binds {
+                    q = q.bind(b);
+                }
+                q = q.bind(limit);
+                q.fetch_all(pool).await?
+            }
+        };
 
         let docs = rows
             .into_iter()

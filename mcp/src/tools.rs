@@ -157,6 +157,7 @@ impl RustQueryTool {
         // Perform vector similarity search
         let results = DocumentQueries::rust_vector_search(
             self.db_pool.pool(),
+            query,
             &query_embedding,
             limit.unwrap_or(5),
         )
