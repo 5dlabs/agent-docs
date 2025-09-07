@@ -595,46 +595,46 @@ impl DocumentQueries {
         let rows = if let Ok(rows) = fts_attempt {
             rows
         } else {
-                // Fallback: tokenized ILIKE requiring all significant tokens
-                let tokens: Vec<String> = query
-                    .split_whitespace()
-                    .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
-                    .filter(|t| t.len() >= 3)
-                    .map(|t| format!("%{t}%"))
-                    .collect();
+            // Fallback: tokenized ILIKE requiring all significant tokens
+            let tokens: Vec<String> = query
+                .split_whitespace()
+                .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
+                .filter(|t| t.len() >= 3)
+                .map(|t| format!("%{t}%"))
+                .collect();
 
-                let mut where_parts = vec!["doc_type::text = $1".to_string()];
-                let mut binds: Vec<String> = Vec::new();
-                let mut bind_index = 2;
-                for _tok in &tokens {
-                    where_parts.push(format!(
-                        "(content ILIKE ${bind_index} OR doc_path ILIKE ${bind_index})"
-                    ));
-                    bind_index += 1;
-                }
-                // Re-add binds in order matching the placeholders
-                binds.extend(tokens.clone());
+            let mut where_parts = vec!["doc_type::text = $1".to_string()];
+            let mut binds: Vec<String> = Vec::new();
+            let mut bind_index = 2;
+            for _tok in &tokens {
+                where_parts.push(format!(
+                    "(content ILIKE ${bind_index} OR doc_path ILIKE ${bind_index})"
+                ));
+                bind_index += 1;
+            }
+            // Re-add binds in order matching the placeholders
+            binds.extend(tokens.clone());
 
-                // If no tokens, fall back to simple ILIKE of full query
-                if tokens.is_empty() {
-                    where_parts.push("(content ILIKE $2 OR doc_path ILIKE $2)".to_string());
-                    binds.push(format!("%{query}%"));
-                    bind_index = 3;
-                }
+            // If no tokens, fall back to simple ILIKE of full query
+            if tokens.is_empty() {
+                where_parts.push("(content ILIKE $2 OR doc_path ILIKE $2)".to_string());
+                binds.push(format!("%{query}%"));
+                bind_index = 3;
+            }
 
-                let sql = format!(
+            let sql = format!(
                     "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
                      FROM documents WHERE {} ORDER BY created_at DESC LIMIT ${}",
                     where_parts.join(" AND "),
                     bind_index
                 );
 
-                let mut q = sqlx::query(&sql).bind("rust");
-                for b in &binds {
-                    q = q.bind(b);
-                }
-                q = q.bind(limit);
-                q.fetch_all(pool).await?
+            let mut q = sqlx::query(&sql).bind("rust");
+            for b in &binds {
+                q = q.bind(b);
+            }
+            q = q.bind(limit);
+            q.fetch_all(pool).await?
         };
 
         let docs = rows
