@@ -322,7 +322,7 @@ impl UniversalParser {
         // Handle multi-document YAML files (separated by ---)
         let mut combined_text = String::new();
         let mut doc_count = 0;
-        
+
         // Try to parse as multi-document YAML
         for document in serde_yaml::Deserializer::from_str(content) {
             match Value::deserialize(document) {
@@ -346,7 +346,12 @@ impl UniversalParser {
                         break;
                     }
                     // We already parsed some documents, just log the error and continue
-                    warn!("Failed to parse YAML document {} in {}: {}", doc_count + 1, path, e);
+                    warn!(
+                        "Failed to parse YAML document {} in {}: {}",
+                        doc_count + 1,
+                        path,
+                        e
+                    );
                     break;
                 }
             }
