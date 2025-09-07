@@ -45,21 +45,21 @@ impl RedisJobMessage {
 ///
 /// # Errors
 /// Returns an error if Redis is not enabled or the enqueue operation fails.
-pub async fn enqueue_job(_msg: &RedisJobMessage) -> anyhow::Result<()> {
+pub async fn enqueue_job(msg: &RedisJobMessage) -> anyhow::Result<()> {
+    use redis::AsyncCommands;
+
     if !use_redis_queue() {
         return Err(anyhow::anyhow!(
             "USE_REDIS_QUEUE not enabled; refusing to enqueue to Redis"
         ));
     }
 
-    use redis::AsyncCommands;
-
     let url = redis_url_from_env();
     let client = redis::Client::open(url)?;
     let mut con = client.get_multiplexed_async_connection().await?;
 
-    let key = format!("queue:{}:p{}", _msg.job_type, _msg.priority.max(1));
-    let val = serde_json::to_string(_msg)?;
+    let key = format!("queue:{}:p{}", msg.job_type, msg.priority.max(1));
+    let val = serde_json::to_string(msg)?;
 
     // LPUSH for FIFO across priorities when used with BRPOP in worker
     let _: i64 = con.lpush(key, val).await?;
