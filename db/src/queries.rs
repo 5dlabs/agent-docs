@@ -592,9 +592,9 @@ impl DocumentQueries {
             .fetch_all(pool)
             .await;
 
-        let rows = match fts_attempt {
-            Ok(rows) => rows,
-            Err(_) => {
+        let rows = if let Ok(rows) = fts_attempt {
+            rows
+        } else {
                 // Fallback: tokenized ILIKE requiring all significant tokens
                 let tokens: Vec<String> = query
                     .split_whitespace()
@@ -635,7 +635,6 @@ impl DocumentQueries {
                 }
                 q = q.bind(limit);
                 q.fetch_all(pool).await?
-            }
         };
 
         let docs = rows
