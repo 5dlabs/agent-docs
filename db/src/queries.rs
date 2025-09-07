@@ -65,7 +65,7 @@ impl DocumentQueries {
         sqlx::query(
             r#"
             INSERT INTO document_sources (doc_type, source_name, config, enabled)
-            VALUES ($1, $2, '{"auto_created": true}', true)
+            VALUES ($1::doc_type, $2, '{"auto_created": true}', true)
             ON CONFLICT (doc_type, source_name) DO NOTHING
             "#,
         )
@@ -99,7 +99,7 @@ impl DocumentQueries {
                 created_at,
                 updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+            VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
             ON CONFLICT (id) DO UPDATE SET
                 content = EXCLUDED.content,
                 metadata = EXCLUDED.metadata,
@@ -184,7 +184,7 @@ impl DocumentQueries {
                     created_at,
                     updated_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+                VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
 
                 RETURNING
                     id,
