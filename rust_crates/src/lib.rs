@@ -123,6 +123,7 @@ impl RustLoader {
         Ok((meta, pages))
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn crawl_docs_rs(
         &mut self,
         crate_name: &str,
@@ -131,7 +132,7 @@ impl RustLoader {
     ) -> Result<Vec<DocPage>> {
         use std::collections::{HashSet, VecDeque};
 
-        let base_url = format!("https://docs.rs/{}/{}/{}", crate_name, version, crate_name);
+        let base_url = format!("https://docs.rs/{crate_name}/{version}/{crate_name}");
 
         let max_pages = max_pages.unwrap_or(10_000);
         let mut pages = Vec::new();
@@ -140,8 +141,7 @@ impl RustLoader {
         queue.push_back(base_url.clone());
 
         let mut processed = 0usize;
-
-        fn should_process_url(url: &str) -> bool {
+        let should_process_url = |url: &str| -> bool {
             if url.contains("/src/") {
                 return false;
             }
@@ -153,7 +153,7 @@ impl RustLoader {
                 return false;
             }
             true
-        }
+        };
 
         while let Some(url) = queue.pop_front() {
             if processed >= max_pages {
@@ -188,7 +188,7 @@ impl RustLoader {
                 for element in document.select(&content_selector) {
                     let text_content: String = element
                         .text()
-                        .map(|s| s.trim())
+                        .map(str::trim)
                         .filter(|s| !s.is_empty())
                         .collect::<Vec<&str>>()
                         .join("\n");
