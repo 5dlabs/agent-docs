@@ -16,7 +16,22 @@ async fn main() -> Result<()> {
 
     let url = redis_url_from_env();
     let client = redis::Client::open(url)?;
-    let mut con = client.get_multiplexed_async_connection().await?;
+
+    let mut con = if let (Ok(username), Ok(password)) = (
+        std::env::var("REDIS_USERNAME"),
+        std::env::var("REDIS_PASSWORD")
+    ) {
+        info!("Connecting to Redis with authentication (user: {})", username);
+        let mut con = client.get_multiplexed_async_connection().await?;
+        redis::cmd("AUTH")
+            .arg(&[&username, &password])
+            .query_async::<()>(&mut con)
+            .await?;
+        con
+    } else {
+        info!("Connecting to Redis without authentication");
+        client.get_multiplexed_async_connection().await?
+    };
 
     // Job types to process
     let job_types: Vec<String> = std::env::var("WORKER_JOB_TYPES")
