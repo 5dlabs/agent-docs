@@ -134,6 +134,24 @@ CRITICAL: You MUST respond with valid JSON in exactly this format:
     "reasoning": "Detailed explanation of the strategy and decisions."
 }}
 
+IMPORTANT CONSTRAINTS FOR cli_commands:
+1. The 'loader cli' command ONLY accepts these arguments:
+   - PATH (required): The directory or file to process
+   - --extensions: Comma-separated list of file extensions (e.g., md,html,yaml)
+   - --recursive: Flag to traverse directories recursively
+   - -o or --output: Output directory path
+   
+2. DO NOT use any of these invalid flags with 'loader cli':
+   - --include-dirs (NOT VALID)
+   - --exclude-dirs (NOT VALID)
+   - --include-paths (NOT VALID)
+   - --exclude-paths (NOT VALID)
+   - Any other flags not listed above
+
+3. To process specific directories, use the PATH argument directly:
+   - CORRECT: "loader cli /tmp/repo-analysis/docs --extensions md --recursive -o /tmp/docs_out"
+   - WRONG: "loader cli /tmp/repo-analysis --include-dirs docs --extensions md --recursive -o /tmp/docs_out"
+
 RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JSON.
 "#,
             github_url, repo_info.name, structure
