@@ -306,6 +306,8 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
             repo_root.join("content/docs"),
             repo_root.join("docs/content"),
             repo_root.join("doc"),
+            repo_root.join("README.md"),
+            repo_root.join("README.MD"),
         ];
         let mut found_any = false;
         for dir in candidates.iter().filter(|p| p.exists()) {

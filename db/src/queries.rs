@@ -603,6 +603,7 @@ impl DocumentQueries {
     /// # Errors
     ///
     /// Returns an error if the database query fails.
+    #[allow(clippy::single_match_else)]
     pub async fn doc_type_vector_search(
         pool: &PgPool,
         doc_type: &str,
@@ -610,12 +611,10 @@ impl DocumentQueries {
         _embedding: &[f32],
         limit: i64,
     ) -> Result<Vec<Document>> {
-        // For now, use text-based search with relevance scoring
-        // We'll add proper embeddings later
-
-        // Use proper enum casting for doc_type comparison
-        let rows = sqlx::query(
-            r"
+        // Attempt full-text search first (uses built-in FTS, no extension required)
+        // Fallback to tokenized ILIKE if FTS functions are unavailable
+        #[allow(clippy::needless_raw_string_hashes)]
+        let fts_sql = r"
             SELECT
                 id,
                 doc_type::text as doc_type,
@@ -626,26 +625,75 @@ impl DocumentQueries {
                 token_count,
                 created_at,
                 updated_at,
-                -- Simple relevance scoring based on content length and recency
-                LENGTH(content) as content_length,
-                EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) as age_seconds
+                ts_rank_cd(
+                    to_tsvector('english', coalesce(content,'')),
+                    websearch_to_tsquery('english', $2)
+                ) AS rank
             FROM documents
             WHERE doc_type::text = $1
-              AND (content ILIKE $2 OR doc_path ILIKE $2)
+              AND (
+                    to_tsvector('english', coalesce(content,'')) @@ websearch_to_tsquery('english', $2)
+                 OR doc_path ILIKE $3
+              )
             ORDER BY 
-              CASE WHEN source_name ILIKE 'cilium-repository%' THEN 0 ELSE 1 END ASC,
-              LENGTH(content) DESC, 
+              rank DESC,
               created_at DESC
-            LIMIT $3
-            ",
-        )
-        .bind(doc_type)
-        .bind(format!("%{query}%"))
-        .bind(limit)
-        .fetch_all(pool)
-        .await?;
+            LIMIT $4
+        ";
 
-        // Debug logging
+        let fts_attempt = sqlx::query(fts_sql)
+            .bind(doc_type)
+            .bind(query)
+            .bind(format!("%{query}%"))
+            .bind(limit)
+            .fetch_all(pool)
+            .await;
+
+        let rows = match fts_attempt {
+            Ok(rows) => rows,
+            Err(_) => {
+                // Fallback: tokenized ILIKE requiring all significant tokens
+                let tokens: Vec<String> = query
+                    .split_whitespace()
+                    .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
+                    .filter(|t| t.len() >= 3)
+                    .map(|t| format!("%{t}%"))
+                    .collect();
+
+                let mut where_parts = vec!["doc_type::text = $1".to_string()];
+                let mut binds: Vec<String> = Vec::new();
+                let mut bind_index = 2;
+                for _tok in &tokens {
+                    where_parts.push(format!(
+                        "(content ILIKE ${bind_index} OR doc_path ILIKE ${bind_index})"
+                    ));
+                    bind_index += 1;
+                    // push corresponding bind after the loop using same index order
+                }
+                // Re-add binds in order matching the placeholders constructed above
+                binds.extend(tokens.clone());
+                // If no tokens, fall back to simple ILIKE of full query
+                if tokens.is_empty() {
+                    where_parts.push("(content ILIKE $2 OR doc_path ILIKE $2)".to_string());
+                    binds.push(format!("%{query}%"));
+                    bind_index = 3;
+                }
+
+                let sql = format!(
+                    "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
+                     FROM documents WHERE {} ORDER BY created_at DESC LIMIT ${}",
+                    where_parts.join(" AND "),
+                    bind_index
+                );
+                let mut q = sqlx::query(&sql).bind(doc_type);
+                for b in &binds {
+                    q = q.bind(b);
+                }
+                q = q.bind(limit);
+                q.fetch_all(pool).await?
+            }
+        };
+
         info!(
             "doc_type_vector_search: Found {} documents for doc_type '{}'",
             rows.len(),
@@ -678,6 +726,7 @@ impl DocumentQueries {
     /// # Errors
     ///
     /// Returns an error if the database query fails.
+    #[allow(clippy::too_many_lines, clippy::single_match_else)]
     pub async fn doc_type_vector_search_with_filters(
         pool: &PgPool,
         doc_type: &str,
@@ -686,86 +735,135 @@ impl DocumentQueries {
         limit: i64,
         filters: &MetadataFilters,
     ) -> Result<Vec<Document>> {
-        // Build dynamic WHERE clause based on provided filters
-        let mut query_parts = vec![
-            "doc_type::text = $1".to_string(),
-            "(content ILIKE $2 OR doc_path ILIKE $2)".to_string(),
-        ];
-        let mut bind_count = 3;
-
-        // Add metadata filters using JSONB operators
+        // Try FTS variant with ranking and metadata filters
+        let mut where_parts = vec!["doc_type::text = $1".to_string()];
+        // FTS predicate and doc_path fallback
+        where_parts.push("(to_tsvector('english', coalesce(content,'')) @@ websearch_to_tsquery('english', $2) OR doc_path ILIKE $3)".to_string());
+        let mut bind_index = 4;
         if filters.format.is_some() {
-            query_parts.push(format!("(metadata->>'format' = ${bind_count})"));
-            bind_count += 1;
+            where_parts.push(format!("(metadata->>'format' = ${bind_index})"));
+            bind_index += 1;
         }
         if filters.complexity.is_some() {
-            query_parts.push(format!("(metadata->>'complexity' = ${bind_count})"));
-            bind_count += 1;
+            where_parts.push(format!("(metadata->>'complexity' = ${bind_index})"));
+            bind_index += 1;
         }
         if filters.category.is_some() {
-            query_parts.push(format!("(metadata->>'category' = ${bind_count})"));
-            bind_count += 1;
+            where_parts.push(format!("(metadata->>'category' = ${bind_index})"));
+            bind_index += 1;
         }
         if filters.topic.is_some() {
-            query_parts.push(format!("(metadata->>'topic' = ${bind_count})"));
-            bind_count += 1;
+            where_parts.push(format!("(metadata->>'topic' = ${bind_index})"));
+            bind_index += 1;
         }
         if filters.api_version.is_some() {
-            query_parts.push(format!("(metadata->>'api_version' = ${bind_count})"));
-            bind_count += 1;
+            where_parts.push(format!("(metadata->>'api_version' = ${bind_index})"));
+            bind_index += 1;
         }
 
-        let where_clause = query_parts.join(" AND ");
-        let final_bind_count = bind_count;
-
-        let query_str = format!(
-            r"
-            SELECT
-                id,
-                doc_type::text as doc_type,
-                source_name,
-                doc_path,
-                content,
-                metadata,
-                token_count,
-                created_at,
-                updated_at
-            FROM documents
-            WHERE {where_clause}
-            ORDER BY 
-              CASE WHEN source_name ILIKE 'cilium-repository%' THEN 0 ELSE 1 END ASC,
-              LENGTH(content) DESC, 
-              created_at DESC
-            LIMIT ${final_bind_count}
-            "
+        let fts_sql = format!(
+            "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at, \
+             ts_rank_cd(to_tsvector('english', coalesce(content,'')), websearch_to_tsquery('english', $2)) AS rank \
+             FROM documents WHERE {} ORDER BY rank DESC, created_at DESC LIMIT ${}",
+            where_parts.join(" AND "),
+            bind_index
         );
 
-        // Build query with dynamic binding
-        let mut query = sqlx::query(&query_str)
+        let mut q = sqlx::query(&fts_sql)
             .bind(doc_type)
+            .bind(query)
             .bind(format!("%{query}%"));
+        if let Some(v) = &filters.format {
+            q = q.bind(v);
+        }
+        if let Some(v) = &filters.complexity {
+            q = q.bind(v);
+        }
+        if let Some(v) = &filters.category {
+            q = q.bind(v);
+        }
+        if let Some(v) = &filters.topic {
+            q = q.bind(v);
+        }
+        if let Some(v) = &filters.api_version {
+            q = q.bind(v);
+        }
+        q = q.bind(limit);
 
-        // Bind filter values in order
-        if let Some(format_val) = &filters.format {
-            query = query.bind(format_val);
-        }
-        if let Some(complexity_val) = &filters.complexity {
-            query = query.bind(complexity_val);
-        }
-        if let Some(category_val) = &filters.category {
-            query = query.bind(category_val);
-        }
-        if let Some(topic_val) = &filters.topic {
-            query = query.bind(topic_val);
-        }
-        if let Some(api_version_val) = &filters.api_version {
-            query = query.bind(api_version_val);
-        }
+        let rows = match q.fetch_all(pool).await {
+            Ok(rows) => rows,
+            Err(_) => {
+                // Fallback to tokenized ILIKE with filters
+                let tokens: Vec<String> = query
+                    .split_whitespace()
+                    .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
+                	.filter(|t| t.len() >= 3)
+                    .map(|t| format!("%{t}%"))
+                    .collect();
 
-        // Bind limit
-        query = query.bind(limit);
-
-        let rows = query.fetch_all(pool).await?;
+                let mut parts = vec!["doc_type::text = $1".to_string()];
+                let mut idx = 2;
+                for _t in &tokens {
+                    parts.push(format!("(content ILIKE ${idx} OR doc_path ILIKE ${idx})"));
+                    idx += 1;
+                }
+                if tokens.is_empty() {
+                    parts.push("(content ILIKE $2 OR doc_path ILIKE $2)".to_string());
+                    idx = 3;
+                }
+                if filters.format.is_some() {
+                    parts.push(format!("(metadata->>'format' = ${idx})"));
+                    idx += 1;
+                }
+                if filters.complexity.is_some() {
+                    parts.push(format!("(metadata->>'complexity' = ${idx})"));
+                    idx += 1;
+                }
+                if filters.category.is_some() {
+                    parts.push(format!("(metadata->>'category' = ${idx})"));
+                    idx += 1;
+                }
+                if filters.topic.is_some() {
+                    parts.push(format!("(metadata->>'topic' = ${idx})"));
+                    idx += 1;
+                }
+                if filters.api_version.is_some() {
+                    parts.push(format!("(metadata->>'api_version' = ${idx})"));
+                    idx += 1;
+                }
+                let sql = format!(
+                    "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
+                     FROM documents WHERE {} ORDER BY created_at DESC LIMIT ${}",
+                    parts.join(" AND "),
+                    idx
+                );
+                let mut q2 = sqlx::query(&sql).bind(doc_type);
+                if tokens.is_empty() {
+                    q2 = q2.bind(format!("%{query}%"));
+                } else {
+                    for t in &tokens {
+                        q2 = q2.bind(t);
+                    }
+                }
+                if let Some(v) = &filters.format {
+                    q2 = q2.bind(v);
+                }
+                if let Some(v) = &filters.complexity {
+                    q2 = q2.bind(v);
+                }
+                if let Some(v) = &filters.category {
+                    q2 = q2.bind(v);
+                }
+                if let Some(v) = &filters.topic {
+                    q2 = q2.bind(v);
+                }
+                if let Some(v) = &filters.api_version {
+                    q2 = q2.bind(v);
+                }
+                q2 = q2.bind(limit);
+                q2.fetch_all(pool).await?
+            }
+        };
 
         let docs = rows
             .into_iter()
