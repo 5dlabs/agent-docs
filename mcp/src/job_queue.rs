@@ -1,7 +1,5 @@
 //! Background job queue for crate ingestion
 
-
-
 use anyhow::Result;
 use db::{
     models::{CrateJob, JobStatus},

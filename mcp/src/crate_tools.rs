@@ -1139,33 +1139,33 @@ impl Tool for CheckRustStatusTool {
                 Uuid::parse_str(job_id_str).map_err(|_| anyhow!("Invalid job ID format"))?;
 
             if let Some(job) = self.job_processor.get_job_status(job_id).await? {
-                    let _ = writeln!(&mut output, "Job Status: {}", job_id);
-                    output.push('\n');
-                    let _ = writeln!(&mut output, "  Crate: {}", job.crate_name);
-                    let _ = writeln!(&mut output, "  Operation: {}", job.operation);
-                    let _ = writeln!(&mut output, "  Status: {:?}", job.status);
-                    if let Some(progress) = job.progress {
-                        let _ = writeln!(&mut output, "  Progress: {}%", progress);
-                    }
+                let _ = writeln!(&mut output, "Job Status: {}", job_id);
+                output.push('\n');
+                let _ = writeln!(&mut output, "  Crate: {}", job.crate_name);
+                let _ = writeln!(&mut output, "  Operation: {}", job.operation);
+                let _ = writeln!(&mut output, "  Status: {:?}", job.status);
+                if let Some(progress) = job.progress {
+                    let _ = writeln!(&mut output, "  Progress: {}%", progress);
+                }
+                let _ = writeln!(
+                    &mut output,
+                    "  Started: {}",
+                    job.started_at.format("%Y-%m-%d %H:%M:%S UTC")
+                );
+                if let Some(finished) = job.finished_at {
                     let _ = writeln!(
                         &mut output,
-                        "  Started: {}",
-                        job.started_at.format("%Y-%m-%d %H:%M:%S UTC")
+                        "  Finished: {}",
+                        finished.format("%Y-%m-%d %H:%M:%S UTC")
                     );
-                    if let Some(finished) = job.finished_at {
-                        let _ = writeln!(
-                            &mut output,
-                            "  Finished: {}",
-                            finished.format("%Y-%m-%d %H:%M:%S UTC")
-                        );
-                    }
-                    if let Some(error) = &job.error {
-                        let _ = writeln!(&mut output, "  Error: {}", error);
-                    }
-                    output.push('\n');
+                }
+                if let Some(error) = &job.error {
+                    let _ = writeln!(&mut output, "  Error: {}", error);
+                }
+                output.push('\n');
             } else {
-                    let _ = writeln!(&mut output, "Job {} not found.", job_id);
-                    output.push('\n');
+                let _ = writeln!(&mut output, "Job {} not found.", job_id);
+                output.push('\n');
             }
         }
 
