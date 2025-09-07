@@ -594,9 +594,10 @@ pub(crate) fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<(
                     tracing::debug!("Path validation: base={:?}, dest={:?}", base, dest_path);
                 }
                 if !dest_path.starts_with(&base) {
-                    return Err(anyhow::anyhow!(
-                        format!("git clone destination is outside work base: dest={:?}, base={:?}", dest_path, base)
-                    ));
+                    return Err(anyhow::anyhow!(format!(
+                        "git clone destination is outside work base: dest={:?}, base={:?}",
+                        dest_path, base
+                    )));
                 }
             }
             Ok(())
