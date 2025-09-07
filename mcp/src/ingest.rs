@@ -250,7 +250,11 @@ fn generate_unique_repo_dir(repo_url: &str) -> String {
 
 /// Execute discovery CLI commands with a strict allowlist
 #[allow(clippy::too_many_lines)]
-async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str, repo_url: &str) -> anyhow::Result<String> {
+async fn execute_cli_plan(
+    analysis: &RepositoryAnalysis,
+    doc_type: &str,
+    repo_url: &str,
+) -> anyhow::Result<String> {
     let mut combined = String::new();
     let mut executed_cli_steps: usize = 0;
     let strict_plan = std::env::var("INGEST_STRICT_PLAN")
