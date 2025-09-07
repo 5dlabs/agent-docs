@@ -245,7 +245,10 @@ fn generate_unique_repo_dir(repo_url: &str) -> String {
     let hash = hasher.finish();
 
     // Create a unique directory name combining timestamp and hash
-    format!("repo-analysis-{timestamp}-{hash_val}", hash_val = hash % 10000)
+    format!(
+        "repo-analysis-{timestamp}-{hash_val}",
+        hash_val = hash % 10000
+    )
 }
 
 /// Execute discovery CLI commands with a strict allowlist
