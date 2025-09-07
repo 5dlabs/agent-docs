@@ -12,4 +12,3 @@ pub struct DocPage {
     pub module_path: String,
     pub extracted_at: DateTime<Utc>,
 }
-
