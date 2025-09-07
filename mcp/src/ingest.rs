@@ -240,10 +240,9 @@ fn work_base() -> std::path::PathBuf {
     static WORK_BASE: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
     WORK_BASE
         .get_or_init(|| {
-            std::env::var("INGEST_WORK_DIR").map_or_else(
-                |_| std::env::temp_dir().join("ingest-work"),
-                std::path::PathBuf::from,
-            )
+            std::env::var("INGEST_WORK_DIR")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|_| std::env::temp_dir().join("agent-docs-ingest"))
         })
         .clone()
 }
@@ -591,9 +590,12 @@ pub(crate) fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<(
             if let Some(dest) = args.last() {
                 let base = work_base();
                 let dest_path = std::path::Path::new(dest);
+                if ingest_debug_enabled() {
+                    tracing::debug!("Path validation: base={:?}, dest={:?}", base, dest_path);
+                }
                 if !dest_path.starts_with(&base) {
                     return Err(anyhow::anyhow!(
-                        "git clone destination is outside work base"
+                        format!("git clone destination is outside work base: dest={:?}, base={:?}", dest_path, base)
                     ));
                 }
             }
