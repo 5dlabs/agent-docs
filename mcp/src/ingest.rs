@@ -268,9 +268,7 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                 }
                 if !found_ext {
                     args.push("--extensions".to_string());
-                    args.push(
-                        "md,mdx,rst,html,json,yaml,yml,toml,txt".to_string(),
-                    );
+                    args.push("md,mdx,rst,html,json,yaml,yml,toml,txt".to_string());
                 }
                 // Ensure --recursive present
                 if !args.iter().any(|a| a == "--recursive") {
@@ -333,7 +331,11 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
             )?;
         }
         if !found_any {
-            let _ = writeln!(combined, "⚠️  No valid documentation directories detected under {}", repo_root.display());
+            let _ = writeln!(
+                combined,
+                "⚠️  No valid documentation directories detected under {}",
+                repo_root.display()
+            );
         }
     }
 
