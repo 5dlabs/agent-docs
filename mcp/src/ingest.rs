@@ -278,6 +278,14 @@ pub async fn execute_cli_plan(
     doc_type: &str,
     repo_url: &str,
 ) -> anyhow::Result<String> {
+    // Ensure the work base exists so any nested paths can be created by tools
+    if let Err(e) = std::fs::create_dir_all(work_base()) {
+        return Err(anyhow::anyhow!(format!(
+            "failed to create work base directory {}: {e}",
+            work_base().display()
+        )));
+    }
+
     // Generate unique directory for this ingestion
     let unique_repo_dir = generate_unique_repo_dir(repo_url);
     let unique_docs_dir = format!("{unique_repo_dir}_out");
@@ -303,7 +311,39 @@ pub async fn execute_cli_plan(
 
         // Normalize cargo/loader invocations
         let (program, mut args) = normalize_command(&cmd, doc_type);
-        // Allowlist check
+        // If this is a git clone step, ensure a safe destination under work_base
+        if program == "git" && !args.is_empty() && args[0] == "clone" {
+            // Count non-option args excluding the subcommand itself to detect if a dest dir is provided
+            let non_opts: Vec<&String> = args
+                .iter()
+                .skip(1) // skip "clone"
+                .filter(|a| !a.starts_with('-'))
+                .collect();
+
+            // If only a single non-option exists, it's the repo URL and no dest was provided
+            if non_opts.len() < 2 {
+                args.push(
+                    work_base()
+                        .join(&unique_repo_dir)
+                        .to_string_lossy()
+                        .to_string(),
+                );
+            } else if let Some(dest) = args.last().cloned() {
+                // If a dest exists but isn't under the work base, force it into the safe work base
+                let dest_path = std::path::PathBuf::from(&dest);
+                if !dest_path.starts_with(work_base()) {
+                    // Replace the last argument with our safe destination
+                    if let Some(last) = args.last_mut() {
+                        *last = work_base()
+                            .join(&unique_repo_dir)
+                            .to_string_lossy()
+                            .to_string();
+                    }
+                }
+            }
+        }
+
+        // Allowlist check (after we may have patched args for safety)
         ensure_allowed(&program, &args)?;
 
         // If this is a loader cli invocation, ensure the include path exists; otherwise skip or fallback
@@ -411,8 +451,14 @@ pub async fn execute_cli_plan(
                     .unwrap_or_else(|_| "debug,loader=debug,mcp=debug".to_string()),
             );
         }
-        let args_clone = args.clone();
-        command.args(args_clone);
+        if ingest_debug_enabled() {
+            tracing::debug!(
+                program = %program,
+                args = ?args,
+                "Executing ingest plan step"
+            );
+        }
+        command.args(&args);
         let out = run_cmd(command).await?;
         write!(&mut combined, "\n# Step {} output:\n{}\n", i + 1, out)?;
         if program == loader_bin().to_string_lossy() && !args.is_empty() && args[0] == "cli" {
