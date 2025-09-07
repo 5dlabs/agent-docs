@@ -11,7 +11,6 @@
 
 pub mod connection;
 pub mod migration_system;
-pub mod migrations;
 pub mod models;
 pub mod pool_config;
 pub mod queries;

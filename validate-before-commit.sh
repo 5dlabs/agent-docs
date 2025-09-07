@@ -72,20 +72,10 @@ else
     exit 1
 fi
 
-# 5. Optional: Run with local database if available
-if docker-compose -f docker-compose.test.yml ps | grep -q "Up" >/dev/null 2>&1; then
-    echo ""
-    echo "🐳 Local database is running - running full database tests..."
-    if ./test-db-setup.sh test >/dev/null 2>&1; then
-        echo "✅ Full database tests with local DB passed"
-    else
-        echo "❌ Full database tests with local DB failed"
-        exit 1
-    fi
-else
-    echo ""
-    echo "💡 Tip: Run './test-db-setup.sh start' to test with a real database locally"
-fi
+# 5. Optional tip for running DB tests locally
+echo ""
+echo "💡 To run DB tests locally, provide TEST_DATABASE_URL, e.g.:"
+echo "   TEST_DATABASE_URL=postgres://user:pass@localhost:5432/test_db cargo test -p db -- --nocapture"
 
 echo ""
 echo "🎉 All validations passed! Ready for commit."

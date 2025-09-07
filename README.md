@@ -18,11 +18,10 @@ This project is organized as a Rust workspace with specialized crates:
 
 ### Core Crates
 
-- **`mcp/`** - Main MCP server implementation with HTTP transport
-- **`db/`** - PostgreSQL database layer with pgvector integration
-- **`embed/`** - OpenAI embedding client for vector operations
-- **`llm/`** - LLM client for AI-powered interactions
-- **`loader/`** - Data loading and ingestion pipeline
+- `mcp/`: Main MCP server implementation with HTTP transport
+- `db/`: PostgreSQL database layer with pgvector integration
+- `embed/`: OpenAI embedding client for vector operations
+- `loader/`: Data loading and ingestion pipeline
 
 ### Key Features
 
@@ -64,28 +63,39 @@ This project is organized as a Rust workspace with specialized crates:
 
 4. **Run the server**
    ```bash
-   cargo run --bin http_server
+   cargo run -p mcp --bin http_server
    ```
 
 The server will start on `http://localhost:3001` with health checks available at `/health`.
 
-### Docker Development
+### Docker
+
+Build an image with the included Dockerfile and run it with your environment:
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up --build
+docker build -t agent-docs .
+docker run --rm -p 3001:3001 \
+  --env-file .env \
+  -v $(pwd)/tools.json:/app/tools.json:ro \
+  agent-docs
 ```
+
+Note: The container expects `DATABASE_URL` and (optionally) `OPENAI_API_KEY`. See `.env.example`.
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Required |
-| `OPENAI_API_KEY` | OpenAI API key for embeddings | Required |
-| `PORT` | Server port | `3001` |
-| `RUST_LOG` | Logging level | `info,doc_server=debug` |
+Key variables used by the server and helpers:
+
+- `DATABASE_URL`: PostgreSQL connection string (required)
+- `OPENAI_API_KEY`: OpenAI API key for embeddings (optional if embeddings are not used locally)
+- `PORT` or `MCP_PORT`: Server port (defaults to 3001)
+- `MCP_HOST`: Bind address (defaults to 0.0.0.0)
+- `RUST_LOG`: Logging level (e.g., `info,doc_server=debug`)
+- `TOOLS_CONFIG_PATH` or `TOOLS_CONFIG`: Path or inline JSON for tool configuration
+- `LOADER_BIN`: Path to the loader binary (defaults to `/app/loader` in container)
+- `CLAUDE_BINARY_PATH`: Path to Claude Code binary (defaults to `claude`)
 
 ### Database Setup
 
@@ -183,7 +193,7 @@ The `loader` binary performs on-host ingestion. Claude Code only proposes a plan
   - `cargo run -p loader -- database --input-dir ./out --doc-type <type> --source-name <name> --yes`
   - Inserts previously emitted JSON docs into PostgreSQL.
 
-Note: Legacy `github` and `web` subcommands were removed. Use `intelligent` for repo ingestion and `local` for direct filesystem parsing.
+Note: Legacy `github` and `web` subcommands were removed. Use the intelligent ingest endpoint for repo ingestion and the CLI for local parsing.
 
 ### Tool Configuration
 
