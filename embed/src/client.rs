@@ -371,8 +371,8 @@ impl OpenAIEmbeddingClient {
     /// initialization fails.
     pub fn new() -> Result<Self> {
         let api_key = env::var("OPENAI_API_KEY").unwrap_or_else(|_| "dummy-key".to_string()); // Allow dummy key for testing
-        let base_url = env::var("OPENAI_BASE_URL")
-            .unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
+        let base_url =
+            env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
         let default_model = env::var("OPENAI_EMBEDDING_MODEL")
             .unwrap_or_else(|_| "text-embedding-3-large".to_string());
 

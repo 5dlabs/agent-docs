@@ -45,7 +45,13 @@ impl EmbeddingBatchRequest {
             .ok()
             .and_then(|v| v.parse::<u32>().ok())
             .unwrap_or(3072);
-        Self { id, text, model, dimensions: Some(dimensions), metadata: HashMap::new() }
+        Self {
+            id,
+            text,
+            model,
+            dimensions: Some(dimensions),
+            metadata: HashMap::new(),
+        }
     }
 
     /// Create a new batch request with optimized dimensions
@@ -57,7 +63,13 @@ impl EmbeddingBatchRequest {
             .ok()
             .and_then(|v| v.parse::<u32>().ok())
             .unwrap_or(1024);
-        Self { id, text, model, dimensions: Some(dimensions), metadata: HashMap::new() }
+        Self {
+            id,
+            text,
+            model,
+            dimensions: Some(dimensions),
+            metadata: HashMap::new(),
+        }
     }
 
     /// Add metadata to the request

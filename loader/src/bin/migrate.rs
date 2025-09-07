@@ -283,9 +283,9 @@ async fn main() -> Result<()> {
     let database_url = args
         .database_url
         .or_else(|| std::env::var("DATABASE_URL").ok())
-        .ok_or_else(|| anyhow::anyhow!(
-            "DATABASE_URL is required (pass --database-url or set DATABASE_URL)"
-        ))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!("DATABASE_URL is required (pass --database-url or set DATABASE_URL)")
+        })?;
 
     info!("Connecting to configured database (URL redacted)");
     let db_pool = Arc::new(
