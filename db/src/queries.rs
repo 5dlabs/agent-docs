@@ -185,6 +185,11 @@ impl DocumentQueries {
                     updated_at
                 )
                 VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
+                ON CONFLICT (id) DO UPDATE SET
+                    content = EXCLUDED.content,
+                    metadata = EXCLUDED.metadata,
+                    token_count = EXCLUDED.token_count,
+                    updated_at = EXCLUDED.updated_at
 
                 RETURNING
                     id,
