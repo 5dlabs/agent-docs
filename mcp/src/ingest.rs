@@ -241,8 +241,7 @@ fn work_base() -> std::path::PathBuf {
     WORK_BASE
         .get_or_init(|| {
             std::env::var("INGEST_WORK_DIR")
-                .map(std::path::PathBuf::from)
-                .unwrap_or_else(|_| std::env::temp_dir().join("agent-docs-ingest"))
+                .map_or_else(|_| std::env::temp_dir().join("agent-docs-ingest"), std::path::PathBuf::from)
         })
         .clone()
 }
