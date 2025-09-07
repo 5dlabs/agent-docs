@@ -291,11 +291,25 @@ jobs:
         id: cargo-llvm-cov-cache
         with:
           path: ~/.cargo/bin/cargo-llvm-cov
-          key: cargo-llvm-cov-${{ runner.os }}-0.6.8
+          key: cargo-llvm-cov-${{ runner.os }}-0.6.9
 
       - name: Install cargo-llvm-cov
         if: steps.cargo-llvm-cov-cache.outputs.cache-hit != 'true'
-        run: cargo install cargo-llvm-cov --version 0.6.8
+        run: |
+          echo "🔧 Installing cargo-llvm-cov..."
+          # Try multiple installation methods for robustness
+          if ! cargo install cargo-llvm-cov --version 0.6.9; then
+            echo "⚠️ Failed to install cargo-llvm-cov 0.6.9, trying alternative version..."
+            if ! cargo install cargo-llvm-cov --version 0.6.8; then
+              echo "⚠️ Failed to install cargo-llvm-cov 0.6.8, trying latest version..."
+              if ! cargo install cargo-llvm-cov; then
+                echo "❌ All cargo-llvm-cov installation attempts failed"
+                echo "cargo-llvm-cov-installation-failed=true" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+            fi
+          fi
+          echo "✅ cargo-llvm-cov installed successfully"
 
       - name: Generate test coverage
         env:
@@ -305,12 +319,31 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "📊 Generating test coverage report..."
-          cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info || true
+
+          # Check if cargo-llvm-cov is available
+          if ! command -v cargo-llvm-cov >/dev/null 2>&1; then
+            echo "❌ cargo-llvm-cov not found, skipping coverage generation"
+            echo "## Test Coverage Summary" > coverage-summary.md
+            echo "" >> coverage-summary.md
+            echo "⚠️ **Coverage**: cargo-llvm-cov installation failed" >> coverage-summary.md
+            exit 0
+          fi
+
+          # Generate coverage with fallback
+          if cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info; then
+            echo "✅ Coverage report generated successfully"
+          else
+            echo "⚠️ Coverage generation failed, creating empty report"
+            echo "## Test Coverage Summary" > coverage-summary.md
+            echo "" >> coverage-summary.md
+            echo "⚠️ **Coverage**: Failed to generate coverage report" >> coverage-summary.md
+            exit 0
+          fi
 
           # Generate summary
           echo "## Test Coverage Summary" > coverage-summary.md
           echo "" >> coverage-summary.md
-          if [ -f "lcov.info" ]; then
+          if [ -f "lcov.info" ] && [ -s "lcov.info" ]; then
             COVERAGE=$(grep -E "^LF:|^LH:" lcov.info | awk -F: '{if($1=="LF") lf+=$2; if($1=="LH") lh+=$2} END {if(lf>0) printf "%.1f", (lh/lf)*100; else print "0.0"}')
             echo "📊 **Overall Coverage**: ${COVERAGE}%" >> coverage-summary.md
             echo "Coverage: ${COVERAGE}%"
@@ -320,6 +353,7 @@ jobs:
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: coverage-reports
           path: |
