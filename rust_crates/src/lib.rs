@@ -113,7 +113,10 @@ impl RustLoader {
         crate_name: &str,
         version: Option<&str>,
     ) -> Result<(CrateMetadata, Vec<DocPage>)> {
-        info!("Loading crate docs: {} (version: {:?})", crate_name, version);
+        info!(
+            "Loading crate docs: {} (version: {:?})",
+            crate_name, version
+        );
         let meta = self.fetch_crate_metadata(crate_name).await?;
         let target = version.unwrap_or(&meta.newest_version);
         let pages = self.crawl_docs_rs(crate_name, target, Some(2000)).await?;
@@ -128,10 +131,7 @@ impl RustLoader {
     ) -> Result<Vec<DocPage>> {
         use std::collections::{HashSet, VecDeque};
 
-        let base_url = format!(
-            "https://docs.rs/{}/{}/{}",
-            crate_name, version, crate_name
-        );
+        let base_url = format!("https://docs.rs/{}/{}/{}", crate_name, version, crate_name);
 
         let max_pages = max_pages.unwrap_or(10_000);
         let mut pages = Vec::new();
