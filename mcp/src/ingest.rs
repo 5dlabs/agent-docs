@@ -179,8 +179,10 @@ fn work_base() -> std::path::PathBuf {
 }
 
 /// Execute discovery CLI commands with a strict allowlist
+#[allow(clippy::too_many_lines)]
 async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyhow::Result<String> {
     let mut combined = String::new();
+    let mut executed_cli_steps: usize = 0;
 
     for (i, original_cmd) in analysis.cli_commands.iter().enumerate() {
         // Remap /tmp to work_base
@@ -207,6 +209,8 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                         repo_root.join("docs"),
                         repo_root.join("Documentation"),
                         repo_root.join("website/docs"),
+                        repo_root.join("website/content"),
+                        repo_root.join("website/content/docs"),
                         repo_root.join("docs/website"),
                         repo_root.join("content/docs"),
                         repo_root.join("docs/content"),
@@ -238,6 +242,40 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                         continue;
                     }
                 }
+                // Ensure robust extensions and recursion for coverage
+                // Normalize/augment --extensions
+                let mut i = 1usize;
+                let mut found_ext = false;
+                while i + 1 < args.len() {
+                    if args[i] == "--extensions" {
+                        found_ext = true;
+                        if let Some(exts) = args.get(i + 1).cloned() {
+                            let mut set: std::collections::BTreeSet<String> = exts
+                                .split(',')
+                                .map(|s| s.trim().to_lowercase())
+                                .filter(|s| !s.is_empty())
+                                .collect();
+                            for e in [
+                                "md", "mdx", "rst", "html", "json", "yaml", "yml", "toml", "txt",
+                            ] {
+                                set.insert(e.to_string());
+                            }
+                            args[i + 1] = set.into_iter().collect::<Vec<_>>().join(",");
+                        }
+                        break;
+                    }
+                    i += 1;
+                }
+                if !found_ext {
+                    args.push("--extensions".to_string());
+                    args.push(
+                        "md,mdx,rst,html,json,yaml,yml,toml,txt".to_string(),
+                    );
+                }
+                // Ensure --recursive present
+                if !args.iter().any(|a| a == "--recursive") {
+                    args.push("--recursive".to_string());
+                }
             }
         }
 
@@ -249,9 +287,54 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                     .unwrap_or_else(|_| "debug,loader=debug,mcp=debug".to_string()),
             );
         }
-        command.args(args);
+        let args_clone = args.clone();
+        command.args(args_clone);
         let out = run_cmd(command).await?;
         write!(&mut combined, "\n# Step {} output:\n{}\n", i + 1, out)?;
+        if program == loader_bin().to_string_lossy() && !args.is_empty() && args[0] == "cli" {
+            executed_cli_steps += 1;
+        }
+    }
+
+    // If none of the CLI steps were executed (e.g., all paths invalid), attempt auto-detection
+    if executed_cli_steps == 0 {
+        let repo_root = work_base().join("repo-analysis");
+        let candidates = [
+            repo_root.join("docs"),
+            repo_root.join("Documentation"),
+            repo_root.join("website/content/docs"),
+            repo_root.join("website/docs"),
+            repo_root.join("docs/source"),
+            repo_root.join("content/docs"),
+            repo_root.join("docs/content"),
+            repo_root.join("doc"),
+        ];
+        let mut found_any = false;
+        for dir in candidates.iter().filter(|p| p.exists()) {
+            let mut command = TokioCommand::new(loader_bin());
+            let args = vec![
+                "cli".to_string(),
+                dir.to_string_lossy().to_string(),
+                "--extensions".to_string(),
+                "md,mdx,rst,html,json,yaml,yml,toml,txt".to_string(),
+                "--recursive".to_string(),
+                "-o".to_string(),
+                work_base().join("docs_out").to_string_lossy().to_string(),
+            ];
+            ensure_allowed(&loader_bin().to_string_lossy(), &args)?;
+            command.args(&args);
+            let out = run_cmd(command).await?;
+            found_any = true;
+            write!(
+                &mut combined,
+                "\n# Auto-detected CLI step for {}:\n{}\n",
+                dir.display(),
+                out
+            )?;
+        }
+        if !found_any {
+            let _ = writeln!(combined, "⚠️  No valid documentation directories detected under {}", repo_root.display());
+        }
     }
 
     Ok(combined)

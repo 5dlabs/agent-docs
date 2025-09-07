@@ -104,7 +104,7 @@ REPOSITORY NAME: {}
 ACTUAL REPOSITORY STRUCTURE:
 {}
 
-CRITICAL: You MUST respond with valid JSON in exactly this format:
+CRITICAL: You MUST respond with valid JSON in exactly this format. Prefer widely compatible commands and include multiple loader cli steps if docs may be in different locations.
 
 {{
     "repository_type": "network-security|rust-library|api-docs|tutorial|reference|mixed",
@@ -119,7 +119,7 @@ CRITICAL: You MUST respond with valid JSON in exactly this format:
     }},
     "ingestion_strategy": {{
         "docs_only": true,
-        "extensions": ["md", "html"],
+        "extensions": ["md", "mdx", "rst", "html", "json", "yaml", "yml", "toml", "txt"],
         "recursive": true,
         "chunk_size": 2000,
         "use_ai_chunking": true,
@@ -133,6 +133,17 @@ CRITICAL: You MUST respond with valid JSON in exactly this format:
     ],
     "reasoning": "Detailed explanation of the strategy and decisions."
 }}
+
+DISCOVERY HINTS (consider these common layouts when picking include_paths):
+- docs/
+- Documentation/
+- doc/
+- website/docs
+- website/content/docs (Hugo)
+- website/content
+- docs/source (Sphinx)
+- content/docs
+- docs/content
 
 IMPORTANT CONSTRAINTS FOR cli_commands:
 1. The 'loader cli' command ONLY accepts these arguments:
@@ -149,8 +160,12 @@ IMPORTANT CONSTRAINTS FOR cli_commands:
    - Any other flags not listed above
 
 3. To process specific directories, use the PATH argument directly:
-   - CORRECT: "loader cli /tmp/repo-analysis/docs --extensions md --recursive -o /tmp/docs_out"
+   - CORRECT: "loader cli /tmp/repo-analysis/docs --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o /tmp/docs_out"
    - WRONG: "loader cli /tmp/repo-analysis --include-dirs docs --extensions md --recursive -o /tmp/docs_out"
+
+4. If unsure of the exact path, include multiple 'loader cli' commands, each targeting a different common docs directory (e.g., docs/, website/content/docs, docs/source).
+   - CORRECT: "loader cli /tmp/repo-analysis/website/content/docs --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o /tmp/docs_out"
+   - CORRECT: "loader cli /tmp/repo-analysis/docs/source --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o /tmp/docs_out"
 
 RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JSON.
 "#,
