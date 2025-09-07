@@ -128,8 +128,8 @@ CRITICAL: You MUST respond with valid JSON in exactly this format:
     }},
     "cli_commands": [
         "git clone --depth 1 REPO_URL /tmp/repo-analysis",
-        "cargo run --bin loader -- cli /tmp/repo-analysis --extensions md,html --recursive -o /tmp/docs_out",
-        "cargo run --bin loader -- database --input-dir /tmp/docs_out --doc-type example --source-name github --yes"
+        "loader cli /tmp/repo-analysis --extensions md,html --recursive -o /tmp/docs_out",
+        "loader database --input-dir /tmp/docs_out --doc-type example --source-name github --yes"
     ],
     "reasoning": "Detailed explanation of the strategy and decisions."
 }}

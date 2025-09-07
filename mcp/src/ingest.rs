@@ -45,7 +45,23 @@ async fn run_cmd(mut cmd: TokioCommand) -> anyhow::Result<String> {
 
 fn loader_bin() -> std::path::PathBuf {
     std::env::var("LOADER_BIN").map_or_else(
-        |_| std::path::PathBuf::from("/app/loader"),
+        |_| {
+            // Try multiple possible locations for the loader binary
+            let candidates = [
+                "/app/loader",
+                "./target/release/loader",
+                "../target/release/loader",
+                "target/release/loader",
+            ];
+            for candidate in &candidates {
+                let path = std::path::PathBuf::from(candidate);
+                if path.exists() {
+                    return path;
+                }
+            }
+            // Fallback to first candidate if none exist
+            std::path::PathBuf::from("/app/loader")
+        },
         std::path::PathBuf::from,
     )
 }
@@ -201,30 +217,53 @@ fn normalize_command(cmd: &str, doc_type: &str) -> (String, Vec<String>) {
     if parts.is_empty() {
         return (loader, vec![]);
     }
-    if parts[0] == "cargo"
-        && parts.get(1) == Some(&"run")
-        && parts.windows(2).any(|w| w == ["--", "cli"])
-    {
-        // cargo run --bin loader -- cli ... or database ...
-        let args_start = parts
-            .iter()
-            .position(|p| *p == "--")
-            .map_or(parts.len(), |i| i + 1);
-        let mut args: Vec<String> = parts[args_start..].iter().map(|&s| s.to_owned()).collect();
-        enforce_doc_type(&mut args, doc_type);
-        return (loader, args);
+
+    // Handle cargo run --bin loader commands (more flexible pattern matching)
+    if parts[0] == "cargo" && parts.get(1) == Some(&"run") {
+        // Look for --bin loader or just --bin followed by loader
+        let mut found_loader_bin = false;
+        let mut args_start = parts.len();
+
+        for (i, &part) in parts.iter().enumerate() {
+            if part == "--bin" {
+                if let Some(&next) = parts.get(i + 1) {
+                    if next == "loader" {
+                        found_loader_bin = true;
+                        // Find the next -- which should indicate the start of loader arguments
+                        for j in (i + 2)..parts.len() {
+                            if parts[j] == "--" {
+                                args_start = j + 1;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        if found_loader_bin {
+            let mut args: Vec<String> = parts[args_start..].iter().map(|&s| s.to_owned()).collect();
+            enforce_doc_type(&mut args, doc_type);
+            return (loader, args);
+        }
     }
+
+    // Handle direct loader commands
     if parts[0] == "loader" {
         let mut args: Vec<String> = parts[1..].iter().map(|&s| s.to_owned()).collect();
         enforce_doc_type(&mut args, doc_type);
         return (loader, args);
     }
+
+    // Handle git commands
     if parts[0] == "git" {
         return (
             "git".to_string(),
             parts[1..].iter().map(|&s| s.to_owned()).collect(),
         );
     }
+
     // Fallback: return as-is (will be rejected by allowlist)
     (
         parts[0].to_string(),
