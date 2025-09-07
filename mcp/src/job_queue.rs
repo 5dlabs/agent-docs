@@ -1,6 +1,6 @@
 //! Background job queue for crate ingestion
 
-#![allow(clippy::must_use_candidate)]
+
 
 use anyhow::Result;
 use db::{
@@ -21,11 +21,13 @@ pub struct CrateJobProcessor {
 
 impl CrateJobProcessor {
     /// Create a new job processor
+    #[must_use]
     pub const fn new(db_pool: DatabasePool) -> Self {
         Self { db_pool }
     }
 
     /// Get a reference to the database pool
+    #[must_use]
     pub const fn db_pool(&self) -> &DatabasePool {
         &self.db_pool
     }

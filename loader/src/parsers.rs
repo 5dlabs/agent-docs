@@ -10,6 +10,7 @@ use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::path::Path;
 use tracing::{debug, info, warn};
 
@@ -245,7 +246,7 @@ impl UniversalParser {
         let text_content = Self::extract_text_from_html(&html_content);
 
         // Parse structure
-        let structured = Self::parse_markdown_structure(content)?;
+        let structured = Self::parse_markdown_structure(content);
 
         let metadata = HashMap::from([
             ("format".to_string(), "markdown".to_string()),
@@ -495,14 +496,15 @@ impl UniversalParser {
     }
 
     /// Estimate token count (rough approximation: 1 token ≈ 4 characters)
-    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn estimate_tokens(text: &str) -> i32 {
-        (text.len() / 4).max(1) as i32
+        // Approximation: 1 token ≈ 4 chars, round up, min 1
+        let len = text.len();
+        let estimated = len.div_ceil(4); // ceil(len/4)
+        i32::try_from(estimated.max(1)).unwrap_or(i32::MAX)
     }
 
     /// Parse markdown structure to extract sections and code blocks
-    #[allow(clippy::unnecessary_wraps)]
-    fn parse_markdown_structure(content: &str) -> Result<StructuredDocument> {
+    fn parse_markdown_structure(content: &str) -> StructuredDocument {
         let mut sections = Vec::new();
         let mut code_blocks = Vec::new();
         let mut toc = Vec::new();
@@ -581,13 +583,13 @@ impl UniversalParser {
             sections.push(section);
         }
 
-        Ok(StructuredDocument {
+        StructuredDocument {
             title: Self::extract_title(&sections),
             toc,
             sections,
             code_blocks,
             links: Vec::new(), // Could be enhanced to extract links
-        })
+        }
     }
 
     /// Convert markdown to HTML
@@ -655,20 +657,19 @@ impl UniversalParser {
     }
 
     /// Convert JSON value to readable text
-    #[allow(clippy::format_push_string)]
     fn json_to_text(value: &Value) -> String {
         match value {
             Value::Object(map) => {
                 let mut result = String::new();
                 for (key, val) in map {
-                    result.push_str(&format!("{}: {}\n", key, Self::json_value_to_string(val)));
+                    let _ = writeln!(result, "{}: {}", key, Self::json_value_to_string(val));
                 }
                 result
             }
             Value::Array(arr) => {
                 let mut result = String::new();
                 for (i, val) in arr.iter().enumerate() {
-                    result.push_str(&format!("{}: {}\n", i, Self::json_value_to_string(val)));
+                    let _ = writeln!(result, "{}: {}", i, Self::json_value_to_string(val));
                 }
                 result
             }
@@ -698,7 +699,6 @@ impl UniversalParser {
     }
 
     /// Convert API spec to readable text
-    #[allow(clippy::format_push_string)]
     fn api_spec_to_text(value: &Value) -> String {
         let mut result = String::new();
 
@@ -708,7 +708,7 @@ impl UniversalParser {
             .and_then(|i| i.get("title"))
             .and_then(|t| t.as_str())
         {
-            result.push_str(&format!("API Title: {title}\n"));
+            let _ = writeln!(result, "API Title: {title}");
         }
 
         if let Some(description) = value
@@ -716,7 +716,7 @@ impl UniversalParser {
             .and_then(|i| i.get("description"))
             .and_then(|d| d.as_str())
         {
-            result.push_str(&format!("Description: {description}\n"));
+            let _ = writeln!(result, "Description: {description}");
         }
 
         if let Some(version) = value
@@ -724,18 +724,18 @@ impl UniversalParser {
             .and_then(|i| i.get("version"))
             .and_then(|v| v.as_str())
         {
-            result.push_str(&format!("Version: {version}\n"));
+            let _ = writeln!(result, "Version: {version}");
         }
 
         // Extract paths
         if let Some(paths) = value.get("paths").and_then(|p| p.as_object()) {
             result.push_str("\nAPI Endpoints:\n");
             for (path, methods) in paths {
-                result.push_str(&format!("\nPath: {path}\n"));
+                let _ = writeln!(result, "\nPath: {path}");
                 if let Some(methods_obj) = methods.as_object() {
                     for (method, details) in methods_obj {
                         if let Some(summary) = details.get("summary").and_then(|s| s.as_str()) {
-                            result.push_str(&format!("  {}: {summary}\n", method.to_uppercase()));
+                            let _ = writeln!(result, "  {}: {summary}", method.to_uppercase());
                         }
                     }
                 }

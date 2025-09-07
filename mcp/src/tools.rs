@@ -306,7 +306,7 @@ impl DynamicQueryTool {
         for (i, doc) in results.iter().enumerate() {
             // Extract source information from metadata
             let source_info = self.extract_source_info(doc);
-            let relevance_score = self.calculate_relevance_score(i, results.len());
+            let relevance_score = Self::calculate_relevance_score(i, results.len());
 
             // Apply adaptive formatting based on content type
             let formatted_content = Self::format_content_adaptively(doc);
@@ -520,8 +520,7 @@ impl DynamicQueryTool {
     }
 
     /// Calculate a mock relevance score based on result position
-    #[allow(clippy::unused_self)]
-    fn calculate_relevance_score(&self, position: usize, _total: usize) -> f64 {
+    fn calculate_relevance_score(position: usize, _total: usize) -> f64 {
         // Simple declining relevance based on position
         // In practice, this would be based on actual vector similarity
         #[allow(clippy::cast_precision_loss)]

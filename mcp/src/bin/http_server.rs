@@ -396,8 +396,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
 
     // Migration 7: Add partitioning for documents table (range partitioning by created_at)
     // NOTE: Disabled for CI/testing environments - too complex for basic schema setup
-    #[allow(clippy::no_effect_underscore_binding)]
-    let _partitioning_sql = r"
+    let _ = r"
         -- Partitioning disabled for CI/testing - requires unique constraints to include partitioning columns
         DO $$ BEGIN
             RAISE NOTICE 'Partitioning migration skipped in CI/testing environment';
@@ -490,8 +489,7 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     */
 
     // Migration 8: Create archival policies and procedures
-    #[allow(clippy::no_effect_underscore_binding)]
-    let _archival_sql = r"
+    let _ = r"
         -- Archival system disabled for CI/testing - creates complex functions that aren't needed for basic testing
         DO $$ BEGIN
             RAISE NOTICE 'Archival migration skipped in CI/testing environment';
@@ -638,7 +636,6 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     });
 
     // Migration 11: Create search-related indexes (optional, idempotent)
-    #[allow(clippy::needless_raw_string_hashes)]
     let search_indexes_sql = r"
         DO $$
         BEGIN

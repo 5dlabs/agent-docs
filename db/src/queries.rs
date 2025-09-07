@@ -52,7 +52,6 @@ impl RowCountable for String {
 pub struct DocumentQueries;
 
 impl DocumentQueries {
-    #[allow(clippy::needless_raw_string_hashes)]
     async fn is_doc_type_enum(pool: &PgPool, table: &str) -> Result<bool> {
         // Detect if the doc_type column is a USER-DEFINED type (enum) for the given table
         let row = sqlx::query(
@@ -663,7 +662,6 @@ impl DocumentQueries {
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    #[allow(clippy::single_match_else)]
     pub async fn doc_type_vector_search(
         pool: &PgPool,
         doc_type: &str,
@@ -673,7 +671,6 @@ impl DocumentQueries {
     ) -> Result<Vec<Document>> {
         // Attempt full-text search first (uses built-in FTS, no extension required)
         // Fallback to tokenized ILIKE if FTS functions are unavailable
-        #[allow(clippy::needless_raw_string_hashes)]
         let fts_sql = r"
             SELECT
                 id,
@@ -709,10 +706,10 @@ impl DocumentQueries {
             .fetch_all(pool)
             .await;
 
-        let rows = match fts_attempt {
-            Ok(rows) => rows,
-            Err(_) => {
-                // Fallback: tokenized ILIKE requiring all significant tokens
+        let rows = if let Ok(rows) = fts_attempt {
+            rows
+        } else {
+            // Fallback: tokenized ILIKE requiring all significant tokens
                 let tokens: Vec<String> = query
                     .split_whitespace()
                     .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
@@ -751,7 +748,6 @@ impl DocumentQueries {
                 }
                 q = q.bind(limit);
                 q.fetch_all(pool).await?
-            }
         };
 
         info!(
@@ -786,7 +782,7 @@ impl DocumentQueries {
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    #[allow(clippy::too_many_lines, clippy::single_match_else)]
+    #[allow(clippy::too_many_lines)]
     pub async fn doc_type_vector_search_with_filters(
         pool: &PgPool,
         doc_type: &str,
@@ -850,10 +846,10 @@ impl DocumentQueries {
         }
         q = q.bind(limit);
 
-        let rows = match q.fetch_all(pool).await {
-            Ok(rows) => rows,
-            Err(_) => {
-                // Fallback to tokenized ILIKE with filters
+        let rows = if let Ok(rows) = q.fetch_all(pool).await {
+            rows
+        } else {
+            // Fallback to tokenized ILIKE with filters
                 let tokens: Vec<String> = query
                     .split_whitespace()
                     .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
@@ -922,7 +918,6 @@ impl DocumentQueries {
                 }
                 q2 = q2.bind(limit);
                 q2.fetch_all(pool).await?
-            }
         };
 
         let docs = rows
@@ -1278,8 +1273,7 @@ impl CrateJobQueries {
         .execute(pool)
         .await?;
 
-        #[allow(clippy::cast_possible_truncation)] // Database row counts are expected to fit in i32
-        Ok(result.rows_affected() as i32)
+        Ok(i32::try_from(result.rows_affected()).unwrap_or(i32::MAX))
     }
 }
 
@@ -1401,8 +1395,7 @@ impl IngestJobQueries {
         .execute(pool)
         .await?;
 
-        #[allow(clippy::cast_possible_truncation)] // DB row counts fit within i32 for our use cases
-        Ok(result.rows_affected() as i32)
+        Ok(i32::try_from(result.rows_affected()).unwrap_or(i32::MAX))
     }
 }
 
@@ -1641,8 +1634,7 @@ impl CrateQueries {
                 version,
                 description: None,
                 documentation_url: None,
-                #[allow(clippy::cast_possible_truncation)] // Document counts are expected to fit in i32
-                total_docs: total_docs as i32,
+                total_docs: i32::try_from(total_docs).unwrap_or(i32::MAX),
                 total_tokens,
                 last_updated,
             }))

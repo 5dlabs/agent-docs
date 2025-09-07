@@ -2,7 +2,6 @@
 
 #![allow(clippy::uninlined_format_args)]
 #![allow(clippy::must_use_candidate)]
-#![allow(clippy::write_with_newline)]
 #![allow(clippy::doc_markdown)]
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::too_many_lines)]
@@ -986,30 +985,30 @@ impl Tool for ListRustCratesTool {
         // Add comprehensive statistics if requested
         if let Some(stats) = &stats {
             output.push_str("📊 **System Statistics:**\n");
-            let _ = write!(
+            let _ = writeln!(
                 &mut output,
-                "   Total Crates: {} (Active: {})\n",
+                "   Total Crates: {} (Active: {})",
                 stats.total_crates, stats.active_crates
             );
-            let _ = write!(
+            let _ = writeln!(
                 &mut output,
-                "   Total Documents: {}\n",
+                "   Total Documents: {}",
                 stats.total_docs_managed
             );
-            let _ = write!(
+            let _ = writeln!(
                 &mut output,
-                "   Total Tokens: {}\n",
+                "   Total Tokens: {}",
                 stats.total_tokens_managed
             );
-            let _ = write!(
+            let _ = writeln!(
                 &mut output,
-                "   Average Docs per Crate: {:.1}\n",
+                "   Average Docs per Crate: {:.1}",
                 stats.average_docs_per_crate
             );
             if let Some(last_update) = &stats.last_update {
-                let _ = write!(
+                let _ = writeln!(
                     &mut output,
-                    "   Last Update: {}\n",
+                    "   Last Update: {}",
                     last_update.format("%Y-%m-%d %H:%M UTC")
                 );
             }
@@ -1017,9 +1016,9 @@ impl Tool for ListRustCratesTool {
         }
 
         for crate_info in &response.items {
-            let _ = write!(
+            let _ = writeln!(
                 &mut output,
-                "📦 **{}** (v{})\n   Docs: {} | Tokens: {} | Updated: {}\n",
+                "📦 **{}** (v{})\n   Docs: {} | Tokens: {} | Updated: {}",
                 crate_info.name,
                 crate_info.version,
                 crate_info.total_docs,
@@ -1028,7 +1027,7 @@ impl Tool for ListRustCratesTool {
             );
 
             if let Some(description) = &crate_info.description {
-                let _ = write!(&mut output, "   Description: {}\n", description);
+                let _ = writeln!(&mut output, "   Description: {}", description);
             }
 
             output.push('\n');
@@ -1139,35 +1138,34 @@ impl Tool for CheckRustStatusTool {
             let job_id =
                 Uuid::parse_str(job_id_str).map_err(|_| anyhow!("Invalid job ID format"))?;
 
-            match self.job_processor.get_job_status(job_id).await? {
-                Some(job) => {
-                    let _ = write!(&mut output, "Job Status: {}\n\n", job_id);
-                    let _ = write!(&mut output, "  Crate: {}\n", job.crate_name);
-                    let _ = write!(&mut output, "  Operation: {}\n", job.operation);
-                    let _ = write!(&mut output, "  Status: {:?}\n", job.status);
+            if let Some(job) = self.job_processor.get_job_status(job_id).await? {
+                    let _ = writeln!(&mut output, "Job Status: {}", job_id);
+                    output.push('\n');
+                    let _ = writeln!(&mut output, "  Crate: {}", job.crate_name);
+                    let _ = writeln!(&mut output, "  Operation: {}", job.operation);
+                    let _ = writeln!(&mut output, "  Status: {:?}", job.status);
                     if let Some(progress) = job.progress {
-                        let _ = write!(&mut output, "  Progress: {}%\n", progress);
+                        let _ = writeln!(&mut output, "  Progress: {}%", progress);
                     }
-                    let _ = write!(
+                    let _ = writeln!(
                         &mut output,
-                        "  Started: {}\n",
+                        "  Started: {}",
                         job.started_at.format("%Y-%m-%d %H:%M:%S UTC")
                     );
                     if let Some(finished) = job.finished_at {
-                        let _ = write!(
+                        let _ = writeln!(
                             &mut output,
-                            "  Finished: {}\n",
+                            "  Finished: {}",
                             finished.format("%Y-%m-%d %H:%M:%S UTC")
                         );
                     }
                     if let Some(error) = &job.error {
-                        let _ = write!(&mut output, "  Error: {}\n", error);
+                        let _ = writeln!(&mut output, "  Error: {}", error);
                     }
                     output.push('\n');
-                }
-                None => {
-                    let _ = write!(&mut output, "Job {} not found.\n\n", job_id);
-                }
+            } else {
+                    let _ = writeln!(&mut output, "Job {} not found.", job_id);
+                    output.push('\n');
             }
         }
 
@@ -1176,29 +1174,29 @@ impl Tool for CheckRustStatusTool {
 
         output.push_str("🦀 Rust Crate Management System Status\n\n");
 
-        let _ = write!(&mut output, "📊 **System Statistics:**\n");
-        let _ = write!(&mut output, "  • Total Crates: {}\n", stats.total_crates);
-        let _ = write!(&mut output, "  • Active Crates: {}\n", stats.active_crates);
-        let _ = write!(
+        let _ = writeln!(&mut output, "📊 **System Statistics:**");
+        let _ = writeln!(&mut output, "  • Total Crates: {}", stats.total_crates);
+        let _ = writeln!(&mut output, "  • Active Crates: {}", stats.active_crates);
+        let _ = writeln!(
             &mut output,
-            "  • Total Documents: {}\n",
+            "  • Total Documents: {}",
             stats.total_docs_managed
         );
-        let _ = write!(
+        let _ = writeln!(
             &mut output,
-            "  • Total Tokens: {}\n",
+            "  • Total Tokens: {}",
             stats.total_tokens_managed
         );
-        let _ = write!(
+        let _ = writeln!(
             &mut output,
-            "  • Average Docs/Crate: {:.1}\n",
+            "  • Average Docs/Crate: {:.1}",
             stats.average_docs_per_crate
         );
 
         if let Some(last_update) = stats.last_update {
-            let _ = write!(
+            let _ = writeln!(
                 &mut output,
-                "  • Last Update: {}\n",
+                "  • Last Update: {}",
                 last_update.format("%Y-%m-%d %H:%M UTC")
             );
         }
@@ -1241,9 +1239,9 @@ impl Tool for CheckRustStatusTool {
             if !recent_completed.is_empty() {
                 output.push_str("📋 **Recent Jobs:**\n");
                 for job in recent_completed {
-                    let _ = write!(
+                    let _ = writeln!(
                         &mut output,
-                        "  • {} - {} ({:?}) - {}\n",
+                        "  • {} - {} ({:?}) - {}",
                         job.crate_name,
                         job.operation,
                         job.status,
@@ -1263,7 +1261,8 @@ impl Tool for CheckRustStatusTool {
                     output.push('\n');
                 }
                 Err(e) => {
-                    let _ = write!(&mut output, "⚠️ **Performance Metrics:** Error - {}\n\n", e);
+                    let _ = writeln!(&mut output, "⚠️ **Performance Metrics:** Error - {}", e);
+                    output.push('\n');
                 }
             }
         }
@@ -1276,7 +1275,8 @@ impl Tool for CheckRustStatusTool {
                     output.push('\n');
                 }
                 Err(e) => {
-                    let _ = write!(&mut output, "⚠️ **Storage Analysis:** Error - {}\n\n", e);
+                    let _ = writeln!(&mut output, "⚠️ **Storage Analysis:** Error - {}", e);
+                    output.push('\n');
                 }
             }
         }
@@ -1289,7 +1289,8 @@ impl Tool for CheckRustStatusTool {
                     output.push('\n');
                 }
                 Err(e) => {
-                    let _ = write!(&mut output, "⚠️ **Health Diagnostics:** Error - {}\n\n", e);
+                    let _ = writeln!(&mut output, "⚠️ **Health Diagnostics:** Error - {}", e);
+                    output.push('\n');
                 }
             }
         }
@@ -1304,14 +1305,14 @@ impl Tool for CheckRustStatusTool {
         output.push_str("🔍 **System Health:**\n");
         match db_health {
             Ok(_) => {
-                let _ = write!(
+                let _ = writeln!(
                     &mut output,
-                    "  ✅ Database: Connected and responsive ({:.2}ms)\n",
+                    "  ✅ Database: Connected and responsive ({:.2}ms)",
                     db_response_time.as_secs_f64() * 1000.0
                 );
             }
             Err(e) => {
-                let _ = write!(&mut output, "  ❌ Database: Error - {}\n", e);
+                let _ = writeln!(&mut output, "  ❌ Database: Error - {}", e);
             }
         }
 
@@ -1365,15 +1366,15 @@ impl CheckRustStatusTool {
         .await?
         .unwrap_or(0.0);
 
-        let _ = write!(
+        let _ = writeln!(
             &mut metrics,
-            "  • Query Response Time: {:.2}ms\n",
+            "  • Query Response Time: {:.2}ms",
             query_time.as_secs_f64() * 1000.0
         );
-        let _ = write!(&mut metrics, "  • Total Rust Documents: {}\n", query_test);
-        let _ = write!(
+        let _ = writeln!(&mut metrics, "  • Total Rust Documents: {}", query_test);
+        let _ = writeln!(
             &mut metrics,
-            "  • Documents with Embeddings: {} ({:.1}%)\n",
+            "  • Documents with Embeddings: {} ({:.1}%)",
             with_embeddings,
             if query_test > 0 {
                 #[allow(clippy::cast_precision_loss)]
@@ -1384,9 +1385,9 @@ impl CheckRustStatusTool {
                 0.0
             }
         );
-        let _ = write!(
+        let _ = writeln!(
             &mut metrics,
-            "  • Average Content Size: {:.0} characters\n",
+            "  • Average Content Size: {:.0} characters",
             avg_content_size
         );
 
@@ -1395,7 +1396,7 @@ impl CheckRustStatusTool {
             .fetch_one(self.db_pool.pool())
             .await?;
         let successful_jobs = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM crate_jobs WHERE status = 'Completed'",
+            "SELECT COUNT(*) FROM crate_jobs WHERE status = 'completed'",
         )
         .fetch_one(self.db_pool.pool())
         .await?;
@@ -1403,9 +1404,9 @@ impl CheckRustStatusTool {
         if total_jobs > 0 {
             #[allow(clippy::cast_precision_loss)]
             let success_rate = (successful_jobs as f64 / total_jobs as f64) * 100.0;
-            let _ = write!(
+            let _ = writeln!(
                 &mut metrics,
-                "  • Job Success Rate: {:.1}% ({}/{})\n",
+                "  • Job Success Rate: {:.1}% ({}/{})",
                 success_rate, successful_jobs, total_jobs
             );
         }
@@ -1442,21 +1443,21 @@ impl CheckRustStatusTool {
         #[allow(clippy::cast_precision_loss)]
         let estimated_db_size_mb = (total_content_size as f64) / 1_048_576.0; // Convert to MB
 
-        let _ = write!(
+        let _ = writeln!(
             &mut analysis,
-            "  • Estimated Database Size: {:.2} MB\n",
+            "  • Estimated Database Size: {:.2} MB",
             estimated_db_size_mb
         );
-        let _ = write!(
+        let _ = writeln!(
             &mut analysis,
-            "  • Total Content Size: {:.2} MB\n",
+            "  • Total Content Size: {:.2} MB",
             estimated_db_size_mb * 0.8
         ); // Rough estimate excluding metadata
 
         if !top_crates.is_empty() {
             analysis.push_str("  • Top Crates by Document Count:\n");
             for (crate_name, count) in top_crates {
-                let _ = write!(&mut analysis, "    - {}: {} documents\n", crate_name, count);
+                let _ = writeln!(&mut analysis, "    - {}: {} documents", crate_name, count);
             }
         }
 
@@ -1484,14 +1485,14 @@ impl CheckRustStatusTool {
 
         match db_health {
             Ok(_) => {
-                let _ = write!(
+                let _ = writeln!(
                     &mut health,
-                    "  ✅ Database Connection: Healthy ({:.2}ms)\n",
+                    "  ✅ Database Connection: Healthy ({:.2}ms)",
                     db_time.as_secs_f64() * 1000.0
                 );
             }
             Err(e) => {
-                let _ = write!(&mut health, "  ❌ Database Connection: Error - {}\n", e);
+                let _ = writeln!(&mut health, "  ❌ Database Connection: Error - {}", e);
             }
         }
 
@@ -1505,16 +1506,16 @@ impl CheckRustStatusTool {
         if orphaned_embeddings == 0 {
             health.push_str("  ✅ Data Integrity: No orphaned embeddings detected\n");
         } else {
-            let _ = write!(
+            let _ = writeln!(
                 &mut health,
-                "  ⚠️ Data Integrity: {} orphaned embeddings found\n",
+                "  ⚠️ Data Integrity: {} orphaned embeddings found",
                 orphaned_embeddings
             );
         }
 
         // Job queue health
         let stuck_jobs = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM crate_jobs WHERE status = 'Running' AND started_at < NOW() - INTERVAL '1 hour'"
+            "SELECT COUNT(*) FROM crate_jobs WHERE status = 'running' AND started_at < NOW() - INTERVAL '1 hour'"
         )
         .fetch_one(self.db_pool.pool())
         .await?;
@@ -1522,9 +1523,9 @@ impl CheckRustStatusTool {
         if stuck_jobs == 0 {
             health.push_str("  ✅ Job Queue: No stuck jobs detected\n");
         } else {
-            let _ = write!(
+            let _ = writeln!(
                 &mut health,
-                "  ⚠️ Job Queue: {} potentially stuck jobs\n",
+                "  ⚠️ Job Queue: {} potentially stuck jobs",
                 stuck_jobs
             );
         }
@@ -1532,9 +1533,9 @@ impl CheckRustStatusTool {
         // System resource estimates
         let pool_size = self.db_pool.pool().size();
         let active_connections = self.db_pool.pool().num_idle();
-        let _ = write!(
+        let _ = writeln!(
             &mut health,
-            "  ℹ️ Connection Pool: {} active, {} total capacity\n",
+            "  ℹ️ Connection Pool: {} active, {} total capacity",
             active_connections, pool_size
         );
 

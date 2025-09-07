@@ -192,11 +192,16 @@ pub struct PaginatedResponse<T> {
 impl<T> PaginatedResponse<T> {
     /// Create a new paginated response
     #[must_use]
-    #[allow(clippy::cast_possible_truncation)] // Pagination pages are expected to be small integers
-    #[allow(clippy::cast_precision_loss)] // Acceptable for pagination calculations
-    #[allow(clippy::cast_lossless)] // i32 to f64 is lossless
     pub fn new(items: Vec<T>, pagination: &PaginationParams, total_items: i64) -> Self {
-        let total_pages = ((total_items as f64) / f64::from(pagination.limit)).ceil() as i32;
+        // Compute total pages using integer math to avoid float casts
+        // Ceiling division: (total_items + limit - 1) / limit
+        let limit_i64 = i64::from(pagination.limit);
+        let total_pages_i64 = if limit_i64 > 0 {
+            (total_items + (limit_i64 - 1)).div_euclid(limit_i64)
+        } else {
+            0
+        };
+        let total_pages = i32::try_from(total_pages_i64).unwrap_or(i32::MAX);
         let has_previous = pagination.page > 1;
         let has_next = pagination.page < total_pages;
 

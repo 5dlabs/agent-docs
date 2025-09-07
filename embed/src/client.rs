@@ -49,9 +49,12 @@ impl RetryPolicy {
             return Duration::ZERO;
         }
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        let exponential_delay =
-            self.base_delay.as_secs_f64() * self.backoff_multiplier.powi((attempt - 1) as i32);
+        // Compute backoff factor without integer casts
+        let mut factor = 1.0;
+        for _ in 0..attempt.saturating_sub(1) {
+            factor *= self.backoff_multiplier;
+        }
+        let exponential_delay = self.base_delay.as_secs_f64() * factor;
         let clamped_delay = exponential_delay.min(self.max_delay.as_secs_f64());
 
         // Add jitter
@@ -175,7 +178,6 @@ impl CircuitBreaker {
 const OPENAI_RPM_LIMIT: u32 = 3000; // Requests per minute
 const OPENAI_TPM_LIMIT: u32 = 1_000_000; // Tokens per minute
 const RATE_LIMIT_WINDOW_SECS: u64 = 60; // 1 minute window
-const AVERAGE_TOKENS_PER_CHAR: f64 = 0.25; // Rough estimate for tokenization
 
 /// Token bucket for rate limiting
 #[derive(Debug)]
@@ -309,14 +311,10 @@ impl RateLimiter {
     /// Estimate token count from text length
     #[must_use]
     pub fn estimate_tokens(text: &str) -> u32 {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let estimated = (text.len() as f64 * AVERAGE_TOKENS_PER_CHAR).ceil() as u32;
-        estimated.max(1) // At least 1 token
+        // 1 token ≈ 4 chars; ceil division, min 1
+        let len = text.len();
+        let est = len.div_ceil(4);
+        u32::try_from(est.max(1)).unwrap_or(u32::MAX)
     }
 }
 
