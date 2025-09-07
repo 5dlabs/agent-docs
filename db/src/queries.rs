@@ -81,7 +81,9 @@ impl DocumentQueries {
         doc_type: &str,
         source_name: &str,
     ) -> Result<()> {
-        let sources_is_enum = Self::is_doc_type_enum(pool, "document_sources").await.unwrap_or(false);
+        let sources_is_enum = Self::is_doc_type_enum(pool, "document_sources")
+            .await
+            .unwrap_or(false);
         if sources_is_enum {
             sqlx::query(
                 r#"
@@ -121,7 +123,9 @@ impl DocumentQueries {
         pool: &PgPool,
         document: &crate::models::Document,
     ) -> Result<crate::models::Document> {
-        let docs_is_enum = Self::is_doc_type_enum(pool, "documents").await.unwrap_or(false);
+        let docs_is_enum = Self::is_doc_type_enum(pool, "documents")
+            .await
+            .unwrap_or(false);
         let row = if docs_is_enum {
             sqlx::query(
                 r"
@@ -251,7 +255,9 @@ impl DocumentQueries {
         let mut transaction = pool.begin().await?;
         let mut inserted_docs = Vec::new();
 
-        let docs_is_enum = Self::is_doc_type_enum(pool, "documents").await.unwrap_or(false);
+        let docs_is_enum = Self::is_doc_type_enum(pool, "documents")
+            .await
+            .unwrap_or(false);
         for doc in documents {
             let row = if docs_is_enum {
                 sqlx::query(
