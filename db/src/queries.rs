@@ -797,7 +797,7 @@ impl DocumentQueries {
                 let tokens: Vec<String> = query
                     .split_whitespace()
                     .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
-                	.filter(|t| t.len() >= 3)
+                    .filter(|t| t.len() >= 3)
                     .map(|t| format!("%{t}%"))
                     .collect();
 

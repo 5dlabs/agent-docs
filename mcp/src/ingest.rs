@@ -260,7 +260,8 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
                                     .filter(|s| !s.is_empty())
                                     .collect();
                                 for e in [
-                                    "md", "mdx", "rst", "html", "json", "yaml", "yml", "toml", "txt",
+                                    "md", "mdx", "rst", "html", "json", "yaml", "yml", "toml",
+                                    "txt",
                                 ] {
                                     set.insert(e.to_string());
                                 }
