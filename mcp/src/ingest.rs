@@ -245,7 +245,7 @@ fn generate_unique_repo_dir(repo_url: &str) -> String {
     let hash = hasher.finish();
 
     // Create a unique directory name combining timestamp and hash
-    format!("repo-analysis-{}-{}", timestamp, hash % 10000)
+    format!("repo-analysis-{timestamp}-{hash_val}", hash_val = hash % 10000)
 }
 
 /// Execute discovery CLI commands with a strict allowlist
@@ -257,7 +257,7 @@ async fn execute_cli_plan(
 ) -> anyhow::Result<String> {
     // Generate unique directory for this ingestion
     let unique_repo_dir = generate_unique_repo_dir(repo_url);
-    let unique_docs_dir = format!("{}_out", unique_repo_dir);
+    let unique_docs_dir = format!("{unique_repo_dir}_out");
 
     let mut combined = String::new();
     let mut executed_cli_steps: usize = 0;
@@ -575,7 +575,7 @@ fn ensure_allowed(program: &str, args: &[String]) -> anyhow::Result<()> {
             }
             Ok(())
         }
-        _ => Err(anyhow::anyhow!(format!("program not allowed: {}", program))),
+        _ => Err(anyhow::anyhow!(format!("program not allowed: {program}"))),
     }
 }
 
