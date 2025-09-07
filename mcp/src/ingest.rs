@@ -268,8 +268,14 @@ async fn execute_cli_plan(
     for (i, original_cmd) in analysis.cli_commands.iter().enumerate() {
         // Remap placeholders and /tmp to work_base
         let cmd = original_cmd
-            .replace("UNIQUE_REPO_DIR", &work_base().join(&unique_repo_dir).to_string_lossy())
-            .replace("UNIQUE_DOCS_OUT", &work_base().join(&unique_docs_dir).to_string_lossy())
+            .replace(
+                "UNIQUE_REPO_DIR",
+                &work_base().join(&unique_repo_dir).to_string_lossy(),
+            )
+            .replace(
+                "UNIQUE_DOCS_OUT",
+                &work_base().join(&unique_docs_dir).to_string_lossy(),
+            )
             .replace("/tmp", work_base().to_string_lossy().as_ref());
 
         // Normalize cargo/loader invocations
