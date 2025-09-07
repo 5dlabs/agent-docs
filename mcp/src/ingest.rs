@@ -163,10 +163,7 @@ fn work_base() -> std::path::PathBuf {
 }
 
 /// Execute discovery CLI commands with a strict allowlist
-async fn execute_cli_plan(
-    analysis: &RepositoryAnalysis,
-    doc_type: &str,
-) -> anyhow::Result<String> {
+async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyhow::Result<String> {
     let mut combined = String::new();
 
     for (i, original_cmd) in analysis.cli_commands.iter().enumerate() {
