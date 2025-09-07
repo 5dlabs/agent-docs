@@ -20,9 +20,9 @@ use serde_json::{json, Value};
 use sqlx;
 use std::{fmt::Write as _, sync::Arc};
 // use tokio::task; // Commented out for MVP - not using background tasks
-use uuid::Uuid;
-use tokio::sync::{oneshot, Semaphore};
 use std::sync::OnceLock;
+use tokio::sync::{oneshot, Semaphore};
+use uuid::Uuid;
 
 use crate::tools::Tool;
 

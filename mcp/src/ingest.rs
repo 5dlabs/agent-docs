@@ -8,10 +8,10 @@ use tokio::process::Command as TokioCommand;
 use crate::server::McpServerState;
 use discovery::{IntelligentRepositoryAnalyzer, RepositoryAnalysis};
 use std::fmt::Write as _;
+use std::sync::{Arc, OnceLock};
+use tokio::sync::{oneshot, Semaphore};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
-use tokio::sync::{oneshot, Semaphore};
-use std::sync::{Arc, OnceLock};
 
 #[derive(Deserialize)]
 pub struct IntelligentIngestRequest {
