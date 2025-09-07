@@ -237,7 +237,12 @@ fn get_ingest_semaphore() -> Arc<Semaphore> {
 }
 
 fn work_base() -> std::path::PathBuf {
-    std::env::var("INGEST_WORK_DIR").map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from)
+    static WORK_BASE: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+    WORK_BASE.get_or_init(|| {
+        std::env::var("INGEST_WORK_DIR")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| std::env::temp_dir().join("ingest-work"))
+    }).clone()
 }
 
 /// Generate a unique directory name for repository analysis based on repo URL and timestamp
