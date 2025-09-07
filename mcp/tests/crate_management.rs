@@ -352,7 +352,7 @@ async fn test_add_rust_crate_invalid_input() -> Result<()> {
     assert!(result.is_err(), "Should fail with missing crate_name");
 
     // Test with invalid crate_name
-    let arguments = json!({"crate_name": ""});
+    let arguments = json!({"name": ""});
     let result = tool.execute(arguments).await;
     assert!(result.is_err(), "Should fail with empty crate_name");
 
