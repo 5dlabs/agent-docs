@@ -225,6 +225,11 @@ async fn detailed_health_check(
     checks.insert(pool_key, pool_health);
     overall_status = elevate_overall(overall_status, pool_status);
 
+    // Background jobs health (crate jobs + ingest jobs)
+    let (jobs_key, jobs_health, jobs_status) = build_jobs_health(&state).await;
+    checks.insert(jobs_key, jobs_health);
+    overall_status = elevate_overall(overall_status, jobs_status);
+
     let (sm_key, sm_health) = build_session_manager_health();
     checks.insert(sm_key, sm_health);
 
@@ -243,6 +248,86 @@ async fn detailed_health_check(
     };
 
     (status_code, Json(health_status))
+}
+
+async fn build_jobs_health(state: &McpServerState) -> (String, ComponentHealth, HealthStatus) {
+    // Consider jobs stuck if 'running' and updated_at older than 1 hour
+    let stuck_threshold = "1 hour"; // SQL interval string
+
+    let res = async {
+        let crate_stuck: i64 = sqlx::query_scalar(
+            &format!(
+                "SELECT COUNT(*) FROM crate_jobs WHERE status = 'running' AND updated_at < NOW() - INTERVAL '{stuck_threshold}'"
+            ),
+        )
+        .fetch_one(state.db_pool.pool())
+        .await?;
+
+        let ingest_stuck: i64 = sqlx::query_scalar(
+            &format!(
+                "SELECT COUNT(*) FROM ingest_jobs WHERE status = 'running' AND updated_at < NOW() - INTERVAL '{stuck_threshold}'"
+            ),
+        )
+        .fetch_one(state.db_pool.pool())
+        .await?;
+
+        // Oldest age of a stuck job in minutes (max staleness)
+        let oldest_minutes: Option<i64> = sqlx::query_scalar(
+            &format!(
+                "SELECT COALESCE(MAX(EXTRACT(EPOCH FROM (NOW() - updated_at))::bigint / 60), 0)
+                 FROM (
+                   SELECT updated_at FROM crate_jobs WHERE status='running' AND updated_at < NOW() - INTERVAL '{stuck_threshold}'
+                   UNION ALL
+                   SELECT updated_at FROM ingest_jobs WHERE status='running' AND updated_at < NOW() - INTERVAL '{stuck_threshold}'
+                 ) t"
+            ),
+        )
+        .fetch_optional(state.db_pool.pool())
+        .await?
+        .flatten();
+
+        anyhow::Ok((crate_stuck, ingest_stuck, oldest_minutes))
+    }
+    .await;
+
+    match res {
+        Ok((crate_stuck, ingest_stuck, oldest_minutes)) => {
+            let total_stuck = crate_stuck + ingest_stuck;
+            let status = if total_stuck == 0 {
+                HealthStatus::Healthy
+            } else if total_stuck <= 5 {
+                HealthStatus::Degraded
+            } else {
+                HealthStatus::Unhealthy
+            };
+            (
+                "jobs".to_string(),
+                ComponentHealth {
+                    status,
+                    response_time_ms: 0,
+                    details: serde_json::json!({
+                        "stuck_threshold": stuck_threshold,
+                        "stuck_crate_jobs": crate_stuck,
+                        "stuck_ingest_jobs": ingest_stuck,
+                        "total_stuck_jobs": total_stuck,
+                        "oldest_stuck_minutes": oldest_minutes
+                    }),
+                    error: None,
+                },
+                status,
+            )
+        }
+        Err(e) => (
+            "jobs".to_string(),
+            ComponentHealth {
+                status: HealthStatus::Degraded,
+                response_time_ms: 0,
+                details: serde_json::json!({}),
+                error: Some(e.to_string()),
+            },
+            HealthStatus::Degraded,
+        ),
+    }
 }
 
 async fn build_database_health(state: &McpServerState) -> (String, ComponentHealth, HealthStatus) {

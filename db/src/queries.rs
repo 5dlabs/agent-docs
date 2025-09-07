@@ -1220,8 +1220,17 @@ impl CrateJobQueries {
 
         let row = sqlx::query_as::<_, crate::models::CrateJob>(
             r"
-            UPDATE crate_jobs 
-            SET status = $2, progress = $3, error = $4, finished_at = $5, updated_at = $6
+            UPDATE crate_jobs
+            SET status = $2,
+                progress = $3,
+                error = $4,
+                finished_at = $5,
+                -- Set started_at when transitioning into running for the first time
+                started_at = CASE
+                    WHEN $2 = 'running'::job_status AND status <> 'running'::job_status THEN $6
+                    ELSE started_at
+                END,
+                updated_at = $6
             WHERE id = $1
             RETURNING *
             ",
@@ -1362,6 +1371,11 @@ impl IngestJobQueries {
                 output = COALESCE($3, output),
                 error = COALESCE($4, error),
                 finished_at = COALESCE($5, finished_at),
+                -- Set started_at when transitioning into running for the first time
+                started_at = CASE
+                    WHEN $2 = 'running'::job_status AND status <> 'running'::job_status THEN $6
+                    ELSE started_at
+                END,
                 updated_at = $6
             WHERE id = $1
             RETURNING *

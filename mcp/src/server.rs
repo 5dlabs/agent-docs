@@ -13,7 +13,7 @@ use axum::{http::Method, routing::any, routing::post, Router};
 use db::DatabasePool;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 /// MCP server state
 #[derive(Clone)]
@@ -77,6 +77,11 @@ impl McpServer {
         // Start background monitoring for the database pool
         db_pool.start_monitoring();
 
+        // Attempt recovery of any stale running jobs from previous restarts
+        if let Err(e) = recover_stale_jobs(db_pool.pool()).await {
+            warn!("Job recovery on startup encountered an error: {}", e);
+        }
+
         Ok(Self { state })
     }
 
@@ -128,6 +133,56 @@ impl McpServer {
             )
             .with_state(self.state.clone())
     }
+}
+
+/// Recover stale running jobs that may have been abandoned due to a restart
+///
+/// This marks jobs in 'running' state whose `updated_at` is older than a threshold
+/// as failed and sets `finished_at`, preserving a clear error reason.
+async fn recover_stale_jobs(pool: &sqlx::PgPool) -> Result<()> {
+    // Thresholds can be tuned; keeping conservative defaults
+    // Crate jobs: 30 minutes
+    let crate_recovery = sqlx::query(
+        r"
+        UPDATE crate_jobs
+        SET status = 'failed',
+            finished_at = CURRENT_TIMESTAMP,
+            error = COALESCE(error, '') || CASE WHEN error IS NULL OR error = '' THEN '' ELSE E'\n' END ||
+                   'Recovery: marked failed on startup due to stale running (updated_at older than 30 minutes).'
+        WHERE status = 'running'
+          AND updated_at < CURRENT_TIMESTAMP - INTERVAL '30 minutes'
+        ",
+    )
+    .execute(pool)
+    .await?;
+
+    let crate_count = crate_recovery.rows_affected();
+
+    // Ingest jobs: 30 minutes
+    let ingest_recovery = sqlx::query(
+        r"
+        UPDATE ingest_jobs
+        SET status = 'failed',
+            finished_at = CURRENT_TIMESTAMP,
+            error = COALESCE(error, '') || CASE WHEN error IS NULL OR error = '' THEN '' ELSE E'\n' END ||
+                   'Recovery: marked failed on startup due to stale running (updated_at older than 30 minutes).'
+        WHERE status = 'running'
+          AND updated_at < CURRENT_TIMESTAMP - INTERVAL '30 minutes'
+        ",
+    )
+    .execute(pool)
+    .await?;
+
+    let ingest_count = ingest_recovery.rows_affected();
+
+    if crate_count > 0 || ingest_count > 0 {
+        info!(
+            "Recovered stale jobs on startup: crate_jobs={}, ingest_jobs={}",
+            crate_count, ingest_count
+        );
+    }
+
+    Ok(())
 }
 
 // Old basic health check removed - now using comprehensive health endpoints from health module

@@ -10,6 +10,8 @@ use discovery::{IntelligentRepositoryAnalyzer, RepositoryAnalysis};
 use std::fmt::Write as _;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
+use tokio::sync::{oneshot, Semaphore};
+use std::sync::{Arc, OnceLock};
 
 #[derive(Deserialize)]
 pub struct IntelligentIngestRequest {
@@ -100,6 +102,8 @@ impl IngestJobManager {
         let db_pool = self.db_pool.clone();
 
         tokio::spawn(async move {
+            // Global concurrency cap for ingest jobs
+            let _permit = get_ingest_semaphore().acquire_owned().await.ok();
             info!(%job_id, %url, %doc_type, "Starting intelligent ingest job");
             let _ = db::queries::IngestJobQueries::update_job_status(
                 db_pool.pool(),
@@ -109,6 +113,30 @@ impl IngestJobManager {
                 None,
             )
             .await;
+
+            // Heartbeat task to keep updated_at fresh while job runs
+            let (hb_tx, mut hb_rx) = oneshot::channel::<()>();
+            let hb_pool = db_pool.clone();
+            let hb_job_id = job_id;
+            let hb_handle = tokio::spawn(async move {
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+                loop {
+                    tokio::select! {
+                        _ = interval.tick() => {
+                            let _ = db::queries::IngestJobQueries::update_job_status(
+                                hb_pool.pool(),
+                                hb_job_id,
+                                JobStatus::Running,
+                                None,
+                                None,
+                            ).await;
+                        }
+                        _ = &mut hb_rx => {
+                            break;
+                        }
+                    }
+                }
+            });
 
             // 1) Run discovery (Claude Code) to get a plan
             let mut analyzer = IntelligentRepositoryAnalyzer::new();
@@ -125,6 +153,9 @@ impl IngestJobManager {
                         Some(&e.to_string()),
                     )
                     .await;
+                    // Stop heartbeat
+                    let _ = hb_tx.send(());
+                    let _ = hb_handle.await;
                     return;
                 }
             };
@@ -155,6 +186,10 @@ impl IngestJobManager {
                     .await;
                 }
             }
+
+            // Stop heartbeat
+            let _ = hb_tx.send(());
+            let _ = hb_handle.await;
         });
 
         Ok(job_id)
@@ -172,6 +207,23 @@ impl IngestJobManager {
             }
         });
     }
+}
+
+// Global semaphore for ingest concurrency
+fn ingest_max_concurrency() -> usize {
+    std::env::var("INGEST_MAX_CONCURRENCY")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .filter(|&v| v > 0)
+        .unwrap_or(2)
+}
+
+static INGEST_SEMAPHORE: OnceLock<Arc<Semaphore>> = OnceLock::new();
+
+fn get_ingest_semaphore() -> Arc<Semaphore> {
+    INGEST_SEMAPHORE
+        .get_or_init(|| Arc::new(Semaphore::new(ingest_max_concurrency())))
+        .clone()
 }
 
 fn work_base() -> std::path::PathBuf {

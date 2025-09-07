@@ -21,6 +21,8 @@ use sqlx;
 use std::{fmt::Write as _, sync::Arc};
 // use tokio::task; // Commented out for MVP - not using background tasks
 use uuid::Uuid;
+use tokio::sync::{oneshot, Semaphore};
+use std::sync::OnceLock;
 
 use crate::tools::Tool;
 
@@ -149,6 +151,8 @@ impl Tool for AddRustCrateTool {
         let version_owned = version.map(String::from);
 
         tokio::spawn(async move {
+            // Global concurrency cap for crate ingestion jobs
+            let _permit = get_crate_job_semaphore().acquire_owned().await.ok();
             tracing::info!("Background task started for crate: {}", crate_name_owned);
             let mut rust_loader = RustLoader::new();
 
@@ -159,6 +163,24 @@ impl Tool for AddRustCrateTool {
             {
                 tracing::error!("Failed to update job status to running: {}", e);
             }
+
+            // Heartbeat task to keep updated_at fresh while job runs
+            let (hb_tx, mut hb_rx) = oneshot::channel::<()>();
+            let hb_processor = job_processor.clone();
+            let hb_job_id = job_id;
+            let hb_handle = tokio::spawn(async move {
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+                loop {
+                    tokio::select! {
+                        _ = interval.tick() => {
+                            let _ = hb_processor.update_job_status(hb_job_id, JobStatus::Running, None, None).await;
+                        }
+                        _ = &mut hb_rx => {
+                            break;
+                        }
+                    }
+                }
+            });
 
             if let Err(e) = Self::process_crate_ingestion(
                 &job_processor,
@@ -193,6 +215,10 @@ impl Tool for AddRustCrateTool {
                     crate_name_owned
                 );
             }
+
+            // Stop heartbeat
+            let _ = hb_tx.send(());
+            let _ = hb_handle.await;
         });
 
         // Return 202 Accepted with job ID immediately
@@ -562,6 +588,23 @@ impl AddRustCrateTool {
         );
         Ok(())
     }
+}
+
+// Global semaphore for crate ingestion concurrency
+fn crate_job_max_concurrency() -> usize {
+    std::env::var("CRATE_JOB_MAX_CONCURRENCY")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .filter(|&v| v > 0)
+        .unwrap_or(2)
+}
+
+static CRATE_JOB_SEMAPHORE: OnceLock<Arc<Semaphore>> = OnceLock::new();
+
+fn get_crate_job_semaphore() -> Arc<Semaphore> {
+    CRATE_JOB_SEMAPHORE
+        .get_or_init(|| Arc::new(Semaphore::new(crate_job_max_concurrency())))
+        .clone()
 }
 
 /// Remove Rust crate tool with cascade deletion
@@ -1169,6 +1212,14 @@ impl Tool for CheckRustStatusTool {
             }
         }
 
+        // Detect stuck crate jobs (> 1 hour without updates)
+        let stuck_crate_jobs: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM crate_jobs WHERE status = 'running' AND updated_at < NOW() - INTERVAL '1 hour'",
+        )
+        .fetch_one(self.db_pool.pool())
+        .await
+        .unwrap_or(0);
+
         // Get overall system statistics
         let stats = CrateQueries::get_crate_statistics(self.db_pool.pool()).await?;
 
@@ -1248,6 +1299,16 @@ impl Tool for CheckRustStatusTool {
                         job.started_at.format("%m-%d %H:%M")
                     );
                 }
+                output.push('\n');
+            }
+
+            // Show stuck job summary if any
+            if stuck_crate_jobs > 0 {
+                let _ = writeln!(
+                    &mut output,
+                    "⚠️  Stuck crate jobs (no update > 1h): {}",
+                    stuck_crate_jobs
+                );
                 output.push('\n');
             }
         }
