@@ -283,15 +283,11 @@ async fn main() -> Result<()> {
     let database_url = args
         .database_url
         .or_else(|| std::env::var("DATABASE_URL").ok())
-        .unwrap_or_else(|| "postgresql://docserver:password@localhost:5433/docs".to_string());
+        .ok_or_else(|| anyhow::anyhow!(
+            "DATABASE_URL is required (pass --database-url or set DATABASE_URL)"
+        ))?;
 
-    info!(
-        "Connecting to database: {}",
-        database_url.replace(
-            &std::env::var("DATABASE_PASSWORD").unwrap_or_default(),
-            "***"
-        )
-    );
+    info!("Connecting to configured database (URL redacted)");
     let db_pool = Arc::new(
         PgPool::connect(&database_url)
             .await

@@ -355,6 +355,8 @@ pub trait EmbeddingClient {
 pub struct OpenAIEmbeddingClient {
     client: Client,
     api_key: String,
+    base_url: String,
+    default_model: String,
     rate_limiter: RateLimiter,
     retry_policy: RetryPolicy,
     circuit_breaker: Arc<Mutex<CircuitBreaker>>,
@@ -369,16 +371,30 @@ impl OpenAIEmbeddingClient {
     /// initialization fails.
     pub fn new() -> Result<Self> {
         let api_key = env::var("OPENAI_API_KEY").unwrap_or_else(|_| "dummy-key".to_string()); // Allow dummy key for testing
+        let base_url = env::var("OPENAI_BASE_URL")
+            .unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
+        let default_model = env::var("OPENAI_EMBEDDING_MODEL")
+            .unwrap_or_else(|_| "text-embedding-3-large".to_string());
 
         let client = Client::new();
 
         Ok(Self {
             client,
             api_key,
+            base_url,
+            default_model,
             rate_limiter: RateLimiter::new(),
             retry_policy: RetryPolicy::new(),
             circuit_breaker: Arc::new(Mutex::new(CircuitBreaker::new(5, Duration::from_secs(300)))), // 5 failures, 5-minute timeout
         })
+    }
+
+    fn endpoint(&self, path: &str) -> String {
+        format!(
+            "{}/{}",
+            self.base_url.trim_end_matches('/'),
+            path.trim_start_matches('/')
+        )
     }
 
     /// Execute an operation with retry logic and circuit breaker
@@ -461,7 +477,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
     async fn embed(&self, text: &str) -> Result<Vec<f32>> {
         let request = EmbeddingRequest {
             input: text.to_string(),
-            model: "text-embedding-3-large".to_string(),
+            model: self.default_model.clone(),
         };
 
         let response = self.generate_embedding(request).await?;
@@ -489,7 +505,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
         let response = self
             .client
-            .post("https://api.openai.com/v1/embeddings")
+            .post(self.endpoint("/embeddings"))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
             .json(&payload)
@@ -558,7 +574,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
             let response = self
                 .client
-                .post("https://api.openai.com/v1/files")
+                .post(self.endpoint("/files"))
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .multipart(form)
                 .send()
@@ -596,7 +612,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
             let response = self
                 .client
-                .post("https://api.openai.com/v1/batches")
+                .post(self.endpoint("/batches"))
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .header("Content-Type", "application/json")
                 .json(&request)
@@ -625,7 +641,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
         let response = self
             .client
-            .get(format!("https://api.openai.com/v1/batches/{batch_id}"))
+            .get(self.endpoint(&format!("/batches/{batch_id}")))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .send()
             .await?;
@@ -650,7 +666,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
         let response = self
             .client
-            .get(format!("https://api.openai.com/v1/files/{file_id}/content"))
+            .get(self.endpoint(&format!("/files/{file_id}/content")))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .send()
             .await?;
@@ -688,9 +704,7 @@ impl EmbeddingClient for OpenAIEmbeddingClient {
 
         let response = self
             .client
-            .post(format!(
-                "https://api.openai.com/v1/batches/{batch_id}/cancel"
-            ))
+            .post(self.endpoint(&format!("/batches/{batch_id}/cancel")))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
             .send()

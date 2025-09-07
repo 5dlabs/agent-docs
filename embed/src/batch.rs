@@ -39,25 +39,25 @@ impl EmbeddingBatchRequest {
     /// Create a new batch request with text-embedding-3-large defaults
     #[must_use]
     pub fn new(id: String, text: String) -> Self {
-        Self {
-            id,
-            text,
-            model: "text-embedding-3-large".to_string(),
-            dimensions: Some(3072), // Full dimensionality
-            metadata: HashMap::new(),
-        }
+        let model = std::env::var("OPENAI_EMBEDDING_MODEL")
+            .unwrap_or_else(|_| "text-embedding-3-large".to_string());
+        let dimensions = std::env::var("OPENAI_EMBEDDING_DIMS")
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(3072);
+        Self { id, text, model, dimensions: Some(dimensions), metadata: HashMap::new() }
     }
 
     /// Create a new batch request with optimized dimensions
     #[must_use]
     pub fn new_optimized(id: String, text: String) -> Self {
-        Self {
-            id,
-            text,
-            model: "text-embedding-3-large".to_string(),
-            dimensions: Some(1024), // Optimized dimensionality for better performance
-            metadata: HashMap::new(),
-        }
+        let model = std::env::var("OPENAI_EMBEDDING_MODEL")
+            .unwrap_or_else(|_| "text-embedding-3-large".to_string());
+        let dimensions = std::env::var("OPENAI_EMBEDDING_DIMS_OPTIMIZED")
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(1024);
+        Self { id, text, model, dimensions: Some(dimensions), metadata: HashMap::new() }
     }
 
     /// Add metadata to the request
