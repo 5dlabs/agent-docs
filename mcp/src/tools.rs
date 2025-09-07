@@ -185,7 +185,7 @@ impl RustQueryTool {
                 "{}. **{}** (from `{metadata}`)\n{}...\n\n",
                 i + 1,
                 doc.doc_path,
-                doc.content.chars().take(300).collect::<String>()
+                doc.content.chars().take(1200).collect::<String>()
             );
         }
 
@@ -336,7 +336,7 @@ impl DynamicQueryTool {
                 // Preserve ASCII art structure for diagrams
                 format!(
                     "```\n{}\n```\n\n*Diagram Content ({})*",
-                    doc.content.chars().take(800).collect::<String>(),
+                    doc.content.chars().take(2000).collect::<String>(),
                     format.unwrap_or("ascii")
                 )
             }
@@ -360,12 +360,12 @@ impl DynamicQueryTool {
                     size,
                     page_count,
                     doc.doc_path,
-                    doc.content.chars().take(300).collect::<String>()
+                    doc.content.chars().take(1000).collect::<String>()
                 )
             }
             Some("markdown") | None => {
                 // Format as markdown with proper structure
-                let content_preview = doc.content.chars().take(400).collect::<String>();
+                let content_preview = doc.content.chars().take(1500).collect::<String>();
                 if content_preview.starts_with('#') {
                     // Already has markdown headers
                     format!("{content_preview}...")
@@ -378,7 +378,7 @@ impl DynamicQueryTool {
                 // Default formatting
                 format!(
                     "{content_preview}...",
-                    content_preview = doc.content.chars().take(300).collect::<String>()
+                    content_preview = doc.content.chars().take(1000).collect::<String>()
                 )
             }
         }
