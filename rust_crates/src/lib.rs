@@ -25,6 +25,11 @@ impl RateLimiter {
     /// Panics if the HTTP client cannot be created.
     #[must_use]
     pub fn new() -> Self {
+        let min_interval = std::env::var("CRATE_CRAWL_INTERVAL_MS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .map_or_else(|| Duration::from_secs(6), Duration::from_millis);
+
         Self {
             client: Client::builder()
                 .timeout(Duration::from_secs(30))
@@ -32,7 +37,7 @@ impl RateLimiter {
                 .build()
                 .expect("Failed to create HTTP client"),
             last_request: None,
-            min_interval: Duration::from_secs(6),
+            min_interval,
         }
     }
 
@@ -119,7 +124,13 @@ impl RustLoader {
         );
         let meta = self.fetch_crate_metadata(crate_name).await?;
         let target = version.unwrap_or(&meta.newest_version);
-        let pages = self.crawl_docs_rs(crate_name, target, Some(2000)).await?;
+        let max_pages = std::env::var("CRATE_CRAWL_MAX_PAGES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(2000);
+        let pages = self
+            .crawl_docs_rs(crate_name, target, Some(max_pages))
+            .await?;
         Ok((meta, pages))
     }
 
