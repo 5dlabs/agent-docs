@@ -191,9 +191,55 @@ async fn execute_cli_plan(analysis: &RepositoryAnalysis, doc_type: &str) -> anyh
         };
 
         // Normalize cargo/loader invocations
-        let (program, args) = normalize_command(&cmd, doc_type);
+        let (program, mut args) = normalize_command(&cmd, doc_type);
         // Allowlist check
         ensure_allowed(&program, &args)?;
+
+        // If this is a loader cli invocation, ensure the include path exists; otherwise skip or fallback
+        if program == loader_bin().to_string_lossy() && !args.is_empty() && args[0] == "cli" {
+            // Expect path argument right after subcommand
+            if args.len() > 1 {
+                let requested_path = std::path::PathBuf::from(&args[1]);
+                if !requested_path.exists() {
+                    // Attempt a smart fallback: check common documentation directories inside the cloned repo
+                    let repo_root = work_base().join("repo-analysis");
+                    let candidates = [
+                        repo_root.join("docs"),
+                        repo_root.join("Documentation"),
+                        repo_root.join("website/docs"),
+                        repo_root.join("docs/website"),
+                        repo_root.join("content/docs"),
+                        repo_root.join("docs/content"),
+                        repo_root.join("doc"),
+                        repo_root.join("docs-src"),
+                        repo_root.join("guides"),
+                        repo_root.join("site/docs"),
+                    ];
+
+                    let fallback = candidates.iter().find(|p| p.exists());
+                    if let Some(found) = fallback {
+                        let msg = format!(
+                            "Requested path not found ({}). Falling back to {}",
+                            requested_path.display(),
+                            found.display()
+                        );
+                        warn!("{}", msg);
+                        let _ = writeln!(combined, "⚠️  {}", msg);
+                        // Replace the include path with the fallback
+                        args[1] = found.to_string_lossy().to_string();
+                    } else {
+                        let msg = format!(
+                            "Requested path not found ({}). No suitable fallback found; skipping this step.",
+                            requested_path.display()
+                        );
+                        warn!("{}", msg);
+                        let _ = writeln!(combined, "⚠️  {}", msg);
+                        // Skip this command and continue with the plan
+                        continue;
+                    }
+                }
+            }
+        }
 
         let mut command = TokioCommand::new(&program);
         if ingest_debug_enabled() {
