@@ -742,20 +742,20 @@ fn handle_sse_request(
     request_id: Uuid,
 ) -> Result<Response, TransportError> {
     info!(request_id = %request_id, "Establishing SSE connection for MCP Streamable HTTP transport");
-    
+
     // Get or create session
     let session_id = get_or_create_comprehensive_session(state, headers, None)?;
-    
+
     // Set SSE headers
     let mut response_headers = HeaderMap::new();
     crate::headers::set_sse_response_headers(&mut response_headers, Some(session_id));
     add_security_headers(&mut response_headers);
-    
+
     // Create SSE response with keep-alive
     let sse_body = format!(
         "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}}}}}\n\n"
     );
-    
+
     Ok((StatusCode::OK, response_headers, sse_body).into_response())
 }
 
