@@ -313,11 +313,11 @@ impl IntoResponse for TransportError {
     }
 }
 
-/// Unified MCP endpoint handler supporting both POST (JSON) and GET (SSE) - MVP: POST only
+/// Unified MCP endpoint handler supporting both POST (JSON) and GET (SSE)
 ///
 /// This handler processes all MCP requests according to the 2025-06-18 specification:
 /// - POST requests with application/json -> JSON-RPC processing
-/// - GET requests -> 405 Method Not Allowed (MVP does not support SSE)
+/// - GET requests with text/event-stream -> SSE for Streamable HTTP transport
 ///   Unified MCP endpoint handler.
 ///
 /// # Errors
@@ -390,18 +390,16 @@ async fn unified_mcp_handler_impl(
         };
     }
 
-    // Validate Accept header for method compatibility (JSON-only policy)
-    // Note: For GET, SSE is disabled, so we skip Accept validation and return 405 below.
+    // Validate Accept header for method compatibility
+    // POST: application/json, GET: text/event-stream
     validate_accept_header(&headers, request.method())?;
 
     match *request.method() {
         Method::POST => handle_json_rpc_request(state, headers, request, request_id).await,
         Method::DELETE => handle_delete_session_request(&state, &headers, request_id),
         Method::GET => {
-            // JSON-only policy: SSE disabled. Always return 405 regardless of Accept header.
-            metrics().increment_method_not_allowed();
-            warn!(request_id = %request_id, "GET request to /mcp endpoint - returning 405 Method Not Allowed");
-            Err(TransportError::MethodNotAllowed)
+            // Handle SSE connection for Streamable HTTP transport
+            handle_sse_request(&state, &headers, request_id)
         }
         _ => {
             metrics().increment_method_not_allowed();
@@ -437,8 +435,18 @@ fn validate_accept_header(headers: &HeaderMap, method: &Method) -> Result<(), Tr
                     }
                 }
                 Method::GET => {
-                    // SSE disabled: skip Accept validation for GET. Handler returns 405.
-                    Ok(())
+                    // For SSE requests, Accept should be compatible with text/event-stream
+                    if accept_header.contains("text/event-stream")
+                        || accept_header.contains("*/*")
+                        || accept_header.contains("text/*")
+                    {
+                        Ok(())
+                    } else {
+                        warn!("Unacceptable Accept header for SSE: {accept_header}");
+                        Err(TransportError::UnacceptableAcceptHeader(
+                            accept_header.to_string(),
+                        ))
+                    }
                 }
                 _ => Ok(()), // Other methods don't have specific Accept requirements
             }
@@ -722,6 +730,33 @@ async fn handle_json_rpc_request(
             Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
         }
     }
+}
+
+/// Handle SSE connection for Streamable HTTP transport
+///
+/// # Errors
+/// Returns a `TransportError` if session creation or SSE setup fails.
+fn handle_sse_request(
+    state: &McpServerState,
+    headers: &HeaderMap,
+    request_id: Uuid,
+) -> Result<Response, TransportError> {
+    info!(request_id = %request_id, "Establishing SSE connection for MCP Streamable HTTP transport");
+    
+    // Get or create session
+    let session_id = get_or_create_comprehensive_session(state, headers, None)?;
+    
+    // Set SSE headers
+    let mut response_headers = HeaderMap::new();
+    crate::headers::set_sse_response_headers(&mut response_headers, Some(session_id));
+    add_security_headers(&mut response_headers);
+    
+    // Create SSE response with keep-alive
+    let sse_body = format!(
+        "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}}}}}\n\n"
+    );
+    
+    Ok((StatusCode::OK, response_headers, sse_body).into_response())
 }
 
 /// Initialize transport with session cleanup task

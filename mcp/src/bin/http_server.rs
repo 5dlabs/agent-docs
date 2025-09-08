@@ -1,6 +1,6 @@
 //! HTTP server binary for the Doc Server
 //!
-//! This binary provides the main HTTP endpoint for MCP communication (JSON-only; SSE disabled).
+//! This binary provides the main HTTP endpoint for MCP communication with Streamable HTTP transport support.
 
 use anyhow::Result;
 use db::{DatabaseMigrationManager, DatabasePool, MigrationInfo, QueryPerformanceMonitor};
