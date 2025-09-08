@@ -147,9 +147,7 @@ fn create_mock_router() -> Router {
                 set_standard_headers(&mut response_headers, Some(session_id));
                 response_headers.insert("content-type", "text/event-stream".parse().unwrap());
 
-                let sse_body = format!(
-                    "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"2025-06-18\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}}}}}\n\n"
-                );
+                let sse_body = "data: {\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {\"protocolVersion\": \"2025-06-18\", \"capabilities\": {\"tools\": {}, \"prompts\": {}}}}\n\n".to_string();
 
                 Ok((StatusCode::OK, response_headers, sse_body).into_response())
             }
