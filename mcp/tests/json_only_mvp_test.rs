@@ -70,9 +70,9 @@ fn create_mock_router() -> Router {
                 let mut h = HeaderMap::new();
                 set_standard_headers(&mut h, None);
                 h.insert("content-type", "text/event-stream".parse().unwrap());
-                
+
                 let sse_body = "data: {\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {\"protocolVersion\": \"2025-06-18\", \"capabilities\": {\"tools\": {}, \"prompts\": {}}}}\n\n";
-                
+
                 return (StatusCode::OK, h, sse_body).into_response();
             }
             _ => {
@@ -209,7 +209,7 @@ async fn test_get_returns_sse_with_proper_headers() {
 
     // Should return 200 OK with SSE (Streamable HTTP transport)
     assert_eq!(response.status(), StatusCode::OK);
-    
+
     // Should have SSE content type
     let content_type = response.headers().get("content-type").unwrap();
     assert_eq!(content_type, "text/event-stream");
@@ -433,7 +433,7 @@ async fn test_metrics_tracking_get_request() {
     // GET should NOT increment method_not_allowed since it's now supported
     // TODO: Debug why method_not_allowed is still being incremented
     // assert_eq!(
-    //     final_metrics.method_not_allowed_total, 
+    //     final_metrics.method_not_allowed_total,
     //     initial_metrics.method_not_allowed_total,
     //     "Method not allowed counter should NOT be incremented for SSE"
     // );

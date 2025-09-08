@@ -142,15 +142,15 @@ fn create_mock_router() -> Router {
                 let Ok(session_id) = state.session_manager.get_or_create_session(&headers) else {
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 };
-                
+
                 let mut response_headers = HeaderMap::new();
                 set_standard_headers(&mut response_headers, Some(session_id));
                 response_headers.insert("content-type", "text/event-stream".parse().unwrap());
-                
+
                 let sse_body = format!(
                     "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"2025-06-18\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}}}}}\n\n"
                 );
-                
+
                 Ok((StatusCode::OK, response_headers, sse_body).into_response())
             }
             _ => Err(StatusCode::METHOD_NOT_ALLOWED),
@@ -284,7 +284,7 @@ async fn test_get_mcp_returns_sse() {
 
     // Should return 200 OK with SSE connection (Streamable HTTP transport)
     assert_eq!(response.status(), StatusCode::OK);
-    
+
     // Should have SSE headers
     let content_type = response.headers().get("content-type").unwrap();
     assert_eq!(content_type, "text/event-stream");
