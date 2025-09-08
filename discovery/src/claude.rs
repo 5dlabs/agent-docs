@@ -1,6 +1,26 @@
 use anyhow::{anyhow, Result};
 use std::process::Stdio;
-use std::{fs, path::PathBuf};
+use std::{fs, path::{Path, PathBuf}};
+
+// Ensure a directory exists and is writable by probing file creation.
+fn ensure_writable_dir(dir: &Path) -> bool {
+    if fs::create_dir_all(dir).is_err() {
+        return false;
+    }
+    let probe = dir.join(".perm_test");
+    match fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&probe)
+    {
+        Ok(_) => {
+            let _ = fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
@@ -42,22 +62,6 @@ impl ClaudeRunner {
         // fall back to a per-run directory under INGEST_WORK_DIR.
         let configured_dir = std::env::var("CLAUDE_CONFIG_DIR").ok();
         let ingest_dir = std::env::var("INGEST_WORK_DIR").unwrap_or_else(|_| "/tmp".into());
-
-        // Helper: check dir writability by creating dir and a tiny temp file.
-        fn ensure_writable_dir(dir: &PathBuf) -> bool {
-            if fs::create_dir_all(dir).is_err() {
-                return false;
-            }
-            let mut probe = dir.clone();
-            probe.push(".perm_test");
-            match fs::OpenOptions::new().create(true).write(true).open(&probe) {
-                Ok(_) => {
-                    let _ = fs::remove_file(&probe);
-                    true
-                }
-                Err(_) => false,
-            }
-        }
 
         // Try the configured dir first if present and writable
         let selected_config_dir: PathBuf = if let Some(cfg) = configured_dir {
