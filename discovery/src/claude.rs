@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use std::process::Stdio;
+use std::{fs, path::PathBuf};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
@@ -36,6 +37,64 @@ impl ClaudeRunner {
             serde_json::to_string(prompt)?
         );
 
+        // Resolve a writable config directory for the Claude CLI.
+        // Prefer explicitly provided CLAUDE_CONFIG_DIR if writable; otherwise
+        // fall back to a per-run directory under INGEST_WORK_DIR.
+        let configured_dir = std::env::var("CLAUDE_CONFIG_DIR").ok();
+        let ingest_dir = std::env::var("INGEST_WORK_DIR").unwrap_or_else(|_| "/tmp".into());
+
+        // Helper: check dir writability by creating dir and a tiny temp file.
+        fn ensure_writable_dir(dir: &PathBuf) -> bool {
+            if fs::create_dir_all(dir).is_err() {
+                return false;
+            }
+            let mut probe = dir.clone();
+            probe.push(".perm_test");
+            match fs::OpenOptions::new().create(true).write(true).open(&probe) {
+                Ok(_) => {
+                    let _ = fs::remove_file(&probe);
+                    true
+                }
+                Err(_) => false,
+            }
+        }
+
+        // Try the configured dir first if present and writable
+        let selected_config_dir: PathBuf = if let Some(cfg) = configured_dir {
+            let p = PathBuf::from(cfg);
+            if ensure_writable_dir(&p) {
+                p
+            } else {
+                // Fallback: unique per-run directory under ingest dir
+                let mut p = PathBuf::from(&ingest_dir);
+                // Include a lightweight unique suffix (secs + pid)
+                let secs = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                let unique = format!("claude-code-config-{}-{}", secs, std::process::id());
+                p.push(unique);
+                let _ = ensure_writable_dir(&p);
+                p
+            }
+        } else {
+            // Default path if none configured: use ingest dir
+            let mut p = PathBuf::from(&ingest_dir);
+            p.push("claude-code-config");
+            // If shared dir is not writable, create a unique subdir
+            if !ensure_writable_dir(&p) {
+                let secs = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                let unique = format!("claude-code-config-{}-{}", secs, std::process::id());
+                p.pop();
+                p.push(unique);
+                let _ = ensure_writable_dir(&p);
+            }
+            p
+        };
+
         let mut cmd = Command::new(&self.binary_path);
         cmd.arg("-p")
             .arg("--output-format")
@@ -47,10 +106,8 @@ impl ClaudeRunner {
             .env("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
             .env("DISABLE_TELEMETRY", "1")
             .env("DISABLE_ERROR_REPORTING", "1")
-            .env("DISABLE_AUTOUPDATER", "1");
-        if std::env::var("CLAUDE_CONFIG_DIR").is_err() {
-            cmd.env("CLAUDE_CONFIG_DIR", "/tmp/claude-code-config");
-        }
+            .env("DISABLE_AUTOUPDATER", "1")
+            .env("CLAUDE_CONFIG_DIR", selected_config_dir.as_os_str());
 
         let mut child = cmd
             .stdin(Stdio::piped())
