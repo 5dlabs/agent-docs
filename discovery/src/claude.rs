@@ -1,6 +1,9 @@
 use anyhow::{anyhow, Result};
 use std::process::Stdio;
-use std::{fs, path::{Path, PathBuf}};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 // Ensure a directory exists and is writable by probing file creation.
 fn ensure_writable_dir(dir: &Path) -> bool {
