@@ -137,6 +137,22 @@ fn create_mock_router() -> Router {
 
                 Ok((StatusCode::OK, response_headers, axum::Json(mock_response)).into_response())
             }
+            Method::GET => {
+                // Mock SSE response for Streamable HTTP transport
+                let Ok(session_id) = state.session_manager.get_or_create_session(&headers) else {
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                };
+                
+                let mut response_headers = HeaderMap::new();
+                set_standard_headers(&mut response_headers, Some(session_id));
+                response_headers.insert("content-type", "text/event-stream".parse().unwrap());
+                
+                let sse_body = format!(
+                    "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"2025-06-18\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}}}}}\n\n"
+                );
+                
+                Ok((StatusCode::OK, response_headers, sse_body).into_response())
+            }
             _ => Err(StatusCode::METHOD_NOT_ALLOWED),
         }
     }
@@ -253,20 +269,25 @@ async fn test_post_mcp_with_wrong_protocol_version_returns_400() {
 }
 
 #[tokio::test]
-async fn test_get_mcp_returns_405() {
+async fn test_get_mcp_returns_sse() {
     let app = create_test_server().await;
 
     let request = Request::builder()
         .method(Method::GET)
         .uri("/mcp")
         .header(MCP_PROTOCOL_VERSION, SUPPORTED_PROTOCOL_VERSION)
+        .header("Accept", "text/event-stream")
         .body(Body::empty())
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
 
-    // Should return 405 Method Not Allowed (MVP: no SSE support)
-    assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+    // Should return 200 OK with SSE connection (Streamable HTTP transport)
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    // Should have SSE headers
+    let content_type = response.headers().get("content-type").unwrap();
+    assert_eq!(content_type, "text/event-stream");
 }
 
 #[tokio::test]

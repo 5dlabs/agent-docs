@@ -61,18 +61,33 @@ fn create_mock_router() -> Router {
         // Count every incoming request to emulate server metrics
         metrics().increment_requests();
 
-        if method != Method::POST {
-            let mut h = HeaderMap::new();
-            set_standard_headers(&mut h, None);
-            metrics().increment_method_not_allowed();
-            return (
-                StatusCode::METHOD_NOT_ALLOWED,
-                h,
-                Json(json!({
-                    "error": {"code": -32600, "message": "Method Not Allowed"}
-                })),
-            )
-                .into_response();
+        match method {
+            Method::POST => {
+                // Continue with POST handling below
+            }
+            Method::GET => {
+                // Mock SSE response for Streamable HTTP transport
+                let mut h = HeaderMap::new();
+                set_standard_headers(&mut h, None);
+                h.insert("content-type", "text/event-stream".parse().unwrap());
+                
+                let sse_body = "data: {\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {\"protocolVersion\": \"2025-06-18\", \"capabilities\": {\"tools\": {}, \"prompts\": {}}}}\n\n";
+                
+                return (StatusCode::OK, h, sse_body).into_response();
+            }
+            _ => {
+                let mut h = HeaderMap::new();
+                set_standard_headers(&mut h, None);
+                metrics().increment_method_not_allowed();
+                return (
+                    StatusCode::METHOD_NOT_ALLOWED,
+                    h,
+                    Json(json!({
+                        "error": {"code": -32600, "message": "Method Not Allowed"}
+                    })),
+                )
+                    .into_response();
+            }
         }
 
         // POST behavior: emulate server-side validations used by tests
@@ -179,20 +194,25 @@ fn create_mock_router() -> Router {
 }
 
 #[tokio::test]
-async fn test_get_returns_405_with_proper_headers() {
+async fn test_get_returns_sse_with_proper_headers() {
     let app = create_test_server().await;
 
     let request = Request::builder()
         .method(Method::GET)
         .uri("/mcp")
         .header("MCP-Protocol-Version", SUPPORTED_PROTOCOL_VERSION)
+        .header("Accept", "text/event-stream")
         .body(Body::empty())
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
 
-    // Must return 405 Method Not Allowed
-    assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+    // Should return 200 OK with SSE (Streamable HTTP transport)
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    // Should have SSE content type
+    let content_type = response.headers().get("content-type").unwrap();
+    assert_eq!(content_type, "text/event-stream");
 
     // Must include MCP protocol version header
     let headers = response.headers();
@@ -392,16 +412,17 @@ async fn test_metrics_tracking_get_request() {
     // Get initial metrics snapshot
     let initial_metrics = metrics().snapshot();
 
-    // Make a GET request (should increment method_not_allowed and requests_total)
+    // Make a GET request (should return SSE and increment requests_total)
     let request = Request::builder()
         .method(Method::GET)
         .uri("/mcp")
         .header("MCP-Protocol-Version", SUPPORTED_PROTOCOL_VERSION)
+        .header("Accept", "text/event-stream")
         .body(Body::empty())
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+    assert_eq!(response.status(), StatusCode::OK);
 
     // Check that metrics were incremented
     let final_metrics = metrics().snapshot();
@@ -409,9 +430,11 @@ async fn test_metrics_tracking_get_request() {
         final_metrics.requests_total > initial_metrics.requests_total,
         "Total requests should be incremented"
     );
-    assert!(
-        final_metrics.method_not_allowed_total > initial_metrics.method_not_allowed_total,
-        "Method not allowed counter should be incremented"
+    // GET should NOT increment method_not_allowed since it's now supported
+    assert_eq!(
+        final_metrics.method_not_allowed_total, 
+        initial_metrics.method_not_allowed_total,
+        "Method not allowed counter should NOT be incremented for SSE"
     );
 }
 
