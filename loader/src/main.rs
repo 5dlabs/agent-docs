@@ -448,16 +448,12 @@ fn create_document_from_json(
         .unwrap_or("")
         .to_string();
 
-    // Extract metadata (use the entire JSON as metadata, or empty object)
+    // Extract metadata (use the entire JSON as metadata, or create enhanced metadata)
     let metadata = if let Some(meta) = json_doc.get("metadata") {
         meta.clone()
     } else {
-        // Create basic metadata from the document
-        serde_json::json!({
-            "original_doc_type": doc_type,
-            "source": source_name,
-            "imported_at": chrono::Utc::now().to_rfc3339()
-        })
+        // Create enhanced metadata by analyzing content
+        create_enhanced_metadata(&doc_type, &source_name, &content, &doc_path)
     };
 
     // Extract token count if available
@@ -478,6 +474,306 @@ fn create_document_from_json(
         created_at: Some(chrono::Utc::now()),
         updated_at: Some(chrono::Utc::now()),
     }
+}
+
+/// Create enhanced metadata by analyzing document content and structure
+fn create_enhanced_metadata(
+    doc_type: &str,
+    source_name: &str,
+    content: &str,
+    doc_path: &str,
+) -> serde_json::Value {
+    let mut metadata = serde_json::Map::new();
+
+    // Basic metadata
+    metadata.insert(
+        "original_doc_type".to_string(),
+        serde_json::Value::String(doc_type.to_string()),
+    );
+    metadata.insert(
+        "source".to_string(),
+        serde_json::Value::String(source_name.to_string()),
+    );
+    metadata.insert(
+        "imported_at".to_string(),
+        serde_json::Value::String(chrono::Utc::now().to_rfc3339()),
+    );
+
+    // Determine format from file path and content
+    let format = determine_document_format(doc_path, content);
+    metadata.insert("format".to_string(), serde_json::Value::String(format));
+
+    // Analyze content for topic, category, and complexity based on doc_type
+    match doc_type {
+        "jupiter" => {
+            let (topic, category, complexity) = analyze_jupiter_content(content, doc_path);
+            metadata.insert("topic".to_string(), serde_json::Value::String(topic));
+            metadata.insert("category".to_string(), serde_json::Value::String(category));
+            metadata.insert(
+                "complexity".to_string(),
+                serde_json::Value::String(complexity),
+            );
+        }
+        "solana" => {
+            let (topic, category, complexity) = analyze_solana_content(content, doc_path);
+            metadata.insert("topic".to_string(), serde_json::Value::String(topic));
+            metadata.insert("category".to_string(), serde_json::Value::String(category));
+            metadata.insert(
+                "complexity".to_string(),
+                serde_json::Value::String(complexity),
+            );
+        }
+        "talos" => {
+            let (topic, category, complexity) = analyze_talos_content(content, doc_path);
+            metadata.insert("topic".to_string(), serde_json::Value::String(topic));
+            metadata.insert("category".to_string(), serde_json::Value::String(category));
+            metadata.insert(
+                "complexity".to_string(),
+                serde_json::Value::String(complexity),
+            );
+        }
+        _ => {
+            // Generic analysis for other document types
+            let (topic, complexity) = analyze_generic_content(content, doc_path);
+            metadata.insert("topic".to_string(), serde_json::Value::String(topic));
+            metadata.insert(
+                "complexity".to_string(),
+                serde_json::Value::String(complexity),
+            );
+        }
+    }
+
+    serde_json::Value::Object(metadata)
+}
+
+/// Determine document format from path and content
+fn determine_document_format(doc_path: &str, content: &str) -> String {
+    use std::path::Path;
+
+    // Check file extension first (case-insensitive)
+    let path = Path::new(doc_path);
+    if let Some(ext) = path.extension() {
+        match ext.to_string_lossy().to_lowercase().as_str() {
+            "md" | "markdown" => return "markdown".to_string(),
+            "json" => return "json".to_string(),
+            "ts" | "tsx" => return "typescript".to_string(),
+            "js" | "jsx" => return "javascript".to_string(),
+            _ => {}
+        }
+    }
+
+    // Analyze content structure
+    if content.contains("```typescript") || content.contains("```ts") {
+        return "typescript".to_string();
+    }
+    if content.contains("```javascript") || content.contains("```js") {
+        return "javascript".to_string();
+    }
+    if content.contains("```json") || content.trim().starts_with('{') {
+        return "json".to_string();
+    }
+    if content.contains("# ") || content.contains("## ") {
+        return "markdown".to_string();
+    }
+
+    "markdown".to_string() // Default fallback
+}
+
+/// Analyze Jupiter-specific content for metadata
+fn analyze_jupiter_content(content: &str, doc_path: &str) -> (String, String, String) {
+    let content_lower = content.to_lowercase();
+    let path_lower = doc_path.to_lowercase();
+
+    // Determine topic based on content analysis
+    let topic = if content_lower.contains("api")
+        || content_lower.contains("endpoint")
+        || content_lower.contains("request")
+        || content_lower.contains("response")
+        || path_lower.contains("api")
+    {
+        "apis"
+    } else if content_lower.contains("swap")
+        || content_lower.contains("trade")
+        || content_lower.contains("trading")
+        || content_lower.contains("exchange")
+    {
+        "trading"
+    } else if content_lower.contains("liquidity")
+        || content_lower.contains("pool")
+        || content_lower.contains("lp")
+    {
+        "liquidity"
+    } else if content_lower.contains("integration")
+        || content_lower.contains("sdk")
+        || content_lower.contains("library")
+        || content_lower.contains("client")
+    {
+        "integration"
+    } else if content_lower.contains("development")
+        || content_lower.contains("dev")
+        || content_lower.contains("build")
+        || content_lower.contains("setup")
+    {
+        "development"
+    } else {
+        "trading" // Default for Jupiter
+    }
+    .to_string();
+
+    // Determine category based on content analysis
+    let category = if content_lower.contains("swap")
+        || content_lower.contains("quote")
+        || path_lower.contains("swap")
+    {
+        "swap-api"
+    } else if content_lower.contains("token") || content_lower.contains("asset") {
+        "token-api"
+    } else if content_lower.contains("price") || content_lower.contains("pricing") {
+        "price-api"
+    } else if content_lower.contains("dex") || content_lower.contains("exchange") {
+        "dex-integration"
+    } else if content_lower.contains("wallet") || content_lower.contains("connect") {
+        "wallet-integration"
+    } else {
+        "swap-api" // Default for Jupiter
+    }
+    .to_string();
+
+    // Determine complexity based on content characteristics
+    let complexity = if content.len() < 1000
+        || content_lower.contains("getting started")
+        || content_lower.contains("quick start")
+        || content_lower.contains("introduction")
+        || path_lower.contains("intro")
+        || path_lower.contains("basic")
+    {
+        "beginner"
+    } else if content.len() > 5000
+        || content_lower.contains("advanced")
+        || content_lower.contains("complex")
+        || content.matches("```").count() > 5
+        || path_lower.contains("advanced")
+    {
+        "advanced"
+    } else {
+        "intermediate"
+    }
+    .to_string();
+
+    (topic, category, complexity)
+}
+
+/// Analyze Solana-specific content for metadata
+fn analyze_solana_content(content: &str, doc_path: &str) -> (String, String, String) {
+    let content_lower = content.to_lowercase();
+    let path_lower = doc_path.to_lowercase();
+
+    let topic =
+        if content_lower.contains("consensus") || content_lower.contains("proof of stake") {
+            "consensus"
+        } else if content_lower.contains("network") || content_lower.contains("rpc") {
+            "networking"
+        } else if content_lower.contains("validator") || content_lower.contains("staking") {
+            "validators"
+        } else if content_lower.contains("crypto")
+            || content_lower.contains("hash")
+            || content_lower.contains("signature")
+        {
+            "cryptography"
+        } else {
+            "development"
+        }
+        .to_string();
+
+    let category = if path_lower.contains("diagram") || content_lower.contains("diagram") {
+        "architecture-diagrams"
+    } else if path_lower.contains("crypto") || content_lower.contains("zk") {
+        "zk-cryptography"
+    } else if path_lower.contains("sequence") {
+        "sequence-diagrams"
+    } else {
+        "core"
+    }
+    .to_string();
+
+    let complexity = determine_complexity_by_content(content, doc_path);
+
+    (topic, category, complexity)
+}
+
+/// Analyze Talos-specific content for metadata
+fn analyze_talos_content(content: &str, doc_path: &str) -> (String, String, String) {
+    let content_lower = content.to_lowercase();
+
+    let topic = if content_lower.contains("kubernetes") || content_lower.contains("k8s") {
+        "kubernetes"
+    } else if content_lower.contains("config") || content_lower.contains("configuration") {
+        "configuration"
+    } else if content_lower.contains("network") || content_lower.contains("networking") {
+        "networking"
+    } else if content_lower.contains("security") || content_lower.contains("secure") {
+        "security"
+    } else {
+        "configuration"
+    }
+    .to_string();
+
+    // Talos doesn't have predefined categories in tools.json, so we'll use a generic approach
+    let category = "talos-os".to_string();
+
+    let complexity = determine_complexity_by_content(content, doc_path);
+
+    (topic, category, complexity)
+}
+
+/// Analyze generic content for basic metadata
+fn analyze_generic_content(content: &str, doc_path: &str) -> (String, String) {
+    let content_lower = content.to_lowercase();
+
+    let topic = if content_lower.contains("api") {
+        "apis"
+    } else if content_lower.contains("config") {
+        "configuration"
+    } else if content_lower.contains("tutorial") || content_lower.contains("guide") {
+        "development"
+    } else {
+        "general"
+    }
+    .to_string();
+
+    let complexity = determine_complexity_by_content(content, doc_path);
+
+    (topic, complexity)
+}
+
+/// Determine complexity based on content characteristics
+fn determine_complexity_by_content(content: &str, doc_path: &str) -> String {
+    let content_lower = content.to_lowercase();
+    let path_lower = doc_path.to_lowercase();
+
+    if content.len() < 1000
+        || content_lower.contains("getting started")
+        || content_lower.contains("quick start")
+        || content_lower.contains("introduction")
+        || content_lower.contains("basic")
+        || path_lower.contains("intro")
+        || path_lower.contains("basic")
+        || path_lower.contains("start")
+    {
+        "beginner"
+    } else if content.len() > 5000
+        || content_lower.contains("advanced")
+        || content_lower.contains("complex")
+        || content.matches("```").count() > 5
+        || content_lower.contains("implementation")
+        || path_lower.contains("advanced")
+        || path_lower.contains("complex")
+    {
+        "advanced"
+    } else {
+        "intermediate"
+    }
+    .to_string()
 }
 
 // Intelligent command removed; discovery is handled by server
