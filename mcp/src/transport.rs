@@ -125,12 +125,13 @@ impl SseHub {
 
     fn subscribe(&self, session_id: Uuid) -> broadcast::Receiver<SseMessage> {
         let s = self.get_or_create(session_id);
-        s.read()
-            .map(|ss| ss.sender.subscribe())
-            .unwrap_or_else(|_| {
+        s.read().map_or_else(
+            |_| {
                 let (tx, _rx) = broadcast::channel(1);
                 tx.subscribe()
-            })
+            },
+            |ss| ss.sender.subscribe(),
+        )
     }
 
     fn snapshot_from(&self, session_id: Uuid, last_id: Option<u64>) -> Vec<(u64, SseMessage)> {
