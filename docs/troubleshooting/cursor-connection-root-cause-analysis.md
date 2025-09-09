@@ -23,15 +23,16 @@ Cursor client was stuck at "Loading tools..." when attempting to connect to the 
 - **Cause**: Cursor not preserving `Mcp-Session-Id` header
 - **Fix**: Implemented client-based session management using `MCP_CLIENT_ID` environment variable
 
-### 4. Protocol Violation (Root Cause)
-- **Issue**: Cursor sending `notifications/initialized` as first message
-- **Cause**: Cursor caching session state but not following proper initialization flow
+### 4. Protocol Handler Bug (Root Cause)
+- **Issue**: Server rejecting ALL `notifications/initialized` messages
+- **Cause**: Handler was unconditionally returning error for `notifications/initialized`
 - **Expected Flow**:
   1. Client sends `initialize` request
   2. Server responds with capabilities
   3. Client sends `notifications/initialized` acknowledgment
-- **Actual Flow**: Cursor skipping directly to step 3
-- **Fix**: Return error when receiving `notifications/initialized` without prior `initialize`
+  4. Server accepts the notification
+- **Actual Flow**: Server was rejecting step 3 even when sent correctly
+- **Fix**: Accept `notifications/initialized` to complete the handshake properly
 
 ## Enhanced Logging Output
 

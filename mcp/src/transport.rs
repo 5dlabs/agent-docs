@@ -431,14 +431,24 @@ pub async fn unified_mcp_handler(
         let is_cursor = user_agent.to_lowercase().contains("cursor");
 
         if is_cursor {
+            let accept_header = headers
+                .get("accept")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            let is_sse_get = method == Method::GET
+                && (accept_header.contains("text/event-stream")
+                    || accept_header.contains("text/*")
+                    || accept_header.contains("*/*"));
             info!(
                 "🔍 CURSOR REQUEST DETECTED: {} {} (protocol: {})",
                 method, uri, protocol_version
             );
-            // Log ALL headers at INFO level for Cursor
-            for (name, value) in &headers {
-                if let Ok(v) = value.to_str() {
-                    info!("  Header: {}: {}", name, v);
+            // Avoid duplicate header dumps for SSE GET; detailed SSE headers are logged in handle_sse_request
+            if !is_sse_get {
+                for (name, value) in &headers {
+                    if let Ok(v) = value.to_str() {
+                        info!("  Header: {}: {}", name, v);
+                    }
                 }
             }
         } else {
@@ -1005,8 +1015,9 @@ fn handle_sse_request(
         info!(request_id = %request_id, "Establishing SSE connection for MCP Streamable HTTP transport");
     }
 
-    // Get or create session
-    let session_id = get_or_create_comprehensive_session(state, headers, None)?;
+    // Get or create session (include client info so MCP_CLIENT_ID/X-Client-Id can be honored)
+    let client_info = extract_client_info(headers);
+    let session_id = get_or_create_comprehensive_session(state, headers, Some(client_info))?;
 
     // Note: Do not increment POST success metrics here; GET establishes SSE only
 
