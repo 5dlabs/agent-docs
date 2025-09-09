@@ -821,20 +821,23 @@ fn handle_sse_request(
     // Get or create session
     let session_id = get_or_create_comprehensive_session(state, headers, None)?;
 
-    // Increment success metrics (SSE connection established)
-    metrics().increment_post_success();
+    // Note: Do not increment POST success metrics here; GET establishes SSE only
 
     // Build a streaming SSE response that stays open until the client disconnects
+    // Include explicit capabilities per MCP spec expectations
     let init_payload = format!(
-        "{{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}",
+        "{{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"resources\": {{}}, \"prompts\": {{}}, \"tools\": {{}}, \"sampling\": {{}}, \"roots\": {{}}, \"elicitation\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}",
         env!("CARGO_PKG_VERSION")
     );
 
     let mut interval = tokio::time::interval(Duration::from_secs(15));
 
     let stream = async_stream::stream! {
-        // Send initialization event first
-        let event = Event::default().data(init_payload.clone()).retry(Duration::from_millis(3000));
+        // Send initialization event first (explicit event name)
+        let event = Event::default()
+            .event("initialized")
+            .data(init_payload.clone())
+            .retry(Duration::from_millis(3000));
         yield Ok::<Event, Infallible>(event);
 
         loop {
