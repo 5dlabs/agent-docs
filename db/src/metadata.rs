@@ -500,7 +500,7 @@ mod tests {
 
     #[test]
     fn test_jupiter_metadata_extraction() {
-        let content = r#"# Jupiter API v6 Documentation
+        let content = r"# Jupiter API v6 Documentation
 
 This guide covers the Jupiter swap API endpoints for trading tokens on Solana.
 
@@ -519,7 +519,7 @@ const response = await fetch('/api/swap', {
 });
 ```
 
-This is an advanced integration guide for developers."#;
+This is an advanced integration guide for developers.";
 
         let doc_path = "docs/api/v6/swap.md";
         let metadata = create_enhanced_metadata("jupiter", "test-source", content, doc_path);
@@ -532,16 +532,16 @@ This is an advanced integration guide for developers."#;
 
     #[test]
     fn test_rust_metadata_extraction() {
-        let content = r#"# Tokio Documentation
+        let content = "# Tokio Documentation
 
 Tokio is an async runtime for Rust.
 
 ```rust
 #[tokio::main]
 async fn main() {
-    println!("Hello, async world!");
+    println!(\"Hello, async world!\");
 }
-```"#;
+```";
 
         let doc_path = "tokio/src/lib.rs";
         let metadata = create_enhanced_metadata("rust", "tokio", content, doc_path);
