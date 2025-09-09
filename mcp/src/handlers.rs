@@ -164,6 +164,15 @@ impl McpHandler {
             "tools/list" => Ok(self.handle_tools_list()),
             "tools/call" => self.handle_tool_call(&request).await,
             "initialize" => Ok(Self::handle_initialize(&request)),
+            "notifications/initialized" => {
+                // Cursor sends this as acknowledgment - just return success
+                debug!("Received notifications/initialized from client");
+                Ok(json!({
+                    "jsonrpc": "2.0",
+                    "result": {},
+                    "id": request.get("id")
+                }))
+            }
             _ => Err(anyhow!("Unsupported method: {}", method)),
         }
     }

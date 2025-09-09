@@ -267,6 +267,52 @@ impl SessionManager {
         Ok(session_id)
     }
 
+    /// Create a new session with a specific ID (for client-based sessions)
+    ///
+    /// # Errors
+    ///
+    /// Returns `SessionError::MaxSessionsReached` if the session limit is exceeded.
+    /// Returns `SessionError::LockError` if the session storage cannot be accessed.
+    pub fn create_session_with_id(
+        &self,
+        session_id: Uuid,
+        client_info: Option<ClientInfo>,
+    ) -> Result<Uuid, SessionError> {
+        let mut sessions = self.sessions.write().map_err(|_| SessionError::LockError)?;
+
+        // Check if session with this ID already exists
+        if sessions.contains_key(&session_id) {
+            // Session already exists, just return it
+            debug!("Session with ID {} already exists, reusing", session_id);
+            return Ok(session_id);
+        }
+
+        // Check session limit
+        if sessions.len() >= self.config.max_sessions {
+            warn!(
+                "Session limit reached: {}/{}",
+                sessions.len(),
+                self.config.max_sessions
+            );
+            return Err(SessionError::MaxSessionsReached(self.config.max_sessions));
+        }
+
+        let mut session = Session::new(self.config.default_ttl, client_info);
+        // Override the auto-generated ID with the provided one
+        session.session_id = session_id;
+
+        sessions.insert(session_id, session);
+
+        let registry = ProtocolRegistry::new();
+        debug!(
+            "Created new session with specific ID: {} with protocol version {} (total: {})",
+            session_id,
+            registry.current_version_string(),
+            sessions.len()
+        );
+        Ok(session_id)
+    }
+
     /// Get an existing session by ID
     ///
     /// # Errors
