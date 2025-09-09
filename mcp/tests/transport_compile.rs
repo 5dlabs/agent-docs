@@ -27,7 +27,7 @@ fn test_transport_config_default() {
     // Test that TransportConfig implements Default
     let config = TransportConfig::default();
     assert_eq!(config.protocol_version, "2025-06-18");
-    assert_eq!(config.session_timeout, Duration::from_secs(300));
+    assert_eq!(config.session_timeout, Duration::from_secs(1800)); // 30 minutes for SSE connections
     assert_eq!(config.heartbeat_interval, Duration::from_secs(30));
     assert_eq!(config.max_json_body_bytes, 2 * 1024 * 1024);
 }
