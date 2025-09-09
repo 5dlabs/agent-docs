@@ -846,78 +846,93 @@ impl DocumentQueries {
         }
         q = q.bind(limit);
 
-        let rows = if let Ok(rows) = q.fetch_all(pool).await {
-            rows
-        } else {
-            // Fallback to tokenized ILIKE with filters
-            let tokens: Vec<String> = query
-                .split_whitespace()
-                .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
-                .filter(|t| t.len() >= 3)
-                .map(|t| format!("%{t}%"))
-                .collect();
+        let rows = match q.fetch_all(pool).await {
+            Ok(rows) => rows,
+            Err(e) => {
+                // Log the error before falling back
+                tracing::warn!(
+                    "FTS query with filters failed: {}, falling back to ILIKE",
+                    e
+                );
+                // Fallback to tokenized ILIKE with filters
+                let tokens: Vec<String> = query
+                    .split_whitespace()
+                    .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()))
+                    .filter(|t| t.len() >= 3)
+                    .map(|t| format!("%{t}%"))
+                    .collect();
 
-            let mut parts = vec!["doc_type::text = $1".to_string()];
-            let mut idx = 2;
-            for _t in &tokens {
-                parts.push(format!("(content ILIKE ${idx} OR doc_path ILIKE ${idx})"));
-                idx += 1;
-            }
-            if tokens.is_empty() {
-                parts.push("(content ILIKE $2 OR doc_path ILIKE $2)".to_string());
-                idx = 3;
-            }
-            if filters.format.is_some() {
-                parts.push(format!("(metadata->>'format' = ${idx})"));
-                idx += 1;
-            }
-            if filters.complexity.is_some() {
-                parts.push(format!("(metadata->>'complexity' = ${idx})"));
-                idx += 1;
-            }
-            if filters.category.is_some() {
-                parts.push(format!("(metadata->>'category' = ${idx})"));
-                idx += 1;
-            }
-            if filters.topic.is_some() {
-                parts.push(format!("(metadata->>'topic' = ${idx})"));
-                idx += 1;
-            }
-            if filters.api_version.is_some() {
-                parts.push(format!("(metadata->>'api_version' = ${idx})"));
-                idx += 1;
-            }
-            let sql = format!(
+                let mut parts = vec!["doc_type::text = $1".to_string()];
+                let mut idx = 2;
+                for _t in &tokens {
+                    parts.push(format!("(content ILIKE ${idx} OR doc_path ILIKE ${idx})"));
+                    idx += 1;
+                }
+                if tokens.is_empty() {
+                    parts.push("(content ILIKE $2 OR doc_path ILIKE $2)".to_string());
+                    idx = 3;
+                }
+                if filters.format.is_some() {
+                    parts.push(format!("(metadata->>'format' = ${idx})"));
+                    idx += 1;
+                }
+                if filters.complexity.is_some() {
+                    parts.push(format!("(metadata->>'complexity' = ${idx})"));
+                    idx += 1;
+                }
+                if filters.category.is_some() {
+                    parts.push(format!("(metadata->>'category' = ${idx})"));
+                    idx += 1;
+                }
+                if filters.topic.is_some() {
+                    parts.push(format!("(metadata->>'topic' = ${idx})"));
+                    idx += 1;
+                }
+                if filters.api_version.is_some() {
+                    parts.push(format!("(metadata->>'api_version' = ${idx})"));
+                    idx += 1;
+                }
+                let sql = format!(
                     "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
                      FROM documents WHERE {} ORDER BY created_at DESC LIMIT ${}",
                     parts.join(" AND "),
                     idx
                 );
-            let mut q2 = sqlx::query(&sql).bind(doc_type);
-            if tokens.is_empty() {
-                q2 = q2.bind(format!("%{query}%"));
-            } else {
-                for t in &tokens {
-                    q2 = q2.bind(t);
+                let mut q2 = sqlx::query(&sql).bind(doc_type);
+                if tokens.is_empty() {
+                    q2 = q2.bind(format!("%{query}%"));
+                } else {
+                    for t in &tokens {
+                        q2 = q2.bind(t);
+                    }
+                }
+                if let Some(v) = &filters.format {
+                    q2 = q2.bind(v);
+                }
+                if let Some(v) = &filters.complexity {
+                    q2 = q2.bind(v);
+                }
+                if let Some(v) = &filters.category {
+                    q2 = q2.bind(v);
+                }
+                if let Some(v) = &filters.topic {
+                    q2 = q2.bind(v);
+                }
+                if let Some(v) = &filters.api_version {
+                    q2 = q2.bind(v);
+                }
+                q2 = q2.bind(limit);
+                match q2.fetch_all(pool).await {
+                    Ok(rows) => rows,
+                    Err(e) => {
+                        tracing::error!(
+                            "Both FTS and ILIKE queries failed with filters. Error: {}",
+                            e
+                        );
+                        return Err(e.into());
+                    }
                 }
             }
-            if let Some(v) = &filters.format {
-                q2 = q2.bind(v);
-            }
-            if let Some(v) = &filters.complexity {
-                q2 = q2.bind(v);
-            }
-            if let Some(v) = &filters.category {
-                q2 = q2.bind(v);
-            }
-            if let Some(v) = &filters.topic {
-                q2 = q2.bind(v);
-            }
-            if let Some(v) = &filters.api_version {
-                q2 = q2.bind(v);
-            }
-            q2 = q2.bind(limit);
-            q2.fetch_all(pool).await?
         };
 
         let docs = rows
