@@ -393,7 +393,10 @@ pub fn set_sse_response_headers(headers: &mut HeaderMap, session_id: Option<Uuid
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
     // Additional headers for better SSE compatibility
     headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
-    headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("Cache-Control"));
+    headers.insert(
+        "Access-Control-Allow-Headers",
+        HeaderValue::from_static("Cache-Control"),
+    );
     headers.insert("X-Accel-Buffering", HeaderValue::from_static("no")); // Disable nginx buffering
 }
 
