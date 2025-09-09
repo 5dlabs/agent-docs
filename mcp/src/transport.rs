@@ -55,7 +55,7 @@ impl Default for TransportConfig {
     fn default() -> Self {
         Self {
             protocol_version: "2025-06-18".to_string(),
-            session_timeout: Duration::from_secs(300), // 5 minutes
+            session_timeout: Duration::from_secs(1800), // 30 minutes for SSE connections
             heartbeat_interval: Duration::from_secs(30), // 30 seconds
             max_json_body_bytes: 2 * 1024 * 1024, // 2 MiB default, matching Axum's default body limit
         }
@@ -570,7 +570,8 @@ fn get_or_create_comprehensive_session(
                 // Check if session exists in comprehensive session manager
                 if let Ok(session) = state.comprehensive_session_manager.get_session(session_id) {
                     if session.is_expired() {
-                        debug!("Comprehensive session expired: {}", session_id);
+                        debug!("Comprehensive session expired: {} (age: {:?}, idle: {:?}), will create new session",
+                            session_id, session.age(), session.idle_time());
                     } else if let Err(e) =
                         session.validate_protocol_version(SUPPORTED_PROTOCOL_VERSION)
                     {
@@ -584,9 +585,12 @@ fn get_or_create_comprehensive_session(
                         let _ = state
                             .comprehensive_session_manager
                             .update_last_accessed(session_id);
-                        debug!("Using existing comprehensive session: {}", session_id);
+                        debug!("Reusing existing comprehensive session: {} (age: {:?}, idle: {:?})",
+                            session_id, session.age(), session.idle_time());
                         return Ok(session_id);
                     }
+                } else {
+                    debug!("Session {} not found in comprehensive session manager, will create new session", session_id);
                 }
             }
         }
