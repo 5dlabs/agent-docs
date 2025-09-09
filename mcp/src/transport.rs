@@ -604,18 +604,23 @@ fn get_or_create_comprehensive_session(
     // try to use a client identifier to maintain session continuity
     if let Some(ref info) = client_info {
         // Check for MCP_CLIENT_ID environment variable or X-Client-Id header
-        let client_id = std::env::var("MCP_CLIENT_ID").ok()
-            .or_else(|| headers.get("X-Client-Id")
+        let client_id = std::env::var("MCP_CLIENT_ID").ok().or_else(|| {
+            headers
+                .get("X-Client-Id")
                 .and_then(|v| v.to_str().ok())
-                .map(String::from));
-        
+                .map(String::from)
+        });
+
         if let Some(client_id) = client_id {
             // Generate a deterministic session ID based on client identifier
             // This allows the same client to reconnect to the same session
             let stable_session_id = generate_stable_session_id(&client_id, info);
-            
+
             // Try to get existing session with this ID
-            if let Ok(session) = state.comprehensive_session_manager.get_session(stable_session_id) {
+            if let Ok(session) = state
+                .comprehensive_session_manager
+                .get_session(stable_session_id)
+            {
                 if !session.is_expired() {
                     let _ = state
                         .comprehensive_session_manager
@@ -629,15 +634,20 @@ fn get_or_create_comprehensive_session(
                     );
                     return Ok(stable_session_id);
                 }
-                debug!("Client-based session expired for client_id: {}, creating new", client_id);
+                debug!(
+                    "Client-based session expired for client_id: {}, creating new",
+                    client_id
+                );
             }
-            
+
             // Create new session with stable ID
             let session_id = state
                 .comprehensive_session_manager
                 .create_session_with_id(stable_session_id, client_info.clone())
-                .map_err(|e| TransportError::InternalError(format!("Session creation failed: {e}")))?;
-            
+                .map_err(|e| {
+                    TransportError::InternalError(format!("Session creation failed: {e}"))
+                })?;
+
             debug!(session_id = %session_id, client_id = %client_id, "Created new client-based session");
             metrics().increment_sessions_created();
             return Ok(session_id);
@@ -660,15 +670,15 @@ fn get_or_create_comprehensive_session(
 fn generate_stable_session_id(client_id: &str, client_info: &ClientInfo) -> Uuid {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-    
+
     let mut hasher = DefaultHasher::new();
     client_id.hash(&mut hasher);
-    
+
     // Include user agent for additional uniqueness
     if let Some(ref user_agent) = client_info.user_agent {
         user_agent.hash(&mut hasher);
     }
-    
+
     // Create a deterministic UUID from the hash
     // Note: Truncation is intentional here - we're extracting bytes from the hash
     let hash = hasher.finish();
@@ -683,9 +693,14 @@ fn generate_stable_session_id(client_id: &str, client_info: &ClientInfo) -> Uuid
         hash as u8,
         0x40, // Version 4
         0x80, // Variant
-        0, 0, 0, 0, 0, 0, // Padding
+        0,
+        0,
+        0,
+        0,
+        0,
+        0, // Padding
     ];
-    
+
     Uuid::from_bytes(bytes)
 }
 
