@@ -1061,16 +1061,16 @@ async fn handle_json_rpc_request(
             );
 
             if wants_sse_stream {
-                // Acknowledge with 200 + headers to confirm receipt
+                // Return a valid JSON-RPC ACK envelope to satisfy strict clients
+                let ack_envelope = json!({
+                    "jsonrpc": "2.0",
+                    "id": jsonrpc_id_value,
+                    "result": { "streaming": true }
+                });
                 let mut response_headers = HeaderMap::new();
                 set_json_response_headers(&mut response_headers, Some(session_id));
                 add_security_headers(&mut response_headers);
-                Ok((
-                    StatusCode::OK,
-                    response_headers,
-                    Json(json!({"status":"streaming"})),
-                )
-                    .into_response())
+                Ok((StatusCode::OK, response_headers, Json(ack_envelope)).into_response())
             } else {
                 // Standard JSON response
                 let mut response_headers = HeaderMap::new();
@@ -1124,12 +1124,7 @@ async fn handle_json_rpc_request(
                 let mut response_headers = HeaderMap::new();
                 set_json_response_headers(&mut response_headers, Some(session_id));
                 add_security_headers(&mut response_headers);
-                Ok((
-                    StatusCode::OK,
-                    response_headers,
-                    Json(json!({"status":"streaming"})),
-                )
-                    .into_response())
+                Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
             } else {
                 // Return JSON-RPC error envelope with HTTP 200 to follow JSON-RPC semantics
                 let mut response_headers = HeaderMap::new();
