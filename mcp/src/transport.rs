@@ -123,6 +123,7 @@ impl SseHub {
         }
     }
 
+    #[allow(dead_code)]
     fn subscribe(&self, session_id: Uuid) -> broadcast::Receiver<SseMessage> {
         let s = self.get_or_create(session_id);
         s.read().map_or_else(
@@ -134,6 +135,7 @@ impl SseHub {
         )
     }
 
+    #[allow(dead_code)]
     fn snapshot_from(&self, session_id: Uuid, last_id: Option<u64>) -> Vec<(u64, SseMessage)> {
         let s = self.get_or_create(session_id);
         let Ok(ss) = s.read() else { return vec![] };
@@ -1204,7 +1206,7 @@ fn handle_sse_request(
         loop {
             tokio::time::sleep(Duration::from_secs(5)).await;
             let keep_alive = Event::default()
-                .comment(format!("keep-alive {}", count));
+                .comment(format!("keep-alive {count}"));
             info!(request_id = %request_id, "SSE: Yielding keep-alive {}", count);
             yield Ok::<Event, Infallible>(keep_alive);
             count += 1;
