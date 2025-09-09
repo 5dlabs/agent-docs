@@ -23,6 +23,8 @@ use tower::ServiceExt;
 
 /// Create a test server or mock router for testing
 async fn create_test_server() -> Router {
+    // Ensure SSE is enabled in test environments so GET /mcp behaves as expected
+    std::env::set_var("MCP_ENABLE_SSE", "true");
     // Fast path for CI/unit tests: use mock unless explicitly requested
     if std::env::var("TEST_DATABASE_URL")
         .map(|v| v.trim().is_empty() || v.trim().eq_ignore_ascii_case("mock"))

@@ -18,6 +18,8 @@ use uuid::Uuid;
 
 // Helper function to create test server
 async fn create_test_server() -> Router {
+    // Ensure SSE is enabled in test environments so GET /mcp behaves as expected
+    std::env::set_var("MCP_ENABLE_SSE", "true");
     // Default to mock for speed unless explicitly configured
     if std::env::var("TEST_DATABASE_URL")
         .map(|v| v.trim().is_empty() || v.trim().eq_ignore_ascii_case("mock"))
