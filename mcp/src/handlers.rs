@@ -166,13 +166,12 @@ impl McpHandler {
             "initialize" => Ok(Self::handle_initialize(&request)),
             "notifications/initialized" => {
                 // This notification should only be sent AFTER receiving initialize response
-                // If we get this without a prior initialize, the client is in a bad state
-                warn!("Received notifications/initialized without prior initialize - prompting reinitialization");
+                // For now, we'll accept it to maintain compatibility
+                // TODO: Track initialization state per session to validate this properly
+                debug!("Received notifications/initialized from client");
 
-                // Return an error to force the client to reinitialize
-                Err(anyhow!(
-                    "Session not initialized. Please send 'initialize' request first."
-                ))
+                // Return empty result for notification (no response body expected)
+                Ok(json!({}))
             }
             _ => Err(anyhow!("Unsupported method: {}", method)),
         }
@@ -247,7 +246,9 @@ impl McpHandler {
         json!({
             "protocolVersion": registry.current_version_string(),
             "capabilities": {
-                "tools": {}
+                "tools": {
+                    "listChanged": true
+                }
             },
             "serverInfo": {
                 "name": "mcp",
