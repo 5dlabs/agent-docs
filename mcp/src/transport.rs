@@ -423,10 +423,30 @@ pub async fn unified_mcp_handler(
         // Log request headers for compatibility/debugging
         log_request_headers(request_id, &headers);
 
-        info!(
-            "Processing MCP request: {} {} (protocol: {})",
-            method, uri, protocol_version
-        );
+        // Enhanced logging for Cursor debugging
+        let user_agent = headers
+            .get("user-agent")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        let is_cursor = user_agent.to_lowercase().contains("cursor");
+
+        if is_cursor {
+            info!(
+                "🔍 CURSOR REQUEST DETECTED: {} {} (protocol: {})",
+                method, uri, protocol_version
+            );
+            // Log ALL headers at INFO level for Cursor
+            for (name, value) in &headers {
+                if let Ok(v) = value.to_str() {
+                    info!("  Header: {}: {}", name, v);
+                }
+            }
+        } else {
+            info!(
+                "Processing MCP request: {} {} (protocol: {})",
+                method, uri, protocol_version
+            );
+        }
 
         unified_mcp_handler_impl(state, headers, request, request_id).await
     }
@@ -772,6 +792,7 @@ fn handle_delete_session_request(
 }
 
 /// Handle JSON-RPC requests over HTTP POST
+#[allow(clippy::too_many_lines)]
 async fn handle_json_rpc_request(
     state: McpServerState,
     headers: HeaderMap,
@@ -840,6 +861,15 @@ async fn handle_json_rpc_request(
             }
         })?;
 
+    // Log raw body for Cursor debugging
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if user_agent.to_lowercase().contains("cursor") {
+        info!(request_id = %request_id, "🔍 CURSOR RAW REQUEST BODY: {}", String::from_utf8_lossy(&body_bytes));
+    }
+
     // Parse JSON-RPC request
     let json_request: Value = serde_json::from_slice(&body_bytes).map_err(|e| {
         metrics().increment_json_parse_errors();
@@ -851,20 +881,45 @@ async fn handle_json_rpc_request(
         .get("id")
         .map_or_else(|| "-".to_string(), ToString::to_string);
 
-    debug!(
-        request_id = %request_id,
-        session_id = %session_id,
-        jsonrpc_id = %jsonrpc_id_str,
-        "Parsed JSON-RPC request: {}",
-        json_request
-    );
+    // Enhanced logging for Cursor
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if user_agent.to_lowercase().contains("cursor") {
+        info!(
+            request_id = %request_id,
+            session_id = %session_id,
+            jsonrpc_id = %jsonrpc_id_str,
+            "🔍 CURSOR PARSED JSON-RPC: {}",
+            serde_json::to_string_pretty(&json_request).unwrap_or_else(|_| json_request.to_string())
+        );
+    } else {
+        debug!(
+            request_id = %request_id,
+            session_id = %session_id,
+            jsonrpc_id = %jsonrpc_id_str,
+            "Parsed JSON-RPC request: {}",
+            json_request
+        );
+    }
 
     // Process through existing MCP handler
     let jsonrpc_id_value = json_request.get("id").cloned().unwrap_or(Value::Null);
     match state.handler.handle_request(json_request).await {
         Ok(result_value) => {
             metrics().increment_post_success();
-            debug!(request_id = %request_id, session_id = %session_id, "MCP handler result: {}", result_value);
+            // Enhanced logging for Cursor responses
+            let user_agent = headers
+                .get("user-agent")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            if user_agent.to_lowercase().contains("cursor") {
+                info!(request_id = %request_id, session_id = %session_id, "🔍 CURSOR RESPONSE: {}", 
+                    serde_json::to_string_pretty(&result_value).unwrap_or_else(|_| result_value.to_string()));
+            } else {
+                debug!(request_id = %request_id, session_id = %session_id, "MCP handler result: {}", result_value);
+            }
 
             // Update session activity using comprehensive session manager
             let _ = state
@@ -887,7 +942,18 @@ async fn handle_json_rpc_request(
         }
         Err(e) => {
             metrics().increment_internal_errors();
-            error!(request_id = %request_id, session_id = %session_id, "MCP handler failed: {}", e);
+
+            // Enhanced error logging for Cursor
+            let user_agent = headers
+                .get("user-agent")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            if user_agent.to_lowercase().contains("cursor") {
+                error!(request_id = %request_id, session_id = %session_id, "🔍 CURSOR REQUEST FAILED: {}", e);
+            } else {
+                error!(request_id = %request_id, session_id = %session_id, "MCP handler failed: {}", e);
+            }
+
             // Return JSON-RPC error envelope with HTTP 200 to follow JSON-RPC semantics
             let mut response_headers = HeaderMap::new();
             set_json_response_headers(&mut response_headers, Some(session_id));
@@ -903,6 +969,11 @@ async fn handle_json_rpc_request(
                 }
             });
 
+            if user_agent.to_lowercase().contains("cursor") {
+                info!(request_id = %request_id, "🔍 CURSOR ERROR RESPONSE: {}", 
+                    serde_json::to_string_pretty(&error_envelope).unwrap_or_else(|_| error_envelope.to_string()));
+            }
+
             Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
         }
     }
@@ -917,7 +988,22 @@ fn handle_sse_request(
     headers: &HeaderMap,
     request_id: Uuid,
 ) -> Result<Response, TransportError> {
-    info!(request_id = %request_id, "Establishing SSE connection for MCP Streamable HTTP transport");
+    // Enhanced logging for SSE requests from Cursor
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if user_agent.to_lowercase().contains("cursor") {
+        info!(request_id = %request_id, "🔍 CURSOR SSE REQUEST - Establishing SSE connection");
+        // Log ALL headers at INFO level for Cursor SSE
+        for (name, value) in headers {
+            if let Ok(v) = value.to_str() {
+                info!("  SSE Header: {}: {}", name, v);
+            }
+        }
+    } else {
+        info!(request_id = %request_id, "Establishing SSE connection for MCP Streamable HTTP transport");
+    }
 
     // Get or create session
     let session_id = get_or_create_comprehensive_session(state, headers, None)?;
