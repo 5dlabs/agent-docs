@@ -382,16 +382,19 @@ pub fn set_json_response_headers(headers: &mut HeaderMap, session_id: Option<Uui
     headers.insert(CONTENT_TYPE, HeaderValue::from_static(CONTENT_TYPE_JSON));
 }
 
-/// Set response headers for Server-Sent Events responses (future use)
+/// Set response headers for Server-Sent Events responses
 ///
 /// This function sets headers appropriate for SSE responses including
-/// the standard MCP headers and SSE-specific headers.
-#[allow(dead_code)]
+/// the standard MCP headers and SSE-specific headers for better client compatibility.
 pub fn set_sse_response_headers(headers: &mut HeaderMap, session_id: Option<Uuid>) {
     set_standard_headers(headers, session_id);
     headers.insert(CONTENT_TYPE, HeaderValue::from_static(CONTENT_TYPE_SSE));
     headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
+    // Additional headers for better SSE compatibility
+    headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
+    headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("Cache-Control"));
+    headers.insert("X-Accel-Buffering", HeaderValue::from_static("no")); // Disable nginx buffering
 }
 
 /// Extract session ID from request headers

@@ -825,15 +825,21 @@ fn handle_sse_request(
     crate::headers::set_sse_response_headers(&mut response_headers, Some(session_id));
     add_security_headers(&mut response_headers);
 
-    // Create SSE response with initialization event and keep-alive
-    // Send initialization event followed by a comment to keep connection alive
+    // Create SSE response with initialization event and structured keep-alive
+    // This provides a more substantial response that Cursor can handle better
     let sse_body = format!(
-        "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}\n\n: keep-alive\n\n",
+        "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}\n\n",
         env!("CARGO_PKG_VERSION")
     );
 
+    // Add multiple keep-alive events to provide more response data
+    let mut full_response = sse_body;
+    for i in 1..=10 {
+        full_response.push_str(&format!(": keep-alive-{}\n\n", i));
+    }
+
     debug!(request_id = %request_id, "Sending SSE initialization response");
-    Ok((StatusCode::OK, response_headers, sse_body).into_response())
+    Ok((StatusCode::OK, response_headers, full_response).into_response())
 }
 
 /// Initialize transport with session cleanup task
