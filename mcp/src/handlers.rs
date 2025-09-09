@@ -165,13 +165,14 @@ impl McpHandler {
             "tools/call" => self.handle_tool_call(&request).await,
             "initialize" => Ok(Self::handle_initialize(&request)),
             "notifications/initialized" => {
-                // Cursor sends this as acknowledgment - just return success
-                debug!("Received notifications/initialized from client");
-                Ok(json!({
-                    "jsonrpc": "2.0",
-                    "result": {},
-                    "id": request.get("id")
-                }))
+                // This notification should only be sent AFTER receiving initialize response
+                // If we get this without a prior initialize, the client is in a bad state
+                warn!("Received notifications/initialized without prior initialize - prompting reinitialization");
+
+                // Return an error to force the client to reinitialize
+                Err(anyhow!(
+                    "Session not initialized. Please send 'initialize' request first."
+                ))
             }
             _ => Err(anyhow!("Unsupported method: {}", method)),
         }
