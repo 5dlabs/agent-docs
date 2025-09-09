@@ -12,6 +12,7 @@ use axum::{
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use thiserror::Error;
@@ -835,7 +836,7 @@ fn handle_sse_request(
     // Add multiple keep-alive events to provide more response data
     let mut full_response = sse_body;
     for i in 1..=10 {
-        full_response.push_str(&format!(": keep-alive-{}\n\n", i));
+        let _ = write!(full_response, ": keep-alive-{i}\n\n");
     }
 
     debug!(request_id = %request_id, "Sending SSE initialization response");
