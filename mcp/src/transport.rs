@@ -825,9 +825,11 @@ fn handle_sse_request(
     crate::headers::set_sse_response_headers(&mut response_headers, Some(session_id));
     add_security_headers(&mut response_headers);
 
-    // Create SSE response with keep-alive
+    // Create SSE response with an initialization event that includes serverInfo
+    // Many IDE clients expect serverInfo for display and capability gating
     let sse_body = format!(
-        "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}}}}}\n\n"
+        "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}\n\n",
+        env!("CARGO_PKG_VERSION")
     );
 
     Ok((StatusCode::OK, response_headers, sse_body).into_response())
