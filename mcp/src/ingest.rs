@@ -310,6 +310,16 @@ pub async fn execute_cli_plan(
             )
             .replace("/tmp", work_base().to_string_lossy().as_ref());
 
+        // Ensure output directories exist before running commands
+        let unique_docs_out_path = work_base().join(&unique_docs_dir);
+        if let Err(e) = std::fs::create_dir_all(&unique_docs_out_path) {
+            warn!(
+                "Failed to create output directory {}: {}",
+                unique_docs_out_path.display(),
+                e
+            );
+        }
+
         // Normalize cargo/loader invocations
         let (program, mut args) = normalize_command(&cmd, doc_type);
         // If this is a git clone step, ensure a safe destination under work_base
