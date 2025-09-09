@@ -182,6 +182,8 @@ jobs:
           # Debug environment variables
           RUST_LOG: debug
           RUST_BACKTRACE: 1
+          # Run tests single-threaded to avoid env/metrics races
+          RUST_TEST_THREADS: 1
         run: |
           echo "🔍 Debug: Checking database connectivity..."
           echo "DATABASE_URL is set: $(if [ -n "${DATABASE_URL}" ]; then echo 'YES'; else echo 'NO'; fi)"
@@ -317,6 +319,8 @@ jobs:
           TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Ensure single-threaded test execution for coverage runs too
+          RUST_TEST_THREADS: 1
         run: |
           echo "📊 Generating test coverage report..."
 
