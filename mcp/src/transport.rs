@@ -830,11 +830,11 @@ fn handle_sse_request(
         env!("CARGO_PKG_VERSION")
     );
 
-    let mut interval = tokio::time::interval(Duration::from_secs(25));
+    let mut interval = tokio::time::interval(Duration::from_secs(15));
 
     let stream = async_stream::stream! {
         // Send initialization event first
-        let event = Event::default().data(init_payload.clone());
+        let event = Event::default().data(init_payload.clone()).retry(Duration::from_millis(3000));
         yield Ok::<Event, Infallible>(event);
 
         loop {
@@ -847,7 +847,7 @@ fn handle_sse_request(
 
     let sse = Sse::new(stream).keep_alive(
         KeepAlive::new()
-            .interval(Duration::from_secs(30))
+            .interval(Duration::from_secs(20))
             .text(": keep-alive\n\n"),
     );
 
