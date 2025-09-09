@@ -114,7 +114,9 @@ impl SseHub {
         }
         let new_stream = Arc::new(RwLock::new(SessionStream::new()));
         if let Ok(mut map) = self.sessions.write() {
-            let entry = map.entry(session_id).or_insert_with(|| Arc::clone(&new_stream));
+            let entry = map
+                .entry(session_id)
+                .or_insert_with(|| Arc::clone(&new_stream));
             Arc::clone(entry)
         } else {
             new_stream
@@ -1016,8 +1018,8 @@ async fn handle_json_rpc_request(
         .unwrap_or("")
         .to_string();
 
-    let wants_sse_stream = accept_header.contains("text/event-stream")
-        || accept_header.contains("text/*");
+    let wants_sse_stream =
+        accept_header.contains("text/event-stream") || accept_header.contains("text/*");
 
     match state.handler.handle_request(json_request).await {
         Ok(result_value) => {
@@ -1047,16 +1049,27 @@ async fn handle_json_rpc_request(
             });
 
             // Publish to session SSE hub for Streamable-HTTP clients (always)
-            let payload = serde_json::to_string(&envelope)
-                .unwrap_or_else(|_| envelope.to_string());
-            let _ = SSE_HUB.publish(session_id, SseMessage { id: None, event: Some("message".to_string()), data: payload });
+            let payload = serde_json::to_string(&envelope).unwrap_or_else(|_| envelope.to_string());
+            let _ = SSE_HUB.publish(
+                session_id,
+                SseMessage {
+                    id: None,
+                    event: Some("message".to_string()),
+                    data: payload,
+                },
+            );
 
             if wants_sse_stream {
                 // Acknowledge with 200 + headers to confirm receipt
                 let mut response_headers = HeaderMap::new();
                 set_json_response_headers(&mut response_headers, Some(session_id));
                 add_security_headers(&mut response_headers);
-                Ok((StatusCode::OK, response_headers, Json(json!({"status":"streaming"}))).into_response())
+                Ok((
+                    StatusCode::OK,
+                    response_headers,
+                    Json(json!({"status":"streaming"})),
+                )
+                    .into_response())
             } else {
                 // Standard JSON response
                 let mut response_headers = HeaderMap::new();
@@ -1097,13 +1110,25 @@ async fn handle_json_rpc_request(
             // Publish error to SSE hub as well (always)
             let payload = serde_json::to_string(&error_envelope)
                 .unwrap_or_else(|_| error_envelope.to_string());
-            let _ = SSE_HUB.publish(session_id, SseMessage { id: None, event: Some("error".to_string()), data: payload });
+            let _ = SSE_HUB.publish(
+                session_id,
+                SseMessage {
+                    id: None,
+                    event: Some("error".to_string()),
+                    data: payload,
+                },
+            );
 
             if wants_sse_stream {
                 let mut response_headers = HeaderMap::new();
                 set_json_response_headers(&mut response_headers, Some(session_id));
                 add_security_headers(&mut response_headers);
-                Ok((StatusCode::OK, response_headers, Json(json!({"status":"streaming"}))).into_response())
+                Ok((
+                    StatusCode::OK,
+                    response_headers,
+                    Json(json!({"status":"streaming"})),
+                )
+                    .into_response())
             } else {
                 // Return JSON-RPC error envelope with HTTP 200 to follow JSON-RPC semantics
                 let mut response_headers = HeaderMap::new();
