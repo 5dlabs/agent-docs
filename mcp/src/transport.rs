@@ -851,7 +851,7 @@ fn handle_sse_request(
     let sse = Sse::new(stream).keep_alive(
         KeepAlive::new()
             .interval(Duration::from_secs(20))
-            .text(": keep-alive\n\n"),
+            .text(": keep-alive"),
     );
 
     let mut response = sse.into_response();
