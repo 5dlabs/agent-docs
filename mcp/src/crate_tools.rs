@@ -451,21 +451,31 @@ impl AddRustCrateTool {
             for doc_page in chunk {
                 // Create document record with enhanced metadata
                 let document_id = uuid::Uuid::new_v4();
-                let mut metadata = json!({
-                    "crate_name": crate_info.name,
-                    "crate_version": crate_info.newest_version,
-                    "item_type": doc_page.item_type,
-                    "module_path": doc_page.module_path,
-                    "extracted_at": doc_page.extracted_at,
-                    "source_url": doc_page.url,
-                    "force_updated": force_update,
-                    "atomic_rollback_enabled": atomic_rollback,
-                    "ingestion_job_id": job_id.to_string()
-                });
 
-                // Add feature information if specified
-                if let Some(feature_list) = features {
-                    metadata["selected_features"] = json!(&feature_list);
+                // Start with intelligent content-based metadata
+                let mut metadata = db::create_enhanced_metadata(
+                    "rust",
+                    &crate_info.name,
+                    &doc_page.content,
+                    &doc_page.module_path
+                );
+
+                // Merge in crate-specific metadata
+                if let Some(metadata_obj) = metadata.as_object_mut() {
+                    metadata_obj.insert("crate_name".to_string(), json!(crate_info.name));
+                    metadata_obj.insert("crate_version".to_string(), json!(crate_info.newest_version));
+                    metadata_obj.insert("item_type".to_string(), json!(doc_page.item_type));
+                    metadata_obj.insert("module_path".to_string(), json!(doc_page.module_path));
+                    metadata_obj.insert("extracted_at".to_string(), json!(doc_page.extracted_at));
+                    metadata_obj.insert("source_url".to_string(), json!(doc_page.url));
+                    metadata_obj.insert("force_updated".to_string(), json!(force_update));
+                    metadata_obj.insert("atomic_rollback_enabled".to_string(), json!(atomic_rollback));
+                    metadata_obj.insert("ingestion_job_id".to_string(), json!(job_id.to_string()));
+
+                    // Add feature information if specified
+                    if let Some(feature_list) = features {
+                        metadata_obj.insert("selected_features".to_string(), json!(&feature_list));
+                    }
                 }
 
                 // Calculate token count (approximation)

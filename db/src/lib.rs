@@ -10,6 +10,7 @@
 //! - Connection pool metrics and alerting
 
 pub mod connection;
+pub mod metadata;
 pub mod migration_system;
 pub mod models;
 pub mod pool_config;
@@ -17,6 +18,7 @@ pub mod queries;
 pub mod retry;
 
 pub use connection::{DatabasePool, HealthCheckResult, PoolMetricsSnapshot, PoolStatus};
+pub use metadata::{create_enhanced_metadata, merge_enhanced_metadata};
 pub use migration_system::{
     DatabaseMigrationManager, MigrationHistory, MigrationInfo, MigrationStatus,
     MigrationStatusSummary, SchemaValidationReport,

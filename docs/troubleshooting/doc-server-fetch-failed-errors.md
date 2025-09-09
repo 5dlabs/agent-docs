@@ -114,14 +114,51 @@ This document records the "fetch failed" error patterns observed during testing 
 | Talos Query | 5 | 1 | 4 | 20% |
 | **Total** | **9** | **3** | **6** | **33%** |
 
+## Update: Jupiter Documentation Re-ingestion Success
+
+### ✅ **Successful Re-ingestion (2025-01-09)**
+After the initial fetch failed errors, we successfully re-ingested the Jupiter documentation:
+
+**Ingestion Command:**
+```bash
+mcp_doc-server_ingest \
+  --repository_url="https://github.com/jup-ag/docs" \
+  --doc_type="jupiter" \
+  --paths="docs" \
+  --extensions="md,mdx"
+```
+
+**Results:**
+- ✅ **150 documents successfully ingested**
+- ✅ **Source**: jup-ag-docs
+- ✅ **Database insertion completed**
+- ✅ **Query tool now working with new content**
+
+### 🔍 **Post-Ingestion Query Results**
+After successful re-ingestion, the Jupiter query tool now returns results from the newly ingested content:
+
+**Query**: "get quote API endpoint"
+- **Result**: 3 relevant results found
+- **Source**: jup-ag-docs (newly ingested)
+- **Content**: Includes swap-instructions.api.mdx, quote.api.mdx, and RFQ integration docs
+- **Relevance**: 80-100%
+
+### 📊 **Updated Success Rate**
+| Tool | Total Queries | Successful | Failed | Success Rate |
+|------|---------------|------------|--------|--------------|
+| Jupiter Query | 6 | 4 | 2 | 67% |
+| Talos Query | 5 | 1 | 4 | 20% |
+| **Total** | **11** | **5** | **6** | **45%** |
+
 ## Next Steps
 
 1. **Monitor Service Status**: Check if these are ongoing issues or temporary problems
 2. **Test Other Doc Server Tools**: Verify if the pattern extends to other documentation tools
 3. **Implement Error Handling**: Add proper error handling and retry mechanisms
 4. **Document Workarounds**: Identify reliable query patterns that consistently work
+5. **Re-ingest Other Documentation**: Consider re-ingesting other documentation sources that may have similar issues
 
 ---
-*Document created: $(date)*
-*Last updated: $(date)*
+*Document created: 2025-01-09*
+*Last updated: 2025-01-09*
 

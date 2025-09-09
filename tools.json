@@ -62,7 +62,21 @@
           "integration",
           "development"
         ],
-        "supports_api_version": true
+        "supports_api_version": true,
+        "topic_keywords": {
+          "apis": ["api", "endpoint", "request", "response", "rest", "http"],
+          "trading": ["swap", "trade", "trading", "exchange", "order", "market"],
+          "liquidity": ["liquidity", "pool", "lp", "provide", "stake"],
+          "integration": ["integration", "sdk", "library", "client", "connect"],
+          "development": ["development", "dev", "build", "setup", "install", "guide"]
+        },
+        "category_keywords": {
+          "swap-api": ["swap", "quote", "exchange", "trade"],
+          "token-api": ["token", "asset", "mint", "balance"],
+          "price-api": ["price", "pricing", "rate", "quote"],
+          "dex-integration": ["dex", "decentralized", "exchange", "amm"],
+          "wallet-integration": ["wallet", "connect", "sign", "transaction"]
+        }
       }
     },
     {
