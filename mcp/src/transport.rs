@@ -520,14 +520,14 @@ pub async fn unified_mcp_handler(
         let user_agent = headers
             .get("user-agent")
             .and_then(|v| v.to_str().ok())
-            .unwrap_or("");
+            .unwrap_or_default();
         let is_cursor = user_agent.to_lowercase().contains("cursor");
 
         if is_cursor {
             let accept_header = headers
                 .get("accept")
                 .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
+                .unwrap_or_default();
             let is_sse_get = method == Method::GET
                 && (accept_header.contains("text/event-stream")
                     || accept_header.contains("text/*")
@@ -971,7 +971,7 @@ async fn handle_json_rpc_request(
     let user_agent = headers
         .get("user-agent")
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
+        .unwrap_or_default();
     if user_agent.to_lowercase().contains("cursor") {
         info!(request_id = %request_id, "🔍 CURSOR RAW REQUEST BODY: {}", String::from_utf8_lossy(&body_bytes));
     }
@@ -991,7 +991,7 @@ async fn handle_json_rpc_request(
     let user_agent = headers
         .get("user-agent")
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
+        .unwrap_or_default();
     if user_agent.to_lowercase().contains("cursor") {
         info!(
             request_id = %request_id,
@@ -1015,7 +1015,7 @@ async fn handle_json_rpc_request(
     let accept_header = headers
         .get("accept")
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("")
+        .unwrap_or_default()
         .to_string();
 
     let wants_sse_stream =
@@ -1028,7 +1028,7 @@ async fn handle_json_rpc_request(
             let user_agent = headers
                 .get("user-agent")
                 .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
+                .unwrap_or_default();
             if user_agent.to_lowercase().contains("cursor") {
                 info!(request_id = %request_id, session_id = %session_id, "🔍 CURSOR RESPONSE: {}", 
                     serde_json::to_string_pretty(&result_value).unwrap_or_else(|_| result_value.to_string()));
