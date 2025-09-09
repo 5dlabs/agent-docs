@@ -104,6 +104,67 @@ impl Default for McpSession {
     }
 }
 
+/// Redact and format headers for logging
+fn log_request_headers(request_id: Uuid, headers: &HeaderMap) {
+    // Helper to fetch header values as UTF-8 strings
+    fn header_str(headers: &HeaderMap, name: &str) -> String {
+        headers
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "<missing>".to_string())
+    }
+
+    // Short summary at info level for quick visibility
+    let proto = header_str(headers, "MCP-Protocol-Version");
+    let accept = header_str(headers, "accept");
+    let content_type = header_str(headers, "content-type");
+    let session_id = header_str(headers, MCP_SESSION_ID);
+    let user_agent = header_str(headers, "user-agent");
+    let origin = header_str(headers, "origin");
+
+    info!(
+        request_id = %request_id,
+        protocol = %proto,
+        accept = %accept,
+        content_type = %content_type,
+        session_id = %session_id,
+        user_agent = %user_agent,
+        origin = %origin,
+        "Incoming request headers (summary)"
+    );
+
+    // Detailed header log at debug level with redaction and truncation
+    const SENSITIVE: &[&str] = &[
+        "authorization",
+        "proxy-authorization",
+        "cookie",
+        "set-cookie",
+        "x-api-key",
+        "x-api-key-id",
+    ];
+
+    let detailed: Vec<(String, String)> = headers
+        .iter()
+        .map(|(name, value)| {
+            let name_str = name.as_str().to_string();
+            let lower = name_str.to_ascii_lowercase();
+            let mut val = match value.to_str() {
+                Ok(s) => s.to_string(),
+                Err(_) => "<non-utf8>".to_string(),
+            };
+            if SENSITIVE.contains(&lower.as_str()) {
+                val = "<redacted>".to_string();
+            } else if val.len() > 256 {
+                val = format!("{}…", &val[..256]);
+            }
+            (name_str, val)
+        })
+        .collect();
+
+    debug!(request_id = %request_id, headers = ?detailed, "Incoming request headers (detailed)");
+}
+
 /// Session manager for handling MCP sessions
 #[derive(Debug, Clone)]
 pub struct SessionManager {
@@ -354,6 +415,9 @@ pub async fn unified_mcp_handler(
     async move {
         // Increment total request counter (count every incoming request)
         metrics().increment_requests();
+
+        // Log request headers for compatibility/debugging
+        log_request_headers(request_id, &headers);
 
         info!(
             "Processing MCP request: {} {} (protocol: {})",
