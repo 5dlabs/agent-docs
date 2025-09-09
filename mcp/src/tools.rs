@@ -698,8 +698,28 @@ impl Tool for IngestTool {
         let base = Self::ingest_work_dir().join(format!("ingest_{doc_type}_{ts}"));
         let repo_dir = base.join("repo");
         let out_dir = base.join("out");
-        tokio::fs::create_dir_all(&repo_dir).await.ok();
-        tokio::fs::create_dir_all(&out_dir).await.ok();
+
+        debug!(
+            "Creating temp directories: base={}, repo={}, out={}",
+            base.display(),
+            repo_dir.display(),
+            out_dir.display()
+        );
+
+        tokio::fs::create_dir_all(&repo_dir).await.map_err(|e| {
+            anyhow!(
+                "Failed to create repo directory {}: {}",
+                repo_dir.display(),
+                e
+            )
+        })?;
+        tokio::fs::create_dir_all(&out_dir).await.map_err(|e| {
+            anyhow!(
+                "Failed to create output directory {}: {}",
+                out_dir.display(),
+                e
+            )
+        })?;
 
         // 1) Clone repository (shallow)
         let mut clone_cmd = TokioCommand::new("git");
@@ -770,25 +790,104 @@ impl Tool for IngestTool {
                 local_cmd.arg(flag);
             }
 
-            let _local_out = Self::run_cmd(&mut local_cmd).await?;
+            let local_out = Self::run_cmd(&mut local_cmd).await?;
+
+            // Verify that JSON files were created
+            let json_files = std::fs::read_dir(&path_out)
+                .map_err(|e| {
+                    anyhow!(
+                        "Failed to read output directory {}: {}",
+                        path_out.display(),
+                        e
+                    )
+                })?
+                .filter_map(std::result::Result::ok)
+                .filter(|entry| {
+                    entry
+                        .path()
+                        .extension()
+                        .and_then(|ext| ext.to_str())
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+                })
+                .count();
+
+            if json_files == 0 {
+                return Err(anyhow!(
+                    "Loader CLI produced no JSON files for path '{}'. Output: {}",
+                    orig,
+                    local_out.trim()
+                ));
+            }
+
+            debug!(
+                "Processed path '{}' -> {} JSON files created",
+                orig, json_files
+            );
             processed_paths.push(orig);
         }
+
+        // Verify the output directory exists and has content before database step
+        let total_json_files = std::fs::read_dir(&out_dir)
+            .map_err(|e| {
+                anyhow!(
+                    "Output directory {} does not exist: {}",
+                    out_dir.display(),
+                    e
+                )
+            })?
+            .filter_map(std::result::Result::ok)
+            .filter(|entry| entry.file_type().is_ok_and(|ft| ft.is_dir()))
+            .map(|dir_entry| {
+                std::fs::read_dir(dir_entry.path())
+                    .map(|read_dir| {
+                        read_dir
+                            .filter_map(std::result::Result::ok)
+                            .filter(|entry| {
+                                entry
+                                    .path()
+                                    .extension()
+                                    .and_then(|ext| ext.to_str())
+                                    .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+                            })
+                            .count()
+                    })
+                    .unwrap_or(0)
+            })
+            .sum::<usize>();
+
+        if total_json_files == 0 {
+            return Err(anyhow!(
+                "No JSON files found in output directory {}. Check that the source paths contain valid documents.",
+                out_dir.display()
+            ));
+        }
+
+        debug!(
+            "Total JSON files ready for database ingestion: {}",
+            total_json_files
+        );
 
         // 4) Load into database
         let mut db_cmd = TokioCommand::new(Self::loader_bin());
         if Self::ingest_debug_enabled() {
             db_cmd.arg("--verbose");
         }
+
+        let out_dir_str = out_dir.to_string_lossy();
+        debug!("Running database command with input-dir: {}", out_dir_str);
+
         db_cmd
             .arg("database")
             .arg("--input-dir")
-            .arg(out_dir.to_string_lossy().as_ref())
+            .arg(out_dir_str.as_ref())
             .arg("--doc-type")
             .arg(doc_type)
             .arg("--source-name")
             .arg(&source_name)
             .arg("--yes");
-        let db_out = Self::run_cmd(&mut db_cmd).await?;
+        let db_out = Self::run_cmd(&mut db_cmd)
+            .await
+            .map_err(|e| anyhow!("Database ingestion failed: {}", e))?;
 
         let mut resp = String::new();
         let _ = writeln!(resp, "✅ Ingestion completed");
