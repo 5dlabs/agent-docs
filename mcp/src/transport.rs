@@ -14,7 +14,7 @@ use axum::{
     Json,
 };
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::convert::Infallible;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
@@ -72,6 +72,97 @@ pub struct SseMessage {
     pub event: Option<String>,
     pub data: String,
 }
+
+/// In-memory SSE hub for per-session message broadcasting with replay buffer.
+#[derive(Debug)]
+struct SessionStream {
+    sender: broadcast::Sender<SseMessage>,
+    buffer: VecDeque<(u64, SseMessage)>,
+    next_id: u64,
+}
+
+impl SessionStream {
+    fn new() -> Self {
+        let (sender, _) = broadcast::channel(256);
+        Self {
+            sender,
+            buffer: VecDeque::with_capacity(256),
+            next_id: 1,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct SseHub {
+    sessions: RwLock<HashMap<Uuid, Arc<RwLock<SessionStream>>>>,
+}
+
+impl SseHub {
+    const MAX_BUFFER: usize = 256;
+
+    fn new() -> Self {
+        Self {
+            sessions: RwLock::new(HashMap::new()),
+        }
+    }
+
+    fn get_or_create(&self, session_id: Uuid) -> Arc<RwLock<SessionStream>> {
+        if let Ok(map) = self.sessions.read() {
+            if let Some(s) = map.get(&session_id) {
+                return Arc::clone(s);
+            }
+        }
+        let new_stream = Arc::new(RwLock::new(SessionStream::new()));
+        if let Ok(mut map) = self.sessions.write() {
+            let entry = map.entry(session_id).or_insert_with(|| Arc::clone(&new_stream));
+            Arc::clone(entry)
+        } else {
+            new_stream
+        }
+    }
+
+    fn subscribe(&self, session_id: Uuid) -> broadcast::Receiver<SseMessage> {
+        let s = self.get_or_create(session_id);
+        s.read()
+            .map(|ss| ss.sender.subscribe())
+            .unwrap_or_else(|_| {
+                let (tx, _rx) = broadcast::channel(1);
+                tx.subscribe()
+            })
+    }
+
+    fn snapshot_from(&self, session_id: Uuid, last_id: Option<u64>) -> Vec<(u64, SseMessage)> {
+        let s = self.get_or_create(session_id);
+        let Ok(ss) = s.read() else { return vec![] };
+        let start_after = last_id.unwrap_or(0);
+        ss.buffer
+            .iter()
+            .filter(|(id, _)| *id > start_after)
+            .cloned()
+            .collect()
+    }
+
+    fn publish(&self, session_id: Uuid, mut msg: SseMessage) -> u64 {
+        let s = self.get_or_create(session_id);
+        let mut id_assigned = 0;
+        if let Ok(mut ss) = s.write() {
+            let id = ss.next_id;
+            ss.next_id = ss.next_id.saturating_add(1);
+            msg.id = Some(id.to_string());
+            // buffer and trim
+            ss.buffer.push_back((id, msg.clone()));
+            while ss.buffer.len() > Self::MAX_BUFFER {
+                ss.buffer.pop_front();
+            }
+            // best-effort broadcast
+            let _ = ss.sender.send(msg);
+            id_assigned = id;
+        }
+        id_assigned
+    }
+}
+
+static SSE_HUB: std::sync::LazyLock<SseHub> = std::sync::LazyLock::new(SseHub::new);
 
 /// MCP session state
 #[derive(Debug, Clone)]
@@ -527,8 +618,11 @@ fn validate_accept_header(headers: &HeaderMap, method: &Method) -> Result<(), Tr
             // For POST (JSON-RPC) requests, Accept should be compatible with application/json
             match *method {
                 Method::POST => {
+                    // Allow both JSON responses and streaming via SSE for Streamable HTTP
                     if accept_header.contains("application/json")
                         || accept_header.contains("application/*")
+                        || accept_header.contains("text/event-stream")
+                        || accept_header.contains("text/*")
                         || accept_header.contains("*/*")
                     {
                         Ok(())
@@ -916,6 +1010,15 @@ async fn handle_json_rpc_request(
 
     // Process through existing MCP handler
     let jsonrpc_id_value = json_request.get("id").cloned().unwrap_or(Value::Null);
+    let accept_header = headers
+        .get("accept")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    let wants_sse_stream = accept_header.contains("text/event-stream")
+        || accept_header.contains("text/*");
+
     match state.handler.handle_request(json_request).await {
         Ok(result_value) => {
             metrics().increment_post_success();
@@ -936,11 +1039,6 @@ async fn handle_json_rpc_request(
                 .comprehensive_session_manager
                 .update_last_accessed(session_id);
 
-            // Create response with proper headers
-            let mut response_headers = HeaderMap::new();
-            set_json_response_headers(&mut response_headers, Some(session_id));
-            add_security_headers(&mut response_headers);
-
             // Wrap in JSON-RPC envelope
             let envelope = json!({
                 "jsonrpc": "2.0",
@@ -948,7 +1046,24 @@ async fn handle_json_rpc_request(
                 "result": result_value
             });
 
-            Ok((StatusCode::OK, response_headers, Json(envelope)).into_response())
+            // Publish to session SSE hub for Streamable-HTTP clients (always)
+            let payload = serde_json::to_string(&envelope)
+                .unwrap_or_else(|_| envelope.to_string());
+            let _ = SSE_HUB.publish(session_id, SseMessage { id: None, event: Some("message".to_string()), data: payload });
+
+            if wants_sse_stream {
+                // Acknowledge with 200 + headers to confirm receipt
+                let mut response_headers = HeaderMap::new();
+                set_json_response_headers(&mut response_headers, Some(session_id));
+                add_security_headers(&mut response_headers);
+                Ok((StatusCode::OK, response_headers, Json(json!({"status":"streaming"}))).into_response())
+            } else {
+                // Standard JSON response
+                let mut response_headers = HeaderMap::new();
+                set_json_response_headers(&mut response_headers, Some(session_id));
+                add_security_headers(&mut response_headers);
+                Ok((StatusCode::OK, response_headers, Json(envelope)).into_response())
+            }
         }
         Err(e) => {
             metrics().increment_internal_errors();
@@ -963,11 +1078,6 @@ async fn handle_json_rpc_request(
             } else {
                 error!(request_id = %request_id, session_id = %session_id, "MCP handler failed: {}", e);
             }
-
-            // Return JSON-RPC error envelope with HTTP 200 to follow JSON-RPC semantics
-            let mut response_headers = HeaderMap::new();
-            set_json_response_headers(&mut response_headers, Some(session_id));
-            add_security_headers(&mut response_headers);
 
             let error_envelope = json!({
                 "jsonrpc": "2.0",
@@ -984,7 +1094,23 @@ async fn handle_json_rpc_request(
                     serde_json::to_string_pretty(&error_envelope).unwrap_or_else(|_| error_envelope.to_string()));
             }
 
-            Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
+            // Publish error to SSE hub as well (always)
+            let payload = serde_json::to_string(&error_envelope)
+                .unwrap_or_else(|_| error_envelope.to_string());
+            let _ = SSE_HUB.publish(session_id, SseMessage { id: None, event: Some("error".to_string()), data: payload });
+
+            if wants_sse_stream {
+                let mut response_headers = HeaderMap::new();
+                set_json_response_headers(&mut response_headers, Some(session_id));
+                add_security_headers(&mut response_headers);
+                Ok((StatusCode::OK, response_headers, Json(json!({"status":"streaming"}))).into_response())
+            } else {
+                // Return JSON-RPC error envelope with HTTP 200 to follow JSON-RPC semantics
+                let mut response_headers = HeaderMap::new();
+                set_json_response_headers(&mut response_headers, Some(session_id));
+                add_security_headers(&mut response_headers);
+                Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
+            }
         }
     }
 }
@@ -1021,28 +1147,66 @@ fn handle_sse_request(
 
     // Note: Do not increment POST success metrics here; GET establishes SSE only
 
-    // Build a streaming SSE response that stays open until the client disconnects
-    // Include explicit capabilities per MCP spec expectations
+    // Build a streaming SSE response that stays open until the client disconnects.
+    // Include explicit capabilities per MCP spec expectations.
     let init_payload = format!(
         "{{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"resources\": {{}}, \"prompts\": {{}}, \"tools\": {{}}, \"sampling\": {{}}, \"roots\": {{}}, \"elicitation\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}",
         env!("CARGO_PKG_VERSION")
     );
 
     let mut interval = tokio::time::interval(Duration::from_secs(15));
+    let last_event_id = headers
+        .get("Last-Event-ID")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse::<u64>().ok());
+    let mut rx = SSE_HUB.subscribe(session_id);
+    let replay = SSE_HUB.snapshot_from(session_id, last_event_id);
 
     let stream = async_stream::stream! {
-        // Send initialization event first (explicit event name)
-        let event = Event::default()
+        // 1) Send initialization event (id: 0)
+        let init_event = Event::default()
+            .id("0")
             .event("initialized")
             .data(init_payload.clone())
             .retry(Duration::from_millis(3000));
-        yield Ok::<Event, Infallible>(event);
+        yield Ok::<Event, Infallible>(init_event);
 
+        // 2) Replay buffered events after Last-Event-ID
+        for (id, msg) in replay {
+            let mut ev = Event::default();
+            if let Some(ev_name) = msg.event.clone() { ev = ev.event(ev_name); }
+            ev = ev.id(id.to_string());
+            ev = ev.data(msg.data.clone());
+            yield Ok::<Event, Infallible>(ev);
+        }
+
+        // 3) Live loop: keep-alives + new messages
         loop {
-            interval.tick().await;
-            // Send comment keep-alive to avoid buffering and keep connection active
-            let keep = Event::default().comment("keep-alive");
-            yield Ok::<Event, Infallible>(keep);
+            tokio::select! {
+                _ = interval.tick() => {
+                    let keep = Event::default().comment("keep-alive");
+                    yield Ok::<Event, Infallible>(keep);
+                }
+                recv = rx.recv() => {
+                    match recv {
+                        Ok(msg) => {
+                            let mut ev = Event::default();
+                            if let Some(ev_name) = msg.event.clone() { ev = ev.event(ev_name); }
+                            if let Some(id) = msg.id.clone() { ev = ev.id(id); }
+                            ev = ev.data(msg.data.clone());
+                            yield Ok::<Event, Infallible>(ev);
+                        }
+                        Err(broadcast::error::RecvError::Lagged(_)) => {
+                            // Receiver lagged behind; send a hint comment
+                            let warn_ev = Event::default().comment("lagged: events dropped");
+                            yield Ok::<Event, Infallible>(warn_ev);
+                        }
+                        Err(broadcast::error::RecvError::Closed) => {
+                            break;
+                        }
+                    }
+                }
+            }
         }
     };
 
