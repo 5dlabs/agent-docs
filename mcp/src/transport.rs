@@ -585,8 +585,12 @@ fn get_or_create_comprehensive_session(
                         let _ = state
                             .comprehensive_session_manager
                             .update_last_accessed(session_id);
-                        debug!("Reusing existing comprehensive session: {} (age: {:?}, idle: {:?})",
-                            session_id, session.age(), session.idle_time());
+                        debug!(
+                            "Reusing existing comprehensive session: {} (age: {:?}, idle: {:?})",
+                            session_id,
+                            session.age(),
+                            session.idle_time()
+                        );
                         return Ok(session_id);
                     }
                 } else {
