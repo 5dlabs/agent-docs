@@ -19,6 +19,16 @@ use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn, Instrument};
 use uuid::Uuid;
 
+// Sensitive header names (lowercase) to redact in detailed logs
+const SENSITIVE_HEADERS: &[&str] = &[
+    "authorization",
+    "proxy-authorization",
+    "cookie",
+    "set-cookie",
+    "x-api-key",
+    "x-api-key-id",
+];
+
 use crate::headers::{
     set_json_response_headers, set_standard_headers, validate_protocol_version, MCP_SESSION_ID,
     SUPPORTED_PROTOCOL_VERSION,
@@ -111,8 +121,7 @@ fn log_request_headers(request_id: Uuid, headers: &HeaderMap) {
         headers
             .get(name)
             .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "<missing>".to_string())
+            .map_or_else(|| "<missing>".to_string(), ToString::to_string)
     }
 
     // Short summary at info level for quick visibility
@@ -135,15 +144,6 @@ fn log_request_headers(request_id: Uuid, headers: &HeaderMap) {
     );
 
     // Detailed header log at debug level with redaction and truncation
-    const SENSITIVE: &[&str] = &[
-        "authorization",
-        "proxy-authorization",
-        "cookie",
-        "set-cookie",
-        "x-api-key",
-        "x-api-key-id",
-    ];
-
     let detailed: Vec<(String, String)> = headers
         .iter()
         .map(|(name, value)| {
@@ -153,7 +153,7 @@ fn log_request_headers(request_id: Uuid, headers: &HeaderMap) {
                 Ok(s) => s.to_string(),
                 Err(_) => "<non-utf8>".to_string(),
             };
-            if SENSITIVE.contains(&lower.as_str()) {
+            if SENSITIVE_HEADERS.contains(&lower.as_str()) {
                 val = "<redacted>".to_string();
             } else if val.len() > 256 {
                 val = format!("{}…", &val[..256]);
@@ -462,8 +462,15 @@ async fn unified_mcp_handler_impl(
         Method::POST => handle_json_rpc_request(state, headers, request, request_id).await,
         Method::DELETE => handle_delete_session_request(&state, &headers, request_id),
         Method::GET => {
-            // Handle SSE connection for Streamable HTTP transport
-            handle_sse_request(&state, &headers, request_id)
+            // Gate SSE behind an env flag for compatibility with acceptance tests
+            if std::env::var("MCP_ENABLE_SSE")
+                .is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            {
+                handle_sse_request(&state, &headers, request_id)
+            } else {
+                warn!(request_id = %request_id, "GET /mcp not enabled (MCP_ENABLE_SSE not set) - returning 405");
+                Err(TransportError::MethodNotAllowed)
+            }
         }
         _ => {
             metrics().increment_method_not_allowed();

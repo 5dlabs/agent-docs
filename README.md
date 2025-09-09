@@ -93,6 +93,7 @@ Key variables used by the server and helpers:
 - `PORT` or `MCP_PORT`: Server port (defaults to 3001)
 - `MCP_HOST`: Bind address (defaults to 0.0.0.0)
 - `RUST_LOG`: Logging level (e.g., `info,doc_server=debug`)
+- `MCP_ENABLE_SSE`: Enable experimental SSE on `GET /mcp` when set to `1` or `true` (defaults to disabled; `GET /mcp` returns 405). This keeps acceptance tests green while allowing opt-in SSE during development.
 - `TOOLS_CONFIG_PATH` or `TOOLS_CONFIG`: Path or inline JSON for tool configuration
 - `LOADER_BIN`: Path to the loader binary (defaults to `/app/loader` in container)
 - `CLAUDE_BINARY_PATH`: Path to Claude Code binary (defaults to `claude`)
