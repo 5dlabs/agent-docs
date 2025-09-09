@@ -1175,11 +1175,13 @@ fn handle_sse_request(
 
     let stream = async_stream::stream! {
         // 1) Send initialization event (id: 0)
+        debug!(request_id = %request_id, "SSE: Sending initialization event");
         let init_event = Event::default()
             .id("0")
             .event("initialized")
             .data(init_payload.clone())
             .retry(Duration::from_millis(3000));
+        debug!(request_id = %request_id, "SSE: Yielding init event");
         yield Ok::<Event, Infallible>(init_event);
 
         // 2) Replay buffered events after Last-Event-ID
@@ -1221,19 +1223,21 @@ fn handle_sse_request(
         }
     };
 
+    debug!(request_id = %request_id, "SSE: Creating Sse wrapper");
     let sse = Sse::new(stream).keep_alive(
         KeepAlive::new()
             .interval(Duration::from_secs(20))
             .text(": keep-alive"),
     );
 
+    debug!(request_id = %request_id, "SSE: Converting to response");
     let mut response = sse.into_response();
     // Set protocol/session/security headers explicitly for clients
     let headers_mut = response.headers_mut();
     crate::headers::set_sse_response_headers(headers_mut, Some(session_id));
     add_security_headers(headers_mut);
 
-    debug!(request_id = %request_id, "Started persistent SSE stream");
+    info!(request_id = %request_id, session_id = %session_id, "SSE: Started persistent SSE stream");
     Ok(response)
 }
 
