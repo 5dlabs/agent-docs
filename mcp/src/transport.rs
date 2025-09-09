@@ -7,7 +7,10 @@ use axum::{
     body::Body,
     extract::{Request, State},
     http::{HeaderMap, Method, StatusCode},
-    response::{sse::{Event, KeepAlive, Sse}, IntoResponse, Response},
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse, Response,
+    },
     Json,
 };
 use serde_json::{json, Value};
@@ -842,7 +845,11 @@ fn handle_sse_request(
         }
     };
 
-    let sse = Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(30)).text(": keep-alive\n\n"));
+    let sse = Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(30))
+            .text(": keep-alive\n\n"),
+    );
 
     let mut response = sse.into_response();
     // Set protocol/session/security headers explicitly for clients
