@@ -590,10 +590,16 @@ async fn unified_mcp_handler_impl(
         Method::POST => handle_json_rpc_request(state, headers, request, request_id).await,
         Method::DELETE => handle_delete_session_request(&state, &headers, request_id),
         Method::GET => {
-            // Gate SSE behind an env flag for compatibility with acceptance tests
-            if std::env::var("MCP_ENABLE_SSE")
-                .is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            {
+            // Gate SSE behind an env flag, but allow Cursor UA for compatibility fallback
+            let sse_env_enabled = std::env::var("MCP_ENABLE_SSE")
+                .is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+            let ua_allows_fallback = headers
+                .get("user-agent")
+                .and_then(|v| v.to_str().ok())
+                .map(|ua| ua.to_lowercase().contains("cursor"))
+                .unwrap_or(false);
+
+            if sse_env_enabled || ua_allows_fallback {
                 handle_sse_request(&state, &headers, request_id)
             } else {
                 warn!(request_id = %request_id, "GET /mcp not enabled (MCP_ENABLE_SSE not set) - returning 405");
@@ -1019,7 +1025,12 @@ async fn handle_json_rpc_request(
         .unwrap_or_default()
         .to_string();
 
-    let wants_sse_stream =
+    // Note: For POST requests, always return a proper JSON-RPC response body.
+    // Some clients (e.g., Cursor streamableHttp) send Accept headers that include
+    // text/event-stream during initialization, but still expect an InitializeResult
+    // in the JSON-RPC response. To maximize compatibility, we do NOT switch the
+    // POST response shape based on Accept; SSE is handled via GET /mcp only.
+    let _wants_sse_stream =
         accept_header.contains("text/event-stream") || accept_header.contains("text/*");
 
     match state.handler.handle_request(json_request).await {
@@ -1060,24 +1071,11 @@ async fn handle_json_rpc_request(
                 },
             );
 
-            if wants_sse_stream {
-                // Return a valid JSON-RPC ACK envelope to satisfy strict clients
-                let ack_envelope = json!({
-                    "jsonrpc": "2.0",
-                    "id": jsonrpc_id_value,
-                    "result": { "streaming": true }
-                });
-                let mut response_headers = HeaderMap::new();
-                set_json_response_headers(&mut response_headers, Some(session_id));
-                add_security_headers(&mut response_headers);
-                Ok((StatusCode::OK, response_headers, Json(ack_envelope)).into_response())
-            } else {
-                // Standard JSON response
-                let mut response_headers = HeaderMap::new();
-                set_json_response_headers(&mut response_headers, Some(session_id));
-                add_security_headers(&mut response_headers);
-                Ok((StatusCode::OK, response_headers, Json(envelope)).into_response())
-            }
+            // Always return a standard JSON-RPC response for POST
+            let mut response_headers = HeaderMap::new();
+            set_json_response_headers(&mut response_headers, Some(session_id));
+            add_security_headers(&mut response_headers);
+            Ok((StatusCode::OK, response_headers, Json(envelope)).into_response())
         }
         Err(e) => {
             metrics().increment_internal_errors();
@@ -1120,18 +1118,11 @@ async fn handle_json_rpc_request(
                 },
             );
 
-            if wants_sse_stream {
-                let mut response_headers = HeaderMap::new();
-                set_json_response_headers(&mut response_headers, Some(session_id));
-                add_security_headers(&mut response_headers);
-                Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
-            } else {
-                // Return JSON-RPC error envelope with HTTP 200 to follow JSON-RPC semantics
-                let mut response_headers = HeaderMap::new();
-                set_json_response_headers(&mut response_headers, Some(session_id));
-                add_security_headers(&mut response_headers);
-                Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
-            }
+            // Always return JSON-RPC error envelope with HTTP 200 per JSON-RPC semantics
+            let mut response_headers = HeaderMap::new();
+            set_json_response_headers(&mut response_headers, Some(session_id));
+            add_security_headers(&mut response_headers);
+            Ok((StatusCode::OK, response_headers, Json(error_envelope)).into_response())
         }
     }
 }
