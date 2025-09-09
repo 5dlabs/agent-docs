@@ -7,12 +7,12 @@ use axum::{
     body::Body,
     extract::{Request, State},
     http::{HeaderMap, Method, StatusCode},
-    response::{IntoResponse, Response},
+    response::{sse::{Event, KeepAlive, Sse}, IntoResponse, Response},
     Json,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::fmt::Write;
+use std::convert::Infallible;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use thiserror::Error;
@@ -821,26 +821,37 @@ fn handle_sse_request(
     // Increment success metrics (SSE connection established)
     metrics().increment_post_success();
 
-    // Set SSE headers
-    let mut response_headers = HeaderMap::new();
-    crate::headers::set_sse_response_headers(&mut response_headers, Some(session_id));
-    add_security_headers(&mut response_headers);
-
-    // Create SSE response with initialization event and structured keep-alive
-    // This provides a more substantial response that Cursor can handle better
-    let sse_body = format!(
-        "data: {{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}\n\n",
+    // Build a streaming SSE response that stays open until the client disconnects
+    let init_payload = format!(
+        "{{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"tools\": {{}}, \"prompts\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}",
         env!("CARGO_PKG_VERSION")
     );
 
-    // Add multiple keep-alive events to provide more response data
-    let mut full_response = sse_body;
-    for i in 1..=10 {
-        let _ = write!(full_response, ": keep-alive-{i}\n\n");
-    }
+    let mut interval = tokio::time::interval(Duration::from_secs(25));
 
-    debug!(request_id = %request_id, "Sending SSE initialization response");
-    Ok((StatusCode::OK, response_headers, full_response).into_response())
+    let stream = async_stream::stream! {
+        // Send initialization event first
+        let event = Event::default().data(init_payload.clone());
+        yield Ok::<Event, Infallible>(event);
+
+        loop {
+            interval.tick().await;
+            // Send comment keep-alive to avoid buffering and keep connection active
+            let keep = Event::default().comment("keep-alive");
+            yield Ok::<Event, Infallible>(keep);
+        }
+    };
+
+    let sse = Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(30)).text(": keep-alive\n\n"));
+
+    let mut response = sse.into_response();
+    // Set protocol/session/security headers explicitly for clients
+    let headers_mut = response.headers_mut();
+    crate::headers::set_sse_response_headers(headers_mut, Some(session_id));
+    add_security_headers(headers_mut);
+
+    debug!(request_id = %request_id, "Started persistent SSE stream");
+    Ok(response)
 }
 
 /// Initialize transport with session cleanup task
