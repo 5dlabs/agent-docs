@@ -1160,66 +1160,54 @@ fn handle_sse_request(
 
     // Build a streaming SSE response that stays open until the client disconnects.
     // Include explicit capabilities per MCP spec expectations.
-    let init_payload = format!(
-        "{{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"resources\": {{}}, \"prompts\": {{}}, \"tools\": {{}}, \"sampling\": {{}}, \"roots\": {{}}, \"elicitation\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}",
-        env!("CARGO_PKG_VERSION")
-    );
+    // let init_payload = format!(
+    //     "{{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {{\"protocolVersion\": \"{SUPPORTED_PROTOCOL_VERSION}\", \"capabilities\": {{\"resources\": {{}}, \"prompts\": {{}}, \"tools\": {{}}, \"sampling\": {{}}, \"roots\": {{}}, \"elicitation\": {{}}}}, \"serverInfo\": {{\"name\": \"mcp\", \"version\": \"{}\"}}}}}}",
+    //     env!("CARGO_PKG_VERSION")
+    // );
 
-    let mut interval = tokio::time::interval(Duration::from_secs(15));
-    let last_event_id = headers
-        .get("Last-Event-ID")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse::<u64>().ok());
-    let mut rx = SSE_HUB.subscribe(session_id);
-    let replay = SSE_HUB.snapshot_from(session_id, last_event_id);
+    // Temporarily commented out for simplified debugging
+    // let mut interval = tokio::time::interval(Duration::from_secs(15));
+    // let last_event_id = headers
+    //     .get("Last-Event-ID")
+    //     .and_then(|v| v.to_str().ok())
+    //     .and_then(|s| s.parse::<u64>().ok());
+    // let mut rx = SSE_HUB.subscribe(session_id);
+    // let replay = SSE_HUB.snapshot_from(session_id, last_event_id);
 
+    // Simplified SSE stream for debugging
     let stream = async_stream::stream! {
-        // 1) Send initialization event (id: 0)
-        debug!(request_id = %request_id, "SSE: Sending initialization event");
+        info!(request_id = %request_id, "SSE: Starting stream generation");
+
+        // Send initial event immediately
         let init_event = Event::default()
             .id("0")
-            .event("initialized")
-            .data(init_payload.clone())
-            .retry(Duration::from_millis(3000));
-        debug!(request_id = %request_id, "SSE: Yielding init event");
+            .event("message")
+            .data(format!(
+                "{{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{{\"protocolVersion\":\"{}\",\"capabilities\":{{\"tools\":{{\"listChanged\":true}}}},\"serverInfo\":{{\"name\":\"mcp\",\"version\":\"{}\"}}}}}}",
+                SUPPORTED_PROTOCOL_VERSION,
+                env!("CARGO_PKG_VERSION")
+            ));
+        info!(request_id = %request_id, "SSE: Yielding init event");
         yield Ok::<Event, Infallible>(init_event);
 
-        // 2) Replay buffered events after Last-Event-ID
-        for (id, msg) in replay {
-            let mut ev = Event::default();
-            if let Some(ev_name) = msg.event.clone() { ev = ev.event(ev_name); }
-            ev = ev.id(id.to_string());
-            ev = ev.data(msg.data.clone());
-            yield Ok::<Event, Infallible>(ev);
-        }
+        // Send a test message after 1 second
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        let test_event = Event::default()
+            .id("1")
+            .event("message")
+            .data("{\"test\":\"message\"}");
+        info!(request_id = %request_id, "SSE: Yielding test event");
+        yield Ok::<Event, Infallible>(test_event);
 
-        // 3) Live loop: keep-alives + new messages
+        // Keep connection alive with periodic comments
+        let mut count = 2;
         loop {
-            tokio::select! {
-                _ = interval.tick() => {
-                    let keep = Event::default().comment("keep-alive");
-                    yield Ok::<Event, Infallible>(keep);
-                }
-                recv = rx.recv() => {
-                    match recv {
-                        Ok(msg) => {
-                            let mut ev = Event::default();
-                            if let Some(ev_name) = msg.event.clone() { ev = ev.event(ev_name); }
-                            if let Some(id) = msg.id.clone() { ev = ev.id(id); }
-                            ev = ev.data(msg.data.clone());
-                            yield Ok::<Event, Infallible>(ev);
-                        }
-                        Err(broadcast::error::RecvError::Lagged(_)) => {
-                            // Receiver lagged behind; send a hint comment
-                            let warn_ev = Event::default().comment("lagged: events dropped");
-                            yield Ok::<Event, Infallible>(warn_ev);
-                        }
-                        Err(broadcast::error::RecvError::Closed) => {
-                            break;
-                        }
-                    }
-                }
-            }
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            let keep_alive = Event::default()
+                .comment(format!("keep-alive {}", count));
+            info!(request_id = %request_id, "SSE: Yielding keep-alive {}", count);
+            yield Ok::<Event, Infallible>(keep_alive);
+            count += 1;
         }
     };
 
