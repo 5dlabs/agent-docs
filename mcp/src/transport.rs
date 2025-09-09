@@ -596,8 +596,7 @@ async fn unified_mcp_handler_impl(
             let ua_allows_fallback = headers
                 .get("user-agent")
                 .and_then(|v| v.to_str().ok())
-                .map(|ua| ua.to_lowercase().contains("cursor"))
-                .unwrap_or(false);
+                .is_some_and(|ua| ua.to_lowercase().contains("cursor"));
 
             if sse_env_enabled || ua_allows_fallback {
                 handle_sse_request(&state, &headers, request_id)
