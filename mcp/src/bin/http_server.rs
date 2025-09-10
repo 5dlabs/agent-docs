@@ -717,10 +717,14 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
     migration_manager.register_migration(MigrationInfo {
         id: "012_force_doc_type_text".to_string(),
         version: "1.3.0".to_string(),
-        description: "Convert doc_type columns to TEXT and drop legacy enum/check constraints".to_string(),
+        description: "Convert doc_type columns to TEXT and drop legacy enum/check constraints"
+            .to_string(),
         up_sql: force_text_sql.to_string(),
         down_sql: Some("-- irreversible migration; no-op".to_string()),
-        dependencies: vec!["003_documents_table".to_string(), "004_document_sources_table".to_string()],
+        dependencies: vec![
+            "003_documents_table".to_string(),
+            "004_document_sources_table".to_string(),
+        ],
         checksum: calculate_checksum(force_text_sql),
     });
 }
