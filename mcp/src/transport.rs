@@ -1074,8 +1074,8 @@ async fn handle_json_rpc_request(
     // Determine whether this is a JSON-RPC notification (no id) per spec. For notifications,
     // servers MUST NOT send a JSON-RPC response. This avoids emitting invalid envelopes with
     // id=null that confuse some clients.
-    let is_notification = !json_request.get("id").is_some()
-        || json_request.get("id").is_some_and(|v| v.is_null());
+    let is_notification =
+        !json_request.get("id").is_some() || json_request.get("id").is_some_and(|v| v.is_null());
 
     // Note: For POST requests, we return a proper JSON-RPC response body only for calls with an id.
     // SSE is established via GET /mcp. We do not mirror POST responses onto SSE by default to
@@ -1109,7 +1109,9 @@ async fn handle_json_rpc_request(
                 let mut response_headers = HeaderMap::new();
                 set_json_response_headers(&mut response_headers, Some(session_id));
                 add_security_headers(&mut response_headers);
-                return Ok((StatusCode::NO_CONTENT, response_headers, Body::empty()).into_response());
+                return Ok(
+                    (StatusCode::NO_CONTENT, response_headers, Body::empty()).into_response()
+                );
             }
 
             // Wrap in JSON-RPC envelope for standard requests (with id)
@@ -1121,8 +1123,8 @@ async fn handle_json_rpc_request(
 
             // Optionally mirror to SSE if explicitly enabled
             if mirror_to_sse {
-                let payload = serde_json::to_string(&envelope)
-                    .unwrap_or_else(|_| envelope.to_string());
+                let payload =
+                    serde_json::to_string(&envelope).unwrap_or_else(|_| envelope.to_string());
                 let _ = SSE_HUB.publish(
                     session_id,
                     SseMessage {
@@ -1158,7 +1160,9 @@ async fn handle_json_rpc_request(
                 let mut response_headers = HeaderMap::new();
                 set_json_response_headers(&mut response_headers, Some(session_id));
                 add_security_headers(&mut response_headers);
-                return Ok((StatusCode::NO_CONTENT, response_headers, Body::empty()).into_response());
+                return Ok(
+                    (StatusCode::NO_CONTENT, response_headers, Body::empty()).into_response()
+                );
             }
 
             let error_envelope = json!({
