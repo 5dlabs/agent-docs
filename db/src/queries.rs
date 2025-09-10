@@ -52,24 +52,6 @@ impl RowCountable for String {
 pub struct DocumentQueries;
 
 impl DocumentQueries {
-    async fn is_doc_type_enum(pool: &PgPool, table: &str) -> Result<bool> {
-        // Detect if the doc_type column is a USER-DEFINED type (enum) for the given table
-        let row = sqlx::query(
-            r"
-            SELECT data_type = 'USER-DEFINED' AS is_enum
-            FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = $1 AND column_name = 'doc_type'
-            LIMIT 1
-            ",
-        )
-        .bind(table)
-        .fetch_optional(pool)
-        .await?;
-
-        Ok(row
-            .and_then(|r| r.try_get::<bool, _>("is_enum").ok())
-            .unwrap_or(false))
-    }
     /// Ensure document source exists
     ///
     /// # Errors
@@ -290,7 +272,7 @@ impl DocumentQueries {
             r"
             SELECT 
                 id,
-                doc_type::text as doc_type,
+                doc_type,
                 source_name,
                 doc_path,
                 content,
@@ -299,7 +281,7 @@ impl DocumentQueries {
                 created_at,
                 updated_at
             FROM documents
-            WHERE doc_type::text = $1
+            WHERE doc_type = $1
             ORDER BY created_at DESC
             ",
         )
@@ -339,7 +321,7 @@ impl DocumentQueries {
             r"
             SELECT 
                 id,
-                doc_type::text as doc_type,
+                doc_type,
                 source_name,
                 doc_path,
                 content,
@@ -392,7 +374,7 @@ impl DocumentQueries {
             r"
             SELECT 
                 id,
-                doc_type::text as doc_type,
+                doc_type,
                 source_name,
                 doc_path,
                 content,
@@ -447,7 +429,7 @@ impl DocumentQueries {
         let fts_sql = r"
             SELECT
                 id,
-                doc_type::text as doc_type,
+                doc_type,
                 source_name,
                 doc_path,
                 content,
@@ -460,7 +442,7 @@ impl DocumentQueries {
                     websearch_to_tsquery('english', $1)
                 ) AS rank
             FROM documents
-            WHERE doc_type::text = 'rust'
+            WHERE doc_type = 'rust'
               AND (
                     to_tsvector('english', coalesce(content,'')) @@ websearch_to_tsquery('english', $1)
                  OR doc_path ILIKE $2
@@ -490,7 +472,7 @@ impl DocumentQueries {
                 .map(|t| format!("%{t}%"))
                 .collect();
 
-            let mut where_parts = vec!["doc_type::text = $1".to_string()];
+            let mut where_parts = vec!["doc_type = $1".to_string()];
             let mut binds: Vec<String> = Vec::new();
             let mut bind_index = 2;
             for _tok in &tokens {
@@ -510,7 +492,7 @@ impl DocumentQueries {
             }
 
             let sql = format!(
-                    "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
+                    "SELECT id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
                      FROM documents WHERE {} ORDER BY created_at DESC LIMIT ${}",
                     where_parts.join(" AND "),
                     bind_index
@@ -562,7 +544,7 @@ impl DocumentQueries {
         let fts_sql = r"
             SELECT
                 id,
-                doc_type::text as doc_type,
+                doc_type,
                 source_name,
                 doc_path,
                 content,
@@ -575,7 +557,7 @@ impl DocumentQueries {
                     websearch_to_tsquery('english', $2)
                 ) AS rank
             FROM documents
-            WHERE doc_type::text = $1
+            WHERE doc_type = $1
               AND (
                     to_tsvector('english', coalesce(content,'')) @@ websearch_to_tsquery('english', $2)
                  OR doc_path ILIKE $3
@@ -605,7 +587,7 @@ impl DocumentQueries {
                 .map(|t| format!("%{t}%"))
                 .collect();
 
-            let mut where_parts = vec!["doc_type::text = $1".to_string()];
+            let mut where_parts = vec!["doc_type = $1".to_string()];
             let mut binds: Vec<String> = Vec::new();
             let mut bind_index = 2;
             for _tok in &tokens {
@@ -625,7 +607,7 @@ impl DocumentQueries {
             }
 
             let sql = format!(
-                    "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
+                    "SELECT id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
                      FROM documents WHERE {} ORDER BY created_at DESC LIMIT ${}",
                     where_parts.join(" AND "),
                     bind_index
@@ -680,7 +662,7 @@ impl DocumentQueries {
         filters: &MetadataFilters,
     ) -> Result<Vec<Document>> {
         // Try FTS variant with ranking and metadata filters
-        let mut where_parts = vec!["doc_type::text = $1".to_string()];
+        let mut where_parts = vec!["doc_type = $1".to_string()];
         // FTS predicate and doc_path fallback
         where_parts.push("(to_tsvector('english', coalesce(content,'')) @@ websearch_to_tsquery('english', $2) OR doc_path ILIKE $3)".to_string());
         let mut bind_index = 4;
@@ -706,7 +688,7 @@ impl DocumentQueries {
         }
 
         let fts_sql = format!(
-            "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at, \
+            "SELECT id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at, \
              ts_rank_cd(to_tsvector('english', coalesce(content,'')), websearch_to_tsquery('english', $2)) AS rank \
              FROM documents WHERE {} ORDER BY rank DESC, created_at DESC LIMIT ${}",
             where_parts.join(" AND "),
@@ -750,7 +732,7 @@ impl DocumentQueries {
                     .map(|t| format!("%{t}%"))
                     .collect();
 
-                let mut parts = vec!["doc_type::text = $1".to_string()];
+                let mut parts = vec!["doc_type = $1".to_string()];
                 let mut idx = 2;
                 for _t in &tokens {
                     parts.push(format!("(content ILIKE ${idx} OR doc_path ILIKE ${idx})"));
@@ -781,7 +763,7 @@ impl DocumentQueries {
                     idx += 1;
                 }
                 let sql = format!(
-                    "SELECT id, doc_type::text as doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
+                    "SELECT id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at \
                      FROM documents WHERE {} ORDER BY created_at DESC LIMIT ${}",
                     parts.join(" AND "),
                     idx
@@ -975,7 +957,7 @@ impl QueryPerformanceMonitor {
             "explain_doc_type_query",
             Self::explain_query(
                 pool,
-                "SELECT * FROM documents WHERE doc_type::text = 'rust' LIMIT 10",
+                "SELECT * FROM documents WHERE doc_type = 'rust' LIMIT 10",
             ),
         )
         .await?;
@@ -1000,7 +982,7 @@ impl QueryPerformanceMonitor {
             r"
             SELECT 
                 id,
-                doc_type::text as doc_type,
+                doc_type,
                 source_name,
                 doc_path,
                 content,
@@ -1341,7 +1323,7 @@ impl CrateQueries {
                     COALESCE(SUM(token_count), 0) as total_tokens,
                     MAX(created_at) as last_updated
                 FROM documents 
-                WHERE doc_type::text = 'rust' 
+                WHERE doc_type = 'rust' 
                 AND metadata->>'crate_name' IS NOT NULL
             "
         .to_string()];
@@ -1388,7 +1370,7 @@ impl CrateQueries {
         let mut count_query_parts = vec![r"
             SELECT COUNT(DISTINCT metadata->>'crate_name') 
             FROM documents 
-            WHERE doc_type::text = 'rust' 
+            WHERE doc_type = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
             "
         .to_string()];
@@ -1460,7 +1442,7 @@ impl CrateQueries {
                     COALESCE(SUM(CAST(token_count AS BIGINT)), 0) as tokens_count,
                     MAX(created_at) as last_updated
                 FROM documents 
-                WHERE doc_type::text = 'rust' 
+                WHERE doc_type = 'rust' 
                 AND metadata->>'crate_name' IS NOT NULL
                 GROUP BY metadata->>'crate_name'
             )
@@ -1485,7 +1467,7 @@ impl CrateQueries {
             r"
             SELECT COALESCE(SUM(CAST(token_count AS BIGINT)), 0)::bigint
             FROM documents 
-            WHERE doc_type::text = 'rust' 
+            WHERE doc_type = 'rust' 
             AND metadata->>'crate_name' IS NOT NULL
             ",
         )
@@ -1529,7 +1511,7 @@ impl CrateQueries {
                 COALESCE(SUM(CAST(token_count AS BIGINT)), 0)::bigint as total_tokens,
                 MAX(created_at) as last_updated
             FROM documents 
-            WHERE doc_type::text = 'rust' 
+            WHERE doc_type = 'rust' 
             AND metadata->>'crate_name' = $1
             GROUP BY metadata->>'crate_name', metadata->>'crate_version'
             LIMIT 1
