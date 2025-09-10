@@ -184,9 +184,8 @@ impl DynamicQueryTool {
             if self.is_discovery_query(query) {
                 debug!("Discovery query triggered for: '{}'", query);
                 return self.handle_birdeye_discovery_query(query, limit).await;
-            } else {
-                debug!("Regular search for Birdeye query: '{}'", query);
             }
+            debug!("Regular search for Birdeye query: '{}'", query);
         }
 
         // Try vector search first, fallback to text search if vector extension not available
@@ -266,6 +265,7 @@ impl DynamicQueryTool {
     }
 
     /// Handle Birdeye-specific discovery queries inline
+    #[allow(clippy::too_many_lines)]
     async fn handle_birdeye_discovery_query(
         &self,
         query: &str,
@@ -273,7 +273,8 @@ impl DynamicQueryTool {
     ) -> Result<String> {
         let _query_lower = query.to_lowercase();
         let db_doc_type = "birdeye";
-        let max_results = limit.unwrap_or(50) as usize;
+        let max_results = usize::try_from(limit.unwrap_or(50))
+            .unwrap_or(50);
 
         // Query for all endpoints with metadata
         let endpoints = sqlx::query(
@@ -335,55 +336,66 @@ impl DynamicQueryTool {
 
         // Add categorized sections
         if !price_endpoints.is_empty() {
+            #[allow(clippy::format_push_string)]
             response.push_str(&format!(
                 "## Price Endpoints ({})\n\n",
                 price_endpoints.len()
             ));
             for endpoint in price_endpoints.into_iter().take(max_results) {
-                response.push_str(&format!("• {}\n\n", endpoint));
+                #[allow(clippy::format_push_string)]
+                response.push_str(&format!("• {endpoint}\n\n"));
             }
         }
 
         if !token_endpoints.is_empty() {
+            #[allow(clippy::format_push_string)]
             response.push_str(&format!(
                 "## Token Endpoints ({})\n\n",
                 token_endpoints.len()
             ));
             for endpoint in token_endpoints.into_iter().take(max_results) {
-                response.push_str(&format!("• {}\n\n", endpoint));
+                #[allow(clippy::format_push_string)]
+                response.push_str(&format!("• {endpoint}\n\n"));
             }
         }
 
         if !trade_endpoints.is_empty() {
+            #[allow(clippy::format_push_string)]
             response.push_str(&format!(
                 "## Trading Endpoints ({})\n\n",
                 trade_endpoints.len()
             ));
             for endpoint in trade_endpoints.into_iter().take(max_results) {
-                response.push_str(&format!("• {}\n\n", endpoint));
+                #[allow(clippy::format_push_string)]
+                response.push_str(&format!("• {endpoint}\n\n"));
             }
         }
 
         if !wallet_endpoints.is_empty() {
+            #[allow(clippy::format_push_string)]
             response.push_str(&format!(
                 "## Wallet Endpoints ({})\n\n",
                 wallet_endpoints.len()
             ));
             for endpoint in wallet_endpoints.into_iter().take(max_results) {
-                response.push_str(&format!("• {}\n\n", endpoint));
+                #[allow(clippy::format_push_string)]
+                response.push_str(&format!("• {endpoint}\n\n"));
             }
         }
 
         if !other_endpoints.is_empty() {
+            #[allow(clippy::format_push_string)]
             response.push_str(&format!(
                 "## Other Endpoints ({})\n\n",
                 other_endpoints.len()
             ));
             for endpoint in other_endpoints.into_iter().take(max_results) {
-                response.push_str(&format!("• {}\n\n", endpoint));
+                #[allow(clippy::format_push_string)]
+                response.push_str(&format!("• {endpoint}\n\n"));
             }
         }
 
+        #[allow(clippy::format_push_string)]
         response.push_str(&format!(
             "\n**Total Endpoints Available:** {}\n",
             endpoints.len()
