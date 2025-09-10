@@ -6,7 +6,7 @@
 use axum::{
     body::Body,
     extract::{Request, State},
-    http::{HeaderMap, Method, StatusCode},
+    http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
         IntoResponse, Response,
@@ -594,6 +594,31 @@ async fn unified_mcp_handler_impl(
         Method::POST => handle_json_rpc_request(state, headers, request, request_id).await,
         Method::DELETE => handle_delete_session_request(&state, &headers, request_id),
         Method::GET => handle_sse_request(&state, &headers, request_id),
+        Method::OPTIONS => {
+            // CORS preflight response (204 No Content) with permissive headers for internal usage
+            let mut response_headers = HeaderMap::new();
+            set_standard_headers(&mut response_headers, None);
+            add_security_headers(&mut response_headers);
+            response_headers.insert(
+                HeaderName::from_static("access-control-allow-methods"),
+                HeaderValue::from_static("GET, POST, DELETE, OPTIONS, HEAD"),
+            );
+            response_headers.insert(
+                HeaderName::from_static("access-control-allow-headers"),
+                HeaderValue::from_static(
+                    "Accept, Accept-Language, Content-Type, Cache-Control, MCP-Protocol-Version, Mcp-Session-Id, X-Client-Id",
+                ),
+            );
+            response_headers.insert(
+                HeaderName::from_static("access-control-allow-origin"),
+                HeaderValue::from_static("*"),
+            );
+            response_headers.insert(
+                HeaderName::from_static("access-control-max-age"),
+                HeaderValue::from_static("600"),
+            );
+            Ok((StatusCode::NO_CONTENT, response_headers, "").into_response())
+        }
         Method::HEAD => {
             // Respond OK with MCP headers so clients can probe server availability
             let mut response_headers = HeaderMap::new();
