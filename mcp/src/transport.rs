@@ -1071,13 +1071,18 @@ async fn handle_json_rpc_request(
         .unwrap_or_default()
         .to_string();
 
-    // Note: For POST requests, always return a proper JSON-RPC response body.
-    // Some clients (e.g., Cursor streamableHttp) send Accept headers that include
-    // text/event-stream during initialization, but still expect an InitializeResult
-    // in the JSON-RPC response. To maximize compatibility, we do NOT switch the
-    // POST response shape based on Accept; SSE is handled via GET /mcp only.
-    let _wants_sse_stream =
-        accept_header.contains("text/event-stream") || accept_header.contains("text/*");
+    // Determine whether this is a JSON-RPC notification (no id) per spec. For notifications,
+    // servers MUST NOT send a JSON-RPC response. This avoids emitting invalid envelopes with
+    // id=null that confuse some clients.
+    let is_notification = !json_request.get("id").is_some()
+        || json_request.get("id").is_some_and(|v| v.is_null());
+
+    // Note: For POST requests, we return a proper JSON-RPC response body only for calls with an id.
+    // SSE is established via GET /mcp. We do not mirror POST responses onto SSE by default to
+    // avoid duplicate responses that some clients treat as "unknown message ID".
+    let mirror_to_sse = std::env::var("MCP_ENABLE_SSE_MIRROR")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
 
     match state.handler.handle_request(json_request).await {
         Ok(result_value) => {
@@ -1099,25 +1104,36 @@ async fn handle_json_rpc_request(
                 .comprehensive_session_manager
                 .update_last_accessed(session_id);
 
-            // Wrap in JSON-RPC envelope
+            if is_notification {
+                // JSON-RPC notification: do not send a JSON-RPC response body.
+                let mut response_headers = HeaderMap::new();
+                set_json_response_headers(&mut response_headers, Some(session_id));
+                add_security_headers(&mut response_headers);
+                return Ok((StatusCode::NO_CONTENT, response_headers, Body::empty()).into_response());
+            }
+
+            // Wrap in JSON-RPC envelope for standard requests (with id)
             let envelope = json!({
                 "jsonrpc": "2.0",
                 "id": jsonrpc_id_value,
                 "result": result_value
             });
 
-            // Publish to session SSE hub for Streamable-HTTP clients (always)
-            let payload = serde_json::to_string(&envelope).unwrap_or_else(|_| envelope.to_string());
-            let _ = SSE_HUB.publish(
-                session_id,
-                SseMessage {
-                    id: None,
-                    event: Some("message".to_string()),
-                    data: payload,
-                },
-            );
+            // Optionally mirror to SSE if explicitly enabled
+            if mirror_to_sse {
+                let payload = serde_json::to_string(&envelope)
+                    .unwrap_or_else(|_| envelope.to_string());
+                let _ = SSE_HUB.publish(
+                    session_id,
+                    SseMessage {
+                        id: None,
+                        event: Some("message".to_string()),
+                        data: payload,
+                    },
+                );
+            }
 
-            // Always return a standard JSON-RPC response for POST
+            // Return a standard JSON-RPC response for POST
             let mut response_headers = HeaderMap::new();
             set_json_response_headers(&mut response_headers, Some(session_id));
             add_security_headers(&mut response_headers);
@@ -1137,6 +1153,14 @@ async fn handle_json_rpc_request(
                 error!(request_id = %request_id, session_id = %session_id, "MCP handler failed: {}", e);
             }
 
+            if is_notification {
+                // Notifications do not expect a JSON-RPC response; still update headers.
+                let mut response_headers = HeaderMap::new();
+                set_json_response_headers(&mut response_headers, Some(session_id));
+                add_security_headers(&mut response_headers);
+                return Ok((StatusCode::NO_CONTENT, response_headers, Body::empty()).into_response());
+            }
+
             let error_envelope = json!({
                 "jsonrpc": "2.0",
                 "id": jsonrpc_id_value,
@@ -1152,17 +1176,19 @@ async fn handle_json_rpc_request(
                     serde_json::to_string_pretty(&error_envelope).unwrap_or_else(|_| error_envelope.to_string()));
             }
 
-            // Publish error to SSE hub as well (always)
-            let payload = serde_json::to_string(&error_envelope)
-                .unwrap_or_else(|_| error_envelope.to_string());
-            let _ = SSE_HUB.publish(
-                session_id,
-                SseMessage {
-                    id: None,
-                    event: Some("error".to_string()),
-                    data: payload,
-                },
-            );
+            // Optionally mirror error to SSE if explicitly enabled
+            if mirror_to_sse {
+                let payload = serde_json::to_string(&error_envelope)
+                    .unwrap_or_else(|_| error_envelope.to_string());
+                let _ = SSE_HUB.publish(
+                    session_id,
+                    SseMessage {
+                        id: None,
+                        event: Some("error".to_string()),
+                        data: payload,
+                    },
+                );
+            }
 
             // Always return JSON-RPC error envelope with HTTP 200 per JSON-RPC semantics
             let mut response_headers = HeaderMap::new();
@@ -1224,6 +1250,20 @@ fn handle_sse_request(
 
     let stream = async_stream::stream! {
         info!(request_id = %request_id, "SSE stream established for session {}; replay_from={:?}", session_id, last_event_id);
+
+        // Emit an initial JSON-RPC notification to signal SSE readiness to clients.
+        // This avoids clients treating the stream as stale and also aligns with common
+        // patterns expecting a `notifications/initialized` message.
+        let init_payload = json!({
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized",
+            "params": {
+                "protocolVersion": SUPPORTED_PROTOCOL_VERSION,
+                "capabilities": { "tools": { "listChanged": true } }
+            }
+        }).to_string();
+        let init_event = Event::default().event("message").data(init_payload);
+        yield Ok::<Event, Infallible>(init_event);
 
         // First, deliver any buffered messages newer than Last-Event-ID
         for (id, msg) in snapshot {
