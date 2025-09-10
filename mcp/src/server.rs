@@ -54,8 +54,8 @@ impl McpServer {
         // Start background cleanup task for comprehensive session manager
         comprehensive_session_manager.start_cleanup_task();
 
-        // Initialize security configuration
-        let security_config = SecurityConfig::default();
+        // Initialize security configuration (allow env overrides for production)
+        let security_config = SecurityConfig::from_env();
 
         // Initialize the transport with legacy session cleanup (for backward compatibility)
         initialize_transport(session_manager.clone()).await;

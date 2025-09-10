@@ -94,6 +94,11 @@ Key variables used by the server and helpers:
 - `MCP_HOST`: Bind address (defaults to 0.0.0.0)
 - `RUST_LOG`: Logging level (e.g., `info,doc_server=debug`)
 - `MCP_ENABLE_SSE`: Enable experimental SSE on `GET /mcp` when set to `1` or `true` (defaults to disabled; `GET /mcp` returns 405). This keeps acceptance tests green while allowing opt-in SSE during development.
+  - Note: When enabled, the SSE stream now relays per-session responses and periodic keep‑alives.
+- `MCP_ALLOWED_ORIGINS`: Comma-separated list of allowed origins for POST security checks (default allows localhost variants only). Example: `https://cursor.sh,https://your.domain`
+- `MCP_STRICT_ORIGIN_VALIDATION`: If `true`, enforce scheme + allow‑list checks on `Origin` header for POST (default: `true`). Set to `false` to be permissive for native clients that send `Origin: null`.
+- `MCP_REQUIRE_ORIGIN_HEADER`: If `true`, require `Origin` header on all POST requests (default: `false`).
+- `MCP_LOCALHOST_ONLY`: If `true`, restrict server bind validation to localhost (default: `true`). Has effect when using `McpServer::serve`.
 - `TOOLS_CONFIG_PATH` or `TOOLS_CONFIG`: Path or inline JSON for tool configuration
 - `LOADER_BIN`: Path to the loader binary (defaults to `/app/loader` in container)
 - `CLAUDE_BINARY_PATH`: Path to Claude Code binary (defaults to `claude`)

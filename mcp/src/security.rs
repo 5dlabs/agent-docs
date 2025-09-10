@@ -55,6 +55,45 @@ impl SecurityConfig {
         Self::default()
     }
 
+    /// Construct from environment variables with sensible defaults.
+    ///
+    /// Supported env vars:
+    /// - `MCP_ALLOWED_ORIGINS` (comma-separated)
+    /// - `MCP_STRICT_ORIGIN_VALIDATION` (true/false)
+    /// - `MCP_REQUIRE_ORIGIN_HEADER` (true/false)
+    /// - `MCP_LOCALHOST_ONLY` (true/false)
+    #[must_use]
+    pub fn from_env() -> Self {
+        let mut cfg = Self::default();
+
+        // Allowed origins
+        if let Ok(list) = std::env::var("MCP_ALLOWED_ORIGINS") {
+            let mut set: HashSet<String> = HashSet::new();
+            for item in list.split(',') {
+                let trimmed = item.trim();
+                if !trimmed.is_empty() {
+                    set.insert(trimmed.to_string());
+                }
+            }
+            if !set.is_empty() {
+                cfg.allowed_origins = set;
+            }
+        }
+
+        // Booleans
+        if let Ok(v) = std::env::var("MCP_STRICT_ORIGIN_VALIDATION") {
+            cfg.strict_origin_validation = matches!(v.as_str(), "1" | "true" | "TRUE" | "True");
+        }
+        if let Ok(v) = std::env::var("MCP_REQUIRE_ORIGIN_HEADER") {
+            cfg.require_origin_header = matches!(v.as_str(), "1" | "true" | "TRUE" | "True");
+        }
+        if let Ok(v) = std::env::var("MCP_LOCALHOST_ONLY") {
+            cfg.localhost_only = matches!(v.as_str(), "1" | "true" | "TRUE" | "True");
+        }
+
+        cfg
+    }
+
     /// Add an allowed origin to the configuration
     pub fn add_allowed_origin(&mut self, origin: &str) -> &mut Self {
         self.allowed_origins.insert(origin.to_string());
@@ -175,16 +214,16 @@ pub fn validate_origin(headers: &HeaderMap, config: &SecurityConfig) -> Result<(
 
     // If origin is present, validate it
     if let Some(origin_value) = origin {
-        // Basic origin format validation
-        if !origin_value.starts_with("http://") && !origin_value.starts_with("https://") {
-            return Err(SecurityError::InvalidOriginFormat(origin_value));
-        }
-
-        // Check if origin is in allowed list (if strict validation enabled)
-        if config.strict_origin_validation && !config.is_origin_allowed(&origin_value) {
-            warn!("Origin not allowed: {}", origin_value);
-            return Err(SecurityError::OriginNotAllowed(origin_value));
-        }
+        // When strict validation is enabled, enforce scheme + allow‑list
+        if config.strict_origin_validation {
+            if !origin_value.starts_with("http://") && !origin_value.starts_with("https://") {
+                return Err(SecurityError::InvalidOriginFormat(origin_value));
+            }
+            if !config.is_origin_allowed(&origin_value) {
+                warn!("Origin not allowed: {}", origin_value);
+                return Err(SecurityError::OriginNotAllowed(origin_value));
+            }
+        } // else: be permissive for non-browser/native clients (Cursor often sends `Origin: null`)
     }
 
     Ok(())

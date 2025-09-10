@@ -1167,22 +1167,62 @@ fn handle_sse_request(
 
     // Build a streaming SSE response that stays open until the client disconnects.
     // Per MCP Streamable HTTP transport specification, the SSE stream starts empty
-    // and only carries responses to requests made via POST /mcp.
+    // and only carries responses to requests made via POST /mcp. We forward those
+    // responses by subscribing to the per-session hub, and also send periodic keep-alives.
 
-    // Create a proper MCP Streamable HTTP SSE stream that starts empty
+    // Optional event replay support via Last-Event-ID
+    let last_event_id = headers
+        .get("Last-Event-ID")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse::<u64>().ok());
+
+    // Receiver for live messages
+    let mut rx = SSE_HUB.subscribe(session_id);
+
+    // Snapshot for replay, if any
+    let snapshot: Vec<(u64, SseMessage)> = SSE_HUB.snapshot_from(session_id, last_event_id);
+
     let stream = async_stream::stream! {
-        // DO NOT send any MCP notifications immediately - this violates MCP protocol flow
-        // The client must initiate communication via POST requests
-        // The server responds via this SSE stream only after receiving proper requests
+        info!(request_id = %request_id, "SSE stream established for session {}; replay_from={:?}", session_id, last_event_id);
 
-        info!(request_id = %request_id, "SSE stream established, waiting for client requests via POST");
+        // First, deliver any buffered messages newer than Last-Event-ID
+        for (id, msg) in snapshot.into_iter() {
+            let mut ev = Event::default();
+            if let Some(name) = msg.event.clone() { ev = ev.event(name); }
+            ev = ev.id(id.to_string());
+            ev = ev.data(msg.data.clone());
+            yield Ok::<Event, Infallible>(ev);
+        }
 
-        // Keep connection alive indefinitely with periodic keep-alive messages
+        // Keep-alive and live-forwarding loop
         let mut interval = tokio::time::interval(Duration::from_secs(30));
         loop {
-            interval.tick().await;
-            let keep_alive = Event::default().comment("keep-alive");
-            yield Ok::<Event, Infallible>(keep_alive);
+            tokio::select! {
+                _ = interval.tick() => {
+                    let keep_alive = Event::default().comment("keep-alive");
+                    yield Ok::<Event, Infallible>(keep_alive);
+                }
+                recv = rx.recv() => {
+                    match recv {
+                        Ok(msg) => {
+                            let mut ev = Event::default();
+                            if let Some(name) = msg.event.clone() { ev = ev.event(name); }
+                            if let Some(id) = msg.id.clone() { ev = ev.id(id); }
+                            ev = ev.data(msg.data.clone());
+                            yield Ok::<Event, Infallible>(ev);
+                        }
+                        Err(broadcast::error::RecvError::Lagged(_)) => {
+                            // On lag, send a comment to hint client it may want to reconnect
+                            let hint = Event::default().comment("lagged");
+                            yield Ok::<Event, Infallible>(hint);
+                        }
+                        Err(broadcast::error::RecvError::Closed) => {
+                            // Hub closed; end stream
+                            break;
+                        }
+                    }
+                }
+            }
         }
     };
 
