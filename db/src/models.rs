@@ -9,7 +9,7 @@ use uuid::Uuid;
 /// Document types supported by the system
 /// Now using a newtype for dynamic configuration - any docType from tools.json is valid
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "doc_type")]
+#[sqlx(transparent)]
 pub struct DocType(pub String);
 
 impl DocType {
