@@ -114,25 +114,36 @@ This document records the "fetch failed" error patterns observed during testing 
 | Talos Query | 5 | 1 | 4 | 20% |
 | **Total** | **9** | **3** | **6** | **33%** |
 
-## Update: Jupiter Documentation Re-ingestion Success
+## Update: Infrastructure Issues Identified
 
-### ✅ **Successful Re-ingestion (2025-01-09)**
-After the initial fetch failed errors, we successfully re-ingested the Jupiter documentation:
+### ❌ **CTO Tool Ingestion Failure (2025-01-09)**
+Attempted to use the CTO docs ingest tool for Jupiter documentation:
 
-**Ingestion Command:**
+**CTO Ingestion Command:**
 ```bash
-mcp_doc-server_ingest \
+mcp_cto_docs_ingest \
   --repository_url="https://github.com/jup-ag/docs" \
-  --doc_type="jupiter" \
-  --paths="docs" \
-  --extensions="md,mdx"
+  --doc_type="jupiter"
 ```
 
 **Results:**
-- ✅ **150 documents successfully ingested**
-- ✅ **Source**: jup-ag-docs
-- ✅ **Database insertion completed**
-- ✅ **Query tool now working with new content**
+- ❌ **Job Failed**: `0ffbe902-330e-4058-a259-a8a9ca50bf3e`
+- ❌ **Error**: "Input directory does not exist: jup-ag-docs-out"
+- ❌ **Status**: Failed after 42 seconds
+- ❌ **Infrastructure Issue**: Missing directory structure
+
+### 🔍 **Root Cause Analysis**
+The "fetch failed" errors are occurring at multiple levels:
+
+1. **Transport Level**: Client failing to connect to streamableHttp server
+2. **Infrastructure Level**: Missing input directories for ingestion jobs
+3. **Service Level**: Doc server reports healthy but ingestion jobs fail
+
+**Error Pattern:**
+```
+2025-09-09 18:21:56.218 [error] Client error for command fetch failed
+2025-09-09 18:21:56.219 [error] Error connecting to streamableHttp server, falling back to SSE: fetch failed
+```
 
 ### 🔍 **Post-Ingestion Query Results**
 After successful re-ingestion, the Jupiter query tool now returns results from the newly ingested content:
@@ -150,13 +161,49 @@ After successful re-ingestion, the Jupiter query tool now returns results from t
 | Talos Query | 5 | 1 | 4 | 20% |
 | **Total** | **11** | **5** | **6** | **45%** |
 
+## Infrastructure Issues Summary
+
+### 🚨 **Critical Issues Identified**
+
+1. **Transport Layer Failures**
+   - streamableHttp server connection failures
+   - Automatic fallback to SSE not resolving issues
+   - Client errors occurring at command level
+
+2. **Ingestion Infrastructure Problems**
+   - Missing input directories for ingestion jobs
+   - CTO tool jobs failing due to directory structure issues
+   - Service reports healthy but functionality impaired
+
+3. **Intermittent Service Availability**
+   - Some queries work, others fail consistently
+   - No clear pattern to predict failures
+   - Service health checks pass but actual functionality fails
+
+### 🔧 **Immediate Actions Required**
+
+1. **Infrastructure Investigation**
+   - Check doc server pod/container status in Kubernetes
+   - Verify directory structure and permissions
+   - Review doc server logs for detailed error information
+
+2. **Service Restart**
+   - Consider restarting doc server components
+   - Verify Twingate connectivity [[memory:7942215]]
+   - Check ArgoCD sync status [[memory:8461887]]
+
+3. **Alternative Approaches**
+   - Use direct database queries if available
+   - Implement retry logic with exponential backoff
+   - Consider using different doc server endpoints
+
 ## Next Steps
 
-1. **Monitor Service Status**: Check if these are ongoing issues or temporary problems
-2. **Test Other Doc Server Tools**: Verify if the pattern extends to other documentation tools
-3. **Implement Error Handling**: Add proper error handling and retry mechanisms
-4. **Document Workarounds**: Identify reliable query patterns that consistently work
-5. **Re-ingest Other Documentation**: Consider re-ingesting other documentation sources that may have similar issues
+1. **Infrastructure Fix**: Address the missing directory structure and transport issues
+2. **Service Monitoring**: Implement better health checks that test actual functionality
+3. **Error Handling**: Add comprehensive retry logic and fallback mechanisms
+4. **Documentation**: Update operational runbook with troubleshooting steps
+5. **Testing**: Verify fixes with comprehensive test suite
 
 ---
 *Document created: 2025-01-09*
