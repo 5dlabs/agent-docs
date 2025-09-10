@@ -1166,23 +1166,18 @@ fn handle_sse_request(
     // Note: Do not increment POST success metrics here; GET establishes SSE only
 
     // Build a streaming SSE response that stays open until the client disconnects.
-    // Include explicit capabilities per MCP spec expectations.
+    // Per MCP Streamable HTTP transport specification, the SSE stream starts empty
+    // and only carries responses to requests made via POST /mcp.
 
-    // Simple SSE implementation - not using SSE hub for now
-
-    // Create a simple, stable SSE stream
+    // Create a proper MCP Streamable HTTP SSE stream that starts empty
     let stream = async_stream::stream! {
-        // Send initial capabilities event
-        let init_event = Event::default()
-            .id("0")
-            .event("initialized")
-            .data(format!(
-                "{{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{{\"protocolVersion\":\"{SUPPORTED_PROTOCOL_VERSION}\",\"capabilities\":{{\"tools\":{{\"listChanged\":true}},\"resources\":{{}},\"prompts\":{{}}}},\"serverInfo\":{{\"name\":\"mcp\",\"version\":\"{}\"}}}}}}",
-                env!("CARGO_PKG_VERSION")
-            ));
-        yield Ok::<Event, Infallible>(init_event);
+        // DO NOT send any MCP notifications immediately - this violates MCP protocol flow
+        // The client must initiate communication via POST requests
+        // The server responds via this SSE stream only after receiving proper requests
+        
+        info!(request_id = %request_id, "SSE stream established, waiting for client requests via POST");
 
-        // Keep connection alive indefinitely
+        // Keep connection alive indefinitely with periodic keep-alive messages
         let mut interval = tokio::time::interval(Duration::from_secs(30));
         loop {
             interval.tick().await;
