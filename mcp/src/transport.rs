@@ -1302,7 +1302,7 @@ fn handle_sse_request(
     let keepalive_secs = std::env::var("MCP_SSE_KEEPALIVE_SECS")
         .ok()
         .and_then(|v| v.parse::<u64>().ok())
-        .filter(|&v| v >= 5 && v <= 600)
+        .filter(|&v| (5..=600).contains(&v))
         .unwrap_or(20);
 
     let sse = Sse::new(stream).keep_alive(
