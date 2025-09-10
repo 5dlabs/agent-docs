@@ -266,7 +266,11 @@ impl DynamicQueryTool {
     }
 
     /// Handle Birdeye-specific discovery queries inline
-    async fn handle_birdeye_discovery_query(&self, query: &str, limit: Option<i64>) -> Result<String> {
+    async fn handle_birdeye_discovery_query(
+        &self,
+        query: &str,
+        limit: Option<i64>,
+    ) -> Result<String> {
         let _query_lower = query.to_lowercase();
         let db_doc_type = "birdeye";
         let max_results = limit.unwrap_or(50) as usize;
@@ -284,7 +288,7 @@ impl DynamicQueryTool {
             WHERE doc_type = $1
               AND doc_path LIKE '%/%'
             ORDER BY doc_path
-            "
+            ",
         )
         .bind(db_doc_type)
         .fetch_all(self.db_pool.pool())
@@ -308,8 +312,11 @@ impl DynamicQueryTool {
                 "**{}** {}\n   {}",
                 method.unwrap_or_else(|| "GET".to_string()),
                 doc_path,
-                preview.unwrap_or_else(|| "API endpoint documentation".to_string())
-                    .chars().take(100).collect::<String>()
+                preview
+                    .unwrap_or_else(|| "API endpoint documentation".to_string())
+                    .chars()
+                    .take(100)
+                    .collect::<String>()
             );
 
             // Categorize based on path
@@ -328,41 +335,59 @@ impl DynamicQueryTool {
 
         // Add categorized sections
         if !price_endpoints.is_empty() {
-            response.push_str(&format!("## Price Endpoints ({})\n\n", price_endpoints.len()));
+            response.push_str(&format!(
+                "## Price Endpoints ({})\n\n",
+                price_endpoints.len()
+            ));
             for endpoint in price_endpoints.into_iter().take(max_results) {
                 response.push_str(&format!("• {}\n\n", endpoint));
             }
         }
 
         if !token_endpoints.is_empty() {
-            response.push_str(&format!("## Token Endpoints ({})\n\n", token_endpoints.len()));
+            response.push_str(&format!(
+                "## Token Endpoints ({})\n\n",
+                token_endpoints.len()
+            ));
             for endpoint in token_endpoints.into_iter().take(max_results) {
                 response.push_str(&format!("• {}\n\n", endpoint));
             }
         }
 
         if !trade_endpoints.is_empty() {
-            response.push_str(&format!("## Trading Endpoints ({})\n\n", trade_endpoints.len()));
+            response.push_str(&format!(
+                "## Trading Endpoints ({})\n\n",
+                trade_endpoints.len()
+            ));
             for endpoint in trade_endpoints.into_iter().take(max_results) {
                 response.push_str(&format!("• {}\n\n", endpoint));
             }
         }
 
         if !wallet_endpoints.is_empty() {
-            response.push_str(&format!("## Wallet Endpoints ({})\n\n", wallet_endpoints.len()));
+            response.push_str(&format!(
+                "## Wallet Endpoints ({})\n\n",
+                wallet_endpoints.len()
+            ));
             for endpoint in wallet_endpoints.into_iter().take(max_results) {
                 response.push_str(&format!("• {}\n\n", endpoint));
             }
         }
 
         if !other_endpoints.is_empty() {
-            response.push_str(&format!("## Other Endpoints ({})\n\n", other_endpoints.len()));
+            response.push_str(&format!(
+                "## Other Endpoints ({})\n\n",
+                other_endpoints.len()
+            ));
             for endpoint in other_endpoints.into_iter().take(max_results) {
                 response.push_str(&format!("• {}\n\n", endpoint));
             }
         }
 
-        response.push_str(&format!("\n**Total Endpoints Available:** {}\n", endpoints.len()));
+        response.push_str(&format!(
+            "\n**Total Endpoints Available:** {}\n",
+            endpoints.len()
+        ));
         response.push_str("\n💡 **Tip:** Use specific endpoint paths like `GET /defi/price` for detailed documentation.");
 
         Ok(response)

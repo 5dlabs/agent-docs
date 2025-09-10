@@ -305,13 +305,12 @@ impl DatabaseTestFixture {
         let mut doc_ids = Vec::new();
 
         // Ensure document_sources entry exists before inserting documents
-        let source_exists = sqlx::query(
-            "SELECT 1 FROM document_sources WHERE doc_type = $1 AND source_name = $2",
-        )
-        .bind("rust")
-        .bind(&self.test_crate_name)
-        .fetch_optional(&self.pool)
-        .await?;
+        let source_exists =
+            sqlx::query("SELECT 1 FROM document_sources WHERE doc_type = $1 AND source_name = $2")
+                .bind("rust")
+                .bind(&self.test_crate_name)
+                .fetch_optional(&self.pool)
+                .await?;
 
         if source_exists.is_none() {
             // Create document_sources entry if it doesn't exist
