@@ -688,14 +688,11 @@ fn extract_client_info(headers: &HeaderMap) -> ClientInfo {
 }
 
 /// Try to extract and validate session from headers
-fn try_extract_session_from_headers(
-    state: &McpServerState,
-    headers: &HeaderMap,
-) -> Option<Uuid> {
+fn try_extract_session_from_headers(state: &McpServerState, headers: &HeaderMap) -> Option<Uuid> {
     let session_header = headers.get(MCP_SESSION_ID)?;
     let session_str = session_header.to_str().ok()?;
     let session_id = Uuid::parse_str(session_str).ok()?;
-    
+
     // Check if session exists in comprehensive session manager
     if let Ok(session) = state.comprehensive_session_manager.get_session(session_id) {
         if session.is_expired() {
@@ -703,7 +700,7 @@ fn try_extract_session_from_headers(
                 session_id, session.age(), session.idle_time());
             return None;
         }
-        
+
         if let Err(e) = session.validate_protocol_version(SUPPORTED_PROTOCOL_VERSION) {
             warn!("Session protocol version mismatch: {}", e);
             debug!(
@@ -712,7 +709,7 @@ fn try_extract_session_from_headers(
             );
             return None;
         }
-        
+
         // Update session activity
         let _ = state
             .comprehensive_session_manager
@@ -725,8 +722,11 @@ fn try_extract_session_from_headers(
         );
         return Some(session_id);
     }
-    
-    debug!("Session {} not found in comprehensive session manager, will create new session", session_id);
+
+    debug!(
+        "Session {} not found in comprehensive session manager, will create new session",
+        session_id
+    );
     None
 }
 
@@ -800,15 +800,13 @@ fn try_get_client_based_session(
         let session_id = state
             .comprehensive_session_manager
             .create_session_with_id(stable_session_id, Some(client_info.clone()))
-            .map_err(|e| {
-                TransportError::InternalError(format!("Session creation failed: {e}"))
-            })?;
+            .map_err(|e| TransportError::InternalError(format!("Session creation failed: {e}")))?;
 
         debug!(session_id = %session_id, client_id = %client_id, "Created new client-based session");
         metrics().increment_sessions_created();
         return Ok(Some(session_id));
     }
-    
+
     Ok(None)
 }
 
