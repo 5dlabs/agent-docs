@@ -745,6 +745,24 @@ fn get_or_create_comprehensive_session(
                 .map(String::from)
         });
 
+        // For Cursor clients without explicit client ID, use User-Agent + Origin as stable identifier
+        let client_id = client_id.or_else(|| {
+            if let Some(ref user_agent) = info.user_agent {
+                if user_agent.to_lowercase().contains("cursor") {
+                    // Create stable ID from User-Agent and Origin
+                    let origin = info.origin.as_deref().unwrap_or("unknown");
+                    Some(format!("cursor-auto-{}-{}", 
+                        user_agent.replace('/', "-").replace(' ', "-"),
+                        origin.replace('/', "-").replace(':', "-")
+                    ))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        });
+
         if let Some(client_id) = client_id {
             // Generate a deterministic session ID based on client identifier
             // This allows the same client to reconnect to the same session

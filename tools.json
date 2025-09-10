@@ -110,42 +110,150 @@
       "docType": "cilium",
       "title": "Cilium Documentation Query",
       "description": "Search Cilium networking and security documentation for Kubernetes and cloud-native environments.",
-      "enabled": true
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "yaml"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "networking",
+          "security",
+          "observability",
+          "policy",
+          "installation"
+        ],
+        "supported_topics": [
+          "ebpf",
+          "network-policy",
+          "service-mesh",
+          "security",
+          "monitoring"
+        ]
+      }
     },
     {
       "name": "talos_query",
       "docType": "talos",
       "title": "Talos OS Documentation Query",
       "description": "Search Talos OS documentation for minimal, secure, and immutable Linux distribution designed for Kubernetes.",
-      "enabled": true
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "yaml"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "installation",
+          "configuration",
+          "networking",
+          "security",
+          "kubernetes"
+        ],
+        "supported_topics": [
+          "cluster-setup",
+          "machine-config",
+          "networking",
+          "security",
+          "troubleshooting"
+        ]
+      }
     },
     {
       "name": "meteora_query",
       "docType": "meteora",
       "title": "Meteora Protocol Documentation Query",
       "description": "Search Meteora DeFi protocol documentation including liquidity pools, farming, and yield strategies.",
-      "enabled": true
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "json"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "liquidity-pools",
+          "farming",
+          "yield-strategies",
+          "api",
+          "integration"
+        ],
+        "supported_topics": [
+          "defi",
+          "liquidity",
+          "yield-farming",
+          "trading",
+          "solana"
+        ]
+      }
     },
     {
       "name": "raydium_query",
       "docType": "raydium",
       "title": "Raydium Protocol Documentation Query",
       "description": "Search Raydium DEX and AMM documentation for Solana-based trading and liquidity provision.",
-      "enabled": true
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "json"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "dex",
+          "amm",
+          "trading",
+          "liquidity",
+          "api"
+        ],
+        "supported_topics": [
+          "swap",
+          "liquidity-pools",
+          "farming",
+          "defi",
+          "solana"
+        ]
+      }
     },
     {
       "name": "ebpf_query",
       "docType": "ebpf",
       "title": "eBPF Documentation Query",
       "description": "Search eBPF (extended Berkeley Packet Filter) documentation for kernel programming and observability.",
-      "enabled": true
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "c"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "kernel-programming",
+          "observability",
+          "networking",
+          "security",
+          "tracing"
+        ],
+        "supported_topics": [
+          "bpf-programs",
+          "kernel-hooks",
+          "observability",
+          "performance",
+          "security"
+        ]
+      }
     },
     {
       "name": "rust_best_practices_query",
       "docType": "rust_best_practices",
       "title": "Rust Best Practices Query",
       "description": "Search curated Rust best practices, patterns, and guidelines for idiomatic and performant code in rust_best_practices.",
-      "enabled": true
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "rust"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "performance",
+          "safety",
+          "patterns",
+          "idioms",
+          "architecture"
+        ],
+        "supported_topics": [
+          "ownership",
+          "error-handling",
+          "concurrency",
+          "testing",
+          "optimization"
+        ]
+      }
     },
     {
       "name": "add_rust_crate",
