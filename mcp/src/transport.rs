@@ -751,7 +751,8 @@ fn get_or_create_comprehensive_session(
                 if user_agent.to_lowercase().contains("cursor") {
                     // Create stable ID from User-Agent and Origin
                     let origin = info.origin.as_deref().unwrap_or("unknown");
-                    Some(format!("cursor-auto-{}-{}", 
+                    Some(format!(
+                        "cursor-auto-{}-{}",
                         user_agent.replace('/', "-").replace(' ', "-"),
                         origin.replace('/', "-").replace(':', "-")
                     ))
