@@ -390,13 +390,22 @@ pub fn set_sse_response_headers(headers: &mut HeaderMap, session_id: Option<Uuid
     set_standard_headers(headers, session_id);
     headers.insert(CONTENT_TYPE, HeaderValue::from_static(CONTENT_TYPE_SSE));
     // Advise proxies and intermediaries not to buffer or transform SSE
-    headers.insert("Cache-Control", HeaderValue::from_static("no-cache, no-transform"));
+    headers.insert(
+        "Cache-Control",
+        HeaderValue::from_static("no-cache, no-transform"),
+    );
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
-    headers.insert("Keep-Alive", HeaderValue::from_static("timeout=600, max=1000"));
+    headers.insert(
+        "Keep-Alive",
+        HeaderValue::from_static("timeout=600, max=1000"),
+    );
     // Additional headers for better SSE compatibility
     headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
     headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("Accept, Accept-Language, Content-Type, Cache-Control, MCP-Protocol-Version, Mcp-Session-Id, X-Client-Id"));
-    headers.insert("Access-Control-Expose-Headers", HeaderValue::from_static("MCP-Protocol-Version, Mcp-Session-Id"));
+    headers.insert(
+        "Access-Control-Expose-Headers",
+        HeaderValue::from_static("MCP-Protocol-Version, Mcp-Session-Id"),
+    );
     headers.insert("Vary", HeaderValue::from_static("Accept, Origin"));
     headers.insert("X-Accel-Buffering", HeaderValue::from_static("no")); // Disable nginx buffering
 }

@@ -1305,8 +1305,11 @@ fn handle_sse_request(
         .filter(|&v| v >= 5 && v <= 600)
         .unwrap_or(20);
 
-    let sse = Sse::new(stream)
-        .keep_alive(KeepAlive::new().interval(Duration::from_secs(keepalive_secs)).text(": keep-alive"));
+    let sse = Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(keepalive_secs))
+            .text(": keep-alive"),
+    );
 
     let mut response = sse.into_response();
     // Set protocol/session/security headers explicitly for clients
