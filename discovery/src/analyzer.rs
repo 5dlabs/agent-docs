@@ -106,6 +106,11 @@ ACTUAL REPOSITORY STRUCTURE:
 
 CRITICAL: You MUST respond with valid JSON in exactly this format. Prefer widely compatible commands and include multiple loader cli steps if docs may be in different locations.
 
+OPENAPI & API SCHEMAS (HIGH PRIORITY):
+- If you detect OpenAPI/Swagger schemas (typically under paths like openapi/, docs/openapi/, or files named *.yaml/*.yml with API definitions), you MUST include those directories in ingestion and add yaml,yml to extensions.
+- When OpenAPI is present, include BOTH the OpenAPI folder and narrative guides in separate loader cli commands (same output dir is fine). This ensures API endpoints are searchable alongside guides.
+- Examples of OpenAPI locations to include if present: openapi/, docs/openapi/, api/openapi/.
+
 {{
     "repository_type": "network-security|rust-library|api-docs|tutorial|reference|mixed",
     "documentation_assessment": {{
@@ -119,7 +124,7 @@ CRITICAL: You MUST respond with valid JSON in exactly this format. Prefer widely
     }},
     "ingestion_strategy": {{
         "docs_only": true,
-        "extensions": ["<choose only relevant formats>", "md", "mdx", "rst", "html"],
+        "extensions": ["<choose only relevant formats>", "md", "mdx", "rst", "html", "yaml", "yml"],
         "recursive": true,
         "chunk_size": 2000,
         "use_ai_chunking": true,
@@ -144,7 +149,7 @@ DISCOVERY HINTS (consider these common layouts when picking include_paths and fo
 - docs/source (Sphinx)
 - content/docs
 - docs/content
-Choose the minimal set of file formats that carry documentation value for this repo. Prefer md/mdx/rst/html. Include yaml/yml/toml/json only if they contain human-facing docs (not just config or generated schemas). Exclude build output, vendored libs, and test fixtures.
+Choose the minimal set of file formats that carry documentation value for this repo. Prefer md/mdx/rst/html. IMPORTANT: If OpenAPI API schemas are present, include yaml/yml because they contain human-facing API definitions. Otherwise, include yaml/yml/toml/json only when they have human-facing docs. Exclude build output, vendored libs, and test fixtures.
 
 IMPORTANT CONSTRAINTS FOR cli_commands:
 1. The 'loader cli' command ONLY accepts these arguments:
@@ -167,6 +172,7 @@ IMPORTANT CONSTRAINTS FOR cli_commands:
 4. If unsure of the exact path, include multiple 'loader cli' commands, each targeting a different common docs directory (e.g., docs/, website/content/docs, docs/source).
    - CORRECT: "loader cli UNIQUE_REPO_DIR/website/content/docs --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o UNIQUE_DOCS_OUT"
    - CORRECT: "loader cli UNIQUE_REPO_DIR/docs/source --extensions md,mdx,rst,html,json,yaml,yml,toml,txt --recursive -o UNIQUE_DOCS_OUT"
+   - CORRECT (OpenAPI): "loader cli UNIQUE_REPO_DIR/openapi --extensions yaml,yml --recursive -o UNIQUE_DOCS_OUT"
 
 RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JSON.
 "#,
