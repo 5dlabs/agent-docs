@@ -1174,7 +1174,7 @@ fn handle_sse_request(
         // DO NOT send any MCP notifications immediately - this violates MCP protocol flow
         // The client must initiate communication via POST requests
         // The server responds via this SSE stream only after receiving proper requests
-        
+
         info!(request_id = %request_id, "SSE stream established, waiting for client requests via POST");
 
         // Keep connection alive indefinitely with periodic keep-alive messages
