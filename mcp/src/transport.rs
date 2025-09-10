@@ -123,6 +123,7 @@ impl SseHub {
         }
     }
 
+    #[allow(dead_code)]
     fn subscribe(&self, session_id: Uuid) -> broadcast::Receiver<SseMessage> {
         let s = self.get_or_create(session_id);
         s.read().map_or_else(
@@ -134,6 +135,7 @@ impl SseHub {
         )
     }
 
+    #[allow(dead_code)]
     fn snapshot_from(&self, session_id: Uuid, last_id: Option<u64>) -> Vec<(u64, SseMessage)> {
         let s = self.get_or_create(session_id);
         let Ok(ss) = s.read() else { return vec![] };
@@ -1161,13 +1163,7 @@ fn handle_sse_request(
     // Build a streaming SSE response that stays open until the client disconnects.
     // Include explicit capabilities per MCP spec expectations.
 
-    // Create a simple, stable SSE implementation
-    let _last_event_id = headers
-        .get("Last-Event-ID")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse::<u64>().ok());
-    let _rx = SSE_HUB.subscribe(session_id);
-    let _replay = SSE_HUB.snapshot_from(session_id, _last_event_id);
+    // Simple SSE implementation - not using SSE hub for now
 
     // Create a simple, stable SSE stream
     let stream = async_stream::stream! {
