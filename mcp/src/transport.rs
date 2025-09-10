@@ -753,8 +753,8 @@ fn get_or_create_comprehensive_session(
                     let origin = info.origin.as_deref().unwrap_or("unknown");
                     Some(format!(
                         "cursor-auto-{}-{}",
-                        user_agent.replace('/', "-").replace(' ', "-"),
-                        origin.replace('/', "-").replace(':', "-")
+                        user_agent.replace(['/', ' '], "-"),
+                        origin.replace(['/', ':'], "-")
                     ))
                 } else {
                     None
@@ -1205,7 +1205,7 @@ fn handle_sse_request(
         info!(request_id = %request_id, "SSE stream established for session {}; replay_from={:?}", session_id, last_event_id);
 
         // First, deliver any buffered messages newer than Last-Event-ID
-        for (id, msg) in snapshot.into_iter() {
+        for (id, msg) in snapshot {
             let mut ev = Event::default();
             if let Some(name) = msg.event.clone() { ev = ev.event(name); }
             ev = ev.id(id.to_string());
