@@ -1298,11 +1298,15 @@ fn handle_sse_request(
         }
     };
 
-    let sse = Sse::new(stream).keep_alive(
-        KeepAlive::new()
-            .interval(Duration::from_secs(20))
-            .text(": keep-alive"),
-    );
+    // Allow tuning keep-alive interval via env (defaults to 20s)
+    let keepalive_secs = std::env::var("MCP_SSE_KEEPALIVE_SECS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|&v| v >= 5 && v <= 600)
+        .unwrap_or(20);
+
+    let sse = Sse::new(stream)
+        .keep_alive(KeepAlive::new().interval(Duration::from_secs(keepalive_secs)).text(": keep-alive"));
 
     let mut response = sse.into_response();
     // Set protocol/session/security headers explicitly for clients
