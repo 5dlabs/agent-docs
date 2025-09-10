@@ -1065,17 +1065,11 @@ async fn handle_json_rpc_request(
 
     // Process through existing MCP handler
     let jsonrpc_id_value = json_request.get("id").cloned().unwrap_or(Value::Null);
-    let accept_header = headers
-        .get("accept")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or_default()
-        .to_string();
-
     // Determine whether this is a JSON-RPC notification (no id) per spec. For notifications,
     // servers MUST NOT send a JSON-RPC response. This avoids emitting invalid envelopes with
     // id=null that confuse some clients.
-    let is_notification =
-        !json_request.get("id").is_some() || json_request.get("id").is_some_and(|v| v.is_null());
+    // Clippy pedantic: prefer map_or + method reference for clarity
+    let is_notification = json_request.get("id").map_or(true, Value::is_null);
 
     // Note: For POST requests, we return a proper JSON-RPC response body only for calls with an id.
     // SSE is established via GET /mcp. We do not mirror POST responses onto SSE by default to
