@@ -585,27 +585,21 @@ async fn unified_mcp_handler_impl(
     }
 
     // Validate Accept header for method compatibility
-    // POST: application/json, GET: text/event-stream
-    validate_accept_header(&headers, request.method())?;
+    // POST: application/json, GET: text/event-stream, HEAD: skip (no body expected)
+    if request.method() != Method::HEAD {
+        validate_accept_header(&headers, request.method())?;
+    }
 
     match *request.method() {
         Method::POST => handle_json_rpc_request(state, headers, request, request_id).await,
         Method::DELETE => handle_delete_session_request(&state, &headers, request_id),
-        Method::GET => {
-            // Gate SSE behind an env flag, but allow Cursor UA for compatibility fallback
-            let sse_env_enabled = std::env::var("MCP_ENABLE_SSE")
-                .is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
-            let ua_allows_fallback = headers
-                .get("user-agent")
-                .and_then(|v| v.to_str().ok())
-                .is_some_and(|ua| ua.to_lowercase().contains("cursor"));
-
-            if sse_env_enabled || ua_allows_fallback {
-                handle_sse_request(&state, &headers, request_id)
-            } else {
-                warn!(request_id = %request_id, "GET /mcp not enabled (MCP_ENABLE_SSE not set) - returning 405");
-                Err(TransportError::MethodNotAllowed)
-            }
+        Method::GET => handle_sse_request(&state, &headers, request_id),
+        Method::HEAD => {
+            // Respond OK with MCP headers so clients can probe server availability
+            let mut response_headers = HeaderMap::new();
+            set_standard_headers(&mut response_headers, None);
+            add_security_headers(&mut response_headers);
+            Ok((StatusCode::OK, response_headers, "").into_response())
         }
         _ => {
             metrics().increment_method_not_allowed();
