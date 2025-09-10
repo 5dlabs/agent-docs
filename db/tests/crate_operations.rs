@@ -306,7 +306,7 @@ impl DatabaseTestFixture {
 
         // Ensure document_sources entry exists before inserting documents
         let source_exists = sqlx::query(
-            "SELECT 1 FROM document_sources WHERE doc_type = $1::doc_type AND source_name = $2",
+            "SELECT 1 FROM document_sources WHERE doc_type = $1 AND source_name = $2",
         )
         .bind("rust")
         .bind(&self.test_crate_name)
@@ -317,7 +317,7 @@ impl DatabaseTestFixture {
             // Create document_sources entry if it doesn't exist
             sqlx::query(
                 "INSERT INTO document_sources (doc_type, source_name, config, enabled, created_at, updated_at)
-                 VALUES ($1::doc_type, $2, $3, $4, $5, $5)
+                 VALUES ($1, $2, $3, $4, $5, $5)
                  ON CONFLICT (doc_type, source_name) DO NOTHING"
             )
             .bind("rust")
@@ -340,7 +340,7 @@ impl DatabaseTestFixture {
 
             // Check if document already exists before inserting
             let exists = sqlx::query(
-                "SELECT 1 FROM documents WHERE doc_type = $1::doc_type AND source_name = $2 AND doc_path = $3"
+                "SELECT 1 FROM documents WHERE doc_type = $1 AND source_name = $2 AND doc_path = $3"
             )
             .bind("rust")
             .bind(&self.test_crate_name)
@@ -960,7 +960,7 @@ async fn test_crate_document_metadata_queries() -> Result<()> {
                     } else if e.to_string().contains("no unique or exclusion constraint") {
                         // Constraint is missing, try to check if document actually exists
                         let exists_check = sqlx::query(
-                        "SELECT 1 FROM documents WHERE doc_type = $1::doc_type AND source_name = $2 AND doc_path = $3"
+                        "SELECT 1 FROM documents WHERE doc_type = $1 AND source_name = $2 AND doc_path = $3"
                     )
                     .bind("rust")
                     .bind(&fixture.test_crate_name)

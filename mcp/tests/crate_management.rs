@@ -129,7 +129,7 @@ impl CrateManagementTestFixture {
         // First, ensure the document source exists
         // Use a simpler approach that doesn't rely on constraint names
         let existing_source = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM document_sources WHERE doc_type = $1::doc_type AND source_name = $2",
+            "SELECT COUNT(*) FROM document_sources WHERE doc_type = $1 AND source_name = $2",
         )
         .bind("rust")
         .bind(&self.test_crate_name)
@@ -143,7 +143,7 @@ impl CrateManagementTestFixture {
             sqlx::query(
                 r"
                 INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                VALUES ($1::doc_type, $2, $3, $4)
+                VALUES ($1, $2, $3, $4)
                 ",
             )
             .bind("rust")
@@ -174,7 +174,7 @@ impl CrateManagementTestFixture {
             let insert_result = sqlx::query(
                 r"
                 INSERT INTO documents (id, doc_type, source_name, doc_path, content, metadata, token_count, created_at, updated_at)
-                VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
                 ",
             )
             .bind(doc_id)

@@ -9,6 +9,7 @@ use db::{
 };
 use embed::{EmbeddingClient, OpenAIEmbeddingClient};
 use serde_json::{json, Value};
+use sqlx::Row;
 use std::fmt::Write as _;
 use tracing::{debug, warn};
 
@@ -177,6 +178,17 @@ impl DynamicQueryTool {
         // Use config doc_type directly (already in correct format)
         let db_doc_type = self.config.doc_type.as_str();
 
+        // Handle discovery queries inline for Birdeye API
+        if self.config.doc_type == "birdeye" {
+            debug!("Birdeye query detected: '{}'", query);
+            if self.is_discovery_query(query) {
+                debug!("Discovery query triggered for: '{}'", query);
+                return self.handle_birdeye_discovery_query(query, limit).await;
+            } else {
+                debug!("Regular search for Birdeye query: '{}'", query);
+            }
+        }
+
         // Try vector search first, fallback to text search if vector extension not available
         let results = match self
             .try_vector_search(query, db_doc_type, limit, filters.as_ref())
@@ -219,6 +231,139 @@ impl DynamicQueryTool {
                 relevance_score * 100.0,
             );
         }
+
+        Ok(response)
+    }
+
+    /// Check if query is a discovery request
+    fn is_discovery_query(&self, query: &str) -> bool {
+        let query_lower = query.to_lowercase();
+
+        // Discovery patterns for Birdeye API
+        if self.config.doc_type == "birdeye" {
+            // Debug: Add some logging to understand what's happening
+            debug!("Checking discovery query: '{}'", query_lower);
+
+            let is_discovery = (query_lower.contains("list") && query_lower.contains("endpoint"))
+                || query_lower.contains("what endpoints")
+                || query_lower.contains("show me all")
+                || query_lower.contains("available endpoints")
+                || query_lower.contains("all price endpoints")
+                || query_lower.contains("what price endpoints")
+                || query_lower.contains("what apis")
+                || query_lower.contains("what api")
+                || query_lower.contains("api overview")
+                || query_lower.contains("endpoint catalog");
+
+            if is_discovery {
+                debug!("Discovery query detected: '{}'", query_lower);
+            }
+
+            return is_discovery;
+        }
+
+        false
+    }
+
+    /// Handle Birdeye-specific discovery queries inline
+    async fn handle_birdeye_discovery_query(&self, query: &str, limit: Option<i64>) -> Result<String> {
+        let _query_lower = query.to_lowercase();
+        let db_doc_type = "birdeye";
+        let max_results = limit.unwrap_or(50) as usize;
+
+        // Query for all endpoints with metadata
+        let endpoints = sqlx::query(
+            r"
+            SELECT
+                doc_path,
+                metadata->>'method' as method,
+                metadata->>'endpoint' as endpoint,
+                metadata->>'api_version' as api_version,
+                LEFT(content, 200) as preview
+            FROM documents
+            WHERE doc_type = $1
+              AND doc_path LIKE '%/%'
+            ORDER BY doc_path
+            "
+        )
+        .bind(db_doc_type)
+        .fetch_all(self.db_pool.pool())
+        .await?;
+
+        let mut response = String::from("# Birdeye API Endpoint Catalog\n\n");
+
+        // Categorize endpoints
+        let mut price_endpoints = Vec::new();
+        let mut token_endpoints = Vec::new();
+        let mut trade_endpoints = Vec::new();
+        let mut wallet_endpoints = Vec::new();
+        let mut other_endpoints = Vec::new();
+
+        for row in &endpoints {
+            let doc_path: String = row.get("doc_path");
+            let method: Option<String> = row.get("method");
+            let preview: Option<String> = row.get("preview");
+
+            let endpoint_info = format!(
+                "**{}** {}\n   {}",
+                method.unwrap_or_else(|| "GET".to_string()),
+                doc_path,
+                preview.unwrap_or_else(|| "API endpoint documentation".to_string())
+                    .chars().take(100).collect::<String>()
+            );
+
+            // Categorize based on path
+            if doc_path.contains("/price") || doc_path.contains("/multi_price") {
+                price_endpoints.push(endpoint_info);
+            } else if doc_path.contains("/token") {
+                token_endpoints.push(endpoint_info);
+            } else if doc_path.contains("/txs") || doc_path.contains("/trader") {
+                trade_endpoints.push(endpoint_info);
+            } else if doc_path.contains("/wallet") {
+                wallet_endpoints.push(endpoint_info);
+            } else {
+                other_endpoints.push(endpoint_info);
+            }
+        }
+
+        // Add categorized sections
+        if !price_endpoints.is_empty() {
+            response.push_str(&format!("## Price Endpoints ({})\n\n", price_endpoints.len()));
+            for endpoint in price_endpoints.into_iter().take(max_results) {
+                response.push_str(&format!("• {}\n\n", endpoint));
+            }
+        }
+
+        if !token_endpoints.is_empty() {
+            response.push_str(&format!("## Token Endpoints ({})\n\n", token_endpoints.len()));
+            for endpoint in token_endpoints.into_iter().take(max_results) {
+                response.push_str(&format!("• {}\n\n", endpoint));
+            }
+        }
+
+        if !trade_endpoints.is_empty() {
+            response.push_str(&format!("## Trading Endpoints ({})\n\n", trade_endpoints.len()));
+            for endpoint in trade_endpoints.into_iter().take(max_results) {
+                response.push_str(&format!("• {}\n\n", endpoint));
+            }
+        }
+
+        if !wallet_endpoints.is_empty() {
+            response.push_str(&format!("## Wallet Endpoints ({})\n\n", wallet_endpoints.len()));
+            for endpoint in wallet_endpoints.into_iter().take(max_results) {
+                response.push_str(&format!("• {}\n\n", endpoint));
+            }
+        }
+
+        if !other_endpoints.is_empty() {
+            response.push_str(&format!("## Other Endpoints ({})\n\n", other_endpoints.len()));
+            for endpoint in other_endpoints.into_iter().take(max_results) {
+                response.push_str(&format!("• {}\n\n", endpoint));
+            }
+        }
+
+        response.push_str(&format!("\n**Total Endpoints Available:** {}\n", endpoints.len()));
+        response.push_str("\n💡 **Tip:** Use specific endpoint paths like `GET /defi/price` for detailed documentation.");
 
         Ok(response)
     }

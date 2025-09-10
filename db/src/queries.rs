@@ -80,34 +80,17 @@ impl DocumentQueries {
         doc_type: &str,
         source_name: &str,
     ) -> Result<()> {
-        let sources_is_enum = Self::is_doc_type_enum(pool, "document_sources")
-            .await
-            .unwrap_or(false);
-        if sources_is_enum {
-            sqlx::query(
-                r#"
-                INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                VALUES ($1::doc_type, $2, '{"auto_created": true}', true)
-                ON CONFLICT DO NOTHING
-                "#,
-            )
-            .bind(doc_type)
-            .bind(source_name)
-            .execute(pool)
-            .await?;
-        } else {
-            sqlx::query(
-                r#"
-                INSERT INTO document_sources (doc_type, source_name, config, enabled)
-                VALUES ($1, $2, '{"auto_created": true}', true)
-                ON CONFLICT DO NOTHING
-                "#,
-            )
-            .bind(doc_type)
-            .bind(source_name)
-            .execute(pool)
-            .await?;
-        }
+        sqlx::query(
+            r#"
+            INSERT INTO document_sources (doc_type, source_name, config, enabled)
+            VALUES ($1, $2, '{"auto_created": true}', true)
+            ON CONFLICT DO NOTHING
+            "#,
+        )
+        .bind(doc_type)
+        .bind(source_name)
+        .execute(pool)
+        .await?;
 
         Ok(())
     }
@@ -122,58 +105,12 @@ impl DocumentQueries {
         pool: &PgPool,
         document: &crate::models::Document,
     ) -> Result<crate::models::Document> {
-        let docs_is_enum = Self::is_doc_type_enum(pool, "documents")
-            .await
-            .unwrap_or(false);
-        let row = if docs_is_enum {
-            sqlx::query(
-                r"
-                INSERT INTO documents (
-                    id,
-                    doc_type,
-                    source_name,
-                    doc_path,
-                    content,
-                    metadata,
-                    token_count,
-                    created_at,
-                    updated_at
-                )
-                VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
-                ON CONFLICT (id) DO UPDATE SET
-                    content = EXCLUDED.content,
-                    metadata = EXCLUDED.metadata,
-                    token_count = EXCLUDED.token_count,
-                    updated_at = EXCLUDED.updated_at
-                RETURNING
-                    id,
-                    doc_type::text as doc_type,
-                    source_name,
-                    doc_path,
-                    content,
-                    metadata,
-                    token_count,
-                    created_at,
-                    updated_at
-                ",
-            )
-            .bind(document.id)
-            .bind(&document.doc_type)
-            .bind(&document.source_name)
-            .bind(&document.doc_path)
-            .bind(&document.content)
-            .bind(&document.metadata)
-            .bind(document.token_count)
-            .bind(document.created_at.unwrap_or_else(chrono::Utc::now))
-            .fetch_one(pool)
-            .await?
-        } else {
-            sqlx::query(
-                r"
-                INSERT INTO documents (
-                    id,
-                    doc_type,
-                    source_name,
+        let row = sqlx::query(
+            r"
+            INSERT INTO documents (
+                id,
+                doc_type,
+                source_name,
                 doc_path,
                 content,
                 metadata,
@@ -189,7 +126,7 @@ impl DocumentQueries {
                 updated_at = EXCLUDED.updated_at
             RETURNING
                 id,
-                doc_type::text as doc_type,
+                doc_type,
                 source_name,
                 doc_path,
                 content,
@@ -198,18 +135,17 @@ impl DocumentQueries {
                 created_at,
                 updated_at
             ",
-            )
-            .bind(document.id)
-            .bind(&document.doc_type)
-            .bind(&document.source_name)
-            .bind(&document.doc_path)
-            .bind(&document.content)
-            .bind(&document.metadata)
-            .bind(document.token_count)
-            .bind(document.created_at.unwrap_or_else(chrono::Utc::now))
-            .fetch_one(pool)
-            .await?
-        };
+        )
+        .bind(document.id)
+        .bind(&document.doc_type)
+        .bind(&document.source_name)
+        .bind(&document.doc_path)
+        .bind(&document.content)
+        .bind(&document.metadata)
+        .bind(document.token_count)
+        .bind(document.created_at.unwrap_or_else(chrono::Utc::now))
+        .fetch_one(pool)
+        .await?;
 
         let doc = crate::models::Document {
             id: row.get("id"),
@@ -254,60 +190,13 @@ impl DocumentQueries {
         let mut transaction = pool.begin().await?;
         let mut inserted_docs = Vec::new();
 
-        let docs_is_enum = Self::is_doc_type_enum(pool, "documents")
-            .await
-            .unwrap_or(false);
         for doc in documents {
-            let row = if docs_is_enum {
-                sqlx::query(
-                    r"
-                    INSERT INTO documents (
-                        id,
-                        doc_type,
-                        source_name,
-                        doc_path,
-                        content,
-                        metadata,
-                        token_count,
-                        created_at,
-                        updated_at
-                    )
-                    VALUES ($1, $2::doc_type, $3, $4, $5, $6, $7, $8, $8)
-                    ON CONFLICT (id) DO UPDATE SET
-                        content = EXCLUDED.content,
-                        metadata = EXCLUDED.metadata,
-                        token_count = EXCLUDED.token_count,
-                        updated_at = EXCLUDED.updated_at
-
-                    RETURNING
-                        id,
-                        doc_type::text as doc_type,
-                        source_name,
-                        doc_path,
-                        content,
-                        metadata,
-                        token_count,
-                        created_at,
-                        updated_at
-                    ",
-                )
-                .bind(doc.id)
-                .bind(&doc.doc_type)
-                .bind(&doc.source_name)
-                .bind(&doc.doc_path)
-                .bind(&doc.content)
-                .bind(&doc.metadata)
-                .bind(doc.token_count)
-                .bind(doc.created_at.unwrap_or_else(chrono::Utc::now))
-                .fetch_one(&mut *transaction)
-                .await?
-            } else {
-                sqlx::query(
-                    r"
-                    INSERT INTO documents (
-                        id,
-                        doc_type,
-                        source_name,
+            let row = sqlx::query(
+                r"
+                INSERT INTO documents (
+                    id,
+                    doc_type,
+                    source_name,
                     doc_path,
                     content,
                     metadata,
@@ -324,7 +213,7 @@ impl DocumentQueries {
 
                 RETURNING
                     id,
-                    doc_type::text as doc_type,
+                    doc_type,
                     source_name,
                     doc_path,
                     content,
@@ -333,18 +222,17 @@ impl DocumentQueries {
                     created_at,
                     updated_at
                 ",
-                )
-                .bind(doc.id)
-                .bind(&doc.doc_type)
-                .bind(&doc.source_name)
-                .bind(&doc.doc_path)
-                .bind(&doc.content)
-                .bind(&doc.metadata)
-                .bind(doc.token_count)
-                .bind(doc.created_at.unwrap_or_else(chrono::Utc::now))
-                .fetch_one(&mut *transaction)
-                .await?
-            };
+            )
+            .bind(doc.id)
+            .bind(&doc.doc_type)
+            .bind(&doc.source_name)
+            .bind(&doc.doc_path)
+            .bind(&doc.content)
+            .bind(&doc.metadata)
+            .bind(doc.token_count)
+            .bind(doc.created_at.unwrap_or_else(chrono::Utc::now))
+            .fetch_one(&mut *transaction)
+            .await?;
 
             let inserted_doc = crate::models::Document {
                 id: row.get("id"),
