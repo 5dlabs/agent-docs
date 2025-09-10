@@ -687,6 +687,131 @@ fn extract_client_info(headers: &HeaderMap) -> ClientInfo {
     }
 }
 
+/// Try to extract and validate session from headers
+fn try_extract_session_from_headers(
+    state: &McpServerState,
+    headers: &HeaderMap,
+) -> Option<Uuid> {
+    let session_header = headers.get(MCP_SESSION_ID)?;
+    let session_str = session_header.to_str().ok()?;
+    let session_id = Uuid::parse_str(session_str).ok()?;
+    
+    // Check if session exists in comprehensive session manager
+    if let Ok(session) = state.comprehensive_session_manager.get_session(session_id) {
+        if session.is_expired() {
+            debug!("Comprehensive session expired: {} (age: {:?}, idle: {:?}), will create new session",
+                session_id, session.age(), session.idle_time());
+            return None;
+        }
+        
+        if let Err(e) = session.validate_protocol_version(SUPPORTED_PROTOCOL_VERSION) {
+            warn!("Session protocol version mismatch: {}", e);
+            debug!(
+                "Invalidating session with wrong protocol version: {}",
+                session_id
+            );
+            return None;
+        }
+        
+        // Update session activity
+        let _ = state
+            .comprehensive_session_manager
+            .update_last_accessed(session_id);
+        debug!(
+            "Reusing existing comprehensive session: {} (age: {:?}, idle: {:?})",
+            session_id,
+            session.age(),
+            session.idle_time()
+        );
+        return Some(session_id);
+    }
+    
+    debug!("Session {} not found in comprehensive session manager, will create new session", session_id);
+    None
+}
+
+/// Try to get or create a client-based session for clients that don't preserve session IDs
+fn try_get_client_based_session(
+    state: &McpServerState,
+    headers: &HeaderMap,
+    client_info: &ClientInfo,
+) -> Result<Option<Uuid>, TransportError> {
+    // Check for MCP_CLIENT_ID environment variable or X-Client-Id header
+    let client_id = std::env::var("MCP_CLIENT_ID").ok().or_else(|| {
+        headers
+            .get("X-Client-Id")
+            .and_then(|v| v.to_str().ok())
+            .map(String::from)
+    });
+
+    // For Cursor clients without explicit client ID, use User-Agent + Origin as stable identifier
+    let client_id = client_id.or_else(|| {
+        if let Some(ref user_agent) = client_info.user_agent {
+            if user_agent.to_lowercase().contains("cursor") {
+                // Create stable ID from User-Agent and Origin
+                let origin = client_info.origin.as_deref().unwrap_or("unknown");
+                Some(format!(
+                    "cursor-auto-{}-{}",
+                    user_agent.replace(['/', ' '], "-"),
+                    origin.replace(['/', ':'], "-")
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    });
+
+    if let Some(client_id) = client_id {
+        // Generate a deterministic session ID based on client identifier
+        let stable_session_id = generate_stable_session_id(&client_id, client_info);
+
+        // Try to get existing session with this ID
+        if let Ok(session) = state
+            .comprehensive_session_manager
+            .get_session(stable_session_id)
+        {
+            if !session.is_expired() {
+                let _ = state
+                    .comprehensive_session_manager
+                    .update_last_accessed(stable_session_id);
+                info!(
+                    "🔄 CURSOR RECONNECTION: Reusing client-based session {} for client_id: {} (age: {:?}, idle: {:?})",
+                    stable_session_id,
+                    client_id,
+                    session.age(),
+                    session.idle_time()
+                );
+                return Ok(Some(stable_session_id));
+            }
+            warn!(
+                "🔄 CURSOR RECONNECTION: Client-based session expired for client_id: {}, creating new session",
+                client_id
+            );
+        } else {
+            info!(
+                "🔄 CURSOR RECONNECTION: No existing session found for client_id: {}, creating new session",
+                client_id
+            );
+        }
+
+        // Create new session with stable ID
+        let session_id = state
+            .comprehensive_session_manager
+            .create_session_with_id(stable_session_id, Some(client_info.clone()))
+            .map_err(|e| {
+                TransportError::InternalError(format!("Session creation failed: {e}"))
+            })?;
+
+        debug!(session_id = %session_id, client_id = %client_id, "Created new client-based session");
+        metrics().increment_sessions_created();
+        return Ok(Some(session_id));
+    }
+    
+    Ok(None)
+}
+
 /// Get or create session using the comprehensive session manager
 ///
 /// # Errors
@@ -698,116 +823,14 @@ fn get_or_create_comprehensive_session(
     client_info: Option<ClientInfo>,
 ) -> Result<Uuid, TransportError> {
     // First, try to extract session ID from headers (standard approach)
-    if let Some(session_header) = headers.get(MCP_SESSION_ID) {
-        if let Ok(session_str) = session_header.to_str() {
-            if let Ok(session_id) = Uuid::parse_str(session_str) {
-                // Check if session exists in comprehensive session manager
-                if let Ok(session) = state.comprehensive_session_manager.get_session(session_id) {
-                    if session.is_expired() {
-                        debug!("Comprehensive session expired: {} (age: {:?}, idle: {:?}), will create new session",
-                            session_id, session.age(), session.idle_time());
-                    } else if let Err(e) =
-                        session.validate_protocol_version(SUPPORTED_PROTOCOL_VERSION)
-                    {
-                        warn!("Session protocol version mismatch: {}", e);
-                        debug!(
-                            "Invalidating session with wrong protocol version: {}",
-                            session_id
-                        );
-                    } else {
-                        // Update session activity
-                        let _ = state
-                            .comprehensive_session_manager
-                            .update_last_accessed(session_id);
-                        debug!(
-                            "Reusing existing comprehensive session: {} (age: {:?}, idle: {:?})",
-                            session_id,
-                            session.age(),
-                            session.idle_time()
-                        );
-                        return Ok(session_id);
-                    }
-                } else {
-                    debug!("Session {} not found in comprehensive session manager, will create new session", session_id);
-                }
-            }
-        }
+    if let Some(session_id) = try_extract_session_from_headers(state, headers) {
+        return Ok(session_id);
     }
 
     // Fallback: For clients that don't preserve session IDs (like Cursor),
     // try to use a client identifier to maintain session continuity
     if let Some(ref info) = client_info {
-        // Check for MCP_CLIENT_ID environment variable or X-Client-Id header
-        let client_id = std::env::var("MCP_CLIENT_ID").ok().or_else(|| {
-            headers
-                .get("X-Client-Id")
-                .and_then(|v| v.to_str().ok())
-                .map(String::from)
-        });
-
-        // For Cursor clients without explicit client ID, use User-Agent + Origin as stable identifier
-        let client_id = client_id.or_else(|| {
-            if let Some(ref user_agent) = info.user_agent {
-                if user_agent.to_lowercase().contains("cursor") {
-                    // Create stable ID from User-Agent and Origin
-                    let origin = info.origin.as_deref().unwrap_or("unknown");
-                    Some(format!(
-                        "cursor-auto-{}-{}",
-                        user_agent.replace(['/', ' '], "-"),
-                        origin.replace(['/', ':'], "-")
-                    ))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        });
-
-        if let Some(client_id) = client_id {
-            // Generate a deterministic session ID based on client identifier
-            // This allows the same client to reconnect to the same session
-            let stable_session_id = generate_stable_session_id(&client_id, info);
-
-            // Try to get existing session with this ID
-            if let Ok(session) = state
-                .comprehensive_session_manager
-                .get_session(stable_session_id)
-            {
-                if !session.is_expired() {
-                    let _ = state
-                        .comprehensive_session_manager
-                        .update_last_accessed(stable_session_id);
-                    info!(
-                        "🔄 CURSOR RECONNECTION: Reusing client-based session {} for client_id: {} (age: {:?}, idle: {:?})",
-                        stable_session_id,
-                        client_id,
-                        session.age(),
-                        session.idle_time()
-                    );
-                    return Ok(stable_session_id);
-                }
-                warn!(
-                    "🔄 CURSOR RECONNECTION: Client-based session expired for client_id: {}, creating new session",
-                    client_id
-                );
-            } else {
-                info!(
-                    "🔄 CURSOR RECONNECTION: No existing session found for client_id: {}, creating new session",
-                    client_id
-                );
-            }
-
-            // Create new session with stable ID
-            let session_id = state
-                .comprehensive_session_manager
-                .create_session_with_id(stable_session_id, client_info.clone())
-                .map_err(|e| {
-                    TransportError::InternalError(format!("Session creation failed: {e}"))
-                })?;
-
-            debug!(session_id = %session_id, client_id = %client_id, "Created new client-based session");
-            metrics().increment_sessions_created();
+        if let Some(session_id) = try_get_client_based_session(state, headers, info)? {
             return Ok(session_id);
         }
     }
