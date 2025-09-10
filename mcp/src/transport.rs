@@ -759,8 +759,8 @@ fn get_or_create_comprehensive_session(
                     let _ = state
                         .comprehensive_session_manager
                         .update_last_accessed(stable_session_id);
-                    debug!(
-                        "Reusing client-based session: {} for client_id: {} (age: {:?}, idle: {:?})",
+                    info!(
+                        "🔄 CURSOR RECONNECTION: Reusing client-based session {} for client_id: {} (age: {:?}, idle: {:?})",
                         stable_session_id,
                         client_id,
                         session.age(),
@@ -768,8 +768,13 @@ fn get_or_create_comprehensive_session(
                     );
                     return Ok(stable_session_id);
                 }
-                debug!(
-                    "Client-based session expired for client_id: {}, creating new",
+                warn!(
+                    "🔄 CURSOR RECONNECTION: Client-based session expired for client_id: {}, creating new session",
+                    client_id
+                );
+            } else {
+                info!(
+                    "🔄 CURSOR RECONNECTION: No existing session found for client_id: {}, creating new session",
                     client_id
                 );
             }
