@@ -671,6 +671,58 @@ fn register_core_migrations(migration_manager: &mut DatabaseMigrationManager) {
         dependencies: vec!["003_documents_table".to_string()],
         checksum: calculate_checksum(search_indexes_sql),
     });
+
+    // Migration 12: Force doc_type columns to TEXT and drop legacy enum/checks
+    let force_text_sql = r"
+        DO $$
+        DECLARE
+            tbl text;
+            con record;
+        BEGIN
+            -- Convert doc_type columns to TEXT if they are enum/user-defined
+            FOREACH tbl IN ARRAY ARRAY['documents','document_sources','archived_documents'] LOOP
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema='public' AND table_name=tbl AND column_name='doc_type' AND data_type='USER-DEFINED'
+                ) THEN
+                    EXECUTE format('ALTER TABLE %I ALTER COLUMN doc_type TYPE TEXT USING doc_type::text', tbl);
+                    RAISE NOTICE 'Converted %.doc_type to TEXT', tbl;
+                END IF;
+
+                -- Drop any CHECK constraints that reference doc_type
+                FOR con IN
+                    SELECT conname, pg_get_constraintdef(oid) AS def
+                    FROM pg_constraint
+                    WHERE conrelid = to_regclass('public.'||tbl)
+                      AND contype = 'c'
+                LOOP
+                    IF position('doc_type' in con.def) > 0 THEN
+                        EXECUTE format('ALTER TABLE %I DROP CONSTRAINT %I', tbl, con.conname);
+                        RAISE NOTICE 'Dropped constraint %.% on %', con.conname, con.def, tbl;
+                    END IF;
+                END LOOP;
+            END LOOP;
+
+            -- Drop legacy enum type if it still exists
+            IF EXISTS (SELECT 1 FROM pg_type WHERE typname='doc_type') THEN
+                BEGIN
+                    EXECUTE 'DROP TYPE doc_type';
+                    RAISE NOTICE 'Dropped legacy enum type doc_type';
+                EXCEPTION WHEN dependent_objects_still_exist THEN
+                    RAISE NOTICE 'Could not drop enum doc_type due to remaining dependencies';
+                END;
+            END IF;
+        END$$;
+    ";
+    migration_manager.register_migration(MigrationInfo {
+        id: "012_force_doc_type_text".to_string(),
+        version: "1.3.0".to_string(),
+        description: "Convert doc_type columns to TEXT and drop legacy enum/check constraints".to_string(),
+        up_sql: force_text_sql.to_string(),
+        down_sql: Some("-- irreversible migration; no-op".to_string()),
+        dependencies: vec!["003_documents_table".to_string(), "004_document_sources_table".to_string()],
+        checksum: calculate_checksum(force_text_sql),
+    });
 }
 
 /// Run database migrations only (for K8s migration jobs)
