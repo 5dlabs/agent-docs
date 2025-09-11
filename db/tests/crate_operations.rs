@@ -335,7 +335,7 @@ impl DatabaseTestFixture {
                 Err(e) if e.to_string().contains("no unique or exclusion constraint") => {
                     // Constraint doesn't exist, try manual insert with check
                     let manual_check = sqlx::query(
-                        "SELECT 1 FROM document_sources WHERE doc_type = $1 AND source_name = $2"
+                        "SELECT 1 FROM document_sources WHERE doc_type = $1 AND source_name = $2",
                     )
                     .bind("rust")
                     .bind(&self.test_crate_name)
