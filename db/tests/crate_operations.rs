@@ -314,7 +314,8 @@ impl DatabaseTestFixture {
 
         if source_exists.is_none() {
             // Create document_sources entry if it doesn't exist
-            sqlx::query(
+            // Try ON CONFLICT first, but fall back to manual check if constraint doesn't exist
+            let insert_result = sqlx::query(
                 "INSERT INTO document_sources (doc_type, source_name, config, enabled, created_at, updated_at)
                  VALUES ($1, $2, $3, $4, $5, $5)
                  ON CONFLICT (doc_type, source_name) DO NOTHING"
@@ -325,7 +326,41 @@ impl DatabaseTestFixture {
             .bind(true)
             .bind(Utc::now())
             .execute(&self.pool)
-            .await?;
+            .await;
+
+            match insert_result {
+                Ok(_) => {
+                    // Insert succeeded with ON CONFLICT
+                }
+                Err(e) if e.to_string().contains("no unique or exclusion constraint") => {
+                    // Constraint doesn't exist, try manual insert with check
+                    let manual_check = sqlx::query(
+                        "SELECT 1 FROM document_sources WHERE doc_type = $1 AND source_name = $2"
+                    )
+                    .bind("rust")
+                    .bind(&self.test_crate_name)
+                    .fetch_optional(&self.pool)
+                    .await?;
+
+                    if manual_check.is_none() {
+                        sqlx::query(
+                            "INSERT INTO document_sources (doc_type, source_name, config, enabled, created_at, updated_at)
+                             VALUES ($1, $2, $3, $4, $5, $5)"
+                        )
+                        .bind("rust")
+                        .bind(&self.test_crate_name)
+                        .bind(json!({"test": true, "version": "0.1.0"}))
+                        .bind(true)
+                        .bind(Utc::now())
+                        .execute(&self.pool)
+                        .await?;
+                    }
+                }
+                Err(e) => {
+                    // Re-raise other errors
+                    return Err(anyhow::Error::from(e));
+                }
+            }
         }
 
         for i in 0..count {
