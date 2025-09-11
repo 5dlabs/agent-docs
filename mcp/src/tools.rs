@@ -193,7 +193,10 @@ impl DynamicQueryTool {
             .try_vector_search(query, db_doc_type, limit, filters.as_ref())
             .await
         {
-            Ok(results) => results,
+            Ok(results) => {
+                debug!("Vector search returned {} results for '{}'", results.len(), query);
+                results
+            },
             Err(e) => {
                 warn!("Vector search failed ({}), falling back to text search", e);
                 self.text_search(query, db_doc_type, limit).await?
@@ -275,14 +278,23 @@ impl DynamicQueryTool {
         let db_doc_type = "birdeye";
         let max_results = usize::try_from(limit.unwrap_or(50)).unwrap_or(50);
 
-        // Query for all endpoints with metadata
+        debug!("Starting Birdeye discovery query with doc_type: {}", db_doc_type);
+
+        // Query for all endpoints, extracting method and endpoint from content
         let endpoints = sqlx::query(
             r"
             SELECT
                 doc_path,
-                metadata->>'method' as method,
-                metadata->>'endpoint' as endpoint,
-                metadata->>'api_version' as api_version,
+                CASE
+                    WHEN content LIKE '%**Method:** GET%' THEN 'GET'
+                    WHEN content LIKE '%**Method:** POST%' THEN 'POST'
+                    WHEN content LIKE '%**Method:** PUT%' THEN 'PUT'
+                    WHEN content LIKE '%**Method:** DELETE%' THEN 'DELETE'
+                    WHEN content LIKE '%**Method:** PATCH%' THEN 'PATCH'
+                    ELSE 'GET'
+                END as method,
+                doc_path as endpoint,
+                NULL as api_version,
                 LEFT(content, 200) as preview
             FROM documents
             WHERE doc_type = $1
@@ -293,6 +305,8 @@ impl DynamicQueryTool {
         .bind(db_doc_type)
         .fetch_all(self.db_pool.pool())
         .await?;
+
+        debug!("Found {} endpoints in database", endpoints.len());
 
         let mut response = String::from("# Birdeye API Endpoint Catalog\n\n");
 
