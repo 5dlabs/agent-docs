@@ -11,7 +11,7 @@ use embed::{EmbeddingClient, OpenAIEmbeddingClient};
 use serde_json::{json, Value};
 use sqlx::Row;
 use std::fmt::Write as _;
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 // Legacy IngestTool removed - use intelligent ingestion endpoint at /ingest/intelligent instead
 
