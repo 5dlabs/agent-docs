@@ -301,6 +301,7 @@ impl DatabaseTestFixture {
         Ok(())
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn insert_test_documents(&self, count: i32) -> Result<Vec<Uuid>> {
         let mut doc_ids = Vec::new();
 
