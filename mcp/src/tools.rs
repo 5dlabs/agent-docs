@@ -194,9 +194,13 @@ impl DynamicQueryTool {
             .await
         {
             Ok(results) => {
-                debug!("Vector search returned {} results for '{}'", results.len(), query);
+                debug!(
+                    "Vector search returned {} results for '{}'",
+                    results.len(),
+                    query
+                );
                 results
-            },
+            }
             Err(e) => {
                 warn!("Vector search failed ({}), falling back to text search", e);
                 self.text_search(query, db_doc_type, limit).await?
@@ -278,7 +282,10 @@ impl DynamicQueryTool {
         let db_doc_type = "birdeye";
         let max_results = usize::try_from(limit.unwrap_or(50)).unwrap_or(50);
 
-        debug!("Starting Birdeye discovery query with doc_type: {}", db_doc_type);
+        debug!(
+            "Starting Birdeye discovery query with doc_type: {}",
+            db_doc_type
+        );
 
         // Query for all endpoints, extracting method and endpoint from content
         let endpoints = sqlx::query(
