@@ -288,16 +288,20 @@ impl DynamicQueryTool {
         );
 
         // First, test basic database connectivity
-        let test_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM documents WHERE doc_type = $1")
-            .bind(db_doc_type)
-            .fetch_one(self.db_pool.pool())
-            .await
-            .map_err(|e| {
-                error!("Database connectivity test failed: {}", e);
-                anyhow!("Database connectivity test failed: {}", e)
-            })?;
+        let test_count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM documents WHERE doc_type = $1")
+                .bind(db_doc_type)
+                .fetch_one(self.db_pool.pool())
+                .await
+                .map_err(|e| {
+                    error!("Database connectivity test failed: {}", e);
+                    anyhow!("Database connectivity test failed: {}", e)
+                })?;
 
-        debug!("Database connectivity test passed: {} documents found for doc_type '{}'", test_count.0, db_doc_type);
+        debug!(
+            "Database connectivity test passed: {} documents found for doc_type '{}'",
+            test_count.0, db_doc_type
+        );
 
         // Query for all endpoints, extracting method and endpoint from content
         let endpoints = match sqlx::query(
@@ -323,11 +327,15 @@ impl DynamicQueryTool {
         )
         .bind(db_doc_type)
         .fetch_all(self.db_pool.pool())
-        .await {
+        .await
+        {
             Ok(results) => {
-                debug!("Successfully fetched {} endpoints from database", results.len());
+                debug!(
+                    "Successfully fetched {} endpoints from database",
+                    results.len()
+                );
                 results
-            },
+            }
             Err(e) => {
                 error!("Failed to fetch endpoints from database: {}", e);
                 return Ok("# Birdeye API Endpoint Catalog\n\n**Error:** Failed to fetch endpoints from database.\n\n💡 **Tip:** Use specific endpoint paths like `GET /defi/price` for detailed documentation.".to_string());
