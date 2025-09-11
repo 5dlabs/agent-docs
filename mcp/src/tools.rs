@@ -273,8 +273,7 @@ impl DynamicQueryTool {
     ) -> Result<String> {
         let _query_lower = query.to_lowercase();
         let db_doc_type = "birdeye";
-        let max_results = usize::try_from(limit.unwrap_or(50))
-            .unwrap_or(50);
+        let max_results = usize::try_from(limit.unwrap_or(50)).unwrap_or(50);
 
         // Query for all endpoints with metadata
         let endpoints = sqlx::query(
