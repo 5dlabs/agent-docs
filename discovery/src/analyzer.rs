@@ -236,7 +236,7 @@ RESPOND ONLY WITH THE JSON. DO NOT include any other text before or after the JS
         });
 
         let v: serde_json::Value = serde_json::from_str(&json_str)
-            .map_err(|e| anyhow!("Failed to parse Claude response JSON: {}", e))?;
+            .map_err(|e| anyhow!("Failed to parse Claude response JSON: {e}"))?;
 
         let strategy_json = v
             .get("ingestion_strategy")

@@ -152,8 +152,8 @@ impl ClaudeRunner {
                 }
                 Ok(stdout.trim().to_string())
             }
-            Ok(Err(e)) => Err(anyhow!("Failed to read Claude output: {}", e)),
-            Err(_) => Err(anyhow!("Claude timed out after {}s", timeout_secs)),
+            Ok(Err(e)) => Err(anyhow!("Failed to read Claude output: {e}")),
+            Err(_) => Err(anyhow!("Claude timed out after {timeout_secs}s")),
         }
     }
 }
