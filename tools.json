@@ -305,6 +305,156 @@
         "performance_metrics": true,
         "storage_analysis": true
       }
+    },
+    {
+      "name": "openhands_query",
+      "docType": "openhands",
+      "title": "OpenHands CLI Documentation Query",
+      "description": "Search OpenHands CLI documentation for AI-assisted software development and automation tools.",
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "python", "json"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "cli",
+          "automation",
+          "development",
+          "ai-assistance",
+          "integration"
+        ],
+        "supported_topics": [
+          "installation",
+          "configuration",
+          "usage",
+          "api",
+          "troubleshooting"
+        ]
+      }
+    },
+    {
+      "name": "gemini_query",
+      "docType": "gemini",
+      "title": "Google Gemini CLI Documentation Query",
+      "description": "Search Google Gemini CLI documentation for AI-powered development assistance and code generation tools.",
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "python", "json"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "ai-assistance",
+          "code-generation",
+          "cli",
+          "development",
+          "google-ai"
+        ],
+        "supported_topics": [
+          "installation",
+          "authentication",
+          "usage",
+          "api",
+          "examples"
+        ]
+      }
+    },
+    {
+      "name": "qwen_query",
+      "docType": "qwen",
+      "title": "Qwen Code CLI Documentation Query",
+      "description": "Search Qwen Code CLI documentation for AI-powered coding assistance and development tools.",
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "python", "json"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "ai-assistance",
+          "code-generation",
+          "cli",
+          "development",
+          "qwen-ai"
+        ],
+        "supported_topics": [
+          "installation",
+          "configuration",
+          "usage",
+          "api",
+          "models"
+        ]
+      }
+    },
+    {
+      "name": "grok_query",
+      "docType": "grok",
+      "title": "Grok CLI Documentation Query",
+      "description": "Search Grok CLI documentation for AI-powered development assistance and coding tools.",
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "python", "json"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "ai-assistance",
+          "code-generation",
+          "cli",
+          "development",
+          "grok-ai"
+        ],
+        "supported_topics": [
+          "installation",
+          "authentication",
+          "usage",
+          "api",
+          "xai-integration"
+        ]
+      }
+    },
+    {
+      "name": "codex_query",
+      "docType": "codex",
+      "title": "OpenAI Codex CLI Documentation Query",
+      "description": "Search OpenAI Codex CLI documentation for AI-powered coding assistance and development tools.",
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "python", "json"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "ai-assistance",
+          "code-generation",
+          "cli",
+          "development",
+          "openai-codex"
+        ],
+        "supported_topics": [
+          "installation",
+          "authentication",
+          "usage",
+          "api",
+          "examples"
+        ]
+      }
+    },
+    {
+      "name": "cursor_query",
+      "docType": "cursor",
+      "title": "Cursor IDE CLI Documentation Query",
+      "description": "Search Cursor IDE CLI documentation for AI-powered development assistance and coding tools.",
+      "enabled": true,
+      "metadataHints": {
+        "supported_formats": ["markdown", "json", "typescript"],
+        "supported_complexity_levels": ["beginner", "intermediate", "advanced"],
+        "supported_categories": [
+          "ai-assistance",
+          "code-generation",
+          "cli",
+          "development",
+          "cursor-ide"
+        ],
+        "supported_topics": [
+          "installation",
+          "configuration",
+          "usage",
+          "api",
+          "extensions"
+        ]
+      }
     }
   ]
 }
