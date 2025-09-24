@@ -51,6 +51,9 @@ fn loader_bin() -> std::path::PathBuf {
             // Try multiple possible locations for the loader binary
             let candidates = [
                 "/app/loader",
+                "./target/debug/loader",
+                "../target/debug/loader",
+                "target/debug/loader",
                 "./target/release/loader",
                 "../target/release/loader",
                 "target/release/loader",
@@ -62,7 +65,11 @@ fn loader_bin() -> std::path::PathBuf {
                 }
             }
             // Fallback to first candidate if none exist
-            std::path::PathBuf::from("/app/loader")
+            warn!(
+                "loader binary not found in default locations; falling back to {}. Set LOADER_BIN to override.",
+                candidates[0]
+            );
+            std::path::PathBuf::from(candidates[0])
         },
         std::path::PathBuf::from,
     )

@@ -5,6 +5,20 @@ use serde::Deserialize;
 use serde_json::Value;
 use tracing::{info, warn};
 
+async fn establish_connection(
+    client: &redis::Client,
+    auth: Option<&(String, String)>,
+) -> redis::RedisResult<redis::aio::MultiplexedConnection> {
+    let mut con = client.get_multiplexed_async_connection().await?;
+    if let Some((username, password)) = auth {
+        redis::cmd("AUTH")
+            .arg(&[username.as_str(), password.as_str()])
+            .query_async::<()>(&mut con)
+            .await?;
+    }
+    Ok(con)
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
@@ -16,25 +30,21 @@ async fn main() -> Result<()> {
 
     let url = redis_url_from_env();
     let client = redis::Client::open(url)?;
-
-    let mut con = if let (Ok(username), Ok(password)) = (
-        std::env::var("REDIS_USERNAME"),
-        std::env::var("REDIS_PASSWORD"),
+    let auth = match (
+        std::env::var("REDIS_USERNAME").ok(),
+        std::env::var("REDIS_PASSWORD").ok(),
     ) {
-        info!(
-            "Connecting to Redis with authentication (user: {})",
-            username
-        );
-        let mut con = client.get_multiplexed_async_connection().await?;
-        redis::cmd("AUTH")
-            .arg(&[&username, &password])
-            .query_async::<()>(&mut con)
-            .await?;
-        con
+        (Some(username), Some(password)) => Some((username, password)),
+        _ => None,
+    };
+
+    if let Some((username, _)) = auth.as_ref() {
+        info!("Connecting to Redis with authentication (user: {username})");
     } else {
         info!("Connecting to Redis without authentication");
-        client.get_multiplexed_async_connection().await?
-    };
+    }
+
+    let mut con = establish_connection(&client, auth.as_ref()).await?;
 
     // Job types to process
     let job_types: Vec<String> = std::env::var("WORKER_JOB_TYPES")
@@ -65,8 +75,22 @@ async fn main() -> Result<()> {
         {
             Ok(v) => v,
             Err(e) => {
-                warn!("Redis BRPOP error: {e}");
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                warn!("Redis BRPOP error: {e}; attempting to reconnect");
+                let mut backoff = std::time::Duration::from_secs(1);
+                loop {
+                    tokio::time::sleep(backoff).await;
+                    match establish_connection(&client, auth.as_ref()).await {
+                        Ok(new_con) => {
+                            info!("Reconnected to Redis successfully");
+                            con = new_con;
+                            break;
+                        }
+                        Err(conn_err) => {
+                            warn!("Redis reconnect failed: {conn_err}");
+                            backoff = (backoff * 2).min(std::time::Duration::from_secs(30));
+                        }
+                    }
+                }
                 continue;
             }
         };
